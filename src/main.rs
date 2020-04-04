@@ -4,20 +4,37 @@
 extern crate serde_derive;
 extern crate serde_json;
 extern crate web_view;
+#[macro_use]
+extern crate fstrings;
 
 use web_view::*;
 use actix_files as fs;
-use actix_web::{body::Body, web, App, HttpRequest, HttpResponse, HttpServer};
-use std::{borrow::Cow, sync::mpsc, thread};
+use actix_web::{App, HttpServer};
+use std::{thread, time::Duration};
+use subprocess::{Exec};
 
 
 fn main() {
+    let is_production = false;
+    let port = if is_production { 5000 } else { 3000 };
+    let content_url = f!("http://localhost:{port}/index.html");
+    let res = Exec::shell("pgrep -f yarn").capture().unwrap().stdout_str();
+    if res.chars().count() == 0 {
+        thread::spawn(move || {
+            let _ = Exec::shell("cd src/ui/namp && yarn run start").join();
+        });
+        thread::sleep(Duration::from_millis(100));
+    }
+    
     let handle = thread::spawn(move || {
         let sys = actix_rt::System::new("actix-example");
 
-        let server = HttpServer::new(|| { App::new().service(fs::Files::new("/static", "//home/aschey/windows/shared_files/Music").show_files_listing())
+        let server = HttpServer::new(|| { 
+            App::new()
+            .service(fs::Files::new("/music", "//home/aschey/windows/shared_files/Music").show_files_listing())
+            .service(fs::Files::new("/", "./src/ui/namp/build").show_files_listing())
             })
-            .bind("127.0.0.1:8088")
+            .bind("127.0.0.1:5000")
             .unwrap();
 
         server.run();
@@ -26,7 +43,7 @@ fn main() {
 
     let mut webview = web_view::builder()
         .title("Rust Todo App")
-        .content(Content::Url("http://localhost:3000"))
+        .content(Content::Url(content_url))
         .size(800, 600)
         .resizable(true)
         .debug(true)

@@ -573,6 +573,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
 
 [[package]]
+name = "fstrings"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf9084fe6b2d23352fbc8075cf64cab8d31ecd842890da3b1d2ca923a5610b25"
+dependencies = [
+ "fstrings-proc-macro",
+ "proc-macro-hack",
+]
+
+[[package]]
+name = "fstrings-proc-macro"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "61e9b6c9f1182cddace5ad7105741f60dd83b715eeaaa097ea874b9b4412f143"
+dependencies = [
+ "proc-macro-hack",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "fuchsia-zircon"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1053,10 +1075,12 @@ dependencies = [
  "actix-files",
  "actix-rt",
  "actix-web",
+ "fstrings",
  "mime_guess",
  "serde",
  "serde_derive",
  "serde_json",
+ "subprocess",
  "web-view",
 ]
 
@@ -1420,6 +1444,16 @@ dependencies = [
  "gobject-sys",
  "libc",
  "pkg-config",
+]
+
+[[package]]
+name = "subprocess"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5109e3c3215ce5339ca9766a6db7f39144ccc7d9bad53b96d65cfb14ae6c2985"
+dependencies = [
+ "libc",
+ "winapi 0.3.8",
 ]
 
 [[package]]
