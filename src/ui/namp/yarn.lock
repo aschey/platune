@@ -945,7 +945,7 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@blueprintjs/core@^3.24.0":
+"@blueprintjs/core@^3.23.1", "@blueprintjs/core@^3.24.0":
   version "3.24.0"
   resolved "https://registry.yarnpkg.com/@blueprintjs/core/-/core-3.24.0.tgz#593a2b289bb94224f3a924eb1b3065ea3c4ca00a"
   integrity sha512-qW29DDPjzYsT27J6n97C0jZ1ifvEEziwNC98UhaKdSE7I8qxbLsb+ft2JOop+pEX4ab67T1lhQKAiQjWCPKZng==
@@ -969,6 +969,17 @@
   dependencies:
     classnames "^2.2"
     tslib "~1.10.0"
+
+"@blueprintjs/table@^3.8.3":
+  version "3.8.3"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/table/-/table-3.8.3.tgz#b46308ff154b74c92b8f4e0815b9a257dcb5eb92"
+  integrity sha512-ppyXy/8USvTe+HHl6VGJk+GqJalwzutTJNAiZMgpTJh8UglH8/245IpDpIlAYlyNW98RhMtloB+5UuBWHpxmhA==
+  dependencies:
+    "@blueprintjs/core" "^3.23.1"
+    classnames "^2.2"
+    prop-types "^15.6.0"
+    react-lifecycles-compat "^3.0.4"
+    tslib "~1.9.0"
 
 "@cnakazawa/watch@^1.0.3":
   version "1.0.4"
@@ -8322,7 +8333,7 @@ prompts@^2.0.1:
     kleur "^3.0.3"
     sisteransi "^1.0.4"
 
-prop-types@^15.6.1, prop-types@^15.6.2, prop-types@^15.7.2:
+prop-types@^15.6.0, prop-types@^15.6.1, prop-types@^15.6.2, prop-types@^15.7.2:
   version "15.7.2"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
   integrity sha512-8QQikdH7//R2vurIJSutZ1smHYTcLpRWEOlHnzcWHmBYrOGUysKwSsrC89BCiFj3CbrfJ/nXFdJepOVrY1GCHQ==
@@ -9983,6 +9994,11 @@ tslib@~1.10.0:
   version "1.10.0"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.10.0.tgz#c3c19f95973fb0a62973fb09d90d961ee43e5c8a"
   integrity sha512-qOebF53frne81cf0S9B41ByenJ3/IuH8yJKngAX35CmiZySA0khhkovshKK+jGCaMnVomla7gVlIcc3EvKPbTQ==
+
+tslib@~1.9.0:
+  version "1.9.3"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.9.3.tgz#d7e4dd79245d85428c4d7e4822a79917954ca286"
+  integrity sha512-4krF8scpejhaOgqzBEcGM7yDIEfi0/8+8zDRZhNZZ2kjmHJ4hv3zCbQWxoJGz1iw5U0Jl0nma13xzHXcncMavQ==
 
 tsutils@^3.17.1:
   version "3.17.1"

@@ -3,6 +3,7 @@ import logo from './logo.svg';
 import './App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
 import { FolderPicker } from './FolderPicker';
+import { MainNavBar } from './MainNavBar';
 
 export interface ITreeState {
   nodes: ITreeNode[];
@@ -13,6 +14,7 @@ export interface ITreeState {
 const App: React.FC<{}> = () => {
   return (
     <div className="App">
+      <MainNavBar/>
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <FolderPicker nodes={INITIAL_STATE} homeDir=""></FolderPicker>
