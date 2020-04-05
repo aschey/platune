@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
-import { FolderPicker } from './FolderPicker';
 
 export interface ITreeState {
   nodes: ITreeNode[];
@@ -10,25 +9,52 @@ export interface ITreeState {
 }
 
 
-const App: React.FC<{}> = () => {
+export const FolderPicker: React.FC<ITreeState> = (state: ITreeState) => {
+  //state: ITreeState = { nodes: INITIAL_STATE, homeDir: '' };
+  const [homeDir, setHomeDir] = useState<String>();
+
+  useEffect(() => {
+      setHomeDir("/home/aschey");
+  })
+
+  const handleNodeClick = (nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
+    const originallySelected = nodeData.isSelected;
+    if (!e.shiftKey) {
+        forEachNode(state.nodes, n => (n.isSelected = false));
+    }
+    nodeData.isSelected = originallySelected == null ? true : !originallySelected;
+    //this.setState(this.state);
+  };
+
+  const handleNodeCollapse = (nodeData: ITreeNode) => {
+      nodeData.isExpanded = false;
+      //this.setState(this.state);
+  };
+
+  const handleNodeExpand = (nodeData: ITreeNode) => {
+      nodeData.isExpanded = true;
+      //this.setState(this.state);
+  };
+
+  const forEachNode = (nodes: ITreeNode[] | undefined, callback: (node: ITreeNode) => void) => {
+      if (nodes == null) {
+          return;
+      }
+
+      for (const node of nodes) {
+          callback(node);
+          forEachNode(node.childNodes, callback);
+      }
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <FolderPicker nodes={INITIAL_STATE} homeDir=""></FolderPicker>
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+        <Tree
+            contents={state.nodes}
+            onNodeClick={handleNodeClick}
+            onNodeCollapse={handleNodeCollapse}
+            onNodeExpand={handleNodeExpand}
+            className={Classes.ELEVATION_0}
+        />
   );
 }
 
@@ -98,6 +124,4 @@ const INITIAL_STATE: ITreeNode[] = [
       disabled: true,
   },
 ];
-
-export default App;
 
