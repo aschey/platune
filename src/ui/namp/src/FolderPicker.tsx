@@ -14,7 +14,7 @@ export const FolderPicker: React.FC<ITreeState> = (state: ITreeState) => {
   const [homeDir, setHomeDir] = useState<String>();
 
   useEffect(() => {
-      setHomeDir("/home/aschey");
+     // setHomeDir("/home/aschey");
   })
 
   const handleNodeClick = (nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {

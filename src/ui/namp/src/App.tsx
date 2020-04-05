@@ -16,8 +16,8 @@ const App: React.FC<{}> = () => {
     <div className="App">
       <MainNavBar/>
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <FolderPicker nodes={INITIAL_STATE} homeDir=""></FolderPicker>
+      
+       
         <p>
           Edit <code>src/App.tsx</code> and save to reload.
         </p>

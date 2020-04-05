@@ -23,11 +23,11 @@ fn main() {
         let _ = server::run_server(tx);
     });
     let srv = rx.recv().unwrap();
-
     let webview = web_view::builder()
         .title("NAMP")
         .content(Content::Url(content_url))
-        .size(800, 600)
+        // There's no maximize function so just set it to something large
+        .size(100000, 100000)
         .resizable(true)
         .debug(true)
         .user_data(())
