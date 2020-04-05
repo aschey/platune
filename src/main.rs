@@ -35,11 +35,8 @@ fn main() {
         .build()
         .unwrap();
 
-    //webview.set_color((156, 39, 176));
-
-    let res = webview.run().unwrap();
+    let _ = webview.run();
     actix_rt::System::new("").block_on(srv.stop(true));
-    println!("final state: {:?}", res);
 }
 
 fn ensure_node_started() {
