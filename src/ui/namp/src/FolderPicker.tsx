@@ -2,20 +2,62 @@ import React, { useState, useEffect } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
+import { getJson } from './fetchUtil';
 
 export interface ITreeState {
   nodes: ITreeNode[];
   homeDir: string;
 }
 
-
 export const FolderPicker: React.FC<ITreeState> = (state: ITreeState) => {
   //state: ITreeState = { nodes: INITIAL_STATE, homeDir: '' };
-  const [homeDir, setHomeDir] = useState<String>();
+  const [nodes, setNodes] = useState<ITreeNode[]>([]);
+  let id = 0;
 
   useEffect(() => {
-     // setHomeDir("/home/aschey");
-  })
+    const rootNode: ITreeNode = {
+        id,
+        hasCaret: true,
+        icon: 'folder-close',
+        label: "/",
+        isExpanded: true,
+        childNodes: [],
+        nodeData: undefined
+     }
+     id++;
+     updateNodes('/', rootNode, [rootNode]);
+  }, []);
+
+  const updateNodes = (path: string, rootNode: ITreeNode, nodes: ITreeNode[]) => {
+    getJson<{dirs: Array<string>}>(`/dirs?dir=${path}`).then(dirsResponse => {
+        const dirs = dirsResponse.dirs;
+        const childNodes = dirs.map((d, i): ITreeNode => {
+            let node: ITreeNode = {
+                id,
+                hasCaret: true,
+                icon: "folder-close",
+                label: d,
+                isExpanded: false,
+                childNodes: [],
+                nodeData: rootNode
+            }
+            id++;
+            return node;
+       });
+        rootNode.childNodes = childNodes;
+        setNodes([...nodes]);
+    });
+  }
+  
+  const getFullPath = (node: ITreeNode): string => {
+      let path = node.label.toString();
+      while (node.nodeData !== undefined) {
+        let parentNode = node.nodeData as ITreeNode;
+        path = `${parentNode.label}/${path}`;
+        node = parentNode;
+      }
+      return path;
+  }
 
   const handleNodeClick = (nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
     const originallySelected = nodeData.isSelected;
@@ -23,17 +65,17 @@ export const FolderPicker: React.FC<ITreeState> = (state: ITreeState) => {
         forEachNode(state.nodes, n => (n.isSelected = false));
     }
     nodeData.isSelected = originallySelected == null ? true : !originallySelected;
-    //this.setState(this.state);
+    setNodes([...nodes]);
   };
 
   const handleNodeCollapse = (nodeData: ITreeNode) => {
       nodeData.isExpanded = false;
-      //this.setState(this.state);
+      setNodes([...nodes]);
   };
 
   const handleNodeExpand = (nodeData: ITreeNode) => {
       nodeData.isExpanded = true;
-      //this.setState(this.state);
+      updateNodes(getFullPath(nodeData), nodeData, nodes);
   };
 
   const forEachNode = (nodes: ITreeNode[] | undefined, callback: (node: ITreeNode) => void) => {
@@ -47,9 +89,10 @@ export const FolderPicker: React.FC<ITreeState> = (state: ITreeState) => {
       }
   }
 
+
   return (
         <Tree
-            contents={state.nodes}
+            contents={nodes}
             onNodeClick={handleNodeClick}
             onNodeCollapse={handleNodeCollapse}
             onNodeExpand={handleNodeExpand}

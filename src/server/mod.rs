@@ -1,9 +1,10 @@
 use dirs::home_dir;
 use std::{sync::mpsc};
-use actix_web::{dev::Server, HttpServer, HttpRequest, HttpResponse, App, http::Method, Result, http::StatusCode, get, error};
+use actix_web::{dev::Server, HttpServer, HttpRequest, HttpResponse, App, http::Method, Result, http::StatusCode, get, error, web::Query};
 use actix_cors::Cors;
 use actix_files as fs;
 use serde::{Deserialize, Serialize};
+use std::fs::{read_dir, DirEntry};
 use std::path::PathBuf;
 use std::vec::Vec;
 use paperclip::actix::{
@@ -21,7 +22,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .wrap(Cors::new().allowed_origin("http://localhost:3000").finish())
         .wrap_api()
         // REST endpoints
-        .service(web::resource("/homeDir").route(web::get().to(get_home_dir)))
+        .service(web::resource("/dirs").route(web::get().to(get_dirs)))
         .service(web::resource("/configuredFolders").route(web::get().to(get_configured_folders)))
         .with_json_spec_at("/docs")
         .build()
@@ -41,14 +42,25 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     sys.block_on(srv)
 }
 
-#[api_v2_operation]
-async fn get_home_dir(_: HttpRequest) -> Option<Result<Json<HomeDirResponse>, ()>> {
-    let home_path = home_dir()?;
-    let home_str = String::from(home_path.to_str()?);
+fn filter_dirs(res: Result<DirEntry, std::io::Error>) -> Option<String> {
+    let path = res.unwrap().path();
+    if !path.is_dir() {
+        return None
+    }
+    let str_path = String::from(path.to_str().unwrap());
+    let dir_name = String::from(str_path.split("/").last().unwrap());
+    if !dir_name.starts_with(".") { Some(dir_name) } else { None }
+}
 
-    //let response = HttpResponse::build(StatusCode::OK)
-        let response = Json(HomeDirResponse {home_dir: home_str});
-    return Some(Ok(response));
+#[api_v2_operation]
+async fn get_dirs(dir_request: Query<DirRequest>) -> Result<Json<DirResponse>, ()> {
+    let mut entries = read_dir(dir_request.dir.as_str()).unwrap()
+        .filter_map(|res| filter_dirs(res))
+        .collect::<Vec<_>>();
+
+    entries.sort();
+    let response = Json(DirResponse {dirs: entries});
+    return Ok(response);
 }
 
 #[api_v2_operation]
@@ -59,6 +71,13 @@ async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
 }
 
 #[derive(Serialize, Apiv2Schema)]
-struct HomeDirResponse {
-    home_dir: String,
+#[serde(rename_all = "camelCase")]
+struct DirResponse {
+    dirs: Vec<String>,
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct DirRequest {
+    dir: String,
 }
