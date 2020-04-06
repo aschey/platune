@@ -18,7 +18,7 @@ export const Settings: React.FC<{}> = () => {
             </Popover>
             <Dialog 
                 style={{width: '1000px'}}
-                className={Classes.DIALOG} 
+                className={`${Classes.DIALOG} bp3-dark`} 
                 icon="folder-close" 
                 title="Configure Folders" 
                 isOpen={isOpen} 

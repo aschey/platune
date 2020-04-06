@@ -13,9 +13,9 @@ export interface ITreeState {
 
 const App: React.FC<{}> = () => {
   return (
-    <div className="App">
+    <div className="App bp3-dark">
       <MainNavBar/>
-      <header className="App-header">
+      <header className="App-header ">
       
        
         <p>
