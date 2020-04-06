@@ -9,8 +9,7 @@ export interface ITreeState {
   homeDir: string;
 }
 
-export const FolderPicker: React.FC<ITreeState> = (state: ITreeState) => {
-  //state: ITreeState = { nodes: INITIAL_STATE, homeDir: '' };
+export const FolderPicker: React.FC<{}> = () => {
   const [nodes, setNodes] = useState<ITreeNode[]>([]);
   let id = 0;
 
@@ -62,7 +61,7 @@ export const FolderPicker: React.FC<ITreeState> = (state: ITreeState) => {
   const handleNodeClick = (nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
     const originallySelected = nodeData.isSelected;
     if (!e.shiftKey) {
-        forEachNode(state.nodes, n => (n.isSelected = false));
+        forEachNode(nodes, n => (n.isSelected = false));
     }
     nodeData.isSelected = originallySelected == null ? true : !originallySelected;
     setNodes([...nodes]);
