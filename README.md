@@ -17,3 +17,11 @@ Since it's just a web app using a REST API under the hood, the UI can also be ac
 - Support sync between Android and desktop
 - Possibly install the web server as a systemd/windows service instead of spinning it up on the fly, might be more robust
 - Add option to install as a separate client/server system to be used as a hosted web app
+- Some kind of shortcut to easily play/pause/change volume, etc. Maybe system hotkeys or a taskbar icon.
+- Remote control desktop player from Android app
+
+### Features Completed
+- Nothing! (yet)
+
+### Features in Progress
+- UI to select folders to import
