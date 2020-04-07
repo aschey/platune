@@ -12,19 +12,20 @@ export interface ITreeState {
 export const FolderPicker: React.FC<{}> = () => {
   const [nodes, setNodes] = useState<ITreeNode[]>([]);
   let id = 0;
+  const delim = navigator.platform === 'Win32' ? '\\' : '/';
 
   useEffect(() => {
     const rootNode: ITreeNode = {
         id,
         hasCaret: true,
         icon: 'folder-close',
-        label: "/",
+        label: delim,
         isExpanded: true,
         childNodes: [],
         nodeData: undefined
      }
      id++;
-     updateNodes('/', rootNode, [rootNode]);
+     updateNodes(delim, rootNode, [rootNode]);
   }, []);
 
   const updateNodes = (path: string, rootNode: ITreeNode, nodes: ITreeNode[]) => {
@@ -52,7 +53,8 @@ export const FolderPicker: React.FC<{}> = () => {
       let path = node.label.toString();
       while (node.nodeData !== undefined) {
         let parentNode = node.nodeData as ITreeNode;
-        path = `${parentNode.label}/${path}`;
+        let parentDir = parentNode.label === delim ? '' : parentNode.label;
+        path = `${parentDir}${delim}${path}`;
         node = parentNode;
       }
       return path;

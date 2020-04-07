@@ -13,6 +13,7 @@ use paperclip::actix::{
     // use this instead of actix_web::web
     web::{self, Json},
 };
+const IS_WINDOWS: bool = cfg!(windows);
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     let mut sys = actix_rt::System::new("test");
@@ -42,20 +43,21 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     sys.block_on(srv)
 }
 
-fn filter_dirs(res: Result<DirEntry, std::io::Error>) -> Option<String> {
+fn filter_dirs(res: Result<DirEntry, std::io::Error>, delim: &str) -> Option<String> {
     let path = res.unwrap().path();
     if !path.is_dir() {
         return None
     }
     let str_path = String::from(path.to_str().unwrap());
-    let dir_name = String::from(str_path.split("/").last().unwrap());
+    let dir_name = String::from(str_path.split(delim).last().unwrap());
     if !dir_name.starts_with(".") { Some(dir_name) } else { None }
 }
 
 #[api_v2_operation]
 async fn get_dirs(dir_request: Query<DirRequest>) -> Result<Json<DirResponse>, ()> {
+    let delim = if IS_WINDOWS { "\\" } else { "/" };
     let mut entries = read_dir(dir_request.dir.as_str()).unwrap()
-        .filter_map(|res| filter_dirs(res))
+        .filter_map(|res| filter_dirs(res, delim))
         .collect::<Vec<_>>();
 
     entries.sort();

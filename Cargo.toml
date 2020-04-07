@@ -5,9 +5,12 @@ authors = ["Austin Schey <aschey13@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[target.'cfg(windows)'.dependencies]
+web-view = { version = "0.6.2", features = ["edge"] }
 
+[target.'cfg(unix)'.dependencies]
+web-view = { version = "0.6.2" }
 [dependencies]
-web-view = "0.6.2"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"

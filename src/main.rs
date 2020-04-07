@@ -7,10 +7,12 @@ use std::{thread, time::Duration};
 use subprocess::{Exec};
 use std::sync::mpsc;
 use fstrings::*;
+use std::fs::{read_dir, DirEntry};
 
+const IS_WINDOWS: bool = cfg!(windows);
 
 fn main() {
-    let is_production = false;
+    let is_production = true;
     let port = if is_production { 5000 } else { 3000 };
     let content_url = f!("http://localhost:{port}/index.html");
 
@@ -27,7 +29,7 @@ fn main() {
         .title("NAMP")
         .content(Content::Url(content_url))
         // There's no maximize function so just set it to something large
-        .size(100000, 100000)
+        .size(1000, 800)
         .resizable(true)
         .debug(true)
         .user_data(())
@@ -40,6 +42,10 @@ fn main() {
 }
 
 fn ensure_node_started() {
+    // Have to start manually on Windows for now
+    if IS_WINDOWS {
+        return;
+    }
     // TODO: make this more robust
     let res = Exec::shell("pgrep -f yarn").capture().unwrap().stdout_str();
         if res.chars().count() == 0 {
