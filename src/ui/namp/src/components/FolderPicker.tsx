@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import logo from './logo.svg';
-import './App.css';
+import '../css/App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
-import { getJson } from './fetchUtil';
+import { getJson } from '../fetchUtil';
 import { start } from 'repl';
 
 interface FolderPickerProps {

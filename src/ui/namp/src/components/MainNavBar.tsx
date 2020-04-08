@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, NavbarGroup, Alignment, NavbarHeading, NavbarDivider, Button, Classes, Popover, MenuItem, Menu, Position, Icon } from '@blueprintjs/core';
 import { Settings } from './Settings';
-import logo from './logo.png';
-import logoDark from './logo-dark.png';
+import logo from '../res/logo.png';
+import logoDark from '../res/logo-dark.png';
 
 
 export const MainNavBar: React.FC<{}> = () => {

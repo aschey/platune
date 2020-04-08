@@ -1,6 +1,6 @@
 import React from 'react';
 import logo from './logo.svg';
-import './App.css';
+import '../css/App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
 import { FolderPicker } from './FolderPicker';
 import { MainNavBar } from './MainNavBar';

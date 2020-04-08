@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Column, Cell } from '@blueprintjs/table';
 import { Button, ITreeNode, Tooltip, Position, Icon, Classes, Intent } from '@blueprintjs/core';
 import { FolderPicker } from './FolderPicker';
-import { getJson } from './fetchUtil';
+import { getJson } from '../fetchUtil';
 import { SelectedFolders } from './SelectedFolders';
 
 export const FolderView: React.FC<{}> = () => {
