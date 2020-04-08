@@ -17,7 +17,7 @@ export const Settings: React.FC<{}> = () => {
                 <Button className={Classes.MINIMAL} icon="cog" rightIcon="caret-down" />
             </Popover>
             <Dialog 
-                style={{width: '1000px'}}
+                style={{width: '1000px', boxShadow: 'none'}}
                 className={`${Classes.DIALOG} bp3-dark`} 
                 icon="folder-close" 
                 title="Configure Folders" 

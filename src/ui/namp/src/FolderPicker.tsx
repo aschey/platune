@@ -5,12 +5,11 @@ import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blue
 import { getJson } from './fetchUtil';
 import { start } from 'repl';
 
-export interface ITreeState {
-  nodes: ITreeNode[];
-  homeDir: string;
+interface FolderPickerProps {
+    setSelected(folder: string): void;
 }
 
-export const FolderPicker: React.FC<{}> = () => {
+export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected }: FolderPickerProps) => {
   const [nodes, setNodes] = useState<ITreeNode[]>([]);
   const [id, setId] = useState<number>(0);
   const [delim, setDelim] = useState<string>('');
@@ -75,6 +74,7 @@ export const FolderPicker: React.FC<{}> = () => {
     }
     nodeData.isSelected = originallySelected == null ? true : !originallySelected;
     setNodes([...nodes]);
+    setSelected(getFullPath(nodeData));
   };
 
   const handleNodeCollapse = (nodeData: ITreeNode) => {
