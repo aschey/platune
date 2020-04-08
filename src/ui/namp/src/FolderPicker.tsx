@@ -3,6 +3,7 @@ import logo from './logo.svg';
 import './App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
 import { getJson } from './fetchUtil';
+import { start } from 'repl';
 
 export interface ITreeState {
   nodes: ITreeNode[];
@@ -11,29 +12,35 @@ export interface ITreeState {
 
 export const FolderPicker: React.FC<{}> = () => {
   const [nodes, setNodes] = useState<ITreeNode[]>([]);
-  let id = 0;
-  const delim = navigator.platform === 'Win32' ? '\\' : '/';
+  const [id, setId] = useState<number>(0);
+  const [delim, setDelim] = useState<string>('');
 
   useEffect(() => {
-    const rootNode: ITreeNode = {
-        id,
-        hasCaret: true,
-        icon: 'folder-close',
-        label: delim,
-        isExpanded: true,
-        childNodes: [],
-        nodeData: undefined
-     }
-     id++;
-     updateNodes(delim, rootNode, [rootNode]);
+    getJson('/isWindows').then(isWindows =>
+        { 
+            let _delim = isWindows ? '\\' : '/';
+            setDelim(_delim);
+            const rootNode: ITreeNode = {
+                id,
+                hasCaret: true,
+                icon: 'folder-close',
+                label: _delim,
+                isExpanded: true,
+                childNodes: [],
+                nodeData: undefined
+             }
+             updateNodes(_delim, rootNode, [rootNode], id + 1);
+        });
+    
   }, []);
 
-  const updateNodes = (path: string, rootNode: ITreeNode, nodes: ITreeNode[]) => {
+  const updateNodes = (path: string, rootNode: ITreeNode, nodes: ITreeNode[], startId: number) => {
     getJson<{dirs: Array<string>}>(`/dirs?dir=${path}`).then(dirsResponse => {
+        let _id = startId;
         const dirs = dirsResponse.dirs;
         const childNodes = dirs.map((d, i): ITreeNode => {
             let node: ITreeNode = {
-                id,
+                id: _id,
                 hasCaret: true,
                 icon: "folder-close",
                 label: d,
@@ -41,10 +48,11 @@ export const FolderPicker: React.FC<{}> = () => {
                 childNodes: [],
                 nodeData: rootNode
             }
-            id++;
+            _id++;
             return node;
        });
         rootNode.childNodes = childNodes;
+        setId(_id);
         setNodes([...nodes]);
     });
   }
@@ -76,7 +84,7 @@ export const FolderPicker: React.FC<{}> = () => {
 
   const handleNodeExpand = (nodeData: ITreeNode) => {
       nodeData.isExpanded = true;
-      updateNodes(getFullPath(nodeData), nodeData, nodes);
+      updateNodes(getFullPath(nodeData), nodeData, nodes, id);
   };
 
   const forEachNode = (nodes: ITreeNode[] | undefined, callback: (node: ITreeNode) => void) => {

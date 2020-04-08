@@ -25,6 +25,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         // REST endpoints
         .service(web::resource("/dirs").route(web::get().to(get_dirs)))
         .service(web::resource("/configuredFolders").route(web::get().to(get_configured_folders)))
+        .service(web::resource("/isWindows").route(web::get().to(get_is_windows)))
         .with_json_spec_at("/docs")
         .build()
         // static files
@@ -63,6 +64,11 @@ async fn get_dirs(dir_request: Query<DirRequest>) -> Result<Json<DirResponse>, (
     entries.sort();
     let response = Json(DirResponse {dirs: entries});
     return Ok(response);
+}
+
+#[api_v2_operation]
+async fn get_is_windows() -> Result<Json<bool>, ()> {
+    return Ok(Json(IS_WINDOWS));
 }
 
 #[api_v2_operation]

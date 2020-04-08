@@ -12,7 +12,7 @@ use std::fs::{read_dir, DirEntry};
 const IS_WINDOWS: bool = cfg!(windows);
 
 fn main() {
-    let is_production = true;
+    let is_production = false;
     let port = if is_production { 5000 } else { 3000 };
     let content_url = f!("http://localhost:{port}/index.html");
 
