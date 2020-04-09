@@ -7,20 +7,20 @@ export const Settings: React.FC<{}> = () => {
 
     const settingsMenu = (
         <Menu>
-            <MenuItem text="Configure Folders" onClick={() => setIsOpen(true)}/>
+            <MenuItem text='Configure Folders' icon='folder-open' onClick={() => setIsOpen(true)}/>
         </Menu>
     );
     
     return (
         <>
             <Popover content={settingsMenu}>
-                <Button className={Classes.MINIMAL} icon="cog" rightIcon="caret-down" />
+                <Button className={Classes.MINIMAL} icon='cog' rightIcon='caret-down' />
             </Popover>
             <Dialog 
                 style={{width: '1000px', boxShadow: 'none'}}
                 className={`${Classes.DIALOG} bp3-dark`} 
-                icon="folder-close" 
-                title="Configure Folders" 
+                icon='folder-open' 
+                title='Configure Folders' 
                 isOpen={isOpen} 
                 onClose={() => setIsOpen(false)}
                 autoFocus={true}

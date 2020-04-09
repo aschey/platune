@@ -38,7 +38,7 @@ export const FolderView: React.FC<{}> = () => {
                 <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
                             onClick={() => AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000})}/>
                 <div style={{margin: '5px'}}/>
-                <Button intent={Intent.WARNING} icon='undo' text='Cancel'/>
+                <Button intent={Intent.WARNING} icon='undo' text='Revert'/>
                 </div>
                 </div>
             </div>
@@ -48,7 +48,6 @@ export const FolderView: React.FC<{}> = () => {
                 <div style={{margin: '5px'}}/>
                 <div style={{display: 'flex', flexDirection: 'row'}}>
                     <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add'/>
-                   
                 </div>
             </div>
         </div>
