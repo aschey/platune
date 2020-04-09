@@ -102,7 +102,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
 
 
   return (
-      <div style={{height, overflowY: 'scroll', width}}>
+      <div style={{height, overflowY: 'scroll', width}} className='bp3-table-container'>
         <Tree
             contents={nodes}
             onNodeClick={handleNodeClick}

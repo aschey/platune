@@ -29,16 +29,26 @@ export const FolderView: React.FC<{}> = () => {
     }
 
     return (
-        <div style={{display: 'flex', alignItems: 'top', height: '500px', marginTop: '20px'}}>
-            <SelectedFolders rows={rows} setRows={setRows} width='400px' height='380px'/>
+        <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', height: '500px', marginTop: '20px'}}>
             <div style={{display: 'flex', flexDirection: 'column'}}>
-                <FolderPicker setSelected={setSelected} width='500px' height='380px'/>
+                <SelectedFolders rows={rows} setRows={setRows} width='425px' height='450px'/>
+                <div style={{display: 'flex', flexDirection: 'column'}}>
+                <div style={{margin: '5px'}}/>
+                <div style={{display: 'flex', flexDirection: 'row'}}>
+                <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
+                            onClick={() => AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000})}/>
+                <div style={{margin: '5px'}}/>
+                <Button intent={Intent.WARNING} icon='undo' text='Cancel'/>
+                </div>
+                </div>
+            </div>
+            <div style={{margin: '5px'}}/>
+            <div style={{display: 'flex', flexDirection: 'column'}}>
+                <FolderPicker setSelected={setSelected} width='480px' height='450px'/>
                 <div style={{margin: '5px'}}/>
                 <div style={{display: 'flex', flexDirection: 'row'}}>
                     <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add'/>
-                    <div style={{margin: '5px'}}/>
-                    <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
-                        onClick={() => AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000})}/>
+                   
                 </div>
             </div>
         </div>
