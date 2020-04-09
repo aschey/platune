@@ -61,7 +61,7 @@ async fn get_dirs(dir_request: Query<DirRequest>) -> Result<Json<DirResponse>, (
         .filter_map(|res| filter_dirs(res, delim))
         .collect::<Vec<_>>();
 
-    entries.sort();
+    entries.sort_by(|l, r| Ord::cmp(&l.to_lowercase(), &r.to_lowercase()));
     let response = Json(DirResponse {dirs: entries});
     return Ok(response);
 }
