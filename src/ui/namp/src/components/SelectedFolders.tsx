@@ -18,7 +18,7 @@ export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows,
     const pathRenderer = (rowIndex: number) => <Cell style={{fontSize: 14}}>{rows[rowIndex]}</Cell>;
 
     const deleteRenderer = (rowIndex: number) => 
-        <Cell style={{padding: '0 2px'}}><Button intent={Intent.DANGER} icon='delete' onClick={() => deleteClick(rowIndex)} minimal small/></Cell>;
+        <Cell style={{padding: '0 3px'}}><Button intent={Intent.DANGER} icon='delete' onClick={() => deleteClick(rowIndex)} minimal small/></Cell>;
     
     return (
         <div style={{width, height}}>
