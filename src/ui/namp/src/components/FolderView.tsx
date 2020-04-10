@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Column, Cell } from '@blueprintjs/table';
 import { Button, ITreeNode, Tooltip, Position, Icon, Classes, Intent, Toaster, Toast, ButtonGroup, Divider } from '@blueprintjs/core';
 import { FolderPicker } from './FolderPicker';
-import { getJson } from '../fetchUtil';
+import { getJson, putJson } from '../fetchUtil';
 import { SelectedFolders } from './SelectedFolders';
 import { intentClass } from '@blueprintjs/core/lib/esm/common/classes';
 
@@ -28,6 +28,11 @@ export const FolderView: React.FC<{}> = () => {
         setRows([...rows]);
     }
 
+    const saveFoldersClick = async () => {
+        await putJson<any>('/updateFolders', {folders: rows});
+        AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000});
+    }
+
     return (
         <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', height: '500px', marginTop: '20px'}}>
             <div style={{display: 'flex', flexDirection: 'column'}}>
@@ -36,7 +41,7 @@ export const FolderView: React.FC<{}> = () => {
                 <div style={{margin: '5px'}}/>
                 <div style={{display: 'flex', flexDirection: 'row'}}>
                 <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
-                            onClick={() => AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000})}/>
+                            onClick={saveFoldersClick}/>
                 <div style={{margin: '5px'}}/>
                 <Button intent={Intent.WARNING} icon='undo' text='Revert'/>
                 </div>

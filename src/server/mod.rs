@@ -9,10 +9,11 @@ use std::fs::{read_dir, DirEntry};
 use std::path::PathBuf;
 use dotenv::dotenv;
 use std::{vec::Vec, env};
+use diesel;
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
-use models::folder;
-use crate::schema;
+use models::folder::*;
+use crate::schema::folder::dsl::*;
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -36,12 +37,13 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
 
     let srv = HttpServer::new(|| { 
         App::new()
-        .wrap(Cors::new().allowed_origin("http://localhost:3000").finish())
+        .wrap(Cors::new().finish())
         .wrap_api()
         // REST endpoints
         .service(web::resource("/dirs").route(web::get().to(get_dirs)))
         .service(web::resource("/configuredFolders").route(web::get().to(get_configured_folders)))
         .service(web::resource("/isWindows").route(web::get().to(get_is_windows)))
+        .service(web::resource("/updateFolders").route(web::put().to(update_folders)))
         .with_json_spec_at("/docs")
         .build()
         // static files
@@ -90,10 +92,22 @@ async fn get_is_windows() -> Result<Json<bool>, ()> {
 #[api_v2_operation]
 async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
     let connection = establish_connection();
-    let results = schema::folder::table.load::<models::folder::Folder>(&connection).expect("error");
+    let results = folder.load::<Folder>(&connection).expect("error");
     let paths = results.iter().map(|rr| rr.full_path.clone()).collect();
     
     return Ok(Json(paths));
+}
+
+#[api_v2_operation]
+async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>, ()> {
+    let new_folders = &new_folders_req.folders;
+    let connection = establish_connection();
+    let res = diesel::delete(folder.filter(full_path.ne_all(new_folders.iter()))).execute(&connection);
+    let existing = folder.filter(full_path.eq_any(new_folders.iter())).load::<Folder>(&connection).expect("error");
+    let existing_paths = existing.iter().map(|rr| rr.full_path.clone()).collect::<Vec<_>>();
+    let folders_to_create = new_folders.iter().filter(|f| !existing_paths.contains(f)).map(|f| full_path.eq(f)).collect::<Vec<_>>();
+    let res1 = diesel::insert_into(folder).values(folders_to_create).execute(&connection);
+    return Ok(Json(()));
 }
 
 #[derive(Serialize, Apiv2Schema)]
@@ -106,4 +120,10 @@ struct DirResponse {
 #[serde(rename_all = "camelCase")]
 struct DirRequest {
     dir: String,
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct FolderUpdate {
+    folders: Vec<String>,
 }

@@ -3,6 +3,8 @@ Created with
 - Rust
 - [web-view](https://github.com/Boscop/web-view)
 - [actix-web](https://github.com/actix/actix-web)
+- [Diesel](https://github.com/diesel-rs/diesel)
+- Sqlite
 - React
 - Typescript
 - [Blueprint](https://github.com/palantir/blueprint)
