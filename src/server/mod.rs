@@ -91,8 +91,8 @@ async fn get_is_windows() -> Result<Json<bool>, ()> {
 async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
     let connection = establish_connection();
     let results = schema::folder::table.load::<models::folder::Folder>(&connection).expect("error");
-    let paths = results.iter().map(|rr| rr.full_path.clone()).collect::<Vec<_>>();
-
+    let paths = results.iter().map(|rr| rr.full_path.clone()).collect();
+    
     return Ok(Json(paths));
 }
 
