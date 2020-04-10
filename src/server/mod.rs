@@ -1,3 +1,4 @@
+mod models;
 use dirs::home_dir;
 use std::{sync::mpsc};
 use actix_web::{dev::Server, HttpServer, HttpRequest, HttpResponse, App, http::Method, Result, http::StatusCode, get, error, web::Query};
@@ -6,7 +7,13 @@ use actix_files as fs;
 use serde::{Deserialize, Serialize};
 use std::fs::{read_dir, DirEntry};
 use std::path::PathBuf;
-use std::vec::Vec;
+use dotenv::dotenv;
+use std::{vec::Vec, env};
+use diesel::sqlite::SqliteConnection;
+use diesel::prelude::*;
+use models::folder;
+use crate::schema;
+
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
     OpenApiExt, Apiv2Schema, api_v2_operation,
@@ -14,6 +21,15 @@ use paperclip::actix::{
     web::{self, Json},
 };
 const IS_WINDOWS: bool = cfg!(windows);
+
+pub fn establish_connection() -> SqliteConnection {
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
+    SqliteConnection::establish(&database_url)
+        .expect("Error connecting to database")
+
+}
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     let mut sys = actix_rt::System::new("test");
@@ -73,9 +89,11 @@ async fn get_is_windows() -> Result<Json<bool>, ()> {
 
 #[api_v2_operation]
 async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
-    let a = String::from("/home/aschey");
-    let xs = vec![a];
-    return Ok(Json(xs));
+    let connection = establish_connection();
+    let results = schema::folder::table.load::<models::folder::Folder>(&connection).expect("error");
+    let paths = results.iter().map(|rr| rr.full_path.clone()).collect::<Vec<_>>();
+
+    return Ok(Json(paths));
 }
 
 #[derive(Serialize, Apiv2Schema)]

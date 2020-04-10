@@ -1,6 +1,10 @@
 //#![windows_subsystem = "windows"]
 
 mod server;
+pub mod schema;
+
+#[macro_use]
+extern crate diesel;
 
 use web_view::*;
 use std::{thread, time::Duration};
