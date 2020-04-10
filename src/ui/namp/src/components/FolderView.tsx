@@ -16,12 +16,14 @@ export const FolderView: React.FC<{}> = () => {
     const [selected, setSelected] = useState<string>('');
     
     useEffect(() => {
-      getJson<Array<string>>('/configuredFolders').then(setRows);
+      refreshFolders();
     }, []);
 
     const cellRenderer = (rowIndex: number) => {
         return <Cell>{rows[rowIndex]}</Cell>
     };
+
+    const refreshFolders = () => getJson<Array<string>>('/configuredFolders').then(setRows);
 
     const addFolderClick = () => {
         rows.push(selected);
@@ -31,6 +33,10 @@ export const FolderView: React.FC<{}> = () => {
     const saveFoldersClick = async () => {
         await putJson<any>('/updateFolders', {folders: rows});
         AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000});
+    }
+
+    const revertClick = () => {
+        refreshFolders();
     }
 
     return (
@@ -43,7 +49,7 @@ export const FolderView: React.FC<{}> = () => {
                 <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
                             onClick={saveFoldersClick}/>
                 <div style={{margin: '5px'}}/>
-                <Button intent={Intent.WARNING} icon='undo' text='Revert'/>
+                <Button intent={Intent.WARNING} icon='undo' text='Revert' onClick={revertClick}/>
                 </div>
                 </div>
             </div>
