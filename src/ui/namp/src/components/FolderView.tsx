@@ -55,7 +55,7 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
             </div>
             <div style={{ width: spacerWidth}}/>
             <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
-                <FolderPicker setSelected={setSelected} height={height-50}/>
+                <FolderPicker setSelected={setSelected} width={panelWidth} height={height-50}/>
                 <div style={{margin: spacerWidth}}/>
                 <div style={{display: 'flex', flexDirection: 'row'}}>
                     <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add'/>

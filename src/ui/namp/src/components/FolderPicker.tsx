@@ -7,7 +7,7 @@ import { start } from 'repl';
 
 interface FolderPickerProps {
     setSelected(folder: string): void;
-    //width: number;
+    width: number;
     height: number;
 }
 
