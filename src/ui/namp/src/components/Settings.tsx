@@ -17,7 +17,7 @@ export const Settings: React.FC<{}> = () => {
                 <Button className={Classes.MINIMAL} icon='cog' rightIcon='caret-down' />
             </Popover>
             <Dialog 
-                style={{width: '1000px', boxShadow: 'none'}}
+                style={{width: 1000, height: 600, boxShadow: 'none'}}
                 className={`${Classes.DIALOG} bp3-dark`} 
                 icon='folder-open' 
                 title='Configure Folders' 
@@ -26,7 +26,7 @@ export const Settings: React.FC<{}> = () => {
                 autoFocus={true}
                 enforceFocus={true}
                 usePortal={true}>
-                <FolderView/>
+                <FolderView width={950} height={540}/>
             </Dialog>
         </>
     )

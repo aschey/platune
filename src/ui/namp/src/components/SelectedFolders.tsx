@@ -5,11 +5,13 @@ import { Button, AnchorButton, Intent } from '@blueprintjs/core';
 interface SelectedFoldersProps {
     rows: string[];
     setRows: (rows: string[]) => void;
-    width: string;
-    height: string;
+    width: number;
+    height: number;
 }
 
 export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows, width, height }: SelectedFoldersProps) => {
+    const deleteRowWidth = 30;
+
     const deleteClick = (rowIndex: number) => {
         const newRows = rows.filter((r, i) => i !== rowIndex);
         setRows([...newRows]);
@@ -22,7 +24,7 @@ export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows,
     
     return (
         <div style={{width, height}}>
-        <Table numRows={rows.length} columnWidths={[300, 30]} rowHeights={rows.map(() => 25)}>
+        <Table numRows={rows.length} columnWidths={[width-(deleteRowWidth * 2), deleteRowWidth]} rowHeights={rows.map(() => 25)}>
             <Column name='Path' cellRenderer={pathRenderer}/>
             <Column name='' cellRenderer={deleteRenderer}/>
         </Table>

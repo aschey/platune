@@ -7,8 +7,8 @@ import { start } from 'repl';
 
 interface FolderPickerProps {
     setSelected(folder: string): void;
-    width: string;
-    height: string;
+    //width: number;
+    height: number;
 }
 
 export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, height }: FolderPickerProps) => {
@@ -73,7 +73,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
     // }
     nodeData.isSelected = originallySelected == null ? true : !originallySelected;
     setNodes([...nodes]);
-    setSelected(getFullPath(nodeData));
+    setSelected(nodeData.id as string);
   };
 
   const handleNodeCollapse = (nodeData: ITreeNode) => {
