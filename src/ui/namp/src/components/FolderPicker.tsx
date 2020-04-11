@@ -13,59 +13,43 @@ interface FolderPickerProps {
 
 export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, height }: FolderPickerProps) => {
   const [nodes, setNodes] = useState<ITreeNode[]>([]);
-  const [id, setId] = useState<number>(0);
   const [delim, setDelim] = useState<string>('');
 
   useEffect(() => {
-    getJson('/isWindows').then(async isWindows =>
-        { 
-            let _delim = isWindows ? '\\' : '/';
-            let dirsResponse = await getJson<{dirs: Array<string>}>('/dirsInit');
-            let _id = id;
-            setDelim(_delim);
-            let _nodes = dirsResponse.dirs.map((d, i): ITreeNode => {
-                let node: ITreeNode = {
-                    id: _id,
-                    hasCaret: true,
-                    icon: 'folder-close',
-                    label: d,
-                    isExpanded: false,
-                    childNodes: [],
-                    nodeData: undefined
-                }
-                _id++;
-                return node;
-            });
-            for (let node of _nodes) {
-                _id = await updateNodes(getFullPath(node), node, _nodes, _id + 1);
-            }
-            
-            
-        });
-    
+    getJson<boolean>('/isWindows').then(isWindows => setDelim(isWindows ? '\\' : '/'));
   }, []);
 
-  const updateNodes = async (path: string, rootNode: ITreeNode, nodes: ITreeNode[], startId: number): Promise<number> => {
-    const dirsResponse = await getJson<{dirs: Array<string>}>(`/dirs?dir=${path}`);
-    let _id = startId;
-    const shouldExpand = dirsResponse.dirs.length > 1;
-    const childNodes = dirsResponse.dirs.map((d, i): ITreeNode => {
+  useEffect(() => {
+    getNodes('/dirsInit', undefined).then(async _nodes => {
+        for (let node of _nodes) {
+            await updateNodes(node, _nodes);
+        }
+    });    
+  }, [delim]);
+
+  const getNodes = async (path: string, rootNode: ITreeNode | undefined, shouldExpand: boolean | null = null): Promise<ITreeNode<{}>[]> => {
+    let dirsResponse = await getJson<{dirs: Array<string>}>(path);
+    const isExpanded = shouldExpand ?? dirsResponse.dirs.length === 1;
+    let _nodes = dirsResponse.dirs.map((dir): ITreeNode => {
         let node: ITreeNode = {
-            id: _id,
+            id: '',
             hasCaret: true,
             icon: 'folder-close',
-            label: d,
-            isExpanded: shouldExpand,
+            label: dir,
+            isExpanded,
             childNodes: [],
             nodeData: rootNode
         }
-        _id++;
+        node.id = getFullPath(node);
         return node;
     });
+    return _nodes;
+  }
+
+  const updateNodes = async (rootNode: ITreeNode, nodes: ITreeNode[]): Promise<void> => {
+    const childNodes = await getNodes(`/dirs?dir=${rootNode.id}`, rootNode, false);
     rootNode.childNodes = childNodes;
-    setId(_id);
     setNodes([...nodes]);
-    return _id;
   }
   
   const getFullPath = (node: ITreeNode): string => {
@@ -97,9 +81,9 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
       setNodes([...nodes]);
   };
 
-  const handleNodeExpand = (nodeData: ITreeNode) => {
+  const handleNodeExpand = async (nodeData: ITreeNode) => {
       nodeData.isExpanded = true;
-      updateNodes(getFullPath(nodeData), nodeData, nodes, id);
+      await updateNodes(nodeData, nodes);
   };
 
   const forEachNode = (nodes: ITreeNode[] | undefined, callback: (node: ITreeNode) => void) => {
@@ -126,6 +110,3 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
         </div>
   );
 }
-
-
-
