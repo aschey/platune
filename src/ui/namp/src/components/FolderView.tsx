@@ -37,25 +37,26 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
     const revertClick = () => {
         refreshFolders();
     }
-
+    const spacerWidth = 5;
+    const panelWidth = (width - spacerWidth) / 2;
     return (
         <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', width, height, marginTop: 20}}>
-            <div style={{display: 'flex', flexDirection: 'column', width: width * .5}}>
-                <SelectedFolders rows={rows} setRows={setRows} width={width * .5} height={height-50}/>
+            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
+                <SelectedFolders rows={rows} setRows={setRows} width={panelWidth} height={height-50}/>
                 <div style={{display: 'flex', flexDirection: 'column'}}>
-                <div style={{margin: '5px'}}/>
+                <div style={{margin: spacerWidth}}/>
                 <div style={{display: 'flex', flexDirection: 'row'}}>
                 <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
                             onClick={saveFoldersClick}/>
-                <div style={{margin: '5px'}}/>
+                <div style={{margin: spacerWidth}}/>
                 <Button intent={Intent.WARNING} icon='undo' text='Revert' onClick={revertClick}/>
                 </div>
             </div>
             </div>
-            <div style={{margin: '5px'}}/>
-            <div style={{display: 'flex', flexDirection: 'column', width: width * .5}}>
+            <div style={{ width: spacerWidth}}/>
+            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
                 <FolderPicker setSelected={setSelected} height={height-50}/>
-                <div style={{margin: '5px'}}/>
+                <div style={{margin: spacerWidth}}/>
                 <div style={{display: 'flex', flexDirection: 'row'}}>
                     <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add'/>
                 </div>

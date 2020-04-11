@@ -38,7 +38,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
             label: dir,
             isExpanded,
             childNodes: [],
-            nodeData: rootNode
+            nodeData: rootNode,
         }
         node.id = getFullPath(node);
         return node;
@@ -105,7 +105,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
             onNodeClick={handleNodeClick}
             onNodeCollapse={handleNodeCollapse}
             onNodeExpand={handleNodeExpand}
-            className={Classes.ELEVATION_0}
+            className={`{Classes.ELEVATION_0} Expand-Column`}
         />
         </div>
   );
