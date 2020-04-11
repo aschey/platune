@@ -12,6 +12,7 @@ use subprocess::{Exec};
 use std::sync::mpsc;
 use fstrings::*;
 use std::fs::{read_dir, DirEntry};
+use sysinfo::{ProcessExt, SystemExt, DiskExt};
 
 const IS_WINDOWS: bool = cfg!(windows);
 

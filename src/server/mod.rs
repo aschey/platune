@@ -14,6 +14,7 @@ use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
 use models::folder::*;
 use crate::schema::folder::dsl::*;
+use sysinfo::{ProcessExt, SystemExt, DiskExt};
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -40,6 +41,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .wrap(Cors::new().finish())
         .wrap_api()
         // REST endpoints
+        .service(web::resource("/dirsInit").route(web::get().to(get_dirs_init)))
         .service(web::resource("/dirs").route(web::get().to(get_dirs)))
         .service(web::resource("/configuredFolders").route(web::get().to(get_configured_folders)))
         .service(web::resource("/isWindows").route(web::get().to(get_is_windows)))
@@ -70,6 +72,16 @@ fn filter_dirs(res: Result<DirEntry, std::io::Error>, delim: &str) -> Option<Str
     let str_path = String::from(path.to_str().unwrap());
     let dir_name = String::from(str_path.split(delim).last().unwrap());
     if !dir_name.starts_with(".") { Some(dir_name) } else { None }
+}
+
+#[api_v2_operation]
+async fn get_dirs_init() -> Result<Json<DirResponse>, ()> {
+    let system = sysinfo::System::new_all();
+    let mut disks = system.get_disks().iter().map(|d| String::from(d.get_mount_point().to_str().unwrap())).collect::<Vec<_>>();
+    if IS_WINDOWS {
+        disks = disks.iter().map(|d| d.replace("\\", "")).collect();
+    }
+    return Ok(Json(DirResponse {dirs: disks}))
 }
 
 #[api_v2_operation]

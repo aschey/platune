@@ -17,49 +17,62 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
   const [delim, setDelim] = useState<string>('');
 
   useEffect(() => {
-    getJson('/isWindows').then(isWindows =>
+    getJson('/isWindows').then(async isWindows =>
         { 
             let _delim = isWindows ? '\\' : '/';
+            let dirsResponse = await getJson<{dirs: Array<string>}>('/dirsInit');
+            let _id = id;
             setDelim(_delim);
-            const rootNode: ITreeNode = {
-                id,
-                hasCaret: true,
-                icon: 'folder-close',
-                label: _delim,
-                isExpanded: true,
-                childNodes: [],
-                nodeData: undefined
+            let _nodes = dirsResponse.dirs.map((d, i): ITreeNode => {
+                let node: ITreeNode = {
+                    id: _id,
+                    hasCaret: true,
+                    icon: 'folder-close',
+                    label: d,
+                    isExpanded: false,
+                    childNodes: [],
+                    nodeData: undefined
+                }
+                _id++;
+                return node;
+            });
+            for (let node of _nodes) {
+                _id = await updateNodes(getFullPath(node), node, _nodes, _id + 1);
             }
-            updateNodes(_delim, rootNode, [rootNode], id + 1);
+            
+            
         });
     
   }, []);
 
-  const updateNodes = (path: string, rootNode: ITreeNode, nodes: ITreeNode[], startId: number) => {
-    getJson<{dirs: Array<string>}>(`/dirs?dir=${path}`).then(dirsResponse => {
-        let _id = startId;
-        const dirs = dirsResponse.dirs;
-        const childNodes = dirs.map((d, i): ITreeNode => {
-            let node: ITreeNode = {
-                id: _id,
-                hasCaret: true,
-                icon: "folder-close",
-                label: d,
-                isExpanded: false,
-                childNodes: [],
-                nodeData: rootNode
-            }
-            _id++;
-            return node;
-       });
-        rootNode.childNodes = childNodes;
-        setId(_id);
-        setNodes([...nodes]);
+  const updateNodes = async (path: string, rootNode: ITreeNode, nodes: ITreeNode[], startId: number): Promise<number> => {
+    const dirsResponse = await getJson<{dirs: Array<string>}>(`/dirs?dir=${path}`);
+    let _id = startId;
+    const shouldExpand = dirsResponse.dirs.length > 1;
+    const childNodes = dirsResponse.dirs.map((d, i): ITreeNode => {
+        let node: ITreeNode = {
+            id: _id,
+            hasCaret: true,
+            icon: 'folder-close',
+            label: d,
+            isExpanded: shouldExpand,
+            childNodes: [],
+            nodeData: rootNode
+        }
+        _id++;
+        return node;
     });
+    rootNode.childNodes = childNodes;
+    setId(_id);
+    setNodes([...nodes]);
+    return _id;
   }
   
   const getFullPath = (node: ITreeNode): string => {
       let path = node.label.toString();
+      if (delim === '\\' && node.nodeData === undefined) {
+          return `${path}\\`;
+      }
       while (node.nodeData !== undefined) {
         let parentNode = node.nodeData as ITreeNode;
         let parentDir = parentNode.label === delim ? '' : parentNode.label;

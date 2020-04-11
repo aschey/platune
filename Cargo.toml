@@ -25,3 +25,4 @@ dirs = "2.0.2"
 diesel = { version = "1.4.4", features = ["sqlite"] }
 paperclip = { git = "https://github.com/wafflespeanut/paperclip", rev = "e80180f", features = ["actix"] }
 dotenv = "0.15.0"
+sysinfo = "0.13.1"
