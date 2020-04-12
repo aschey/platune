@@ -11,14 +11,14 @@ export const Settings: React.FC<{}> = () => {
             <MenuItem text='Configure Folders' icon='folder-open' onClick={() => setIsOpen(true)}/>
         </Menu>
     );
-    
+    const height = Math.round(window.innerHeight * .66);
     return (
         <>
             <Popover content={settingsMenu}>
                 <Button className={Classes.MINIMAL} icon='cog' rightIcon='caret-down' />
             </Popover>
             <Dialog 
-                style={{width: 1000, height: 600 }}
+                style={{width: 1000, height }}
                 icon='folder-open' 
                 title='Configure Folders' 
                 isOpen={isOpen} 
@@ -26,7 +26,7 @@ export const Settings: React.FC<{}> = () => {
                 autoFocus={true}
                 enforceFocus={true}
                 usePortal={true}>
-                <FolderView width={950} height={540}/>
+                <FolderView width={950} height={height - 60}/>
             </Dialog>
         </>
     )

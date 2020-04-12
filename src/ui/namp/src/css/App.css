@@ -30,6 +30,10 @@
   flex-grow: 1;
 }
 
+.scroll {
+  overflow-y: scroll;
+}
+
 .App-link {
   color: #61dafb;
 }

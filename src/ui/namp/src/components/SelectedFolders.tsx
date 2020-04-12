@@ -23,11 +23,9 @@ export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows,
         <Cell style={{padding: '0 3px'}}><Button intent={Intent.DANGER} icon='delete' onClick={() => deleteClick(rowIndex)} minimal small/></Cell>;
     
     return (
-        <div style={{width, height}}>
-        <Table numRows={rows.length} columnWidths={[width-(deleteRowWidth * 2), deleteRowWidth]} rowHeights={rows.map(() => 25)}>
+        <Table numRows={rows.length} columnWidths={[width-(deleteRowWidth * 2) - 10, deleteRowWidth]} rowHeights={rows.map(() => 25)}>
             <Column name='Path' cellRenderer={pathRenderer}/>
             <Column name='' cellRenderer={deleteRenderer}/>
         </Table>
-        </div>
     )
 }

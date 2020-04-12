@@ -42,32 +42,34 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
     return (
         <>
         <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', width, height, marginTop: 20}}>
-            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
+            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth, height: height-50}}>
                 <SelectedFolders rows={rows} setRows={setRows} width={panelWidth} height={height-50}/>
+                <div style={{margin:spacerWidth}}/>
                 <div style={{display: 'flex', flexDirection: 'column'}}>
-                <div style={{margin: spacerWidth}}/>
-                <div style={{display: 'flex', flexDirection: 'row'}}>
-                <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
+                    <div style={{display: 'flex', flexDirection: 'row'}}>
+                        <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
                             onClick={saveFoldersClick}/>
-                <div style={{margin: spacerWidth}}/>
-                <Button intent={Intent.WARNING} icon='undo' text='Revert' onClick={revertClick}/>
+                        <div style={{margin:spacerWidth}}/>
+                        <Button intent={Intent.WARNING} icon='undo' text='Revert' onClick={revertClick}/>
+                    </div>
                 </div>
             </div>
-            </div>
             <div style={{ width: spacerWidth}}/>
-            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
+            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth, height: height-50}}>
                 <FolderPicker setSelected={setSelected} width={panelWidth} height={height-50}/>
-                <div style={{margin: spacerWidth}}/>
-                <div style={{display: 'flex', flexDirection: 'row'}}>
-                    <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add'/>
+                <div style={{margin:spacerWidth}}/>
+                <div style={{display: 'flex', flexDirection: 'column'}}>
+                    <div style={{display: 'flex', flexDirection: 'row'}}>
+                        <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add'/>
+                    </div>
                 </div>
             </div>
         </div>
         <Alert intent={Intent.DANGER} isOpen={false} className={`bp3-dark`} >
         <p>
-                        Couldn't create the file because the containing folder doesn't exist anymore. You will be
-                        redirected to your user folder.
-                    </p>
+            Couldn't create the file because the containing folder doesn't exist anymore. You will be
+            redirected to your user folder.
+        </p>
         </Alert>
     </>
     )

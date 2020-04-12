@@ -98,14 +98,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
 
 
   return (
-      <div style={{height, overflowY: 'scroll', width}} className={`${Classes.getClassNamespace()}-table-container`}>
         <Tree
             contents={nodes}
             onNodeClick={handleNodeClick}
             onNodeCollapse={handleNodeCollapse}
             onNodeExpand={handleNodeExpand}
-            className={`{Classes.ELEVATION_0} Expand-Column`}
+            className={`{Classes.ELEVATION_0} Expand-Column ${Classes.getClassNamespace()}-table-container scroll`}
         />
-        </div>
   );
 }
