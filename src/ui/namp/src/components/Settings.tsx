@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, MenuItem, Popover, Button, Classes, Dialog } from '@blueprintjs/core';
+import { Menu, MenuItem, Popover, Button, Classes } from '@blueprintjs/core';
 import { FolderView } from './FolderView';
+import { Dialog } from './Dialog';
 
 export const Settings: React.FC<{}> = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -17,8 +18,7 @@ export const Settings: React.FC<{}> = () => {
                 <Button className={Classes.MINIMAL} icon='cog' rightIcon='caret-down' />
             </Popover>
             <Dialog 
-                style={{width: 1000, height: 600, boxShadow: 'none'}}
-                className={`${Classes.DIALOG} bp3-dark`} 
+                style={{width: 1000, height: 600 }}
                 icon='folder-open' 
                 title='Configure Folders' 
                 isOpen={isOpen} 

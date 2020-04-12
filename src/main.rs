@@ -34,7 +34,7 @@ fn main() {
         .title("NAMP")
         .content(Content::Url(content_url))
         // There's no maximize function so just set it to something large
-        .size(1000, 800)
+        .size(1200, 1000)
         .resizable(true)
         .debug(true)
         .user_data(())

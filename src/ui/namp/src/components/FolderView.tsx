@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Column, Cell } from '@blueprintjs/table';
-import { Button, ITreeNode, Tooltip, Position, Icon, Classes, Intent, Toaster, Toast, ButtonGroup, Divider } from '@blueprintjs/core';
+import { Button, ITreeNode, Tooltip, Position, Icon, Classes, Intent, Toaster, Toast, ButtonGroup, Divider, Dialog, Alert } from '@blueprintjs/core';
 import { FolderPicker } from './FolderPicker';
 import { getJson, putJson } from '../fetchUtil';
 import { SelectedFolders } from './SelectedFolders';
@@ -31,7 +31,7 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
 
     const saveFoldersClick = async () => {
         await putJson<void>('/updateFolders', {folders: rows});
-        AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000});
+        AppToaster.show({message: 'Error', intent: Intent.DANGER, icon: 'tick-circle', timeout: 0});
     }
 
     const revertClick = () => {
@@ -40,6 +40,7 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
     const spacerWidth = 5;
     const panelWidth = (width - spacerWidth) / 2;
     return (
+        <>
         <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', width, height, marginTop: 20}}>
             <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
                 <SelectedFolders rows={rows} setRows={setRows} width={panelWidth} height={height-50}/>
@@ -62,5 +63,12 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
                 </div>
             </div>
         </div>
+        <Alert intent={Intent.DANGER} isOpen={false} className={`bp3-dark`} >
+        <p>
+                        Couldn't create the file because the containing folder doesn't exist anymore. You will be
+                        redirected to your user folder.
+                    </p>
+        </Alert>
+    </>
     )
 }

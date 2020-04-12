@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import logo from './logo.svg';
 import '../css/App.css';
-import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
+import { Icon, Intent, ITreeNode, Position, Tooltip, Tree, Classes } from "@blueprintjs/core";
 import { getJson } from '../fetchUtil';
-import { start } from 'repl';
 
 interface FolderPickerProps {
     setSelected(folder: string): void;
@@ -99,7 +98,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
 
 
   return (
-      <div style={{height, overflowY: 'scroll', width}} className='bp3-table-container'>
+      <div style={{height, overflowY: 'scroll', width}} className={`${Classes.getClassNamespace()}-table-container`}>
         <Tree
             contents={nodes}
             onNodeClick={handleNodeClick}
