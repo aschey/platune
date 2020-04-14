@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import logo from './logo.svg';
 import '../css/App.css';
 import { Icon, Intent, ITreeNode, Position, Tooltip, Tree, Classes } from "@blueprintjs/core";
@@ -6,27 +6,27 @@ import { getJson } from '../fetchUtil';
 
 interface FolderPickerProps {
     setSelected(folder: string): void;
-    width: number;
-    height: number;
 }
 
-export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, height }: FolderPickerProps) => {
+export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected }: FolderPickerProps) => {
   const [nodes, setNodes] = useState<ITreeNode[]>([]);
   const [delim, setDelim] = useState<string>('');
 
-  useEffect(() => {
-    getJson<boolean>('/isWindows').then(isWindows => setDelim(isWindows ? '\\' : '/'));
-  }, []);
+  const getFullPath = useCallback((node: ITreeNode): string => {
+    let path = node.label.toString();
+    if (delim === '\\' && node.nodeData === undefined) {
+        return `${path}\\`;
+    }
+    while (node.nodeData !== undefined) {
+      let parentNode = node.nodeData as ITreeNode;
+      let parentDir = parentNode.label === delim ? '' : parentNode.label;
+      path = `${parentDir}${delim}${path}`;
+      node = parentNode;
+    }
+    return path;
+}, [delim]);
 
-  useEffect(() => {
-    getNodes('/dirsInit', undefined).then(async _nodes => {
-        for (let node of _nodes) {
-            await updateNodes(node, _nodes);
-        }
-    });    
-  }, [delim]);
-
-  const getNodes = async (path: string, rootNode: ITreeNode | undefined, shouldExpand: boolean | null = null): Promise<ITreeNode<{}>[]> => {
+  const getNodes = useCallback(async (path: string, rootNode: ITreeNode | undefined, shouldExpand: boolean | null = null): Promise<ITreeNode<{}>[]> => {
     let dirsResponse = await getJson<{dirs: Array<string>}>(path);
     const isExpanded = shouldExpand ?? dirsResponse.dirs.length === 1;
     let _nodes = dirsResponse.dirs.map((dir): ITreeNode => {
@@ -43,27 +43,29 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected, width, 
         return node;
     });
     return _nodes;
-  }
+  }, [getFullPath]);
 
-  const updateNodes = async (rootNode: ITreeNode, nodes: ITreeNode[]): Promise<void> => {
+  const updateNodes = useCallback(async (rootNode: ITreeNode, nodes: ITreeNode[]): Promise<void> => {
     const childNodes = await getNodes(`/dirs?dir=${rootNode.id}`, rootNode, false);
     rootNode.childNodes = childNodes;
     setNodes([...nodes]);
-  }
-  
-  const getFullPath = (node: ITreeNode): string => {
-      let path = node.label.toString();
-      if (delim === '\\' && node.nodeData === undefined) {
-          return `${path}\\`;
-      }
-      while (node.nodeData !== undefined) {
-        let parentNode = node.nodeData as ITreeNode;
-        let parentDir = parentNode.label === delim ? '' : parentNode.label;
-        path = `${parentDir}${delim}${path}`;
-        node = parentNode;
-      }
-      return path;
-  }
+  }, [getNodes]);
+
+  useEffect(() => {
+    console.log('test');
+    getJson<boolean>('/isWindows').then(isWindows => setDelim(isWindows ? '\\' : '/'));
+  }, []);
+
+  useEffect(() => {
+    if (delim === '') {
+      return;
+    }
+    getNodes('/dirsInit', undefined).then(async _nodes => {
+        for (let node of _nodes) {
+            await updateNodes(node, _nodes);
+        }
+    });    
+  }, [delim, getNodes, updateNodes]);
 
   const handleNodeClick = (nodeData: ITreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
     const originallySelected = nodeData.isSelected;

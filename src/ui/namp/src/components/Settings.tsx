@@ -26,7 +26,7 @@ export const Settings: React.FC<{}> = () => {
                 autoFocus={true}
                 enforceFocus={true}
                 usePortal={true}>
-                <FolderView width={950} height={height - 60}/>
+                <FolderView width={950} height={height}/>
             </Dialog>
         </>
     )

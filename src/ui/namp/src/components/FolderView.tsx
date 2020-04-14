@@ -46,29 +46,29 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
     }
     const spacerWidth = 5;
     const panelWidth = (width - spacerWidth) / 2;
+    const buttonHeight = 30;
+    const buttonPanelHeight = 105;
     return (
         <>
         <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', width, height, marginTop: 20}}>
-            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth, height: height-50}}>
-                <SelectedFolders rows={rows} setRows={setRows} width={panelWidth} height={height-50}/>
-                <div style={{margin:spacerWidth}}/>
-                <div style={{display: 'flex', flexDirection: 'column'}}>
-                    <div style={{display: 'flex', flexDirection: 'row'}}>
-                        <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' 
-                            onClick={saveFoldersClick}/>
-                        <div style={{margin:spacerWidth}}/>
-                        <Button intent={Intent.WARNING} icon='undo' text='Revert' onClick={revertClick}/>
-                    </div>
+            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
+                <div style={{height: height-buttonPanelHeight}}>
+                    <SelectedFolders rows={rows} setRows={setRows} width={panelWidth}/>
+                </div>
+                <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', flexGrow: 1}}>
+                    <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}}
+                        onClick={saveFoldersClick}/>
+                    <div style={{margin:spacerWidth}}/>
+                    <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={revertClick}/>
                 </div>
             </div>
             <div style={{ width: spacerWidth}}/>
-            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth, height: height-50}}>
-                <FolderPicker setSelected={setSelected} width={panelWidth} height={height-50}/>
-                <div style={{margin:spacerWidth}}/>
-                <div style={{display: 'flex', flexDirection: 'column'}}>
-                    <div style={{display: 'flex', flexDirection: 'row'}}>
-                        <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add'/>
-                    </div>
+            <div style={{display: 'flex', flexDirection: 'column', width: panelWidth}}>
+                <div style={{height: height-buttonPanelHeight}}>
+                    <FolderPicker setSelected={setSelected}/>
+                </div>
+                <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', flexGrow: 1}}>
+                    <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add' style={{height: buttonHeight}}/>
                 </div>
             </div>
         </div>

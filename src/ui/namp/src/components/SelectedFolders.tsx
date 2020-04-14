@@ -6,10 +6,9 @@ interface SelectedFoldersProps {
     rows: string[];
     setRows: (rows: string[]) => void;
     width: number;
-    height: number;
 }
 
-export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows, width, height }: SelectedFoldersProps) => {
+export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows, width }: SelectedFoldersProps) => {
     const deleteRowWidth = 30;
 
     const deleteClick = (rowIndex: number) => {
