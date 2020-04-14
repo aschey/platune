@@ -16,6 +16,7 @@ use models::folder::*;
 use crate::schema::folder::dsl::*;
 use sysinfo::{ProcessExt, SystemExt, DiskExt};
 use itertools::Itertools;
+use fstrings::*;
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -94,13 +95,13 @@ impl StringVecExt for Vec<String> {
     code=500,
 )]
 #[derive(Fail, Debug)]
-#[fail(display = "my error")]
-struct MyError {
-    name: String,
+#[fail(display = "named error")]
+struct HttpError {
+    result: String,
 }
 
 // Use default implementation for `error_response()` method
-impl error::ResponseError for MyError {
+impl error::ResponseError for HttpError {
     fn status_code(&self) -> StatusCode {
         StatusCode::BAD_REQUEST
     }
@@ -111,7 +112,7 @@ impl error::ResponseError for MyError {
             header::CONTENT_TYPE,
             header::HeaderValue::from_static("text/plain; charset=utf-8"),
         );
-        resp.set_body(body::Body::from(self.name.to_owned()))
+        resp.set_body(body::Body::from(self.result.to_owned()))
     }
 }
 
@@ -171,7 +172,7 @@ fn get_dupe_folders(new_folders: Vec<String>) -> Vec<(String, Vec<String>)> {
 }
 
 #[api_v2_operation]
-async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>, MyError> {
+async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>, HttpError> {
     let mut new_folders = new_folders_req.folders.to_vec();
     new_folders.sort_case_insensitive();
     //let t = new_folders.to_vec();
@@ -187,27 +188,29 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     let grouped = get_dupe_folders(new_folders);//&new_folders.into_iter().group_by(|f| String::from(f)).into_iter().map(|(key, group)| (key, group.collect::<Vec<_>>())).collect::<Vec<(String, Vec<String>)>>();
     for (_, group) in grouped.into_iter() {
         if group.len() > 1 {
-            return Err(MyError {name: "fail".to_owned()});
+            let dup = group[0].to_owned();
+            return Err(HttpError {result: f!("Duplicate folder chosen: {dup}")});
         }
     }
     //let dedup = &new_folders2.into_iter().dedup_by(|l, r| r.starts_with(l)).collect::<Vec<_>>();
     //let lala = new_folders3.iter().filter(|f| !dedup.contains(*f)).collect::<Vec<_>>();
-    let lala = get_subfolders(new_folders3);
-    for _l in lala {
-        return Err(MyError {name: "fail".to_owned()});
+    let invalid_folders = get_subfolders(new_folders3);
+    if invalid_folders.len() > 0 {
+        let invalid = invalid_folders[0].to_owned();
+        return Err(HttpError {result: f!("Unable to select a folder that is a child of another selected folder: {invalid}")});
     }
 
     let connection = establish_connection();
     let res = diesel::delete(folder.filter(full_path.ne_all(new_folders_req.folders.iter()))).execute(&connection);
     if res.is_err() {
-        return Err(MyError {name: "fail".to_owned()});
+        return Err(HttpError {result: "fail".to_owned()});
     }
     let existing = folder.filter(full_path.eq_any(new_folders_req.folders.iter())).load::<Folder>(&connection).expect("error");
     let existing_paths = existing.iter().map(|rr| rr.full_path.clone()).collect::<Vec<_>>();
     let folders_to_create = new_folders_req.folders.iter().filter(|f| !existing_paths.contains(f)).map(|f| full_path.eq(f)).collect::<Vec<_>>();
     let res1 = diesel::insert_into(folder).values(folders_to_create).execute(&connection);
     if res1.is_err() {
-        return Err(MyError {name: "fail".to_owned()});
+        return Err(HttpError {result: "fail".to_owned()});
     }
     return Ok(Json(()));
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Column, Cell } from '@blueprintjs/table';
-import { Button, ITreeNode, Tooltip, Position, Icon, Classes, Intent, Toaster, Toast, ButtonGroup, Divider, Dialog, Alert } from '@blueprintjs/core';
+import { Button, ITreeNode, Tooltip, Position, Icon, Classes, Intent, Toaster, Toast, ButtonGroup, Divider, Alert } from '@blueprintjs/core';
 import { FolderPicker } from './FolderPicker';
 import { getJson, putJson } from '../fetchUtil';
 import { SelectedFolders } from './SelectedFolders';
@@ -13,6 +13,7 @@ const AppToaster = Toaster.create({
 export const FolderView: React.FC<{width: number, height: number}> = ({width, height}) => {
     const [rows, setRows] = useState<Array<string>>([]);
     const [selected, setSelected] = useState<string>('');
+    const [errorText, setErrorText] = useState<string>('');
     
     useEffect(() => {
       refreshFolders();
@@ -30,8 +31,14 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
     }
 
     const saveFoldersClick = async () => {
-        await putJson<void>('/updateFolders', {folders: rows});
-        AppToaster.show({message: 'Error', intent: Intent.DANGER, icon: 'tick-circle', timeout: 0});
+        try {
+            await putJson<void>('/updateFolders', {folders: rows});
+            AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000});
+        }
+        catch (e) {
+            setErrorText(e.message);
+        }
+        
     }
 
     const revertClick = () => {
@@ -65,11 +72,8 @@ export const FolderView: React.FC<{width: number, height: number}> = ({width, he
                 </div>
             </div>
         </div>
-        <Alert intent={Intent.DANGER} isOpen={false} className={`bp3-dark`} >
-        <p>
-            Couldn't create the file because the containing folder doesn't exist anymore. You will be
-            redirected to your user folder.
-        </p>
+        <Alert intent={Intent.DANGER} isOpen={errorText.length > 0} className={`bp3-dark`} onClose={() => setErrorText('')}>
+            {errorText}
         </Alert>
     </>
     )

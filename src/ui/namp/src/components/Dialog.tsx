@@ -6,7 +6,8 @@ interface DialogProps extends BlueprintDialogProps {
 }
 
 export const Dialog: React.FC<DialogProps> = (props: DialogProps) => {
-    return <BlueprintDialog style={{boxShadow: 'none', paddingBottom: 0, ...props.style}} className='bp3-dark' {...props}>
+    const localStyle = {boxShadow: 'none', paddingBottom: 0};
+    return <BlueprintDialog {...props} style={{...props.style, boxShadow: 'none', paddingBottom: 0}} className='bp3-dark'>
        {props.children}
     </BlueprintDialog>
 }
