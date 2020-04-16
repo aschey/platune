@@ -52,7 +52,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected }: Folde
   }, [getNodes]);
 
   useEffect(() => {
-    console.log('test');
     getJson<boolean>('/isWindows').then(isWindows => setDelim(isWindows ? '\\' : '/'));
   }, []);
 
