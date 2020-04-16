@@ -11,17 +11,15 @@ use std::{thread, time::Duration};
 use subprocess::{Exec};
 use std::sync::mpsc;
 use fstrings::*;
-use std::fs::{read_dir, DirEntry};
-use sysinfo::{ProcessExt, SystemExt, DiskExt};
 
 const IS_WINDOWS: bool = cfg!(windows);
+const IS_DEBUG: bool = cfg!(debug_assertions);
 
 fn main() {
-    let is_production = false;
-    let port = if is_production { 5000 } else { 3000 };
+    let port = if IS_DEBUG { 3000 } else { 5000 };
     let content_url = f!("http://localhost:{port}/index.html");
 
-    if !is_production {
+    if IS_DEBUG {
         ensure_node_started();
     }
     
@@ -34,7 +32,7 @@ fn main() {
         .title("NAMP")
         .content(Content::Url(content_url))
         // There's no maximize function so just set it to something large
-        .size(1200, 1000)
+        .size(1200, 800)
         .resizable(true)
         .debug(true)
         .user_data(())
