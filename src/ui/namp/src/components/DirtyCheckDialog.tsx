@@ -1,21 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, Intent, Dialog, IDialogProps } from '@blueprintjs/core';
+import { Alert, Intent, IDialogProps } from '@blueprintjs/core';
+import { Dialog } from './Dialog';
 
-interface DirtyCheckProps<T> extends IDialogProps {
+interface DirtyCheckDialogProps<T> {
     children: React.ReactNode,
-    checkEqual: <T>(left: T, right: T) => boolean,
+    checkEqual: (left: T, right: T) => boolean,
     originalVal: T,
-    newVal: T
+    newVal: T,
+    isOpen: boolean,
+    setIsOpen: (isOpen: boolean) => void,
+    style: React.CSSProperties
 }
 
-export const DirtyCheck: React.FC<DirtyCheckProps<{}>> = <T extends {}>(props: DirtyCheckProps<T>) => {
-    const [isOpen, setIsOpen] = useState<boolean>(false);
+export const DirtyCheckDialog: <T>(props: DirtyCheckDialogProps<T>) => React.ReactElement<DirtyCheckDialogProps<T>> = (props) => {
+    const { children, checkEqual, originalVal, newVal, isOpen, setIsOpen, style } = props;
     const [canClose, setCanClose] = useState<boolean>(true);
     const [alertOpen, setAlertOpen] = useState<boolean>(false);
 
     useEffect(() => {
-        setCanClose(props.checkEqual(props.originalVal, props.newVal));
-    }, [props.originalVal, props.newVal])
+        setCanClose(checkEqual(originalVal, newVal));
+    }, [originalVal, newVal, checkEqual])
 
     const onClose = () => {
         if (canClose) { 
@@ -41,7 +45,7 @@ export const DirtyCheck: React.FC<DirtyCheckProps<{}>> = <T extends {}>(props: D
     return (
     <>
         <Dialog 
-            style={props.style}
+            style={style}
             icon='folder-open' 
             title='Configure Folders' 
             isOpen={isOpen} 
@@ -49,11 +53,10 @@ export const DirtyCheck: React.FC<DirtyCheckProps<{}>> = <T extends {}>(props: D
             autoFocus={true}
             enforceFocus={true}
             usePortal={true}>
-            {props.children}
+            {children}
         </Dialog>
-    
         <Alert intent={Intent.DANGER} isOpen={alertOpen} className={`bp3-dark`} onConfirm={onAlertConfirm} confirmButtonText='Discard' cancelButtonText='Cancel' onCancel={onAlertCancel}>
-            'You have unsaved changes'
+            You have unsaved changes
         </Alert>
     </>)
 }

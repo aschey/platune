@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table, Column, Cell } from '@blueprintjs/table';
 import { Button, ITreeNode, Tooltip, Position, Icon, Classes, Intent, Toaster, Toast, ButtonGroup, Divider, Alert } from '@blueprintjs/core';
 import { FolderPicker } from './FolderPicker';
@@ -14,53 +14,33 @@ interface FolderViewProps {
     height: number;
     rows: string[];
     setRows: (rows: string[]) => void;
-    setCanClose: (canClose: boolean) => void;
+    setOriginalRows: (rows: string[]) => void;
 }
 
 
-export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setRows, setCanClose}) => {
-    //const [rows, setRows] = useState<Array<string>>([]);
+export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setRows, setOriginalRows}) => {
     const [selected, setSelected] = useState<string>('');
     const [errorText, setErrorText] = useState<string>('');
-    const [originalRows, setOriginalRows] = useState<Array<string>>([]);
+
+    const refreshFolders = useCallback(() => getJson<Array<string>>('/configuredFolders').then(folders => {
+        setRows([...folders]);
+        setOriginalRows([...folders]);
+    }), [setRows, setOriginalRows]);
     
     useEffect(() => {
       refreshFolders();
-    }, []);
+    }, [refreshFolders]);
 
     const cellRenderer = (rowIndex: number) => {
         return <Cell>{rows[rowIndex]}</Cell>
     };
-
-    const refreshFolders = () => getJson<Array<string>>('/configuredFolders').then(folders => {
-        setRows([...folders]);
-        setOriginalRows([...folders]);
-        setCanClose(true);
-    });
 
     const addFolderClick = () => {
         rows.push(selected);
         checkSetRows(rows);
     }
 
-    const arraysEqual = (a: string[], b: string[]) => {
-        if (a === b) return true;
-        if (a == null || b == null) return false;
-        if (a.length !== b.length) return false;
-    
-        // If you don't care about the order of the elements inside
-        // the array, you should sort both arrays here.
-        // Please note that calling sort on an array will modify that array.
-        // you might want to clone your array first.
-    
-        for (var i = 0; i < a.length; ++i) {
-            if (a[i] !== b[i]) return false;
-        }
-        return true;
-    }
-
     const checkSetRows = (newRows: string[]) => {
-        setCanClose(arraysEqual(originalRows, newRows));
         setRows([...newRows]);
     }
 
@@ -68,7 +48,6 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setR
         try {
             await putJson<void>('/updateFolders', {folders: rows});
             setOriginalRows([...rows]);
-            setCanClose(true);
             AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000});
         }
         catch (e) {
