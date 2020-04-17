@@ -62,3 +62,7 @@
     transform: rotate(360deg);
   }
 }
+
+.bp3-dialog-header {
+  margin-bottom: 20px;
+}

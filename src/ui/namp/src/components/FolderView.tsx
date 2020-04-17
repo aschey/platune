@@ -65,10 +65,10 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setR
     const spacerWidth = 5;
     const panelWidth = (width - spacerWidth) / 2;
     const buttonHeight = 30;
-    const buttonPanelHeight = 105;
+    const buttonPanelHeight = 50;
     return (
         <>
-            <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', width, height, marginTop: 20}}>
+            <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', width, height}}>
                 <FlexCol style={{width: panelWidth}}>
                     <div style={{height: height-buttonPanelHeight}}>
                         <SelectedFolders rows={rows} setRows={checkSetRows} width={panelWidth}/>
