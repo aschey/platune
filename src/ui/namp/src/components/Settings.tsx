@@ -98,9 +98,10 @@ export const Settings: React.FC<{}> = () => {
                 usePortal={true}>
                 <div style={{paddingLeft: 10, height: height}}>
                     <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
-                        <Tab id='f' title={<MultilineText maxWidth={200} icon='folder-open' text='Configure Folders'/> } panel={configureFolders}/>
+                        <Tab id='f' title={<MultilineText maxWidth={200} icon='folder-open' text='Import Folders'/> } panel={configureFolders}/>
                         <Tab id='t' title={<MultilineText maxWidth={200} icon='database' text='Choose Database Path'/>} panel={chooseDatabase}/>
-                        <Tab id='m' title={<MultilineText maxWidth={200} icon='arrows-horizontal' text='Configure Path Mappings'/>}/>
+                        <Tab id='m' title={<MultilineText maxWidth={200} icon='arrows-horizontal' text='Path Mappings'/>}/>
+                        <Tab id='b' title={<MultilineText maxWidth={200} icon='updated' text='Backup and Restore'/>}/>
                     </Tabs>
                 </div>
             </Dialog>

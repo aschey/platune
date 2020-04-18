@@ -20,6 +20,7 @@ Since it's just a web app using a REST API under the hood, the UI can also be ac
 - Cross-platform desktop app
 - Android app
 - Support sync between Android and desktop
+- Share data between different hard drive partitions and operating systems
 - Possibly install the web server as a systemd/windows service instead of spinning it up on the fly, might be more robust
 - Add option to install as a separate client/server system to be used as a hosted web app
 - Some kind of shortcut to easily play/pause/change volume, etc. Maybe system hotkeys, taskbar icon, and/or browser extension.

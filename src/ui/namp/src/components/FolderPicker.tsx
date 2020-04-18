@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import logo from './logo.svg';
 import '../css/App.css';
-import { Icon, Intent, ITreeNode, Position, Tooltip, Tree, Classes } from "@blueprintjs/core";
+import { Icon, Intent, ITreeNode, Position, Tooltip, Tree, Classes, IconName } from "@blueprintjs/core";
 import { getJson } from '../fetchUtil';
+import { Dir } from '../models/dir';
+import { SelectedFolder } from '../models/selectedFolder';
 
 interface FolderPickerProps {
     setSelected(folder: string): void;
@@ -27,14 +29,15 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected }: Folde
     }, [delim]);
 
     const getNodes = useCallback(async (path: string, rootNode: ITreeNode | undefined, shouldExpand: boolean | null = null): Promise<ITreeNode<{}>[]> => {
-        let dirsResponse = await getJson<{dirs: Array<string>}>(path);
+        let dirsResponse = await getJson<{dirs: Array<Dir>}>(path);
         const isExpanded = shouldExpand ?? dirsResponse.dirs.length === 1;
-        let _nodes = dirsResponse.dirs.map((dir): ITreeNode => {
+        const icon: IconName = isExpanded ? 'folder-open' : 'folder-close';
+        let _nodes = dirsResponse.dirs.filter((dir) => !dir.isFile).map((dir): ITreeNode => {
             let node: ITreeNode = {
                 id: '',
                 hasCaret: true,
-                icon: 'folder-close',
-                label: dir,
+                icon: icon,
+                label: dir.name,
                 isExpanded,
                 childNodes: [],
                 nodeData: rootNode,
@@ -83,6 +86,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected }: Folde
 
     const handleNodeExpand = async (nodeData: ITreeNode) => {
         nodeData.isExpanded = true;
+        nodeData.icon = 'folder-open';
         await updateNodes(nodeData, nodes);
     };
 

@@ -69,23 +69,30 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     sys.block_on(srv)
 }
 
-fn filter_dirs(res: Result<DirEntry, std::io::Error>, delim: &str) -> Option<String> {
+fn filter_dirs(res: Result<DirEntry, std::io::Error>, delim: &str) -> Option<Dir> {
     let path = res.unwrap().path();
-    if !path.is_dir() {
-        return None
-    }
     let str_path = String::from(path.to_str().unwrap());
     let dir_name = String::from(str_path.split(delim).last().unwrap());
-    if !dir_name.starts_with(".") { Some(dir_name) } else { None }
+    if !dir_name.starts_with(".") { Some(Dir {name: dir_name, is_file: path.is_file() }) } else { None }
 }
 
-pub trait StringVecExt {
+pub trait StrVecExt {
     fn sort_case_insensitive(&mut self);
 }
 
-impl StringVecExt for Vec<String> {
+impl StrVecExt for Vec<String> {
     fn sort_case_insensitive(&mut self) {
         &self.sort_by(|l, r| Ord::cmp(&l.to_lowercase(), &r.to_lowercase()));
+    }
+}
+
+pub trait DirVecExt {
+    fn sort_case_insensitive(&mut self);
+}
+
+impl DirVecExt for Vec<Dir> {
+    fn sort_case_insensitive(&mut self) {
+        &self.sort_by(|l, r| Ord::cmp(&l.name.to_lowercase(), &r.name.to_lowercase()));
     }
 }
 
@@ -116,14 +123,22 @@ impl error::ResponseError for HttpError {
     }
 }
 
+fn get_dir_name(disk: &std::path::Path) -> String {
+    let mut str_path = String::from(disk.to_str().unwrap());
+    if IS_WINDOWS {
+        str_path = str_path.replace("\\", "");
+    }
+    return str_path;
+}
 
 #[api_v2_operation]
 async fn get_dirs_init() -> Result<Json<DirResponse>, ()> {
     let system = sysinfo::System::new_all();
-    let mut disks = system.get_disks().iter().map(|d| String::from(d.get_mount_point().to_str().unwrap())).collect::<Vec<_>>();
-    if IS_WINDOWS {
-        disks = disks.iter().map(|d| d.replace("\\", "")).collect();
-    }
+    // let d = system.get_disks();
+    // for disk in system.get_disks() {
+    //          println!("{:?}", std::str::from_utf8(disk.get_file_system()).unwrap() == "fuseblk");
+    //     }
+    let mut disks = system.get_disks().iter().map(|d| Dir { is_file: false, name: get_dir_name(d.get_mount_point()) }).collect::<Vec<_>>();
     return Ok(Json(DirResponse {dirs: disks}))
 }
 
@@ -217,8 +232,15 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
 
 #[derive(Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
+struct Dir {
+    is_file: bool,
+    name: String
+}
+
+#[derive(Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
 struct DirResponse {
-    dirs: Vec<String>,
+    dirs: Vec<Dir>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]
