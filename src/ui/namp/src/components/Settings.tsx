@@ -100,6 +100,7 @@ export const Settings: React.FC<{}> = () => {
                     <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
                         <Tab id='f' title={<MultilineText maxWidth={200} icon='folder-open' text='Configure Folders'/> } panel={configureFolders}/>
                         <Tab id='t' title={<MultilineText maxWidth={200} icon='database' text='Choose Database Path'/>} panel={chooseDatabase}/>
+                        <Tab id='m' title={<MultilineText maxWidth={200} icon='arrows-horizontal' text='Configure Path Mappings'/>}/>
                     </Tabs>
                 </div>
             </Dialog>
