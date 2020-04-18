@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Column, Cell } from '@blueprintjs/table';
-import { Button, AnchorButton, Intent } from '@blueprintjs/core';
+import { Table, Column, Cell, TruncatedFormat, TruncatedPopoverMode } from '@blueprintjs/table';
+import { Button, AnchorButton, Intent, Tooltip } from '@blueprintjs/core';
 
 interface SelectedFoldersProps {
     rows: string[];
@@ -16,7 +16,7 @@ export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows,
         setRows([...newRows]);
     }
 
-    const pathRenderer = (rowIndex: number) => <Cell style={{fontSize: 14}}>{rows[rowIndex]}</Cell>;
+    const pathRenderer = (rowIndex: number) => <Cell style={{fontSize: 14}}><TruncatedFormat detectTruncation showPopover={TruncatedPopoverMode.WHEN_TRUNCATED}>{rows[rowIndex]}</TruncatedFormat></Cell>;
 
     const deleteRenderer = (rowIndex: number) => 
         <Cell style={{padding: '0 3px'}}><Button intent={Intent.DANGER} icon='delete' onClick={() => deleteClick(rowIndex)} minimal small/></Cell>;

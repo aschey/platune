@@ -14,13 +14,15 @@ const AppToaster = Toaster.create({
 interface FolderViewProps {
     width: number;
     height: number;
+    buttonHeight: number;
+    buttonPanelHeight: number;
     rows: string[];
     setRows: (rows: string[]) => void;
     setOriginalRows: (rows: string[]) => void;
 }
 
 
-export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setRows, setOriginalRows}) => {
+export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeight, buttonPanelHeight, rows, setRows, setOriginalRows}) => {
     const [selected, setSelected] = useState<string>('');
     const [errorText, setErrorText] = useState<string>('');
 
@@ -31,19 +33,15 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setR
     
     useEffect(() => {
       refreshFolders();
-    }, [refreshFolders]);
+      return () => setRows([]);
+    }, [refreshFolders, setRows]);
 
     const cellRenderer = (rowIndex: number) => {
         return <Cell>{rows[rowIndex]}</Cell>
     };
 
     const addFolderClick = () => {
-        rows.push(selected);
-        checkSetRows(rows);
-    }
-
-    const checkSetRows = (newRows: string[]) => {
-        setRows([...newRows]);
+        setRows([...rows, selected]);
     }
 
     const saveFoldersClick = async () => {
@@ -64,14 +62,12 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setR
 
     const spacerWidth = 5;
     const panelWidth = (width - spacerWidth) / 2;
-    const buttonHeight = 30;
-    const buttonPanelHeight = 50;
     return (
         <>
-            <div style={{display: 'flex', alignItems: 'top', alignSelf: 'center', width, height}}>
+            <FlexRow style={{alignItems: 'top', alignSelf: 'center', width, height}}>
                 <FlexCol style={{width: panelWidth}}>
                     <div style={{height: height-buttonPanelHeight}}>
-                        <SelectedFolders rows={rows} setRows={checkSetRows} width={panelWidth}/>
+                        <SelectedFolders rows={rows} setRows={setRows} width={panelWidth}/>
                     </div>
                     <FlexRow style={{alignItems: 'center'}}>
                         <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={saveFoldersClick}/>
@@ -88,7 +84,7 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, rows, setR
                         <Button intent={Intent.PRIMARY} onClick={addFolderClick} icon='add' text='Add' style={{height: buttonHeight}}/>
                     </FlexRow>
                 </FlexCol>
-            </div>
+            </FlexRow>
             <Alert intent={Intent.DANGER} isOpen={errorText.length > 0} className={`bp3-dark`} onClose={() => setErrorText('')}>
                 {errorText}
             </Alert>

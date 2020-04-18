@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, MenuItem, Popover, Button, Classes, Intent, Alert, ButtonGroup, Tabs, Tab, TabId, Text, Tooltip, Icon } from '@blueprintjs/core';
+import { Menu, MenuItem, Popover, Button, Classes, Intent, Alert, ButtonGroup, Tabs, Tab, TabId, Text, Tooltip, Icon, Divider } from '@blueprintjs/core';
 import { FolderView } from './FolderView';
 import { Dialog } from './Dialog';
-import { DirtyCheckDialog } from './DirtyCheck';
+import { DirtyCheck } from './DirtyCheck';
 import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
+import { PathPicker } from './PathPicker';
+import { MultilineText } from './MultilineText';
 
 export const Settings: React.FC<{}> = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -16,22 +18,12 @@ export const Settings: React.FC<{}> = () => {
     const [canCloseDbPath, setCanCloseDbPath] = useState<boolean>(true);
     const [alertOpen, setAlertOpen] = useState<boolean>(false);
 
+    const [originalPath, setOriginalPath] = useState<string>('');
+    const [path, setPath] = useState<string>('');
+
     const mapping: Record<TabId, boolean> = {
         'f': canCloseFolders,
         't': canCloseDbPath
-    }
-
-    const arraysEqual = (a: string[], b: string[]): boolean => {
-        if (a === b) return true;
-        if (a == null || b == null) return false;
-        if (a.length !== b.length) return false;
-    
-        const sortedA = a.concat().sort();
-        const sortedB = b.concat().sort();
-        for (var i = 0; i < sortedA.length; ++i) {
-            if (sortedA[i] !== sortedB[i]) return false;
-        }
-        return true;
     }
 
     const onTabChange = (newTab: TabId) => {
@@ -45,22 +37,50 @@ export const Settings: React.FC<{}> = () => {
     }
 
     const height = Math.round(window.innerHeight * .66);
+    const width = Math.round(window.innerWidth * .8);
+    const innerWidth = Math.round((width - 260) * .9);
     const headerAndMargin = 60;
+    const tabHeight = height-headerAndMargin;
+    const buttonHeight = 30;
+    const buttonPanelHeight = 50;
 
     const configureFolders = 
-        <DirtyCheckDialog 
+        <DirtyCheck 
             originalVal={originalRows} 
             newVal={rows} 
-            checkEqual={arraysEqual} 
             alertOpen={alertOpen} 
             setAlertOpen={setAlertOpen} 
             canClose={canCloseFolders} 
             setCanClose={setCanCloseFolders} 
             onAlertConfirm={() => setSelectedTab(chosenTab)}>
-            <FolderView width={950} height={height-headerAndMargin} rows={rows} setRows={setRows} setOriginalRows={setOriginalRows}/>
-        </DirtyCheckDialog>
+            <FolderView 
+                width={innerWidth} 
+                height={tabHeight} 
+                buttonHeight={buttonHeight} 
+                buttonPanelHeight={buttonPanelHeight}
+                rows={rows} 
+                setRows={setRows} 
+                setOriginalRows={setOriginalRows}/>
+        </DirtyCheck>
 
-    
+    const chooseDatabase = 
+        <DirtyCheck
+            originalVal={originalPath}
+            newVal={path}
+            alertOpen={alertOpen}
+            setAlertOpen={setAlertOpen}
+            canClose={canCloseDbPath}
+            setCanClose={setCanCloseDbPath}
+            onAlertConfirm={() => setSelectedTab(chosenTab)}>
+            <PathPicker 
+                width={innerWidth} 
+                buttonHeight={buttonHeight} 
+                height={tabHeight - buttonPanelHeight}
+                originalPath={originalPath}
+                setOriginalPath={setOriginalPath}
+                path={path}
+                setPath={setPath}/>
+        </DirtyCheck>
     return (
         <>
             <Tooltip content='Settings' hoverOpenDelay={500}>
@@ -68,7 +88,7 @@ export const Settings: React.FC<{}> = () => {
             </Tooltip>
             
             <Dialog
-                style={{width: 1200, height: height}}
+                style={{width: width, height: height}}
                 icon='cog' 
                 title='Settings' 
                 isOpen={isOpen} 
@@ -78,8 +98,8 @@ export const Settings: React.FC<{}> = () => {
                 usePortal={true}>
                 <div style={{paddingLeft: 10}}>
                     <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
-                        <Tab id='f' title={<><Icon icon='folder-open'/><span style={{whiteSpace: 'pre'}}>  Configure Folders</span></>} panel={configureFolders}/>
-                        <Tab id='t' title={<><Icon icon='database'/><span style={{whiteSpace: 'pre'}}>  Choose Database Path</span></>} panel={<p>test</p>}/>
+                        <Tab id='f' title={<MultilineText maxWidth={200} icon='folder-open' text='Configure Folders'/> } panel={configureFolders}/>
+                        <Tab id='t' title={<MultilineText maxWidth={200} icon='database' text='Choose Database Path'/>} panel={chooseDatabase}/>
                     </Tabs>
                 </div>
             </Dialog>
