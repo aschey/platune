@@ -14,6 +14,7 @@ use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
 use models::folder::*;
 use crate::schema::folder::dsl::*;
+use crate::schema;
 use sysinfo::{ProcessExt, SystemExt, DiskExt};
 use itertools::Itertools;
 use fstrings::*;
@@ -28,6 +29,11 @@ use paperclip::actix::{
 use failure::Fail;
 
 const IS_WINDOWS: bool = cfg!(windows);
+
+#[cfg(windows)]
+fn get_path() -> schema::folder::full_path_windows { full_path_windows }
+#[cfg(unix)]
+fn get_path() -> schema::folder::full_path_unix { full_path_unix }
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
@@ -163,22 +169,17 @@ async fn get_is_windows() -> Result<Json<bool>, ()> {
 async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
     let connection = establish_connection();
     let results = folder.load::<Folder>(&connection).expect("error");
-    let paths = results.iter().map(|rr| rr.full_path.clone()).collect();
+    let paths = results.iter().map(|rr| get_platform_folder(rr).clone()).collect();
     
     return Ok(Json(paths));
 }
 
 fn get_subfolders(new_folders: Vec<String>) -> Vec<String> {
     let copy = new_folders.to_vec();
-    // |l, r| r.starts_with(l)
     let dedup = &new_folders.into_iter().dedup_by(|l, r| r.starts_with(l)).collect::<Vec<_>>();
-    //let lala = copy.iter().filter(|&f| !dedup.contains(f)).collect::<Vec<_>>();
     
     let lala = copy.into_iter().filter(|f| !dedup.contains(f)).collect::<Vec<_>>();
     return lala;
-    // for _l in lala {
-    //     return Err(());
-    // }
 }
 
 fn get_dupe_folders(new_folders: Vec<String>) -> Vec<(String, Vec<String>)> {
@@ -186,29 +187,40 @@ fn get_dupe_folders(new_folders: Vec<String>) -> Vec<(String, Vec<String>)> {
     return grouped;
 }
 
+fn get_platform_folder(f: &Folder) -> String {
+    if IS_WINDOWS { f.full_path_windows.to_owned() } else { f.full_path_unix.to_owned() }
+}
+
+fn new_folder(path: String) -> NewFolder {
+    if IS_WINDOWS {
+        NewFolder {
+            full_path_unix: "".to_owned(),
+            full_path_windows: path
+        }
+    }
+    else {
+        NewFolder {
+            full_path_unix: path,
+            full_path_windows: "".to_owned()
+        }
+    }
+}
+
 #[api_v2_operation]
 async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>, HttpError> {
     let mut new_folders = new_folders_req.folders.to_vec();
     new_folders.sort_case_insensitive();
-    //let t = new_folders.to_vec();
-    //let new_folders = &new_folders_req.folders;
-    //let data = vec![String::from("a"), String::from("b")];
-    //let mut data_grouped = Vec::new();
-    // for (key, group) in &data.into_iter().group_by(|elt| *elt >= 0) {
-    //     data_grouped.push((key, group.collect::<Vec<_>>()));
-    // }
+    
     let new_folders2 = new_folders.to_vec();
     let new_folders3 = new_folders.to_vec();
-    //let grouped = test(new_folders, |l, r| l == r);
-    let grouped = get_dupe_folders(new_folders);//&new_folders.into_iter().group_by(|f| String::from(f)).into_iter().map(|(key, group)| (key, group.collect::<Vec<_>>())).collect::<Vec<(String, Vec<String>)>>();
+    let grouped = get_dupe_folders(new_folders);
     for (_, group) in grouped.into_iter() {
         if group.len() > 1 {
             let dup = group[0].to_owned();
             return Err(HttpError {result: f!("Duplicate folder chosen: {dup}")});
         }
     }
-    //let dedup = &new_folders2.into_iter().dedup_by(|l, r| r.starts_with(l)).collect::<Vec<_>>();
-    //let lala = new_folders3.iter().filter(|f| !dedup.contains(*f)).collect::<Vec<_>>();
+
     let invalid_folders = get_subfolders(new_folders3);
     if invalid_folders.len() > 0 {
         let invalid = invalid_folders[0].to_owned();
@@ -216,13 +228,18 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     }
 
     let connection = establish_connection();
-    let res = diesel::delete(folder.filter(full_path.ne_all(new_folders_req.folders.iter()))).execute(&connection);
+    let res = diesel::delete(folder.filter(get_path().ne_all(new_folders_req.folders.iter()))).execute(&connection);
     if res.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
     }
-    let existing = folder.filter(full_path.eq_any(new_folders_req.folders.iter())).load::<Folder>(&connection).expect("error");
-    let existing_paths = existing.iter().map(|rr| rr.full_path.clone()).collect::<Vec<_>>();
-    let folders_to_create = new_folders_req.folders.iter().filter(|f| !existing_paths.contains(f)).map(|f| full_path.eq(f)).collect::<Vec<_>>();
+    let existing = folder
+        .filter(get_path().eq_any(new_folders_req.folders.iter()))
+        .load::<Folder>(&connection).expect("error");
+        
+    let existing_paths = existing.iter().map(|rr| get_platform_folder(rr).clone()).collect::<Vec<_>>();
+    let folders_to_create = new_folders_req.folders.iter()
+        .filter(|f| !existing_paths.contains(f))
+        .map(|f| new_folder(f.to_owned())).collect::<Vec<_>>();
     let res1 = diesel::insert_into(folder).values(folders_to_create).execute(&connection);
     if res1.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
