@@ -60,7 +60,7 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeig
         refreshFolders();
     }
 
-    const spacerWidth = 5;
+    const spacerWidth = 10;
     const panelWidth = (width - spacerWidth) / 2;
     return (
         <>

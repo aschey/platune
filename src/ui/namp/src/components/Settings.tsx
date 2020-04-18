@@ -28,7 +28,7 @@ export const Settings: React.FC<{}> = () => {
 
     const onTabChange = (newTab: TabId) => {
         setChosenTab(newTab);
-        if (mapping[selectedTab.toString()]) { 
+        if (mapping[selectedTab]) { 
             setSelectedTab(newTab) 
         } 
         else { 
@@ -75,8 +75,8 @@ export const Settings: React.FC<{}> = () => {
             <PathPicker 
                 width={innerWidth} 
                 buttonHeight={buttonHeight} 
-                height={tabHeight - buttonPanelHeight}
-                originalPath={originalPath}
+                marginBottom={buttonPanelHeight}
+                height={tabHeight}
                 setOriginalPath={setOriginalPath}
                 path={path}
                 setPath={setPath}/>
@@ -96,7 +96,7 @@ export const Settings: React.FC<{}> = () => {
                 autoFocus={true}
                 enforceFocus={true}
                 usePortal={true}>
-                <div style={{paddingLeft: 10}}>
+                <div style={{paddingLeft: 10, height: height}}>
                     <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
                         <Tab id='f' title={<MultilineText maxWidth={200} icon='folder-open' text='Configure Folders'/> } panel={configureFolders}/>
                         <Tab id='t' title={<MultilineText maxWidth={200} icon='database' text='Choose Database Path'/>} panel={chooseDatabase}/>
