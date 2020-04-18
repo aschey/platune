@@ -1,4 +1,7 @@
 ## NAMP (Not Another Music Player)
+[![license](https://img.shields.io/github/license/aschey/NAMP)](https://github.com/aschey/NAMP/LICENSE)
+![GitHub repo size](https://img.shields.io/github/repo-size/aschey/NAMP)
+
 Created with 
 - Rust
 - [web-view](https://github.com/Boscop/web-view)
