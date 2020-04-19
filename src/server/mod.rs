@@ -1,6 +1,6 @@
 mod models;
 use dirs::home_dir;
-use std::{sync::mpsc};
+use std::{sync::mpsc, str};
 use actix_web::{dev::Server, HttpServer, HttpRequest, HttpResponse, App, http::{Method, header}, Result, http::StatusCode, get, error, web::Query, Responder, body};
 use actix_cors::Cors;
 use actix_files as fs;
@@ -61,6 +61,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .service(web::resource("/updateFolders").route(web::put().to(update_folders)))
         .service(web::resource("/getDbPath").route(web::get().to(get_db_path)))
         .service(web::resource("/updateDbPath").route(web::put().to(update_db_path)))
+        .service(web::resource("/getNtfsMounts").route(web::get().to(get_ntfs_mounts)))
         .with_json_spec_at("/spec")
         .build()
         // static files
@@ -169,13 +170,33 @@ async fn get_is_windows() -> Result<Json<bool>, ()> {
     return Ok(Json(IS_WINDOWS));
 }
 
-#[api_v2_operation]
-async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
+fn get_configured_folders_helper() -> Vec<String> {
     let connection = establish_connection();
     let results = folder.load::<Folder>(&connection).expect("error");
     let paths = results.iter().map(|rr| get_platform_folder(rr).clone()).collect();
-    
+    return paths;
+}
+
+#[api_v2_operation]
+async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
+    let paths = get_configured_folders_helper();
     return Ok(Json(paths));
+}
+
+#[api_v2_operation]
+async fn get_ntfs_mounts() -> Result<Json<Vec<String>>, ()> {
+    let system = sysinfo::System::new_all();
+    let disks = system.get_disks();
+    let fuse_disks = disks.iter()
+        .filter(|d| str::from_utf8(d.get_file_system()).unwrap() == "fuseblk")
+        .map(|d| get_dir_name(d.get_mount_point()))
+        .collect::<Vec<_>>();
+    let configured = get_configured_folders_helper();
+    let configured_fuse = fuse_disks.into_iter().filter(|f| configured.iter().any(|c| c.starts_with(f))).collect::<Vec<_>>();
+    return Ok(Json(configured_fuse.to_owned()));
+    // for disk in system.get_disks() {
+    //          println!("{:?}", std::str::from_utf8(disk.get_file_system()).unwrap() == "fuseblk");
+    //     }
 }
 
 fn get_subfolders(new_folders: Vec<String>) -> Vec<String> {

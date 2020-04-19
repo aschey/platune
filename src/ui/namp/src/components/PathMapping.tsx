@@ -16,7 +16,7 @@ interface PathMappingProps {
 export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, originalMappings, setOriginalMappings}) => {
     const [selectedRow, setSelectedRow] = useState<string>('C:');
     useEffect(() => {
-        getJson<string[]>('/configuredFolders').then(folders => {
+        getJson<string[]>('/getNtfsMounts').then(folders => {
             setOriginalMappings([...folders]);
             setMappings([...folders]);
         });
