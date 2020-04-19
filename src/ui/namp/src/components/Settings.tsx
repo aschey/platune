@@ -10,6 +10,7 @@ import { MultilineText } from './MultilineText';
 
 export const Settings: React.FC<{}> = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
+    const [closePending, setClosePending] = useState<boolean>(false);
     const [rows, setRows] = useState<Array<string>>([]);
     const [originalRows, setOriginalRows] = useState<Array<string>>([]);
     const [selectedTab, setSelectedTab] = useState<TabId>('f');
@@ -26,6 +27,12 @@ export const Settings: React.FC<{}> = () => {
         't': canCloseDbPath
     }
 
+    useEffect(() => {
+        if (!alertOpen) {
+            setClosePending(false);
+        }
+    }, [alertOpen, setClosePending]);
+
     const onTabChange = (newTab: TabId) => {
         setChosenTab(newTab);
         if (mapping[selectedTab]) { 
@@ -33,6 +40,25 @@ export const Settings: React.FC<{}> = () => {
         } 
         else { 
             setAlertOpen(true);
+        }
+    }
+
+    const onClose = () => {
+        if (mapping[selectedTab]) { 
+            setIsOpen(false);
+        } 
+        else {
+            setClosePending(true); 
+            setAlertOpen(true);
+        }
+    }
+
+    const onAlertConfirm = () => {
+        if (closePending) {
+            setIsOpen(false);
+        }
+        else {
+            setSelectedTab(chosenTab);
         }
     }
 
@@ -52,7 +78,7 @@ export const Settings: React.FC<{}> = () => {
             setAlertOpen={setAlertOpen} 
             canClose={canCloseFolders} 
             setCanClose={setCanCloseFolders} 
-            onAlertConfirm={() => setSelectedTab(chosenTab)}>
+            onAlertConfirm={onAlertConfirm}>
             <FolderView 
                 width={innerWidth} 
                 height={tabHeight} 
@@ -71,7 +97,7 @@ export const Settings: React.FC<{}> = () => {
             setAlertOpen={setAlertOpen}
             canClose={canCloseDbPath}
             setCanClose={setCanCloseDbPath}
-            onAlertConfirm={() => setSelectedTab(chosenTab)}>
+            onAlertConfirm={onAlertConfirm}>
             <PathPicker 
                 width={innerWidth} 
                 buttonHeight={buttonHeight} 
@@ -92,7 +118,7 @@ export const Settings: React.FC<{}> = () => {
                 icon='cog' 
                 title='Settings' 
                 isOpen={isOpen} 
-                onClose={() => setIsOpen(false)}
+                onClose={onClose}
                 autoFocus={true}
                 enforceFocus={true}
                 usePortal={true}>

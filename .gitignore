@@ -65,3 +65,5 @@ typings/
 build
 
 *.db
+
+.env

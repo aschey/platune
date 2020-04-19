@@ -6,10 +6,7 @@ import { getJson, putJson } from '../fetchUtil';
 import { SelectedFolders } from './SelectedFolders';
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
-
-const AppToaster = Toaster.create({
-    position: Position.TOP
-});
+import { toastSuccess } from '../appToaster';
 
 interface FolderViewProps {
     width: number;
@@ -32,8 +29,8 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeig
     }), [setRows, setOriginalRows]);
     
     useEffect(() => {
-      refreshFolders();
-      return () => setRows([]);
+        refreshFolders();
+        return () => setRows([]);
     }, [refreshFolders, setRows]);
 
     const cellRenderer = (rowIndex: number) => {
@@ -48,7 +45,7 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeig
         try {
             await putJson<void>('/updateFolders', {folders: rows});
             setOriginalRows([...rows]);
-            AppToaster.show({message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000});
+            toastSuccess();
         }
         catch (e) {
             setErrorText(e.message);

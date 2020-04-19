@@ -3,8 +3,9 @@ import { Alert, Intent, IDialogProps, TextArea, Button, Text, Classes, Tooltip, 
 import { FolderPicker } from './FolderPicker';
 import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
-import { getJson } from '../fetchUtil';
+import { getJson, putJson } from '../fetchUtil';
 import { Dir } from '../models/dir';
+import { toastSuccess } from '../appToaster';
 
 interface PathPickerProps {
     width: number,
@@ -19,8 +20,11 @@ interface PathPickerProps {
 export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeight, setOriginalPath, path, setPath, marginBottom}) => {
     const [databaseFound, setDatabaseFound] = useState<boolean>(false);
     useEffect(() => {
-        setOriginalPath('/home/aschey');
-        setPath('/home/aschey');
+        getJson<{name: string}>('/getDbPath').then(res => {
+            setOriginalPath(res.name);
+            setPath(res.name);
+        });
+        
     }, [setOriginalPath, setPath]);
 
     useEffect(() => {
@@ -31,6 +35,12 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
             setDatabaseFound(res.dirs.some(d => d.isFile && d.name.endsWith('namp.db')));
         })
     }, [path, databaseFound, setDatabaseFound]);
+
+    const onSaveClick = async () => {
+        await putJson<{}>('/updateDbPath', { dir: path});
+        setOriginalPath(path);
+        toastSuccess();
+    }
 
     const dbFound = 
         <div style={{color: Colors.GREEN2, paddingTop: 5, paddingLeft: 5}}>
@@ -52,7 +62,7 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
             </div>
             <div style={{height: 5}}/>
                 <FlexRow style={{margin: 5}}>
-                    <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} />
+                    <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
                     <div style={{margin:5}}/>
                     <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}}/>
                 </FlexRow>

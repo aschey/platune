@@ -5,7 +5,7 @@ use actix_web::{dev::Server, HttpServer, HttpRequest, HttpResponse, App, http::{
 use actix_cors::Cors;
 use actix_files as fs;
 use serde::{Deserialize, Serialize};
-use std::fs::{read_dir, DirEntry};
+use std::fs::{read_dir, DirEntry, File, copy, remove_file};
 use std::path::PathBuf;
 use dotenv::dotenv;
 use std::{vec::Vec, env};
@@ -18,6 +18,7 @@ use crate::schema;
 use sysinfo::{ProcessExt, SystemExt, DiskExt};
 use itertools::Itertools;
 use fstrings::*;
+use std::io::prelude::*;
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -29,6 +30,7 @@ use paperclip::actix::{
 use failure::Fail;
 
 const IS_WINDOWS: bool = cfg!(windows);
+const DATABASE_URL: &str = "DATABASE_URL";
 
 #[cfg(windows)]
 fn get_path() -> schema::folder::full_path_windows { full_path_windows }
@@ -37,7 +39,7 @@ fn get_path() -> schema::folder::full_path_unix { full_path_unix }
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
-    let database_url = env::var("DATABASE_URL")
+    let database_url = env::var(DATABASE_URL)
         .expect("DATABASE_URL must be set");
     SqliteConnection::establish(&database_url)
         .expect("Error connecting to database")
@@ -57,7 +59,9 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .service(web::resource("/configuredFolders").route(web::get().to(get_configured_folders)))
         .service(web::resource("/isWindows").route(web::get().to(get_is_windows)))
         .service(web::resource("/updateFolders").route(web::put().to(update_folders)))
-        .with_json_spec_at("/docs")
+        .service(web::resource("/getDbPath").route(web::get().to(get_db_path)))
+        .service(web::resource("/updateDbPath").route(web::put().to(update_db_path)))
+        .with_json_spec_at("/spec")
         .build()
         // static files
         .service(fs::Files::new("/swagger", "./src/ui/namp/swagger").index_file("index.html"))
@@ -144,7 +148,7 @@ async fn get_dirs_init() -> Result<Json<DirResponse>, ()> {
     // for disk in system.get_disks() {
     //          println!("{:?}", std::str::from_utf8(disk.get_file_system()).unwrap() == "fuseblk");
     //     }
-    let mut disks = system.get_disks().iter().map(|d| Dir { is_file: false, name: get_dir_name(d.get_mount_point()) }).collect::<Vec<_>>();
+    let disks = system.get_disks().iter().map(|d| Dir { is_file: false, name: get_dir_name(d.get_mount_point()) }).collect::<Vec<_>>();
     return Ok(Json(DirResponse {dirs: disks}))
 }
 
@@ -245,6 +249,27 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
         return Err(HttpError {result: "fail".to_owned()});
     }
     return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
+    let mut file = File::create(".env").unwrap();
+    let full_url = f!("{request.dir}/namp.db");
+    let _ = file.write_all(f!("DATABASE_URL={full_url}").as_bytes());
+    let current_url = env::var(DATABASE_URL).unwrap();
+    let _res = copy(current_url.to_owned(), full_url.to_owned());
+    let _res2 = remove_file(current_url.to_owned());
+    env::set_var(DATABASE_URL, full_url);
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn get_db_path() -> Result<Json<Dir>, ()>{
+    let mut file = File::open(".env").unwrap();
+    let mut contents = String::new();
+    let _ = file.read_to_string(&mut contents);
+    let res = contents.split("=").last().unwrap().replace("/namp.db", "");
+    return Ok(Json(Dir { is_file: true, name: res.to_owned()}));
 }
 
 #[derive(Serialize, Apiv2Schema)]
