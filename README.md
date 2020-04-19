@@ -27,7 +27,8 @@ Since it's just a web app using a REST API under the hood, the UI can also be ac
 - Remote control desktop player from Android app
 
 ### Features Completed
-- Nothing! (yet)
+- Select folders to import into library
+- Choose database path
 
 ### Features in Progress
-- UI to select folders to import
+- Map paths between hard drive partitions
