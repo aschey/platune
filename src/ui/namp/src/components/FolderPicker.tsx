@@ -108,7 +108,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected }: Folde
             onNodeClick={handleNodeClick}
             onNodeCollapse={handleNodeCollapse}
             onNodeExpand={handleNodeExpand}
-            className={`{Classes.ELEVATION_0} Expand-Column ${Classes.getClassNamespace()}-table-container scroll`}
+            className={`{Classes.ELEVATION_0} Expand-Column bp3-table-container scroll`}
         />
     );
 }

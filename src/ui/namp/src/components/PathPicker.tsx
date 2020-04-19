@@ -18,7 +18,9 @@ interface PathPickerProps {
 }
 
 export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeight, setOriginalPath, path, setPath, marginBottom}) => {
+    const PLACEHOLDER = 'placeholder'
     const [databaseFound, setDatabaseFound] = useState<boolean>(false);
+    const [displayText, setDisplayText] = useState<string>(PLACEHOLDER);
     useEffect(() => {
         getJson<{name: string}>('/getDbPath').then(res => {
             setOriginalPath(res.name);
@@ -32,8 +34,11 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
             return;
         }
         getJson<{dirs: Dir[]}>(`/dirs?dir=${path}`).then(res => {
-            setDatabaseFound(res.dirs.some(d => d.isFile && d.name.endsWith('namp.db')));
-        })
+            const dbFound = res.dirs.some(d => d.isFile && d.name.endsWith('namp.db'));
+            setDatabaseFound(dbFound);
+            setDisplayText(dbFound ? '* Existing database found' : '* Existing database not found');
+        });
+        return () => setDisplayText(PLACEHOLDER);
     }, [path, databaseFound, setDatabaseFound]);
 
     const onSaveClick = async () => {
@@ -42,23 +47,16 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
         toastSuccess();
     }
 
-    const dbFound = 
-        <div style={{color: Colors.GREEN2, paddingTop: 5, paddingLeft: 5}}>
-            <Text>* Existing database found</Text>
-        </div>;
-    const dbNotFound = 
-        <div style={{color: Colors.ORANGE2, paddingTop: 5, paddingLeft: 5}}>
-            <Text>* Existing database not found</Text>
-        </div>;
-
     const sepWidth = 10;
     const panelWidth = (width - sepWidth) / 2;
     return (
         <FlexRow style={{alignItems: 'top', alignSelf: 'center', width, height: height - marginBottom}}>
-            <div style={{width: panelWidth}} className={`${Classes.getClassNamespace()}-table-container`}>
+            <div style={{width: panelWidth}} className={'bp3-table-container'}>
                 <div style={{margin: 5}}>
                 <Text ellipsize className={Classes.INPUT}>{path}</Text>
-                { databaseFound ? dbFound : dbNotFound }
+                <div style={{color: databaseFound ? Colors.GREEN2 : Colors.ORANGE2, paddingTop: 5, paddingLeft: 5}}>
+                    <Text className={displayText === PLACEHOLDER ? 'bp3-skeleton': ''}>{displayText} </Text>
+                </div>
             </div>
             <div style={{height: 5}}/>
                 <FlexRow style={{margin: 5}}>
