@@ -47,6 +47,13 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
         toastSuccess();
     }
 
+    const onRevertClick = () => {
+        getJson<{name: string}>('/getDbPath').then(res => {
+            setOriginalPath(res.name);
+            setPath(res.name);
+        });
+    }
+
     const sepWidth = 10;
     const panelWidth = (width - sepWidth) / 2;
     return (
@@ -62,7 +69,7 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
                 <FlexRow style={{margin: 5}}>
                     <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
                     <div style={{margin:5}}/>
-                    <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}}/>
+                    <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>
                 </FlexRow>
             </div>
             <div style={{width: sepWidth}}/>

@@ -31,6 +31,13 @@ use failure::Fail;
 
 const IS_WINDOWS: bool = cfg!(windows);
 const DATABASE_URL: &str = "DATABASE_URL";
+fn get_delim() -> &'static str {
+    return if IS_WINDOWS { "\\" } else { "/" };
+}
+
+fn get_delim_escaped() -> &'static str {
+    return if IS_WINDOWS { "\\\\" } else { "/" };
+}
 
 #[cfg(windows)]
 fn get_path() -> schema::folder::full_path_windows { full_path_windows }
@@ -155,9 +162,8 @@ async fn get_dirs_init() -> Result<Json<DirResponse>, ()> {
 
 #[api_v2_operation]
 async fn get_dirs(dir_request: Query<DirRequest>) -> Result<Json<DirResponse>, ()> {
-    let delim = if IS_WINDOWS { "\\" } else { "/" };
     let mut entries = read_dir(dir_request.dir.as_str()).unwrap()
-        .filter_map(|res| filter_dirs(res, delim))
+        .filter_map(|res| filter_dirs(res, get_delim()))
         .collect::<Vec<_>>();
 
     entries.sort_case_insensitive();
@@ -275,7 +281,9 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
 #[api_v2_operation]
 async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
     let mut file = File::create(".env").unwrap();
-    let full_url = f!("{request.dir}/namp.db");
+    let delim_escaped = get_delim_escaped();
+    let escaped = request.dir.replace(get_delim(), get_delim_escaped());
+    let full_url = f!("{escaped}{delim_escaped}namp.db");
     let _ = file.write_all(f!("DATABASE_URL={full_url}").as_bytes());
     let current_url = env::var(DATABASE_URL).unwrap();
     let _res = copy(current_url.to_owned(), full_url.to_owned());
@@ -289,7 +297,11 @@ async fn get_db_path() -> Result<Json<Dir>, ()>{
     let mut file = File::open(".env").unwrap();
     let mut contents = String::new();
     let _ = file.read_to_string(&mut contents);
-    let res = contents.split("=").last().unwrap().replace("/namp.db", "");
+    let delim_escaped = get_delim_escaped();
+    let delim = get_delim();
+    let res = contents.split("=").last().unwrap()
+        .replace(delim_escaped, delim)
+        .replace(&f!("{delim}namp.db"), "");
     return Ok(Json(Dir { is_file: true, name: res.to_owned()}));
 }
 
