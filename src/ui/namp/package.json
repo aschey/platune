@@ -4,7 +4,8 @@
   "private": true,
   "dependencies": {
     "@babel/core": "7.9.0",
-    "@blueprintjs/core": "^3.24.0",
+    "@blueprintjs/core": "^3.25.0",
+    "@blueprintjs/select": "^3.12.1",
     "@blueprintjs/table": "^3.8.3",
     "@svgr/webpack": "4.3.3",
     "@testing-library/jest-dom": "^4.2.4",

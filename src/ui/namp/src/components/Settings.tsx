@@ -7,6 +7,7 @@ import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
 import { PathPicker } from './PathPicker';
 import { MultilineText } from './MultilineText';
+import { PathMapping } from './PathMapping';
 
 export const Settings: React.FC<{}> = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -22,9 +23,14 @@ export const Settings: React.FC<{}> = () => {
     const [originalPath, setOriginalPath] = useState<string>('');
     const [path, setPath] = useState<string>('');
 
+    const [originalMappings, setOriginalMappings] = useState<string[]>([]);
+    const [mappings, setMappings] = useState<string[]>([]);
+    const [canCloseMappings, setCanCloseMappings] = useState<boolean>(true);
+
     const mapping: Record<TabId, boolean> = {
         'f': canCloseFolders,
-        't': canCloseDbPath
+        't': canCloseDbPath,
+        'm': canCloseMappings
     }
 
     useEffect(() => {
@@ -107,6 +113,18 @@ export const Settings: React.FC<{}> = () => {
                 path={path}
                 setPath={setPath}/>
         </DirtyCheck>
+
+    const pathMappings = 
+    <DirtyCheck
+        originalVal={originalMappings}
+        newVal={mappings}
+        alertOpen={alertOpen}
+        setAlertOpen={setAlertOpen}
+        canClose={canCloseMappings}
+        setCanClose={setCanCloseMappings}
+        onAlertConfirm={onAlertConfirm}>
+        <PathMapping mappings={mappings} setMappings={setMappings} originalMappings={originalMappings} setOriginalMappings={setOriginalMappings}/>
+    </DirtyCheck>
     return (
         <>
             <Tooltip content='Settings' hoverOpenDelay={500}>
@@ -126,7 +144,7 @@ export const Settings: React.FC<{}> = () => {
                     <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
                         <Tab id='f' title={<MultilineText maxWidth={200} icon='folder-open' text='Import Folders'/> } panel={configureFolders}/>
                         <Tab id='t' title={<MultilineText maxWidth={200} icon='database' text='Choose Database Path'/>} panel={chooseDatabase}/>
-                        <Tab id='m' title={<MultilineText maxWidth={200} icon='arrows-horizontal' text='Path Mappings'/>}/>
+                        <Tab id='m' title={<MultilineText maxWidth={200} icon='arrows-horizontal' text='Path Mappings'/>} panel={pathMappings}/>
                         <Tab id='b' title={<MultilineText maxWidth={200} icon='updated' text='Backup and Restore'/>}/>
                     </Tabs>
                 </div>

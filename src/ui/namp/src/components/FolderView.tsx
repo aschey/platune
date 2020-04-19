@@ -23,7 +23,7 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeig
     const [selected, setSelected] = useState<string>('');
     const [errorText, setErrorText] = useState<string>('');
 
-    const refreshFolders = useCallback(() => getJson<Array<string>>('/configuredFolders').then(folders => {
+    const refreshFolders = useCallback(() => getJson<string[]>('/configuredFolders').then(folders => {
         setRows([...folders]);
         setOriginalRows([...folders]);
     }), [setRows, setOriginalRows]);
