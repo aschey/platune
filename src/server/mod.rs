@@ -189,7 +189,7 @@ async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
 }
 
 #[api_v2_operation]
-async fn get_ntfs_mounts() -> Result<Json<Vec<String>>, ()> {
+async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
     let system = sysinfo::System::new_all();
     let disks = system.get_disks();
     let fuse_disks = disks.iter()
@@ -197,8 +197,12 @@ async fn get_ntfs_mounts() -> Result<Json<Vec<String>>, ()> {
         .map(|d| get_dir_name(d.get_mount_point()))
         .collect::<Vec<_>>();
     let configured = get_configured_folders_helper();
-    let configured_fuse = fuse_disks.into_iter().filter(|f| configured.iter().any(|c| c.starts_with(f))).collect::<Vec<_>>();
-    return Ok(Json(configured_fuse.to_owned()));
+    let mut configured_fuse = fuse_disks.into_iter()
+        .filter(|f| configured.iter().any(|c| c.starts_with(f)))
+        .map(|f| NtfsMapping { dir: f, drive: "C:".to_owned()})
+        .collect::<Vec<_>>();
+    configured_fuse.push(NtfsMapping {dir: "/mnt/test".to_owned(), drive: "".to_owned()});
+    return Ok(Json(configured_fuse));
 }
 
 fn get_subfolders(new_folders: Vec<String>) -> Vec<String> {
@@ -317,6 +321,13 @@ struct Dir {
 #[serde(rename_all = "camelCase")]
 struct DirResponse {
     dirs: Vec<Dir>,
+}
+
+#[derive(Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct NtfsMapping {
+    dir: String,
+    drive: String
 }
 
 #[derive(Deserialize, Apiv2Schema)]

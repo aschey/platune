@@ -19,7 +19,7 @@ export const DirtyCheck: <T>(props: DirtyCheckProps<T>) => React.ReactElement<Di
 
     
 
-    const checkEqual = useCallback(() => {
+    const checkEqual = useCallback((originalVal: any, newVal: any) => {
         const arraysEqual = <T extends any>(a: T[], b: T[]): boolean => {
             if (a === b) return true;
             if (a == null || b == null) return false;
@@ -28,20 +28,32 @@ export const DirtyCheck: <T>(props: DirtyCheckProps<T>) => React.ReactElement<Di
             const sortedA = a.concat().sort();
             const sortedB = b.concat().sort();
             for (var i = 0; i < sortedA.length; ++i) {
-                if (sortedA[i] !== sortedB[i]) return false;
+                if (!checkEqual(sortedA[i], sortedB[i])) {
+                    return false;
+                }
             }
             return true;
         };
 
+        const sortObject = (val: {}) => Object.keys(originalVal).sort().reduce((result, key) => {
+            result[key] = originalVal[key];
+            return result;
+        }, {});
+
         if (Array.isArray(originalVal) && Array.isArray(newVal)) {
             return arraysEqual(originalVal, newVal);
+        }
+        if (typeof originalVal === 'object' && typeof newVal === 'object') {
+            const sortedA = sortObject(originalVal);
+            const sortedB = sortObject(newVal);
+            return JSON.stringify(sortedA) === JSON.stringify(sortedB);
         }
 
         return originalVal === newVal;
     }, [originalVal, newVal]);
 
     useEffect(() => {
-        setCanClose(checkEqual());
+        setCanClose(checkEqual(originalVal, newVal));
     }, [originalVal, newVal, checkEqual, setCanClose]);
 
     const onAlertConfirm = () => {

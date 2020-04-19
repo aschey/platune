@@ -8,6 +8,7 @@ import { FlexCol } from './FlexCol';
 import { PathPicker } from './PathPicker';
 import { MultilineText } from './MultilineText';
 import { PathMapping } from './PathMapping';
+import { NtfsMapping } from '../models/ntfsMapping';
 
 export const Settings: React.FC<{}> = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
@@ -23,8 +24,8 @@ export const Settings: React.FC<{}> = () => {
     const [originalPath, setOriginalPath] = useState<string>('');
     const [path, setPath] = useState<string>('');
 
-    const [originalMappings, setOriginalMappings] = useState<string[]>([]);
-    const [mappings, setMappings] = useState<string[]>([]);
+    const [originalMappings, setOriginalMappings] = useState<NtfsMapping[]>([]);
+    const [mappings, setMappings] = useState<NtfsMapping[]>([]);
     const [canCloseMappings, setCanCloseMappings] = useState<boolean>(true);
 
     const mapping: Record<TabId, boolean> = {
