@@ -152,10 +152,6 @@ fn get_dir_name(disk: &std::path::Path) -> String {
 #[api_v2_operation]
 async fn get_dirs_init() -> Result<Json<DirResponse>, ()> {
     let system = sysinfo::System::new_all();
-    // let d = system.get_disks();
-    // for disk in system.get_disks() {
-    //          println!("{:?}", std::str::from_utf8(disk.get_file_system()).unwrap() == "fuseblk");
-    //     }
     let disks = system.get_disks().iter().map(|d| Dir { is_file: false, name: get_dir_name(d.get_mount_point()) }).collect::<Vec<_>>();
     return Ok(Json(DirResponse {dirs: disks}))
 }
@@ -179,7 +175,10 @@ async fn get_is_windows() -> Result<Json<bool>, ()> {
 fn get_configured_folders_helper() -> Vec<String> {
     let connection = establish_connection();
     let results = folder.load::<Folder>(&connection).expect("error");
-    let paths = results.iter().map(|rr| get_platform_folder(rr).clone()).collect();
+    let paths = results.iter()
+        .map(|rr| get_platform_folder(rr).clone())
+        .filter(|r| r.len() > 0)
+        .collect();
     return paths;
 }
 
@@ -200,9 +199,6 @@ async fn get_ntfs_mounts() -> Result<Json<Vec<String>>, ()> {
     let configured = get_configured_folders_helper();
     let configured_fuse = fuse_disks.into_iter().filter(|f| configured.iter().any(|c| c.starts_with(f))).collect::<Vec<_>>();
     return Ok(Json(configured_fuse.to_owned()));
-    // for disk in system.get_disks() {
-    //          println!("{:?}", std::str::from_utf8(disk.get_file_system()).unwrap() == "fuseblk");
-    //     }
 }
 
 fn get_subfolders(new_folders: Vec<String>) -> Vec<String> {
@@ -241,8 +237,6 @@ fn new_folder(path: String) -> NewFolder {
 async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>, HttpError> {
     let mut new_folders = new_folders_req.folders.to_vec();
     new_folders.sort_case_insensitive();
-    
-    let new_folders2 = new_folders.to_vec();
     let new_folders3 = new_folders.to_vec();
     let grouped = get_dupe_folders(new_folders);
     for (_, group) in grouped.into_iter() {
@@ -259,7 +253,14 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     }
 
     let connection = establish_connection();
-    let res = diesel::delete(folder.filter(get_path().ne_all(new_folders_req.folders.iter()))).execute(&connection);
+    // let sql = diesel::debug_query::<diesel::sqlite::Sqlite, _>(&diesel::delete(folder.filter(get_path().ne_all(new_folders_req.folders.iter()).and(get_path().to_owned().ne(""))))).to_string();
+    // println!("{:?}", sql);
+    let res = diesel::delete(
+        folder.filter(
+            get_path().ne_all(new_folders_req.folders.iter())
+            .and(
+                get_path().ne("")
+            ))).execute(&connection);
     if res.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
     }
