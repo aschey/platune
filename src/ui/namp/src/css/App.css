@@ -66,3 +66,7 @@
 .bp3-dialog-header {
   margin-bottom: 20px;
 }
+
+.bp3-select-popover.small .bp3-menu {
+  min-width: 40px;
+}

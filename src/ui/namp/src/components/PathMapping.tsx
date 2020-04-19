@@ -26,10 +26,11 @@ export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, 
         <FlexRow key={path}>
             <Text ellipsize className={Classes.INPUT}>{path}</Text>
             <DriveSelect 
+                filterable={false}
                 items={Array.from(Array(24).keys()).map(i => `${String.fromCharCode(i + 67)}:`)} 
                 itemRenderer={(item: string, { handleClick }) => <MenuItem key={item} onClick={handleClick} text={item}/>}
                 onItemSelect={(drive: string) => {setSelectedRow(drive)}}
-                popoverProps={{minimal: true}}>
+                popoverProps={{minimal: true, popoverClassName:'small'}}>
                 <Button text={selectedRow} rightIcon='caret-down' />
             </DriveSelect>
         </FlexRow>;
