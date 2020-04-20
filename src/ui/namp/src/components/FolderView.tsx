@@ -11,6 +11,8 @@ import { toastSuccess } from '../appToaster';
 interface FolderViewProps {
     width: number;
     height: number;
+    panelWidth: number;
+    dividerWidth: number;
     buttonHeight: number;
     buttonPanelHeight: number;
     rows: string[];
@@ -19,7 +21,7 @@ interface FolderViewProps {
 }
 
 
-export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeight, buttonPanelHeight, rows, setRows, setOriginalRows}) => {
+export const FolderView: React.FC<FolderViewProps> = ({width, height, panelWidth, dividerWidth, buttonHeight, buttonPanelHeight, rows, setRows, setOriginalRows}) => {
     const [selected, setSelected] = useState<string>('');
     const [errorText, setErrorText] = useState<string>('');
 
@@ -57,8 +59,6 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeig
         refreshFolders();
     }
 
-    const spacerWidth = 10;
-    const panelWidth = (width - spacerWidth) / 2;
     return (
         <>
             <FlexRow style={{alignItems: 'top', alignSelf: 'center', width, height}}>
@@ -68,11 +68,11 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, buttonHeig
                     </div>
                     <FlexRow style={{alignItems: 'center'}}>
                         <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={saveFoldersClick}/>
-                        <div style={{margin:spacerWidth}}/>
+                        <div style={{margin:dividerWidth}}/>
                         <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={revertClick}/>
                     </FlexRow>
                 </FlexCol>
-                <div style={{width: spacerWidth}}/>
+                <div style={{width: dividerWidth}}/>
                 <FlexCol style={{width: panelWidth}}>
                     <div style={{height: height-buttonPanelHeight}}>
                         <FolderPicker setSelected={setSelected}/>

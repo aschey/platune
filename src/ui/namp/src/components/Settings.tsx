@@ -76,6 +76,9 @@ export const Settings: React.FC<{}> = () => {
     const tabHeight = height-headerAndMargin;
     const buttonHeight = 30;
     const buttonPanelHeight = 50;
+    const tabHeightNoButtons = tabHeight - buttonPanelHeight;
+    const dividerWidth = 10;
+    const panelWidth = (innerWidth - dividerWidth) * 0.5;
 
     const configureFolders = 
         <DirtyCheck 
@@ -89,6 +92,8 @@ export const Settings: React.FC<{}> = () => {
             <FolderView 
                 width={innerWidth} 
                 height={tabHeight} 
+                panelWidth={panelWidth}
+                dividerWidth={dividerWidth}
                 buttonHeight={buttonHeight} 
                 buttonPanelHeight={buttonPanelHeight}
                 rows={rows} 
@@ -107,25 +112,33 @@ export const Settings: React.FC<{}> = () => {
             onAlertConfirm={onAlertConfirm}>
             <PathPicker 
                 width={innerWidth} 
+                panelWidth={panelWidth}
+                dividerWidth={dividerWidth}
                 buttonHeight={buttonHeight} 
                 marginBottom={buttonPanelHeight}
-                height={tabHeight}
+                height={tabHeightNoButtons}
                 setOriginalPath={setOriginalPath}
                 path={path}
                 setPath={setPath}/>
         </DirtyCheck>
 
     const pathMappings = 
-    <DirtyCheck
-        originalVal={originalMappings}
-        newVal={mappings}
-        alertOpen={alertOpen}
-        setAlertOpen={setAlertOpen}
-        canClose={canCloseMappings}
-        setCanClose={setCanCloseMappings}
-        onAlertConfirm={onAlertConfirm}>
-        <PathMapping mappings={mappings} setMappings={setMappings} originalMappings={originalMappings} setOriginalMappings={setOriginalMappings}/>
-    </DirtyCheck>
+        <DirtyCheck
+            originalVal={originalMappings}
+            newVal={mappings}
+            alertOpen={alertOpen}
+            setAlertOpen={setAlertOpen}
+            canClose={canCloseMappings}
+            setCanClose={setCanCloseMappings}
+            onAlertConfirm={onAlertConfirm}>
+            <PathMapping 
+                width={innerWidth}
+                height={tabHeightNoButtons}
+                panelWidth={panelWidth}
+                mappings={mappings} 
+                setMappings={setMappings} 
+                setOriginalMappings={setOriginalMappings}/>
+        </DirtyCheck>
     return (
         <>
             <Tooltip content='Settings' hoverOpenDelay={500}>
@@ -133,7 +146,7 @@ export const Settings: React.FC<{}> = () => {
             </Tooltip>
             
             <Dialog
-                style={{width: width, height: height}}
+                style={{width, height}}
                 icon='cog' 
                 title='Settings' 
                 isOpen={isOpen} 
@@ -141,7 +154,7 @@ export const Settings: React.FC<{}> = () => {
                 autoFocus={true}
                 enforceFocus={true}
                 usePortal={true}>
-                <div style={{paddingLeft: 10, height: height}}>
+                <div style={{paddingLeft: 10, height}}>
                     <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
                         <Tab id='f' title={<MultilineText maxWidth={200} icon='folder-open' text='Import Folders'/> } panel={configureFolders}/>
                         <Tab id='t' title={<MultilineText maxWidth={200} icon='database' text='Choose Database Path'/>} panel={chooseDatabase}/>

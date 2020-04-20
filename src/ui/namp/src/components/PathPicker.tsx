@@ -10,6 +10,8 @@ import { toastSuccess } from '../appToaster';
 interface PathPickerProps {
     width: number,
     height: number,
+    panelWidth: number,
+    dividerWidth: number,
     marginBottom: number,
     buttonHeight: number,
     setOriginalPath: (originalPath: string) => void,
@@ -17,7 +19,7 @@ interface PathPickerProps {
     setPath: (path: string) => void
 }
 
-export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeight, setOriginalPath, path, setPath, marginBottom}) => {
+export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeight, setOriginalPath, path, setPath, panelWidth, dividerWidth}) => {
     const PLACEHOLDER = 'placeholder'
     const [databaseFound, setDatabaseFound] = useState<boolean>(false);
     const [displayText, setDisplayText] = useState<string>(PLACEHOLDER);
@@ -54,10 +56,8 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
         });
     }
 
-    const sepWidth = 10;
-    const panelWidth = (width - sepWidth) / 2;
     return (
-        <FlexRow style={{alignItems: 'top', alignSelf: 'center', width, height: height - marginBottom}}>
+        <FlexRow style={{alignItems: 'top', alignSelf: 'center', width, height: height}}>
             <div style={{width: panelWidth}} className={'bp3-table-container'}>
                 <div style={{margin: 5}}>
                 <Text ellipsize className={Classes.INPUT}>{path}</Text>
@@ -72,8 +72,8 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
                     <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>
                 </FlexRow>
             </div>
-            <div style={{width: sepWidth}}/>
-            <div style={{width: panelWidth, height: height - marginBottom}}>
+            <div style={{width: dividerWidth}}/>
+            <div style={{width: panelWidth, height: height}}>
                 <FolderPicker setSelected={setPath}/>
             </div>
         </FlexRow>
