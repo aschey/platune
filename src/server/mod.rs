@@ -1,7 +1,7 @@
 mod models;
 use dirs::home_dir;
 use std::{sync::mpsc, str};
-use actix_web::{dev::Server, HttpServer, HttpRequest, HttpResponse, App, http::{Method, header}, Result, http::StatusCode, get, error, web::Query, Responder, body};
+use actix_web::{dev::Server, HttpServer, HttpRequest, HttpResponse, App, http::{Method, header}, Result, http::StatusCode, get, error, web::Query, Responder, body, middleware};
 use actix_cors::Cors;
 use actix_files as fs;
 use serde::{Deserialize, Serialize};
@@ -19,6 +19,10 @@ use sysinfo::{ProcessExt, SystemExt, DiskExt};
 use itertools::Itertools;
 use fstrings::*;
 use std::io::prelude::*;
+use actix_service::Service;
+use futures::future::FutureExt;
+use actix_http::http::header::{CacheControl, CacheDirective, HeaderName, HeaderValue};
+use std::convert::TryFrom;
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -72,10 +76,30 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .with_json_spec_at("/spec")
         .build()
         // static files
+        .wrap_fn(|req, srv| {
+            let path = req.path().to_owned();
+            srv.call(req).map(move |res| {
+                if path == "/index.html" || path == "/" {
+                    match res {
+                        Ok(mut r) => {
+                            r.headers_mut().insert(HeaderName::try_from("Cache-Control").unwrap(), HeaderValue::try_from("no-cache").unwrap());
+                            Ok(r)
+                        },
+                        Err(r) => Err(r)
+                    }
+                    
+                }
+                else {
+                    res
+                }
+            })
+        })
         .service(fs::Files::new("/swagger", "./src/ui/namp/swagger").index_file("index.html"))
         .service(fs::Files::new("/music", "//home/aschey/windows/shared_files/Music").show_files_listing())
         // Paths are matched in order so this needs to be last
-        .service(fs::Files::new("/", "./src/ui/namp/build").show_files_listing())
+        //.wrap(middleware::DefaultHeaders::new().header("Cache-Control", "no-cache"))
+        
+        .service(fs::Files::new("/", "./src/ui/namp/build").index_file("index.html"))
         })
         .bind("127.0.0.1:5000")?
         .run();
