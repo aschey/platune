@@ -66,7 +66,7 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
                 </div>
             </div>
             <div style={{height: 5}}/>
-                <FlexRow style={{margin: 5}}>
+                <FlexRow style={{margin: 5, marginLeft: 10}}>
                     <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
                     <div style={{margin:5}}/>
                     <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>
