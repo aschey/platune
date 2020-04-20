@@ -41,7 +41,7 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
             setDisplayText(dbFound ? '* Existing database found' : '* Existing database not found');
         });
         return () => setDisplayText(PLACEHOLDER);
-    }, [path, databaseFound, setDatabaseFound]);
+    }, [path, setDatabaseFound]);
 
     const onSaveClick = async () => {
         await putJson<{}>('/updateDbPath', { dir: path});
