@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { getJson } from '../fetchUtil';
+import { getJson, putJson } from '../fetchUtil';
 import { FlexRow } from './FlexRow';
-import { Classes, Text, MenuItem, Position, Button } from '@blueprintjs/core';
+import { Classes, Text, MenuItem, Position, Button, Intent } from '@blueprintjs/core';
 import { Suggest, IItemRendererProps, Select } from '@blueprintjs/select';
 import { NtfsMapping } from '../models/ntfsMapping';
 import { FlexCol } from './FlexCol';
 import _ from 'lodash';
+import { toastSuccess } from '../appToaster';
 
 const DriveSelect = Select.ofType<string>();
 
@@ -13,6 +14,7 @@ interface PathMappingProps {
     width: number, 
     height: number,
     panelWidth: number,
+    buttonHeight: number,
     mappings: NtfsMapping[],
     setMappings: (mappings: NtfsMapping[]) => void,
     setOriginalMappings: (mappings: NtfsMapping[]) => void,
@@ -60,11 +62,11 @@ const Row: React.FC<RowProps> = ({path, drivesUsed, mappings, setMappings, width
     );
 }
 
-export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, setOriginalMappings, width, height, panelWidth}) => {
+export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, setOriginalMappings, width, height, panelWidth, buttonHeight}) => {
     const [drivesUsed, setDrivesUsed] = useState<string[]>([]);
 
     useEffect(() => {
-        getJson<{dir: string, drive: string}[]>('/getNtfsMounts').then(folders => {
+        getJson<NtfsMapping[]>('/getNtfsMounts').then(folders => {
             folders.forEach(f => {
                 if (f.drive === '') {
                     f.drive = NONE;
@@ -79,11 +81,37 @@ export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, 
     useEffect(() => {
         setDrivesUsed([...mappings.map(m => m.drive)]);
     }, [mappings]);
+
+    const onSaveClick = async () => {
+        await putJson<{}>("/updatePathMappings", mappings.map((m): NtfsMapping => ({dir: m.dir, drive: m.drive === NONE ? '' : m.drive})));
+        toastSuccess();
+        setOriginalMappings(_.cloneDeep(mappings));
+    }
+
+    const onRevertClick = () => {
+        getJson<NtfsMapping[]>('/getNtfsMounts').then(folders => {
+            folders.forEach(f => {
+                if (f.drive === '') {
+                    f.drive = NONE;
+                }
+            });
+            setOriginalMappings(_.cloneDeep(folders));
+            setMappings(folders);
+            setDrivesUsed(folders.map(f => f.drive));
+        });
+    }
+
     return (
         <div className={'bp3-table-container'} style={{height}}>
             <div style={{width: panelWidth, paddingTop: 10}}>
                 {mappings.map(r => <Row key={r.dir} width={panelWidth} path={r} drivesUsed={drivesUsed} mappings={mappings} setMappings={setMappings}/>)}
             </div>
+            <div style={{height: 5}}/>
+            <FlexRow style={{margin: 5, marginLeft: 10}}>
+                <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
+                <div style={{margin:5}}/>
+                <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>
+            </FlexRow>
         </div>
     );
 }

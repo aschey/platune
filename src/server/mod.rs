@@ -12,9 +12,10 @@ use std::{vec::Vec, env};
 use diesel;
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
-use models::folder::*;
+use models::{folder::*, mount::*};
 use crate::schema::folder::dsl::*;
 use crate::schema;
+use crate::schema::mount::dsl::*;
 use sysinfo::{ProcessExt, SystemExt, DiskExt};
 use itertools::Itertools;
 use fstrings::*;
@@ -58,7 +59,11 @@ pub fn establish_connection() -> SqliteConnection {
 }
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
-    let mut sys = actix_rt::System::new("test");
+    if !std::path::Path::new("./.env").exists() {
+        write_env(&std::env::current_dir().unwrap().to_str().unwrap().to_owned());
+    }
+
+    let mut sys = actix_rt::System::new("server");
 
     let srv = HttpServer::new(|| { 
         App::new()
@@ -73,6 +78,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .service(web::resource("/getDbPath").route(web::get().to(get_db_path)))
         .service(web::resource("/updateDbPath").route(web::put().to(update_db_path)))
         .service(web::resource("/getNtfsMounts").route(web::get().to(get_ntfs_mounts)))
+        .service(web::resource("/updatePathMappings").route(web::put().to(update_path_mappings)))
         .with_json_spec_at("/spec")
         .build()
         // static files
@@ -212,8 +218,7 @@ async fn get_configured_folders() -> Result<Json<Vec<String>>, ()> {
     return Ok(Json(paths));
 }
 
-#[api_v2_operation]
-async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
+fn get_ntfs_mounts_helper() -> Vec<String> {
     let system = sysinfo::System::new_all();
     let disks = system.get_disks();
     let fuse_disks = disks.iter()
@@ -221,12 +226,29 @@ async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
         .map(|d| get_dir_name(d.get_mount_point()))
         .collect::<Vec<_>>();
     let configured = get_configured_folders_helper();
-    let mut configured_fuse = fuse_disks.into_iter()
+    let configured_fuse = fuse_disks.into_iter()
         .filter(|f| configured.iter().any(|c| c.starts_with(f)))
-        .map(|f| NtfsMapping { dir: f, drive: "C:".to_owned()})
+        //.map(|f| NtfsMapping { dir: f, drive: "C:".to_owned()})
         .collect::<Vec<_>>();
-    configured_fuse.push(NtfsMapping {dir: "/mnt/test".to_owned(), drive: "".to_owned()});
-    return Ok(Json(configured_fuse));
+    return configured_fuse;
+}
+
+#[api_v2_operation]
+async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
+    let connection = establish_connection();
+    let mut fs_fuse = get_ntfs_mounts_helper();
+    fs_fuse.push("/mnt/test".to_owned());
+    let mapped = mount.select((unix_path, windows_path)).load::<(String, String)>(&connection).unwrap();
+    let mapped_unix = mapped.iter().map(|m| m.0.to_owned()).collect::<Vec<_>>();
+    let mut mappings = fs_fuse.iter()
+        .filter(|f| mapped_unix.contains(f))
+        .map(|f| NtfsMapping { dir: f.to_owned(), drive: mapped.iter().filter(|m| m.0 == f.to_owned()).map(|m| m.1.to_owned()).collect()}).collect::<Vec<_>>();
+    mappings.extend(
+        fs_fuse.iter()
+        .filter(|f| !mapped_unix.contains(f))
+        .map(|f| NtfsMapping { dir: f.to_owned(), drive: "".to_owned()}).collect::<Vec<_>>()
+    );
+    return Ok(Json(mappings));
 }
 
 fn get_subfolders(new_folders: Vec<String>) -> Vec<String> {
@@ -307,17 +329,37 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     return Ok(Json(()));
 }
 
-#[api_v2_operation]
-async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
+fn write_env(dir: &String) -> String {
     let mut file = File::create(".env").unwrap();
     let delim_escaped = get_delim_escaped();
-    let escaped = request.dir.replace(get_delim(), get_delim_escaped());
+    let escaped = dir.replace(get_delim(), get_delim_escaped());
     let full_url = f!("{escaped}{delim_escaped}namp.db");
     let _ = file.write_all(f!("DATABASE_URL={full_url}").as_bytes());
+    return full_url;
+}
+
+#[api_v2_operation]
+async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
+    let full_url = write_env(&request.dir);
     let current_url = env::var(DATABASE_URL).unwrap();
     let _res = copy(current_url.to_owned(), full_url.to_owned());
     let _res2 = remove_file(current_url.to_owned());
     env::set_var(DATABASE_URL, full_url);
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()>, HttpError>  {
+    let connection = establish_connection();
+    let ins = request.iter().map(|r| (unix_path.eq(r.dir.to_owned()), windows_path.eq(r.drive.to_owned()))).collect::<Vec<_>>();
+    let res = diesel::replace_into(mount).values(ins).execute(&connection);
+    if res.is_err() {
+        return Err(HttpError {result: "fail".to_owned()});
+    }
+    let res2 = diesel::delete(mount.filter(unix_path.ne_all(request.iter().map(|r| r.dir.to_owned())))).execute(&connection);
+    if res2.is_err() {
+        return Err(HttpError {result: "fail".to_owned()});
+    }
     return Ok(Json(()));
 }
 
@@ -347,7 +389,7 @@ struct DirResponse {
     dirs: Vec<Dir>,
 }
 
-#[derive(Serialize, Apiv2Schema)]
+#[derive(Serialize, Deserialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct NtfsMapping {
     dir: String,

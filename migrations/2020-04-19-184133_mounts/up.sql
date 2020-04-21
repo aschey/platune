@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS mount (
     mount_id INTEGER PRIMARY KEY NOT NULL,
-    unix_path TEXT NOT NULL,
+    unix_path TEXT NOT NULL UNIQUE,
     windows_path TEXT NOT NULL
 )

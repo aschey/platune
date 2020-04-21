@@ -134,6 +134,7 @@ export const Settings: React.FC<{}> = () => {
             <PathMapping 
                 width={innerWidth}
                 height={tabHeightNoButtons}
+                buttonHeight={buttonHeight}
                 panelWidth={panelWidth}
                 mappings={mappings} 
                 setMappings={setMappings} 
