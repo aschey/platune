@@ -40,6 +40,10 @@ fn get_delim() -> &'static str {
     return if IS_WINDOWS { "\\" } else { "/" };
 }
 
+fn convert_delim(path: String) -> String {
+   return if IS_WINDOWS { path.replace("\\", "/") } else { path.replace("/", "\\") };
+}
+
 fn get_delim_escaped() -> &'static str {
     return if IS_WINDOWS { "\\\\" } else { "/" };
 }
@@ -48,6 +52,11 @@ fn get_delim_escaped() -> &'static str {
 fn get_path() -> schema::folder::full_path_windows { full_path_windows }
 #[cfg(unix)]
 fn get_path() -> schema::folder::full_path_unix { full_path_unix }
+
+#[cfg(windows)]
+fn get_mount_path() -> schema::mount::windows_path { windows_path }
+#[cfg(unix)]
+fn get_mount_path() -> schema::mount::unix_path { unix_path }
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
@@ -237,7 +246,7 @@ fn get_ntfs_mounts_helper() -> Vec<String> {
 async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
     let connection = establish_connection();
     let mut fs_fuse = get_ntfs_mounts_helper();
-    fs_fuse.push("/mnt/test".to_owned());
+    //fs_fuse.push("/mnt/test".to_owned());
     let mapped = mount.select((unix_path, windows_path)).load::<(String, String)>(&connection).unwrap();
     let mapped_unix = mapped.iter().map(|m| m.0.to_owned()).collect::<Vec<_>>();
     let mut mappings = fs_fuse.iter()
@@ -303,14 +312,19 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     }
 
     let connection = establish_connection();
-    // let sql = diesel::debug_query::<diesel::sqlite::Sqlite, _>(&diesel::delete(folder.filter(get_path().ne_all(new_folders_req.folders.iter()).and(get_path().to_owned().ne(""))))).to_string();
-    // println!("{:?}", sql);
-    let res = diesel::delete(
-        folder.filter(
-            get_path().ne_all(new_folders_req.folders.iter())
-            .and(
-                get_path().ne("")
-            ))).execute(&connection);
+    //let sql = diesel::debug_query::<diesel::sqlite::Sqlite, _>(&folder.filter(get_path().ne_all(new_folders_req.folders.iter()).and(get_path().to_owned().ne("")))).to_string();
+    //println!("{:?}", sql);
+    let pred = folder.filter(
+        get_path().ne_all(new_folders_req.folders.iter())
+        .and(
+            get_path().ne("")
+        ));
+    let to_remove = pred.to_owned().select(get_path()).load::<String>(&connection).unwrap();
+    for r in to_remove {
+        let _ = diesel::delete(mount.filter(get_mount_path().like(r))).execute(&connection);
+    }
+    
+    let res = diesel::delete(pred.to_owned()).execute(&connection);
     if res.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
     }
@@ -359,6 +373,18 @@ async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()
     let res2 = diesel::delete(mount.filter(unix_path.ne_all(request.iter().map(|r| r.dir.to_owned())))).execute(&connection);
     if res2.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
+    }
+    for r in request.iter() {
+        let pred = full_path_unix.like(r.dir.to_owned() + "%");
+        let path = folder.filter(&pred).select(full_path_unix).first::<String>(&connection).unwrap();
+        let mut replace_val = "".to_owned();
+        if r.drive != "" {
+            let suffix = path.replace(&r.dir, "");
+            let converted = convert_delim(suffix);
+            replace_val = f!("{r.drive}{converted}");
+        }
+       
+        let _ = diesel::update(folder.filter(&pred)).set(full_path_windows.eq(replace_val)).execute(&connection);
     }
     return Ok(Json(()));
 }
