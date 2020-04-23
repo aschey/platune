@@ -61,12 +61,12 @@ export const PathPicker: React.FC<PathPickerProps> = ({width, height, buttonHeig
             <div style={{width: panelWidth}} className={'bp3-table-container'}>
                 <div style={{margin: 5}}>
                 <Text ellipsize className={Classes.INPUT}>{path}</Text>
-                <div style={{color: databaseFound ? Colors.GREEN2 : Colors.ORANGE2, paddingTop: 5, paddingLeft: 5}}>
+                <div style={{color: databaseFound ? Colors.GREEN2 : Colors.ORANGE2, paddingTop: 5, paddingLeft: 0}}>
                     <Text className={displayText === PLACEHOLDER ? 'bp3-skeleton': ''}>{displayText} </Text>
                 </div>
             </div>
             <div style={{height: 5}}/>
-                <FlexRow style={{margin: 5, marginLeft: 10}}>
+                <FlexRow style={{margin: 5, marginLeft: 5}}>
                     <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
                     <div style={{margin:5}}/>
                     <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>

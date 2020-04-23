@@ -159,7 +159,7 @@ export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, 
                 {mappings.map((r, i) => <Row key={i} index={i} isWindows={isWindows} width={panelWidth} path={r} drivesUsed={drivesUsed} mappings={mappings} setMappings={setMappings}/>)}
             </div>
             <div style={{height: 5}}/>
-            <FlexRow style={{margin: 5, marginLeft: 10}}>
+            <FlexRow style={{margin: 5, marginLeft: 5}}>
                 { isWindows ? addButton : null }
                 <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
                 <div style={{margin:5}}/>
