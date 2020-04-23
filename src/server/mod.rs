@@ -382,35 +382,52 @@ async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()
     if res.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
     }
-    let res2 = diesel::delete(mount.filter(unix_path.ne_all(request.iter().map(|r| r.dir.to_owned())))).execute(&connection);
+    let pred = mount.filter(unix_path.ne_all(request.iter().map(|r| r.dir.to_owned())));
+    if IS_WINDOWS {
+        let to_delete = pred.to_owned().select(unix_path).load::<String>(&connection).unwrap();
+        for d in to_delete {
+            let _ = diesel::update(folder.filter(full_path_unix.like(d + "%"))).set(full_path_unix.eq("")).execute(&connection);
+        }
+        
+    }
+    
+    let res2 = diesel::delete(pred).execute(&connection);
     if res2.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
     }
+
     for r in request.iter() {
-        let paths = folder
+        if !IS_WINDOWS {
+            let paths = folder
             .filter(full_path_unix.like(r.dir.to_owned() + "%"))
             .select((folder_id, full_path_unix))
             .load::<(i32, String)>(&connection).unwrap();
-        for path in paths {
-            let mut replace_val = "".to_owned();
-            if r.drive != "" {
-                let suffix = convert_delim_windows(path.1.replace(&r.dir, ""));
-                replace_val = f!("{r.drive}{suffix}");
+            for path in paths {
+                let mut replace_val = "".to_owned();
+                if r.drive != "" {
+                    let suffix = convert_delim_windows(path.1.replace(&r.dir, ""));
+                    replace_val = f!("{r.drive}{suffix}");
+                }
+                let _ = diesel::update(folder.filter(folder_id.eq(path.0))).set(full_path_windows.eq(replace_val)).execute(&connection);
             }
-            let _ = diesel::update(folder.filter(folder_id.eq(path.0))).set(full_path_windows.eq(replace_val)).execute(&connection);
         }
-        if r.drive == "" {
-            continue;
+        else {
+            if r.drive == "" {
+                continue;
+            }
+            let paths2 = folder
+                .filter(full_path_windows.like(r.drive.to_owned() + "%"))
+                .select((folder_id, full_path_windows))
+                .load::<(i32, String)>(&connection).unwrap();
+            for path in paths2 {
+                let suffix = convert_delim_unix(path.1.replace(&r.drive, ""));
+                let replace_val = f!("{r.dir}{suffix}");
+                let _ = diesel::update(folder.filter(folder_id.eq(path.0))).set(full_path_unix.eq(replace_val)).execute(&connection);
+            }
+
+            let _ = diesel::update(folder.filter(full_path_unix.like(r.dir.to_owned() + "%").and(full_path_windows.not_like(r.drive.to_owned() + "%")))).set(full_path_unix.eq("")).execute(&connection);
         }
-        let paths2 = folder
-            .filter(full_path_windows.like(r.drive.to_owned() + "%"))
-            .select((folder_id, full_path_windows))
-            .load::<(i32, String)>(&connection).unwrap();
-        for path in paths2 {
-            let suffix = convert_delim_unix(path.1.replace(&r.drive, ""));
-            let replace_val = f!("{r.dir}{suffix}");
-            let _ = diesel::update(folder.filter(folder_id.eq(path.0))).set(full_path_unix.eq(replace_val)).execute(&connection);
-        }
+        
         
         // let _ = diesel::update(
         //     folder.filter(full_path_windows.like(f!("{r.drive}%"))
