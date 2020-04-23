@@ -103,11 +103,12 @@ export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, 
     const [isWindows, setIsWindows] = useState<boolean>(false);
 
     useEffect(() => {
-        getJson<boolean>('/isWindows').then(setIsWindows);
-    }, []);
-
-    useEffect(() => {
-        getJson<NtfsMapping[]>('/getNtfsMounts').then(folders => {
+        getJson<boolean>('/isWindows').then(async isWindows => {
+            setIsWindows(isWindows);
+            let folders = await getJson<NtfsMapping[]>('/getNtfsMounts');
+            if (isWindows && folders.length === 0) {
+                folders.push({dir: '', drive: ''});
+            }
             folders.forEach(f => {
                 if (f.drive === '') {
                     f.drive = NONE;
