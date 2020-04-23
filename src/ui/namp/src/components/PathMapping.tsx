@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getJson, putJson } from '../fetchUtil';
 import { FlexRow } from './FlexRow';
-import { Classes, Text, MenuItem, Position, Button, Intent } from '@blueprintjs/core';
+import { Classes, Text, MenuItem, Position, Button, Intent, EditableText } from '@blueprintjs/core';
 import { Suggest, IItemRendererProps, Select } from '@blueprintjs/select';
 import { NtfsMapping } from '../models/ntfsMapping';
 import { FlexCol } from './FlexCol';
@@ -25,45 +25,86 @@ interface RowProps {
     drivesUsed: string[],
     mappings: NtfsMapping[],
     setMappings: (mappings: NtfsMapping[]) => void,
-    width: number
+    width: number,
+    isWindows: boolean,
+    index: number
 }
 
 const NONE = 'None';
 
-const Row: React.FC<RowProps> = ({path, drivesUsed, mappings, setMappings, width}) => {
+const Row: React.FC<RowProps> = ({path, drivesUsed, mappings, setMappings, width, isWindows, index}) => {
     const [selectedRow, setSelectedRow] = useState<string>(path.drive);
+    const [newDir, setNewDir] = useState<string>(path.dir);
     useEffect(() => {
         setSelectedRow(path.drive);
     }, [path]);
     
     let choices = [NONE, ...Array.from(Array(24).keys()).map(i => `${String.fromCharCode(i + 67)}:`)];
     const onItemSelect = (drive: string) => {
-        var mapping = mappings.filter(m => m.dir === path.dir)[0];
+        var mapping = mappings[index];
         mapping.drive = drive;
+
         setMappings(_.cloneDeep(mappings));
         setSelectedRow(drive);
     }  
-    return (
+
+    const onConfirm = (text: string) => {
+        var mapping = mappings[index];
+        mapping.dir = text;
+
+        setMappings(_.cloneDeep(mappings));
+        setNewDir(text);
+    }
+
+    const onDelete = () => {
+        mappings.splice(index, 1);
+        setMappings(_.cloneDeep(mappings));
+    }
+
+    const driveSelect = (
+        <DriveSelect 
+            filterable={false}
+            items={choices} 
+            itemRenderer={(item: string, { handleClick }) => <MenuItem key={item} disabled={drivesUsed.includes(item) && selectedRow !== item && item !== NONE} onClick={handleClick} text={item}/>}
+            onItemSelect={onItemSelect}
+            popoverProps={{minimal: true, popoverClassName:'small'}}>
+            <Button text={selectedRow} style={{width: 70}} rightIcon='caret-down' />
+        </DriveSelect>
+    );
+
+    const unixRow = (
         <FlexRow style={{padding: 5}}>
             <FlexCol style={{minWidth: width - 80, paddingRight: 10}}>
                 <Text ellipsize className={Classes.INPUT}>{path.dir}</Text>
             </FlexCol>
             <FlexCol>
-                <DriveSelect 
-                    filterable={false}
-                    items={choices} 
-                    itemRenderer={(item: string, { handleClick }) => <MenuItem key={item} disabled={drivesUsed.includes(item) && selectedRow !== item && item !== NONE} onClick={handleClick} text={item}/>}
-                    onItemSelect={onItemSelect}
-                    popoverProps={{minimal: true, popoverClassName:'small'}}>
-                    <Button text={selectedRow} style={{width: 70}} rightIcon='caret-down' />
-                </DriveSelect>
+                {driveSelect}
             </FlexCol>
         </FlexRow>
     );
+
+    const windowsRow = (
+        <FlexRow style={{padding: 5}}>
+            <FlexCol style={{maxWidth: 80}}>
+                {driveSelect}
+            </FlexCol>
+            <FlexCol style={{paddingRight: 10}}>
+                <EditableText className={Classes.INPUT} value={newDir} onChange={setNewDir} onConfirm={onConfirm}/>
+            </FlexCol>
+            <Button intent={Intent.DANGER} icon='delete' onClick={onDelete} />
+        </FlexRow>
+    )
+
+    return isWindows ? windowsRow : unixRow;
 }
 
 export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, setOriginalMappings, width, height, panelWidth, buttonHeight}) => {
     const [drivesUsed, setDrivesUsed] = useState<string[]>([]);
+    const [isWindows, setIsWindows] = useState<boolean>(false);
+
+    useEffect(() => {
+        getJson<boolean>('/isWindows').then(setIsWindows);
+    }, []);
 
     useEffect(() => {
         getJson<NtfsMapping[]>('/getNtfsMounts').then(folders => {
@@ -101,13 +142,24 @@ export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, 
         });
     }
 
+    const onAddClick = () => {
+        setMappings([..._.cloneDeep(mappings), { dir: '', drive: 'None'}]);
+    }
+
+    const addButton = 
+        <>
+            <Button intent={Intent.PRIMARY} icon='plus' text='Add' style={{height: buttonHeight}} onClick={onAddClick}/>
+            <div style={{margin:5}}/>
+        </>; 
+
     return (
         <div className={'bp3-table-container'} style={{height}}>
             <div style={{width: panelWidth, paddingTop: 10}}>
-                {mappings.map(r => <Row key={r.dir} width={panelWidth} path={r} drivesUsed={drivesUsed} mappings={mappings} setMappings={setMappings}/>)}
+                {mappings.map((r, i) => <Row key={i} index={i} isWindows={isWindows} width={panelWidth} path={r} drivesUsed={drivesUsed} mappings={mappings} setMappings={setMappings}/>)}
             </div>
             <div style={{height: 5}}/>
             <FlexRow style={{margin: 5, marginLeft: 10}}>
+                { isWindows ? addButton : null }
                 <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
                 <div style={{margin:5}}/>
                 <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>

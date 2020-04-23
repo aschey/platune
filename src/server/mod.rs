@@ -41,7 +41,15 @@ fn get_delim() -> &'static str {
 }
 
 fn convert_delim(path: String) -> String {
-   return if IS_WINDOWS { path.replace("\\", "/") } else { path.replace("/", "\\") };
+    return if IS_WINDOWS { path.replace("\\", "/") } else { path.replace("/", "\\") };
+}
+
+fn convert_delim_windows(path: String) -> String {
+    return path.replace("/", "\\");
+}
+
+fn convert_delim_unix(path: String) -> String {
+    return path.replace("\\", "/");
 }
 
 fn get_delim_escaped() -> &'static str {
@@ -248,6 +256,10 @@ async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
     let mut fs_fuse = get_ntfs_mounts_helper();
     //fs_fuse.push("/mnt/test".to_owned());
     let mapped = mount.select((unix_path, windows_path)).load::<(String, String)>(&connection).unwrap();
+    if IS_WINDOWS {
+        let all = mapped.iter().map(|m| NtfsMapping { dir: m.0.to_owned(), drive: m.1.to_owned()}).collect::<Vec<_>>();
+        return Ok(Json(all));
+    }
     let mapped_unix = mapped.iter().map(|m| m.0.to_owned()).collect::<Vec<_>>();
     let mut mappings = fs_fuse.iter()
         .filter(|f| mapped_unix.contains(f))
@@ -375,16 +387,37 @@ async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()
         return Err(HttpError {result: "fail".to_owned()});
     }
     for r in request.iter() {
-        let pred = full_path_unix.like(r.dir.to_owned() + "%");
-        let path = folder.filter(&pred).select(full_path_unix).first::<String>(&connection).unwrap();
-        let mut replace_val = "".to_owned();
-        if r.drive != "" {
-            let suffix = path.replace(&r.dir, "");
-            let converted = convert_delim(suffix);
-            replace_val = f!("{r.drive}{converted}");
+        let paths = folder
+            .filter(full_path_unix.like(r.dir.to_owned() + "%"))
+            .select((folder_id, full_path_unix))
+            .load::<(i32, String)>(&connection).unwrap();
+        for path in paths {
+            let mut replace_val = "".to_owned();
+            if r.drive != "" {
+                let suffix = convert_delim_windows(path.1.replace(&r.dir, ""));
+                replace_val = f!("{r.drive}{suffix}");
+            }
+            let _ = diesel::update(folder.filter(folder_id.eq(path.0))).set(full_path_windows.eq(replace_val)).execute(&connection);
         }
-       
-        let _ = diesel::update(folder.filter(&pred)).set(full_path_windows.eq(replace_val)).execute(&connection);
+        if r.drive == "" {
+            continue;
+        }
+        let paths2 = folder
+            .filter(full_path_windows.like(r.drive.to_owned() + "%"))
+            .select((folder_id, full_path_windows))
+            .load::<(i32, String)>(&connection).unwrap();
+        for path in paths2 {
+            let suffix = convert_delim_unix(path.1.replace(&r.drive, ""));
+            let replace_val = f!("{r.dir}{suffix}");
+            let _ = diesel::update(folder.filter(folder_id.eq(path.0))).set(full_path_unix.eq(replace_val)).execute(&connection);
+        }
+        
+        // let _ = diesel::update(
+        //     folder.filter(full_path_windows.like(f!("{r.drive}%"))
+        //         .and(full_path_unix.not_like(f!("{r.dir}%")))))
+        //         .set(full_path_unix.eq(f!"{r.dir}/"))
+        //         .execute(&connection).unwrap();
+
     }
     return Ok(Json(()));
 }
