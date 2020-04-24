@@ -56,6 +56,14 @@ fn get_delim_escaped() -> &'static str {
     return if IS_WINDOWS { "\\\\" } else { "/" };
 }
 
+fn to_url_path(drive_path: String) -> String {
+    if !IS_WINDOWS {
+        return drive_path;
+    }
+    let replaced = convert_delim_unix(drive_path.replace(":", ""));
+    return f!("/{replaced}");
+}
+
 #[cfg(windows)]
 fn get_path() -> schema::folder::full_path_windows { full_path_windows }
 #[cfg(unix)]
@@ -83,7 +91,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     let mut sys = actix_rt::System::new("server");
 
     let srv = HttpServer::new(|| { 
-        App::new()
+        let mut builder = App::new()
         .wrap(Cors::new().finish())
         .wrap_api()
         // REST endpoints
@@ -117,15 +125,20 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
                 }
             })
         })
-        .service(fs::Files::new("/swagger", "./src/ui/namp/swagger").index_file("index.html"))
-        .service(fs::Files::new("/music", "//home/aschey/windows/shared_files/Music").show_files_listing())
-        // Paths are matched in order so this needs to be last
-        //.wrap(middleware::DefaultHeaders::new().header("Cache-Control", "no-cache"))
-        
-        .service(fs::Files::new("/", "./src/ui/namp/build").index_file("index.html"))
-        })
-        .bind("127.0.0.1:5000")?
-        .run();
+        .service(fs::Files::new("/swagger", "./src/ui/namp/swagger").index_file("index.html"));
+
+        let connection = establish_connection();
+        let paths = folder.select(get_path()).load::<String>(&connection).unwrap();
+        for path in paths {
+            builder = builder.service(fs::Files::new(&to_url_path(path.to_owned()), path.to_owned()).show_files_listing());
+        }
+        let app = builder
+            // Paths are matched in order so this needs to be last
+            .service(fs::Files::new("/", "./src/ui/namp/build").index_file("index.html"));
+        return app;
+    })
+    .bind("127.0.0.1:5000")?
+    .run();
 
     // send server controller to main thread
     let _ = tx.send(srv.clone());
