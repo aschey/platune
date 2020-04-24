@@ -4,6 +4,7 @@ import '../css/App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
 import { FolderPicker } from './FolderPicker';
 import { MainNavBar } from './MainNavBar';
+import { SongGrid } from './SongGrid';
 
 export interface ITreeState {
   nodes: ITreeNode[];
@@ -28,6 +29,7 @@ const App: React.FC<{}> = () => {
             Learn React
         </a>
         </header>
+        <SongGrid/>
     </div>
     );
 }
