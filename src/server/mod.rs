@@ -352,6 +352,14 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     if res1.is_err() {
         return Err(HttpError {result: "fail".to_owned()});
     }
+    let r = mount
+        .select((unix_path, windows_path))
+        .load::<(String, String)>(&connection)
+        .unwrap()
+        .iter()
+        .map(|f| NtfsMapping { dir: f.0.to_owned(), drive: f.1.to_owned()})
+        .collect();
+    sync_folder_mappings(r);
     return Ok(Json(()));
 }
 
@@ -374,29 +382,9 @@ async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
     return Ok(Json(()));
 }
 
-#[api_v2_operation]
-async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()>, HttpError>  {
+fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
     let connection = establish_connection();
-    let ins = request.iter().map(|r| (unix_path.eq(r.dir.to_owned()), windows_path.eq(r.drive.to_owned()))).collect::<Vec<_>>();
-    let res = diesel::replace_into(mount).values(ins).execute(&connection);
-    if res.is_err() {
-        return Err(HttpError {result: "fail".to_owned()});
-    }
-    let pred = mount.filter(unix_path.ne_all(request.iter().map(|r| r.dir.to_owned())));
-    if IS_WINDOWS {
-        let to_delete = pred.to_owned().select(unix_path).load::<String>(&connection).unwrap();
-        for d in to_delete {
-            let _ = diesel::update(folder.filter(full_path_unix.like(d + "%"))).set(full_path_unix.eq("")).execute(&connection);
-        }
-        
-    }
-    
-    let res2 = diesel::delete(pred).execute(&connection);
-    if res2.is_err() {
-        return Err(HttpError {result: "fail".to_owned()});
-    }
-
-    for r in request.iter() {
+    for r in mapping {
         if !IS_WINDOWS {
             let paths = folder
             .filter(full_path_unix.like(r.dir.to_owned() + "%"))
@@ -436,6 +424,31 @@ async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()
         //         .execute(&connection).unwrap();
 
     }
+}
+
+#[api_v2_operation]
+async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()>, HttpError>  {
+    let connection = establish_connection();
+    let ins = request.iter().map(|r| (unix_path.eq(r.dir.to_owned()), windows_path.eq(r.drive.to_owned()))).collect::<Vec<_>>();
+    let res = diesel::replace_into(mount).values(ins).execute(&connection);
+    if res.is_err() {
+        return Err(HttpError {result: "fail".to_owned()});
+    }
+    let pred = mount.filter(unix_path.ne_all(request.iter().map(|r| r.dir.to_owned())));
+    if IS_WINDOWS {
+        let to_delete = pred.to_owned().select(unix_path).load::<String>(&connection).unwrap();
+        for d in to_delete {
+            let _ = diesel::update(folder.filter(full_path_unix.like(d + "%"))).set(full_path_unix.eq("")).execute(&connection);
+        }
+        
+    }
+    
+    let res2 = diesel::delete(pred).execute(&connection);
+    if res2.is_err() {
+        return Err(HttpError {result: "fail".to_owned()});
+    }
+
+    sync_folder_mappings(request.into_inner());
     return Ok(Json(()));
 }
 
