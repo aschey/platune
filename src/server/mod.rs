@@ -345,8 +345,10 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
             get_path().ne("")
         ));
     let to_remove = pred.to_owned().select(get_path()).load::<String>(&connection).unwrap();
+    let all_mounts = mount.select(get_mount_path()).load::<String>(&connection).unwrap();
     for r in to_remove {
-        let _ = diesel::delete(mount.filter(get_mount_path().like(r))).execute(&connection);
+        let remove = all_mounts.iter().filter(|m| r.starts_with(m.to_owned())).collect::<Vec<_>>();
+        let _ = diesel::delete(mount.filter(get_mount_path().eq_any(remove))).execute(&connection);
     }
     
     let res = diesel::delete(pred.to_owned()).execute(&connection);

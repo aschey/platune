@@ -152,18 +152,20 @@ export const PathMapping: React.FC<PathMappingProps> = ({mappings, setMappings, 
             <Button intent={Intent.PRIMARY} icon='plus' text='Add' style={{height: buttonHeight}} onClick={onAddClick}/>
             <div style={{margin:5}}/>
         </>; 
-
+    const noMappings = !isWindows && mappings.length === 0;
     return (
         <div className={'bp3-table-container'} style={{height}}>
             <div style={{width: panelWidth, paddingTop: 10}}>
-                {mappings.map((r, i) => <Row key={i} index={i} isWindows={isWindows} width={panelWidth} path={r} drivesUsed={drivesUsed} mappings={mappings} setMappings={setMappings}/>)}
+                {noMappings
+                    ? <div style={{paddingLeft: 5}}><Text>No mappings available</Text></div>
+                    : mappings.map((r, i) => <Row key={i} index={i} isWindows={isWindows} width={panelWidth} path={r} drivesUsed={drivesUsed} mappings={mappings} setMappings={setMappings}/>)}
             </div>
             <div style={{height: 5}}/>
             <FlexRow style={{margin: 5, marginLeft: 5}}>
                 { isWindows ? addButton : null }
-                <Button intent={Intent.SUCCESS} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
+                <Button intent={Intent.SUCCESS} disabled={noMappings} icon='floppy-disk' text='Save' style={{height: buttonHeight}} onClick={onSaveClick}/>
                 <div style={{margin:5}}/>
-                <Button intent={Intent.WARNING} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>
+                <Button intent={Intent.WARNING} disabled={noMappings} icon='undo' text='Revert' style={{height: buttonHeight}} onClick={onRevertClick}/>
             </FlexRow>
         </div>
     );

@@ -29,6 +29,8 @@ Since it's just a web app using a REST API under the hood, the UI can also be ac
 ### Features Completed
 - Select folders to import into library
 - Choose database path
+- Map paths between hard drive partitions
+- Host configured files as static files
 
 ### Features in Progress
-- Map paths between hard drive partitions
+- main song grid
