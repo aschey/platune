@@ -1296,6 +1296,7 @@ dependencies = [
  "serde_json",
  "subprocess",
  "sysinfo",
+ "taglib",
  "web-view",
 ]
 
@@ -1937,6 +1938,23 @@ dependencies = [
  "once_cell",
  "rayon",
  "winapi 0.3.8",
+]
+
+[[package]]
+name = "taglib"
+version = "1.0.0"
+source = "git+https://github.com/ebassi/taglib-rust#8395821edc9950462c8274a81dc7e0da0b305a42"
+dependencies = [
+ "libc",
+ "taglib-sys",
+]
+
+[[package]]
+name = "taglib-sys"
+version = "1.0.0"
+source = "git+https://github.com/ebassi/taglib-rust#8395821edc9950462c8274a81dc7e0da0b305a42"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

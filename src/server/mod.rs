@@ -84,6 +84,7 @@ pub fn establish_connection() -> SqliteConnection {
 }
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
+    get_all_files();
     if !std::path::Path::new("./.env").exists() {
         write_env(&std::env::current_dir().unwrap().to_str().unwrap().to_owned());
     }
@@ -145,6 +146,41 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
 
     // run future
     sys.block_on(srv)
+}
+
+fn get_all_files_rec(start_path: String) -> Vec<String> {
+    let mut all_files = Vec::<String>::new();
+    let dirs = read_dir(start_path).unwrap();
+    for dir_res in dirs {
+        let dir = dir_res.unwrap();
+        let path = dir.path();
+        let full_path = path.to_str().unwrap().to_owned();
+        if path.is_file() {
+            if full_path.ends_with(".mp3") || full_path.ends_with(".m4a") {
+                all_files.push(full_path);
+            }
+        }
+        else {
+            let inner_files = get_all_files_rec(full_path);
+            all_files = [all_files, inner_files].concat();
+        }
+    }
+    return all_files;
+}
+
+fn get_all_files() {
+    let connection = establish_connection();
+    let dirs = folder.select(get_path()).load::<String>(&connection).unwrap();
+    for dir in dirs {
+        let all_files = get_all_files_rec(dir);
+        for song in all_files {
+            let f = taglib::File::new(song.to_owned()).unwrap();
+            match f.tag() {
+                Ok(t) => println!("{:?}", t.artist()),
+                Err(e) => println!("{:?}", song)
+            }
+        }
+    }
 }
 
 fn filter_dirs(res: Result<DirEntry, std::io::Error>, delim: &str) -> Option<Dir> {
