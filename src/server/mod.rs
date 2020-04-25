@@ -169,18 +169,25 @@ fn get_all_files_rec(start_path: String) -> Vec<String> {
 }
 
 fn get_all_files() {
+    let now = std::time::Instant::now();
     let connection = establish_connection();
     let dirs = folder.select(get_path()).load::<String>(&connection).unwrap();
     for dir in dirs {
         let all_files = get_all_files_rec(dir);
         for song in all_files {
-            let f = taglib::File::new(song.to_owned()).unwrap();
-            match f.tag() {
-                Ok(t) => println!("{:?}", t.artist()),
-                Err(e) => println!("{:?}", song)
-            }
+            //let f = taglib::File::new(song.to_owned()).unwrap();
+            let f = katatsuki::Track::from_path(std::path::Path::new(&song.to_owned()), None);
+            // match f {
+            //     Ok(t) => println!("{:?}", t.artist),
+            //     Err(e) => println!("{:?}", e)
+            // }
+            // match tt {
+            //     Ok(t) => println!("{:?}", t.artist()),
+            //     Err(e) => println!("{:?}", e)
+            // }
         }
     }
+    println!("{}", now.elapsed().as_secs());
 }
 
 fn filter_dirs(res: Result<DirEntry, std::io::Error>, delim: &str) -> Option<Dir> {

@@ -3,13 +3,14 @@ name = "namp"
 version = "0.1.0"
 authors = ["Austin Schey <aschey13@gmail.com>"]
 edition = "2018"
+build="build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [target.'cfg(windows)'.dependencies]
-web-view = { version = "0.6.2", features = ["edge"] }
+web-view = { path = "../web-view", features = ["edge"] }
 
 [target.'cfg(unix)'.dependencies]
-web-view = { version = "0.6.2" }
+web-view = { path = "../web-view" }
 [dependencies]
 serde = "1.0"
 serde_derive = "1.0"
@@ -31,4 +32,10 @@ dotenv = "0.15.0"
 sysinfo = "0.13.1"
 itertools = "0.9.0"
 failure = "0.1.7"
-taglib = { git = "https://github.com/ebassi/taglib-rust" }
+#katatsuki = "1.0.9"
+
+# [patch.crates-io]
+# cmake = { git = "https://github.com/alexcrichton/cmake-rs", tag = "0.1.42" }
+# bindgen = { git = "https://github.com/rust-lang/rust-bindgen", tag = "v0.53.2" }
+
+katatsuki = { path = "../seiri/katatsuki/katatsuki-rs" }
