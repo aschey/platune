@@ -3,7 +3,8 @@ use super::super::schema::import_temp;
 #[derive(Insertable, Clone)]
 #[table_name = "import_temp"]
 pub struct NewImport {
-    pub import_song_path: String,
+    pub import_song_path_unix: String,
+    pub import_song_path_windows: String,
     pub import_artist: String,
     pub import_album_artist: String,
     pub import_title: String,
