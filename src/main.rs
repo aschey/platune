@@ -12,11 +12,16 @@ use subprocess::{Exec};
 use std::sync::mpsc;
 use fstrings::*;
 use async_std::task;
-
 const IS_WINDOWS: bool = cfg!(windows);
 const IS_DEBUG: bool = cfg!(debug_assertions);
 
 fn main() {
+    //for file in files.unwrap() {
+    //     let secs = file.unwrap().path().metadata().unwrap().modified().unwrap();
+    //     let dur = secs.duration_since(std::time::SystemTime::UNIX_EPOCH).unwrap().as_secs() as i64;
+    //     let dt = chrono::Utc.timestamp(dur, 0);
+    //     println!("{:?}", dt.to_rfc2822());
+    // }
     task::block_on(server::get_all_files());
     return;
     let port = if IS_DEBUG { 3000 } else { 5000 };

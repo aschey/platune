@@ -4,12 +4,13 @@ CREATE TABLE IF NOT EXISTS song (
     song_path_windows TEXT NOT NULL UNIQUE,
     modified_date INTEGER NOT NULL,
     artist_id INTEGER NOT NULL,
-    compilation_artist_id INTEGER NOT NULL,
     song_title TEXT NOT NULL,
-    album_id INT NOT NULL,
+    album_id INTEGER NOT NULL,
+    track_number INTEGER NOT NULL,
     play_count INTEGER NOT NULL,
+    file_size INTEGER NOT NULL,
+    disc_number INTEGER NOT NULL,
     is_deleted BOOLEAN NOT NULL,
     FOREIGN KEY(artist_id) REFERENCES artist(artist_id),
-    FOREIGN KEY(compilation_artist_id) REFERENCES artist(artist_id),
     FOREIGN KEY(album_id) REFERENCES album(album_id)
 )

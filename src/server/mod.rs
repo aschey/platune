@@ -29,8 +29,6 @@ use async_std::prelude::*;
 use futures::join;
 use async_std::task;
 use std::time::SystemTime;
-use async_recursion::async_recursion;
-use crc32fast::Hasher;
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -168,35 +166,26 @@ fn get_all_files_rec(start_path: String) -> Vec::<NewImport> {
         let full_path = path.to_str().unwrap();
         if path.is_file() {
             if full_path.ends_with(".mp3") || full_path.ends_with(".m4a") {
-                let modified_time = path.metadata().unwrap().modified().unwrap();
-                let created_time = dir.metadata().unwrap().created().unwrap();
-                let last_changed = if modified_time > created_time { modified_time } else { created_time };
-                let file = filebuffer::FileBuffer::open(&path).unwrap();
-                file.len();
-                // let mut sum: u64 = 0;
-                // for i in (0..file.len()).step_by(1000) {
-                //     sum += *file.get(i).unwrap() as u64;
-                // }
-                //let mut buffer = Vec::<u8>::new();
-                //file.read_to_end(&mut buffer).unwrap();
-                //let mut hasher = Hasher::new();
-                //let h = fxhash::hash(&file.leak());
-                //hasher.update(&file);
-                //let hash = hasher.finalize();
-                //println!("{}", file.len());
+                //let modified_time = path.metadata().unwrap().modified().unwrap();
+                //let last_changed = modified_time;
+                //let file = filebuffer::FileBuffer::open(&path).unwrap();
                 let f = katatsuki::Track::from_path(std::path::Path::new(full_path), None).unwrap();
                 let n = NewImport {
-                    import_artist: f.artist,
+                    import_artist: f.artist.to_owned(),
                     import_album: f.album,
-                    import_modified_date: get_timestamp(last_changed),
+                    import_album_artist: if f.album_artists.len() > 0 { f.album_artists[0].to_owned() } else { f.artist },
                     import_song_path: to_url_path(full_path.to_owned()),
-                    import_title: f.title
+                    import_title: f.title,
+                    import_track_number: f.track_number,
+                    import_disc_number: f.disc_number,
+                    // Will set this before android sync
+                    import_file_size: 0  //file.len();
                 };
                 all_files.push(n);
             }
         }
         else {
-            let inner_files = get_all_files_rec(full_path.to_owned());//.await;
+            let inner_files = get_all_files_rec(full_path.to_owned());
             all_files = [all_files, inner_files].concat();
         }
     }
@@ -204,8 +193,6 @@ fn get_all_files_rec(start_path: String) -> Vec::<NewImport> {
 }
 
 async fn get_all_files_parallel(root: String) {
-    //get_all_files_rec(root);
-    //return;
     let proc_count = num_cpus::get() as f32;
     let dirs_and_files = read_dir(root).unwrap();
 
@@ -230,7 +217,7 @@ async fn get_all_files_parallel(root: String) {
     }       
     let all = futures::future::join_all(handles).await;
     let res = all.iter().flatten().collect::<Vec<_>>();
-    //return;
+
     let connection = establish_connection();
     let batch_size = 5000;
     let batches = (res.len() as f32 / batch_size as f32).ceil() as usize;
@@ -244,7 +231,7 @@ async fn get_all_files_parallel(root: String) {
             Ok(())
         }).unwrap();
     }
-   
+    
     
 }
 

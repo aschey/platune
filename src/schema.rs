@@ -4,6 +4,8 @@ table! {
         album_name -> Text,
         is_compilation -> Bool,
         release_date -> Integer,
+        album_artist_id -> Integer,
+        disc_number -> Integer,
     }
 }
 
@@ -26,10 +28,13 @@ table! {
     import_temp (import_id) {
         import_id -> Integer,
         import_song_path -> Text,
-        import_modified_date -> Integer,
         import_artist -> Text,
+        import_album_artist -> Text,
         import_title -> Text,
         import_album -> Text,
+        import_file_size -> Integer,
+        import_track_number -> Integer,
+        import_disc_number -> Integer,
     }
 }
 
@@ -48,10 +53,12 @@ table! {
         song_path_windows -> Text,
         modified_date -> Integer,
         artist_id -> Integer,
-        compilation_artist_id -> Integer,
         song_title -> Text,
         album_id -> Integer,
+        track_number -> Integer,
         play_count -> Integer,
+        file_size -> Integer,
+        disc_number -> Integer,
         is_deleted -> Bool,
     }
 }
@@ -64,7 +71,9 @@ table! {
     }
 }
 
+joinable!(album -> artist (album_artist_id));
 joinable!(song -> album (album_id));
+joinable!(song -> artist (artist_id));
 
 allow_tables_to_appear_in_same_query!(
     album,

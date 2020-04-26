@@ -332,17 +332,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
-name = "async-recursion"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5444eec77a9ec2bfe4524139e09195862e981400c4358d3b760cae634e4c4ee"
-dependencies = [
- "proc-macro2",
- "quote 1.0.3",
- "syn 1.0.17",
-]
-
-[[package]]
 name = "async-std"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -864,16 +853,6 @@ dependencies = [
  "quote 1.0.3",
  "syn 1.0.17",
  "synstructure",
-]
-
-[[package]]
-name = "filebuffer"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b41bfe1d74263ea9d084be951077614b3b98b4e59a9dafab1467645a9e52305"
-dependencies = [
- "libc",
- "winapi 0.3.8",
 ]
 
 [[package]]
@@ -1533,17 +1512,13 @@ dependencies = [
  "actix-rt",
  "actix-service",
  "actix-web",
- "async-recursion",
  "async-std",
- "crc32fast",
  "diesel",
  "dirs",
  "dotenv",
  "failure",
- "filebuffer",
  "fstrings",
  "futures",
- "fxhash",
  "itertools",
  "katatsuki",
  "mime_guess",
@@ -1552,7 +1527,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "streaming-iterator",
  "subprocess",
  "sysinfo",
  "web-view",
@@ -2163,12 +2137,6 @@ dependencies = [
  "libc",
  "pkg-config",
 ]
-
-[[package]]
-name = "streaming-iterator"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "303235c177994a476226b80d076bd333b7b560fb05bd242a10609d11b07f81f5"
 
 [[package]]
 name = "strsim"
