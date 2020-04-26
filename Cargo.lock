@@ -867,6 +867,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "filebuffer"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b41bfe1d74263ea9d084be951077614b3b98b4e59a9dafab1467645a9e52305"
+dependencies = [
+ "libc",
+ "winapi 0.3.8",
+]
+
+[[package]]
 name = "flate2"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1525,12 +1535,15 @@ dependencies = [
  "actix-web",
  "async-recursion",
  "async-std",
+ "crc32fast",
  "diesel",
  "dirs",
  "dotenv",
  "failure",
+ "filebuffer",
  "fstrings",
  "futures",
+ "fxhash",
  "itertools",
  "katatsuki",
  "mime_guess",

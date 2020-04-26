@@ -30,6 +30,7 @@ use futures::join;
 use async_std::task;
 use std::time::SystemTime;
 use async_recursion::async_recursion;
+use crc32fast::Hasher;
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -170,7 +171,20 @@ fn get_all_files_rec(start_path: String) -> Vec::<NewImport> {
                 let modified_time = path.metadata().unwrap().modified().unwrap();
                 let created_time = dir.metadata().unwrap().created().unwrap();
                 let last_changed = if modified_time > created_time { modified_time } else { created_time };
-                let f = katatsuki::Track::from_path(std::path::Path::new(&path.to_str().unwrap()), None).unwrap();
+                let file = filebuffer::FileBuffer::open(&path).unwrap();
+                file.len();
+                // let mut sum: u64 = 0;
+                // for i in (0..file.len()).step_by(1000) {
+                //     sum += *file.get(i).unwrap() as u64;
+                // }
+                //let mut buffer = Vec::<u8>::new();
+                //file.read_to_end(&mut buffer).unwrap();
+                //let mut hasher = Hasher::new();
+                //let h = fxhash::hash(&file.leak());
+                //hasher.update(&file);
+                //let hash = hasher.finalize();
+                //println!("{}", file.len());
+                let f = katatsuki::Track::from_path(std::path::Path::new(full_path), None).unwrap();
                 let n = NewImport {
                     import_artist: f.artist,
                     import_album: f.album,
@@ -203,19 +217,16 @@ async fn get_all_files_parallel(root: String) {
     let dir_count = dirs.len() as f32;
     let dirs_per_thread = (dir_count / proc_count).ceil() as usize;
     let mut handles = Vec::<_>::new();
-    println!("{}", dirs.len());
     for i in 0..proc_count as usize {
         let i = i.clone();
         let dirs = dirs.clone();
         handles.push(task::spawn(async move {
             let mut files = Vec::<_>::new();
-            println!("{} {}", dirs_per_thread * i, dirs_per_thread*(i+1));
             for path in dirs[dirs_per_thread * i..std::cmp::min(dirs.len(), dirs_per_thread*(i+1))].to_vec() {
                 files = [files, get_all_files_rec(path)].concat();
             }
             return files;
         }));
-        //handles.push(get_all_files_rec2(dirs[dirs_per_thread * i..dirs_per_thread*(i+1)].to_vec()));
     }       
     let all = futures::future::join_all(handles).await;
     let res = all.iter().flatten().collect::<Vec<_>>();
@@ -223,10 +234,9 @@ async fn get_all_files_parallel(root: String) {
     let connection = establish_connection();
     let batch_size = 5000;
     let batches = (res.len() as f32 / batch_size as f32).ceil() as usize;
+    let _ = diesel::delete(import_temp).execute(&connection);
     for i in 0..batches {
         connection.transaction::<_, diesel::result::Error, _>(|| {
-            //println!("{:?}", i * batch_size);
-            //println!("{:?}", i * (batch_size + 1);
             let batch = res[i * batch_size..std::cmp::min(res.len(), (i + 1) * batch_size)].to_vec();
             for row in batch {
                 let _r = diesel::insert_into(import_temp).values(row).execute(&connection).unwrap();
@@ -244,21 +254,6 @@ pub async fn get_all_files() {
     let dirs = folder.select(get_path()).load::<String>(&connection).unwrap();
   
     get_all_files_parallel(dirs[0].to_owned()).await;
-    // for dir in dirs {
-    //     let all_files = get_all_files_rec(dir);
-    //     for song in all_files {
-    //         //let f = taglib::File::new(song.to_owned()).unwrap();
-    //         let f = katatsuki::Track::from_path(std::path::Path::new(&song.to_owned()), None);
-    //         // match f {
-    //         //     Ok(t) => println!("{:?}", t.artist),
-    //         //     Err(e) => println!("{:?}", e)
-    //         // }
-    //         // match tt {
-    //         //     Ok(t) => println!("{:?}", t.artist()),
-    //         //     Err(e) => println!("{:?}", e)
-    //         // }
-    //     }
-    // }
     println!("{}", now.elapsed().as_secs());
 }
 
