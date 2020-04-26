@@ -283,12 +283,17 @@ async fn get_all_files_parallel(root: String, other: String) {
         "
     ).execute(&connection).unwrap();
     
-    // let _ = diesel::sql_query(
-    //     "
-    //     insert into song(song_path_unix, song_path_windows, metadata_modified_date, artist_id, song_title, album_id, track_number, play_count, disc_number, song_year, song_month, song_day, is_deleted)
-
-    //     "
-    // ).execute(&connection).unwrap();
+    let _ = diesel::sql_query(
+        "
+        insert into song(song_path_unix, song_path_windows, metadata_modified_date, artist_id, song_title, album_id, track_number, play_count, disc_number, song_year, song_month, song_day, is_deleted)
+        select import_song_path_unix, import_song_path_windows, strftime('%s', 'now'), artist.artist_id, import_title, album.album_id, import_track_number, 0, import_disc_number, import_year, 0, 0, false
+        from import_temp
+        inner join artist on artist_name = import_artist
+        inner join album on album_name = import_album and album_artist_id = artist.artist_id
+        left outer join song on song_path_unix = import_song_path_unix or song_path_windows = import_song_path_windows
+        where song.song_path_unix is null or song.song_path_windows is null
+        "
+    ).execute(&connection).unwrap();
     
 }
 
