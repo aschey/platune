@@ -32,10 +32,8 @@ dotenv = "0.15.0"
 sysinfo = "0.13.1"
 itertools = "0.9.0"
 failure = "0.1.7"
-#katatsuki = "1.0.9"
-
-# [patch.crates-io]
-# cmake = { git = "https://github.com/alexcrichton/cmake-rs", tag = "0.1.42" }
-# bindgen = { git = "https://github.com/rust-lang/rust-bindgen", tag = "v0.53.2" }
-
 katatsuki = { path = "../seiri/katatsuki/katatsuki-rs" }
+num_cpus = "1.13.0"
+streaming-iterator = "0.1.5"
+async-std = "1.5.0"
+async-recursion = "0.3.1"

@@ -23,6 +23,17 @@ table! {
 }
 
 table! {
+    import_temp (import_id) {
+        import_id -> Integer,
+        import_song_path -> Text,
+        import_modified_date -> Integer,
+        import_artist -> Text,
+        import_title -> Text,
+        import_album -> Text,
+    }
+}
+
+table! {
     mount (mount_id) {
         mount_id -> Integer,
         unix_path -> Text,
@@ -59,6 +70,7 @@ allow_tables_to_appear_in_same_query!(
     album,
     artist,
     folder,
+    import_temp,
     mount,
     song,
     user_setting,

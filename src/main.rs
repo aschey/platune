@@ -11,11 +11,14 @@ use std::{thread, time::Duration};
 use subprocess::{Exec};
 use std::sync::mpsc;
 use fstrings::*;
+use async_std::task;
 
 const IS_WINDOWS: bool = cfg!(windows);
 const IS_DEBUG: bool = cfg!(debug_assertions);
 
 fn main() {
+    task::block_on(server::get_all_files());
+    return;
     let port = if IS_DEBUG { 3000 } else { 5000 };
     let content_url = f!("http://localhost:{port}/index.html");
 
