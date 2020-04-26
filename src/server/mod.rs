@@ -16,6 +16,7 @@ use models::{folder::*, mount::*, import::*};
 use crate::schema::folder::dsl::*;
 use crate::schema::mount::dsl::*;
 use crate::schema::import_temp::dsl::*;
+use crate::schema::artist::dsl::*;
 use crate::schema;
 use sysinfo::{ProcessExt, SystemExt, DiskExt};
 use itertools::Itertools;
@@ -89,7 +90,6 @@ pub fn establish_connection() -> SqliteConnection {
 }
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
-    get_all_files();
     if !std::path::Path::new("./.env").exists() {
         write_env(&std::env::current_dir().unwrap().to_str().unwrap().to_owned());
     }
@@ -166,8 +166,6 @@ fn get_all_files_rec(start_path: String) -> Vec::<NewImport> {
         let full_path = path.to_str().unwrap();
         if path.is_file() {
             if full_path.ends_with(".mp3") || full_path.ends_with(".m4a") {
-                //let modified_time = path.metadata().unwrap().modified().unwrap();
-                //let last_changed = modified_time;
                 //let file = filebuffer::FileBuffer::open(&path).unwrap();
                 let f = katatsuki::Track::from_path(std::path::Path::new(full_path), None).unwrap();
                 let n = NewImport {
@@ -178,6 +176,7 @@ fn get_all_files_rec(start_path: String) -> Vec::<NewImport> {
                     import_title: f.title,
                     import_track_number: f.track_number,
                     import_disc_number: f.disc_number,
+                    import_year: f.year,
                     // Will set this before android sync
                     import_file_size: 0  //file.len();
                 };
@@ -231,7 +230,41 @@ async fn get_all_files_parallel(root: String) {
             Ok(())
         }).unwrap();
     }
-    
+
+    let _ = diesel::sql_query(
+        "
+        insert into artist(artist_name)
+        select import_artist from import_temp
+        left outer join artist on artist_name = import_artist
+        where artist_name is null
+        group by import_artist
+        "
+    ).execute(&connection).unwrap();
+
+    let _ = diesel::sql_query(
+        "
+        insert into artist(artist_name)
+        select import_album_artist from import_temp
+        left outer join artist on artist_name = import_album_artist
+        where artist_name is null
+        group by import_album_artist
+        "
+    ).execute(&connection).unwrap();
+
+    let _ = diesel::sql_query(
+        "
+        insert into album(album_name, album_year, album_artist_id)
+        select import_album, case when count(distinct import_year) > 1 then 0 else import_year end, artist_id
+        from import_temp
+        inner join artist on artist_name = import_album_artist
+        left outer join album on album_name = import_album and album_artist_id = artist_id
+        where album_name is null and album_artist_id is null
+        group by import_album_artist, import_album
+        "
+    ).execute(&connection).unwrap();
+    //let t = import_temp.filter(|a| artist_name.ne(a));
+    // diesel::insert_into(artist).values(
+    //     import_temp.group_by(import_artist).select(import_temp.filter(artist_name.ne("test"))).execute(&connection));
     
 }
 

@@ -10,5 +10,6 @@ pub struct NewImport {
     pub import_album: String,
     pub import_file_size: i32,
     pub import_track_number: i32,
-    pub import_disc_number: i32
+    pub import_disc_number: i32,
+    pub import_year: i32
 }

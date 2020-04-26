@@ -2,10 +2,8 @@ table! {
     album (album_id) {
         album_id -> Integer,
         album_name -> Text,
-        is_compilation -> Bool,
-        release_date -> Integer,
+        album_year -> Integer,
         album_artist_id -> Integer,
-        disc_number -> Integer,
     }
 }
 
@@ -35,6 +33,7 @@ table! {
         import_file_size -> Integer,
         import_track_number -> Integer,
         import_disc_number -> Integer,
+        import_year -> Integer,
     }
 }
 
@@ -59,6 +58,7 @@ table! {
         play_count -> Integer,
         file_size -> Integer,
         disc_number -> Integer,
+        song_year -> Integer,
         is_deleted -> Bool,
     }
 }

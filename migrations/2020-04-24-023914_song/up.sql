@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS song (
     play_count INTEGER NOT NULL,
     file_size INTEGER NOT NULL,
     disc_number INTEGER NOT NULL,
+    song_year INTEGER NOT NULL,
     is_deleted BOOLEAN NOT NULL,
     FOREIGN KEY(artist_id) REFERENCES artist(artist_id),
     FOREIGN KEY(album_id) REFERENCES album(album_id)
