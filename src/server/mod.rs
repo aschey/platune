@@ -12,19 +12,21 @@ use std::{vec::Vec, env};
 use diesel;
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
-use models::{folder::*, mount::*, import::*};
+use models::{folder::*, mount::*, import::*, song::*};
 use crate::schema::folder::dsl::*;
 use crate::schema::mount::dsl::*;
 use crate::schema::import_temp::dsl::*;
 use crate::schema::artist::dsl::*;
+use crate::schema::album::dsl::*;
+use crate::schema::song::dsl::*;
 use crate::schema;
-use sysinfo::{ProcessExt, SystemExt, DiskExt};
+use sysinfo::{SystemExt, DiskExt};
 use itertools::Itertools;
 use fstrings::*;
 use std::io::prelude::*;
 use actix_service::Service;
 use futures::future::FutureExt;
-use actix_http::http::header::{CacheControl, CacheDirective, HeaderName, HeaderValue};
+use actix_http::http::header::{HeaderName, HeaderValue};
 use std::convert::TryFrom;
 use async_std::prelude::*;
 use futures::join;
@@ -80,6 +82,11 @@ fn get_mount_path() -> schema::mount::windows_path { windows_path }
 #[cfg(unix)]
 fn get_mount_path() -> schema::mount::unix_path { unix_path }
 
+#[cfg(windows)]
+fn get_song_path() -> schema::song::song_path_windows { song_path_windows }
+#[cfg(unix)]
+fn get_song_path() -> schema::song::song_path_unix { song_path_unix }
+
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
     let database_url = env::var(DATABASE_URL)
@@ -110,6 +117,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .service(web::resource("/updateDbPath").route(web::put().to(update_db_path)))
         .service(web::resource("/getNtfsMounts").route(web::get().to(get_ntfs_mounts)))
         .service(web::resource("/updatePathMappings").route(web::put().to(update_path_mappings)))
+        .service(web::resource("/songs").route(web::get().to(get_songs)))
         .with_json_spec_at("/spec")
         .build()
         // static files
@@ -596,15 +604,23 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 
             let _ = diesel::update(folder.filter(full_path_unix.like(r.dir.to_owned() + "%").and(full_path_windows.not_like(r.drive.to_owned() + "%")))).set(full_path_unix.eq("")).execute(&connection);
         }
-        
-        
-        // let _ = diesel::update(
-        //     folder.filter(full_path_windows.like(f!("{r.drive}%"))
-        //         .and(full_path_unix.not_like(f!("{r.dir}%")))))
-        //         .set(full_path_unix.eq(f!"{r.dir}/"))
-        //         .execute(&connection).unwrap();
-
     }
+}
+
+#[api_v2_operation]
+async fn get_songs() -> Result<Json<Vec<Song>>, ()> {
+    let connection = establish_connection();
+    let songs = song
+        .inner_join(artist)
+        .inner_join(album)
+        .select((song_title, artist_name, get_song_path()))
+        .order(artist_name)
+        .limit(50)
+        .load::<(String, String, String)>(&connection).unwrap()
+        .iter()
+        .map(|s| Song { name: s.0.to_owned(), artist: s.1.to_owned(), path: "http://localhost:5000".to_owned() + &s.2.to_owned() })
+        .collect::<Vec<_>>();
+    return Ok(Json(songs));
 }
 
 #[api_v2_operation]

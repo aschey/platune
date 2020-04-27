@@ -22,8 +22,8 @@ fn main() {
     //     let dt = chrono::Utc.timestamp(dur, 0);
     //     println!("{:?}", dt.to_rfc2822());
     // }
-    task::block_on(server::get_all_files());
-    return;
+    //task::block_on(server::get_all_files());
+    //return;
     let port = if IS_DEBUG { 3000 } else { 5000 };
     let content_url = f!("http://localhost:{port}/index.html");
 
