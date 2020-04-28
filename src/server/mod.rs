@@ -615,7 +615,7 @@ async fn get_songs() -> Result<Json<Vec<Song>>, ()> {
         .inner_join(album)
         .select((song_title, artist_name, get_song_path()))
         .order(artist_name)
-        .limit(50)
+        .limit(100)
         .load::<(String, String, String)>(&connection).unwrap()
         .iter()
         .map(|s| Song { name: s.0.to_owned(), artist: s.1.to_owned(), path: "http://localhost:5000".to_owned() + &s.2.to_owned() })

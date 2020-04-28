@@ -12,6 +12,7 @@ use subprocess::{Exec};
 use std::sync::mpsc;
 use fstrings::*;
 use async_std::task;
+use std::net::{TcpListener, TcpStream, ToSocketAddrs};
 const IS_WINDOWS: bool = cfg!(windows);
 const IS_DEBUG: bool = cfg!(debug_assertions);
 
@@ -30,26 +31,52 @@ fn main() {
     if IS_DEBUG {
         ensure_node_started();
     }
-    
+    let direct = true;
     let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
+    if direct {
         let _ = server::run_server(tx);
-    });
-    let srv = rx.recv().unwrap();
-    let webview = web_view::builder()
-        .title("NAMP")
-        .content(Content::Url(content_url))
-        // There's no maximize function so just set it to something large
-        .size(1200, 800)
-        .resizable(true)
-        .debug(true)
-        .user_data(())
-        .invoke_handler(|_webview, _arg| Ok(()))
-        .build()
-        .unwrap();
+    }
+    else {
+        thread::spawn(move || {
+            let _ = server::run_server(tx);
+        });
+        let srv = rx.recv().unwrap();
+        let listener = TcpListener::bind("127.0.0.1:8001").unwrap();
+        listener.set_nonblocking(true).expect("Cannot set non-blocking");
+        loop {
+            println!("waiting...");
+            std::thread::sleep(std::time::Duration::from_secs(5));
+            if let Ok(_) = TcpStream::connect("127.0.0.1:8080") {
+                println!("resposnse from server");
+            } else {
+                actix_rt::System::new("").block_on(srv.stop(true));
+                println!("exiting...");
+                std::process::exit(0);
+            }
+            if let Ok(_) = listener.accept() {
+                actix_rt::System::new("").block_on(srv.stop(true));
+                println!("exiting...");
+                std::process::exit(0);
+            }
+        }
+    }
+    
+    
+    
+    // let webview = web_view::builder()
+    //     .title("NAMP")
+    //     .content(Content::Url(content_url))
+    //     // There's no maximize function so just set it to something large
+    //     .size(1200, 800)
+    //     .resizable(true)
+    //     .debug(true)
+    //     .user_data(())
+    //     .invoke_handler(|_webview, _arg| Ok(()))
+    //     .build()
+    //     .unwrap();
 
-    let _ = webview.run();
-    actix_rt::System::new("").block_on(srv.stop(true));
+    // let _ = webview.run();
+    //actix_rt::System::new("").block_on(srv.stop(true));
 }
 
 fn ensure_node_started() {
