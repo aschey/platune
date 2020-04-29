@@ -5,14 +5,13 @@
   "main": "public/electron.js",
   "homepage": "./",
   "author": {
-    "name": "Your Name",
-    "email": "your.email@domain.com",
-    "url": "https://your-website.com"
+    "name": "Austin Schey",
+    "url": "https://github.com/aschey"
   },
   "build": {
-    "appId": "com.my-website.my-app",
-    "productName": "MyApp",
-    "copyright": "Copyright © 2019 ${author}",
+    "appId": "com.namp",
+    "productName": "NAMP",
+    "copyright": "Copyright © 2020 ${author}",
     "mac": {
       "category": "public.app-category.utilities"
     },

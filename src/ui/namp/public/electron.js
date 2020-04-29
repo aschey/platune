@@ -9,14 +9,14 @@ const { spawn } = require('child_process');
 let mainWindow;
 
 function createWindow() {
-  mainWindow = new BrowserWindow({width: 900, height: 680, webPreferences: { webSecurity: !isDev, nodeIntegration: true, nodeIntegrationInWorker: true }});
-  mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
-  if (isDev) {
-    // Open the DevTools.
-    //BrowserWindow.addDevToolsExtension('<location to your react chrome extension>');
-    mainWindow.webContents.openDevTools();
-  }
-  mainWindow.on('closed', () => mainWindow = null);
+    mainWindow = new BrowserWindow({width: 900, height: 680, icon: path.join(__dirname, '../src/res/logo.png'), webPreferences: { 
+        webSecurity: !isDev, 
+        nodeIntegration: true, 
+        nodeIntegrationInWorker: true 
+    }});
+    mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
+    
+    mainWindow.on('closed', () => mainWindow = null);
 }
 
 app.on('ready', () => {
