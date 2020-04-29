@@ -20,7 +20,7 @@ function createWindow() {
 }
 
 app.on('ready', () => {
-    let proc = spawn('.\\target\\debug\\namp.exe', {cwd: '../..', detached: true, windowsHide: true, shell: isDev, stdio: 'ignore'});
+    let proc = spawn('.\\target\\debug\\namp.exe', {cwd: '../../..', detached: true, windowsHide: true, shell: isDev, stdio: 'ignore'});
     proc.unref();
     createWindow();
 });

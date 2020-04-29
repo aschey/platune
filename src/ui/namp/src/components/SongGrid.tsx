@@ -12,6 +12,7 @@ export const SongGrid: React.FC<{}> = () => {
     useEffect(() => {
         getJson<Song[]>('/songs').then(setSongs);
     }, []);
+
     const titleRenderer = (rowIndex: number) => {
         return (
             <Cell>
@@ -19,8 +20,9 @@ export const SongGrid: React.FC<{}> = () => {
                     {songs[rowIndex].name}
                 </Text>
                 <Sound
+                    autoLoad={false}
                     volume={30}
-                    url={songs[rowIndex].path}
+                    url={songs[rowIndex].path.replace('http://localhost:5000', 'file://')}
                     playStatus={rowIndex === selectedRow ? Sound.status.PLAYING : Sound.status.STOPPED}
                 />
             </Cell>
