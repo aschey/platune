@@ -3,18 +3,19 @@
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/NAMP)
 
 Created with 
-- Rust
-- [web-view](https://github.com/Boscop/web-view)
+- [Rust](https://www.rust-lang.org/)
+- [Electron](https://www.electronjs.org/)
 - [actix-web](https://github.com/actix/actix-web)
 - [Diesel](https://github.com/diesel-rs/diesel)
-- Sqlite
-- React
-- Typescript
+- [Sqlite](https://www.sqlite.org/)
+- [React](https://reactjs.org/)
+- [Typescript](https://www.typescriptlang.org/)
 - [Blueprint](https://github.com/palantir/blueprint)
 
 ### How It Works
-On launch, NAMP will spin up a web server used for hosting mp3 files as well as a REST API, and a platform-dependent browser engine sandboxed inside a desktop app.
-Since it's just a web app using a REST API under the hood, the UI can also be accessed at `localhost` from any browser.
+On launch, NAMP will spin up a REST API written in Rust in addition to the Electron UI. The API will handle the majority of the logic,
+with the Electron app being used for the presentation layer. The API will send TCP health checks to the Electron app and will automatically shut
+itself down if the app is no longer running.
 
 ### Goals/Ideas
 - Cross-platform desktop app

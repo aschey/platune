@@ -139,7 +139,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
                 }
             })
         })
-        .service(fs::Files::new("/swagger", "./src/ui/namp/swagger").index_file("index.html"));
+        .service(fs::Files::new("/swagger", "./src/server/swagger").index_file("index.html"));
 
         let connection = establish_connection();
         let paths = folder.select(get_path()).load::<String>(&connection).unwrap();
@@ -615,7 +615,7 @@ async fn get_songs() -> Result<Json<Vec<Song>>, ()> {
         .inner_join(album)
         .select((song_title, artist_name, get_song_path()))
         .order(artist_name)
-        .limit(50)
+        .limit(100)
         .load::<(String, String, String)>(&connection).unwrap()
         .iter()
         .map(|s| Song { name: s.0.to_owned(), artist: s.1.to_owned(), path: "http://localhost:5000".to_owned() + &s.2.to_owned() })
