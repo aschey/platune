@@ -139,7 +139,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
                 }
             })
         })
-        .service(fs::Files::new("/swagger", "./src/ui/namp/swagger").index_file("index.html"));
+        .service(fs::Files::new("/swagger", "./src/server/swagger").index_file("index.html"));
 
         let connection = establish_connection();
         let paths = folder.select(get_path()).load::<String>(&connection).unwrap();
