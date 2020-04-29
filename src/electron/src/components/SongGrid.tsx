@@ -20,7 +20,7 @@ export const SongGrid: React.FC<{}> = () => {
                     {songs[rowIndex].name}
                 </Text>
                 <Sound
-                    autoLoad={true}
+                    autoLoad={false}
                     volume={30}
                     url={songs[rowIndex].path.replace('http://localhost:5000', 'file://')}
                     playStatus={rowIndex === selectedRow ? Sound.status.PLAYING : Sound.status.STOPPED}

@@ -14,8 +14,6 @@ export interface ITreeState {
 
 const App: React.FC<{}> = () => {
     return (
-        <>
-        <meta http-equiv="Content-Security-Policy" content="default-src 'none'"></meta>
         <div className="bp3-dark">
             <MainNavBar/>
         <div style={{paddingTop: 50}}>
@@ -23,7 +21,6 @@ const App: React.FC<{}> = () => {
         </div>
         
     </div>
-    </>
     );
 }
 

@@ -25,13 +25,13 @@ fn main() {
     // }
     //task::block_on(server::get_all_files());
     //return;
-    let port = if IS_DEBUG { 3000 } else { 5000 };
-    let content_url = f!("http://localhost:{port}/index.html");
+    // let port = if IS_DEBUG { 3000 } else { 5000 };
+    // let content_url = f!("http://localhost:{port}/index.html");
 
-    if IS_DEBUG {
-        ensure_node_started();
-    }
-    let direct = true;
+    // if IS_DEBUG {
+    //     ensure_node_started();
+    // }
+    let direct = false;
     let (tx, rx) = mpsc::channel();
     if direct {
         let _ = server::run_server(tx);
@@ -41,13 +41,13 @@ fn main() {
             let _ = server::run_server(tx);
         });
         let srv = rx.recv().unwrap();
-        let listener = TcpListener::bind("127.0.0.1:8001").unwrap();
+        let listener = TcpListener::bind("127.0.0.1:8002").unwrap();
         listener.set_nonblocking(true).expect("Cannot set non-blocking");
         loop {
             println!("waiting...");
             std::thread::sleep(std::time::Duration::from_secs(5));
-            if let Ok(_) = TcpStream::connect("127.0.0.1:8080") {
-                println!("resposnse from server");
+            if let Ok(_) = TcpStream::connect("127.0.0.1:8001") {
+                println!("response from server");
             } else {
                 actix_rt::System::new("").block_on(srv.stop(true));
                 println!("exiting...");
