@@ -24,8 +24,8 @@ app.on('ready', () => {
     , sock = zmq.socket('push');
 
     sock.bindSync('tcp://127.0.0.1:8001');
-    console.log('Producer bound to port 3000');
-    let proc = spawn('.\\target\\debug\\namp.exe', {cwd: '../../..', detached: true, windowsHide: true, shell: isDev, stdio: 'ignore'});
+    let command = process.platform === 'win32' ? '.\\target\\debug\\namp.exe' : './target/debug/namp';
+    let proc = spawn(command, {cwd: '../../..', detached: true, windowsHide: true, shell: isDev, stdio: 'ignore'});
     proc.unref();
     createWindow();
 });
