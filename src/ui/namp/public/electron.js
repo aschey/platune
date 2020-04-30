@@ -20,6 +20,11 @@ function createWindow() {
 }
 
 app.on('ready', () => {
+    var zmq = require('zeromq')
+    , sock = zmq.socket('push');
+
+    sock.bindSync('tcp://127.0.0.1:8001');
+    console.log('Producer bound to port 3000');
     let proc = spawn('.\\target\\debug\\namp.exe', {cwd: '../../..', detached: true, windowsHide: true, shell: isDev, stdio: 'ignore'});
     proc.unref();
     createWindow();

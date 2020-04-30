@@ -41,7 +41,8 @@
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
     "react-sound": "^1.2.0",
-    "typescript": "~3.7.2"
+    "typescript": "~3.7.2",
+    "zeromq": "5"
   },
   "scripts": {
     "start": "rescripts start",
@@ -80,6 +81,7 @@
     "cross-env": "^7.0.2",
     "electron": "^8.2.3",
     "electron-builder": "^22.5.1",
+    "electron-rebuild": "^1.10.1",
     "wait-on": "^4.0.2"
   }
 }
