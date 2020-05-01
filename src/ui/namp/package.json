@@ -2,7 +2,7 @@
   "name": "namp",
   "version": "0.1.0",
   "private": true,
-  "main": "public/electron.js",
+  "main": "dist/electron.js",
   "homepage": "./",
   "author": {
     "name": "Austin Schey",
@@ -27,6 +27,7 @@
     "@blueprintjs/core": "^3.26.0",
     "@blueprintjs/select": "^3.12.2",
     "@blueprintjs/table": "^3.8.4",
+    "@msgpack/msgpack": "^1.12.1",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",
@@ -35,13 +36,14 @@
     "@types/node": "^12.0.0",
     "@types/react": "^16.9.0",
     "@types/react-dom": "^16.9.0",
+    "@types/zeromq": "^4.6.3",
     "electron-is-dev": "^1.2.0",
     "lodash": "^4.17.15",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
     "react-sound": "^1.2.0",
-    "typescript": "~3.7.2",
+    "typescript": "~3.8.3",
     "zeromq": "5"
   },
   "scripts": {
@@ -49,7 +51,7 @@
     "build": "rescripts build",
     "test": "rescripts test",
     "eject": "react-scripts eject",
-    "electron-dev": "concurrently \"cross-env BROWSER=none yarn start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-dev": "tsc --project tsconfig-electron.json && concurrently \"cross-env BROWSER=none yarn start\" \"wait-on http://localhost:3000 && electron .\"",
     "postinstall": "electron-builder install-app-deps",
     "prelinux-pack": "yarn build",
     "prewindows-pack": "yarn build",
@@ -71,9 +73,6 @@
       "last 1 safari version"
     ]
   },
-  "rescripts": [
-    "env"
-  ],
   "devDependencies": {
     "@rescripts/cli": "^0.0.14",
     "@rescripts/rescript-env": "^0.0.12",

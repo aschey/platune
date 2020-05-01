@@ -5,6 +5,7 @@ import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blue
 import { FolderPicker } from './FolderPicker';
 import { MainNavBar } from './MainNavBar';
 import { SongGrid } from './SongGrid';
+import { ipcRenderer } from 'electron';
 
 export interface ITreeState {
   nodes: ITreeNode[];
@@ -13,6 +14,13 @@ export interface ITreeState {
 
 
 const App: React.FC<{}> = () => {
+
+    //console.log(ipcRenderer.sendSync('synchronous-message', 'ping')) // prints "pong"
+    
+    ipcRenderer.on('test', (event: any, arg: any) => {
+      console.log(arg) // prints "pong"
+    })
+    ipcRenderer.send('asynchronous-message', 'ping')
     return (
         <div className="bp3-dark">
             <MainNavBar/>

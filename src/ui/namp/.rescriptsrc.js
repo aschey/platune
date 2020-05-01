@@ -1,0 +1,1 @@
+module.exports = ['env', require.resolve('./.webpack.config.js')]
