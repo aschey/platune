@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS import_temp (
     import_album_artist TEXT NOT NULL,
     import_title TEXT NOT NULL,
     import_album TEXT NOT NULL,
-    import_file_size INTEGER NOT NULL,
     import_track_number INTEGER NOT NULL,
     import_disc_number INTEGER NOT NULL,
     import_year INTEGER NOT NULL

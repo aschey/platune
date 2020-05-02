@@ -42,7 +42,6 @@ table! {
         import_album_artist -> Text,
         import_title -> Text,
         import_album -> Text,
-        import_file_size -> Integer,
         import_track_number -> Integer,
         import_disc_number -> Integer,
         import_year -> Integer,

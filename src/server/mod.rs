@@ -188,9 +188,7 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
                     import_title: f.title,
                     import_track_number: f.track_number,
                     import_disc_number: f.disc_number,
-                    import_year: f.year,
-                    // Will set this before android sync
-                    import_file_size: 0  //file.len();
+                    import_year: f.year
                 };
                 //let original2 = original.clone();
                 //let other2 = other.clone();
