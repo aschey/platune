@@ -3,14 +3,33 @@ import { Table, Cell, Column, SelectionModes, IRegion } from '@blueprintjs/table
 import { Text } from '@blueprintjs/core';
 import { getJson } from '../fetchUtil';
 import { Song } from '../models/song';
+import { range, sleep } from '../util';
 var Sound = require('react-sound').default;
 
 export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
     const [selectedRow, setSelectedRow] = useState<number>(-1);
+    const numTries = 10;
+
+    const loadSongs = async () => {
+        for (let i of range(numTries)) {
+            try {
+                console.log(i);
+                const songs = await getJson<Song[]>('/songs');
+                return songs;
+            }
+            catch (e) {
+                if (i === numTries - 1) {
+                    throw e;
+                }
+                await sleep(1000);
+            }
+        }
+        return [];
+    }
 
     useEffect(() => {
-        getJson<Song[]>('/songs').then(setSongs);
+        loadSongs().then(setSongs);
     }, []);
 
     const titleRenderer = (rowIndex: number) => {
