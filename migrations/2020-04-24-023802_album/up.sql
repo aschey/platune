@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS album (
     album_day INTEGER NOT NULL,
     album_artist_id INTEGER NOT NULL,
     UNIQUE(album_name, album_artist_id)
-    FOREIGN KEY(album_artist_id) REFERENCES artist(artist_id)
+    FOREIGN KEY(album_artist_id) REFERENCES album_artist(album_artist_id)
 )

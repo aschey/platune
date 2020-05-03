@@ -5,6 +5,7 @@ import { spawn } from 'child_process';
 import zmq from 'zeromq';
 import net from 'net';
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 let mainWindow: BrowserWindow | null;
 let server: net.Server | null;
 
@@ -12,9 +13,12 @@ function createWindow() {
     mainWindow = new BrowserWindow({width: 900, height: 680, icon: path.join(__dirname, '../src/res/logo.png'), webPreferences: { 
         webSecurity: !isDev, 
         nodeIntegration: true, 
-        nodeIntegrationInWorker: true 
+        nodeIntegrationInWorker: false,
+        backgroundThrottling: false,
+        autoplayPolicy: 'no-user-gesture-required'
     }});
-    mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
+    console.log(path.join(__dirname, '/index.html'));
+    mainWindow.loadURL(isDev ? `file://${path.join(__dirname, '../public/index.html')}` : `file://${path.join(__dirname, '../build/index.html')}`);
     
     mainWindow.on('closed', () => {
       mainWindow = null;
@@ -24,7 +28,8 @@ function createWindow() {
 }
 
 app.on('ready', () => {
-  const spawnServer = true;
+  
+  const spawnServer = false;
   if (spawnServer) {
     server = net.createServer();
     server.listen(8001);

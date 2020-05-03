@@ -28,8 +28,94 @@
     <title>React App</title>
   </head>
   <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.1.3/howler.core.min.js"></script>
     <script>
-    
+      function findStartGapDuration(audioBuffer) {
+        // Get the raw audio data for the left & right channels.
+        const l = audioBuffer.getChannelData(0);
+        const r = audioBuffer.getChannelData(1);
+        // Each is an array of numbers between -1 and 1 describing
+        // the waveform, sample by sample.
+
+        // Now to figure out how long both channels remain at 0:
+        for (let i = 0; i < l.length; i++) {
+          if (l[i] || r[i]) {
+            // Now we know which sample is non-zero, but we want
+            // the gap in seconds, not samples. Thankfully sampleRate
+            // gives us the number of samples per second.
+            return i / audioBuffer.sampleRate;
+          }
+        }
+
+        // Hmm, the clip is entirely silent
+        return audioBuffer.duration;
+      }
+
+      function findEndGapDuration(audioBuffer) {
+        // Get the raw audio data for the left & right channels.
+        const l = audioBuffer.getChannelData(0);
+        const r = audioBuffer.getChannelData(1);
+        // Each is an array of numbers between -1 and 1 describing
+        // the waveform, sample by sample.
+
+        // Now to figure out how long both channels remain at 0:
+        for (let i = l.length - 1; i >= 0; i--) {
+          if (l[i] || r[i]) {
+            // Now we know which sample is non-zero, but we want
+            // the gap in seconds, not samples. Thankfully sampleRate
+            // gives us the number of samples per second.
+            return audioBuffer.duration - (i / audioBuffer.sampleRate);
+          }
+        }
+
+        // Hmm, the clip is entirely silent
+        return audioBuffer.duration;
+      }
+
+      const context = new AudioContext();
+      // 'file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a'
+      // 'file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a'
+      // 'file:///home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a'
+      // 'file:///home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a'
+      // 'file:///home/aschey/windows/shared_files/Music/Bent Knee/Shiny Eyed Babies/Bent Knee - Shiny Eyed Babies - 06 Dead Horse.mp3'
+      // 'file:///home/aschey/windows/shared_files/Music/Bent Knee/Shiny Eyed Babies/Bent Knee - Shiny Eyed Babies - 07 Battle Creek.mp3'
+      // 'file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 05 Balancing The Dark.mp3'
+      // 'file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 06 Alma Mater.mp3'
+      fetch('file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 05 Balancing The Dark.mp3')
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
+        .then(audioBuffer => {
+          // Create a source:
+          // This represents a playback head.
+          const source = context.createBufferSource();
+          // Give it the audio data we loaded:
+          source.buffer = audioBuffer;
+          // Plug it into the output:
+          source.connect(context.destination);
+          // And off we go!
+          const s = Math.round(audioBuffer.duration * .97);
+          source.start(0, s);
+          fetch('file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 06 Alma Mater.mp3')
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
+            .then(audioBuffer2 => {
+              // Create a source:
+              // This represents a playback head.
+              const source2 = context.createBufferSource();
+              // Give it the audio data we loaded:
+              source2.buffer = audioBuffer2;
+              const gap1 = findEndGapDuration(audioBuffer);
+              console.log(gap1);
+              const gap2 = findStartGapDuration(audioBuffer2);
+              console.log(gap2);
+              // Plug it into the output:
+              source2.connect(context.destination);
+              const safetyBuffer = 0.25;
+              const switchTime = audioBuffer.duration - s;
+              source2.start(switchTime, gap2);
+              source.stop(switchTime - gap1 + safetyBuffer);
+            });
+        });
     </script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>

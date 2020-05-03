@@ -10,6 +10,13 @@ table! {
 }
 
 table! {
+    album_artist (album_artist_id) {
+        album_artist_id -> Integer,
+        album_artist_name -> Text,
+    }
+}
+
+table! {
     artist (artist_id) {
         artist_id -> Integer,
         artist_name -> Text,
@@ -83,13 +90,14 @@ table! {
     }
 }
 
-joinable!(album -> artist (album_artist_id));
+joinable!(album -> album_artist (album_artist_id));
 joinable!(file_size -> song (song_id));
 joinable!(song -> album (album_id));
 joinable!(song -> artist (artist_id));
 
 allow_tables_to_appear_in_same_query!(
     album,
+    album_artist,
     artist,
     file_size,
     folder,

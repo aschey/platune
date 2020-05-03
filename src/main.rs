@@ -19,10 +19,11 @@ fn stop_server(srv: actix_server::Server, t: std::thread::JoinHandle<()>) {
 }
 
 fn main() {
-    let direct = false;
+    let direct = true;
     let (tx, rx) = mpsc::channel();
     
     if direct {
+        //task::block_on(server::get_all_files());
         let _ = server::run_server(tx);
     }
     else {
