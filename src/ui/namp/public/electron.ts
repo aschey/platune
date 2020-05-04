@@ -18,7 +18,7 @@ function createWindow() {
         autoplayPolicy: 'no-user-gesture-required'
     }});
     console.log(path.join(__dirname, '/index.html'));
-    mainWindow.loadURL(isDev ? `file://${path.join(__dirname, '../public/index.html')}` : `file://${path.join(__dirname, '../build/index.html')}`);
+    mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
     
     mainWindow.on('closed', () => {
       mainWindow = null;
