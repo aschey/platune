@@ -51,6 +51,66 @@
         return audioBuffer.duration;
       }
 
+      function ReadInt(buffer) {
+        var result = buffer.charCodeAt(0);
+        for (var i = 1; i < buffer.length; ++i) {
+          result <<= 8;
+          result += buffer.charCodeAt(i);
+        }
+        return result;
+      }
+
+      function ParseGaplessData(arrayBuffer) {
+        // Gapless data is generally within the first 512 bytes, so limit parsing.
+        var byteStr = String.fromCharCode.apply(
+            null, new Uint8Array(arrayBuffer.slice(0, 512)));
+
+        var frontPadding = 0, endPadding = 0, realSamples = 0;
+
+        var iTunesDataIndex = byteStr.indexOf('iTunSMPB');
+        if (iTunesDataIndex != -1) {
+          var frontPaddingIndex = iTunesDataIndex + 34;
+          frontPadding = parseInt(byteStr.substr(frontPaddingIndex, 8), 16);
+
+          var endPaddingIndex = frontPaddingIndex + 9;
+          endPadding = parseInt(byteStr.substr(endPaddingIndex, 8), 16);
+
+          var sampleCountIndex = endPaddingIndex + 9;
+          realSamples = parseInt(byteStr.substr(sampleCountIndex, 16), 16);
+        }
+        var xingDataIndex = byteStr.indexOf('Xing');
+        if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf('Info');
+        if (xingDataIndex != -1) {
+          // See section 2.3.1 in the link above for the specifics on parsing the Xing
+          // frame count.
+          var frameCountIndex = xingDataIndex + 8;
+          var frameCount = ReadInt(byteStr.substr(frameCountIndex, 4));
+
+          // For Layer3 Version 1 and Layer2 there are 1152 samples per frame.  See
+          // section 2.1.5 in the link above for more details.
+          var paddedSamples = frameCount * 1152;
+        }
+        xingDataIndex = byteStr.indexOf('LAME');
+        if (xingDataIndex == -1) xingDataIndex = byteStr.indexOf('Lavf');
+        if (xingDataIndex != -1) {
+          // See http://gabriel.mp3-tech.org/mp3infotag.html#delays for details of
+          // how this information is encoded and parsed.
+          var gaplessDataIndex = xingDataIndex + 21;
+          var gaplessBits = ReadInt(byteStr.substr(gaplessDataIndex, 3));
+
+          // Upper 12 bits are the front padding, lower are the end padding.
+          frontPadding = gaplessBits >> 12;
+          endPadding = gaplessBits & 0xFFF;
+        }
+
+        realSamples = paddedSamples - (frontPadding + endPadding);
+
+        return {
+          audioDuration: realSamples,
+          frontPaddingDuration: frontPadding
+        }
+      }
+
       function findEndGapDuration(audioBuffer) {
         // Get the raw audio data for the left & right channels.
         const l = audioBuffer.getChannelData(0);
@@ -71,7 +131,7 @@
         // Hmm, the clip is entirely silent
         return audioBuffer.duration;
       }
-
+      function test1() {
       const context = new AudioContext();
       // 'file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a'
       // 'file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a'
@@ -81,9 +141,12 @@
       // 'file:///home/aschey/windows/shared_files/Music/Bent Knee/Shiny Eyed Babies/Bent Knee - Shiny Eyed Babies - 07 Battle Creek.mp3'
       // 'file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 05 Balancing The Dark.mp3'
       // 'file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 06 Alma Mater.mp3'
-      fetch('file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 05 Balancing The Dark.mp3')
+      fetch('file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a')
         .then(response => response.arrayBuffer())
-        .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
+        .then(arrayBuffer => {
+          console.log(ParseGaplessData(arrayBuffer));
+          return context.decodeAudioData(arrayBuffer);
+        })
         .then(audioBuffer => {
           // Create a source:
           // This represents a playback head.
@@ -93,11 +156,14 @@
           // Plug it into the output:
           source.connect(context.destination);
           // And off we go!
-          const s = Math.round(audioBuffer.duration * .97);
+          const s = Math.round(audioBuffer.duration * .95);
           source.start(0, s);
-          fetch('file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 06 Alma Mater.mp3')
+          fetch('file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a')
             .then(response => response.arrayBuffer())
-            .then(arrayBuffer => context.decodeAudioData(arrayBuffer))
+            .then(arrayBuffer => {
+              console.log(ParseGaplessData(arrayBuffer));
+              return context.decodeAudioData(arrayBuffer);
+            })
             .then(audioBuffer2 => {
               // Create a source:
               // This represents a playback head.
@@ -113,9 +179,101 @@
               const safetyBuffer = 0.25;
               const switchTime = audioBuffer.duration - s;
               source2.start(switchTime, gap2);
-              source.stop(switchTime - gap1 + safetyBuffer);
+              source.stop(switchTime - gap1);
             });
         });
+      }
+      function test2() {
+        const context = new AudioContext();
+        var audio = document.createElement('audio');
+        var mediaSource = new MediaSource();
+        var SEGMENTS = 2;
+
+        mediaSource.addEventListener('sourceopen', function() {
+          var sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+
+          function onAudioLoaded(arrayBuffer, index) {
+              // Parsing gapless metadata is unfortunately non trivial and a bit messy, so
+              // we'll glaze over it here; see the appendix for details.  ParseGaplessData()
+              // will return a dictionary with two elements:
+              //
+              //    audioDuration: Duration in seconds of all non-padding audio.
+              //    frontPaddingDuration: Duration in seconds of the front padding.
+              //
+              //var gaplessMetadata = ParseGaplessData(data);
+              const arrayBufferCopy = arrayBuffer.slice(0);
+              context.decodeAudioData(arrayBuffer).then(audioBuffer => {
+                const startGap = findStartGapDuration(audioBuffer);
+                const endGap = findEndGapDuration(audioBuffer);
+                // Each appended segment must be appended relative to the next.  To avoid any
+                // overlaps, we'll use the ending timestamp of the last append as the starting
+                // point for our next append or zero if we haven't appended anything yet.
+                var appendTime = index > 0 ? sourceBuffer.buffered.end(0) : 0;
+
+                // Simply put, an append window allows you to trim off audio (or video) frames
+                // which fall outside of a specified time range.  Here, we'll use the end of
+                // our last append as the start of our append window and the end of the real
+                // audio data for this segment as the end of our append window.
+                sourceBuffer.appendWindowStart = appendTime;//Math.max(0, appendTime - 1);
+                sourceBuffer.appendWindowEnd = appendTime + (audioBuffer.duration - endGap);//gaplessMetadata.audioDuration;
+
+                // The timestampOffset field essentially tells MediaSource where in the media
+                // timeline the data given to appendBuffer() should be placed.  I.e., if the
+                // timestampOffset is 1 second, the appended data will start 1 second into
+                // playback.
+                //
+                // MediaSource requires that the media timeline starts from time zero, so we
+                // need to ensure that the data left after filtering by the append window
+                // starts at time zero.  We'll do this by shifting all of the padding we want
+                // to discard before our append time (and thus, before our append window).
+                sourceBuffer.timestampOffset =
+                    appendTime - startGap;
+
+                // When appendBuffer() completes, it will fire an "updateend" event signaling
+                // that it's okay to append another segment of media.  Here, we'll chain the
+                // append for the next segment to the completion of our current append.
+                if (index == 0) {
+                  sourceBuffer.addEventListener('updateend', function() {
+                    if (++index < SEGMENTS) {
+                      fetch('file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 06 Alma Mater.mp3')
+                        .then(response => response.arrayBuffer()) 
+                        .then(function(data) { onAudioLoaded(data, index); });
+                    } else {
+                      // We've loaded all available segments, so tell MediaSource there are no
+                      // more buffers which will be appended.
+                      mediaSource.endOfStream();
+                      audio.play();
+                    }
+                  });
+                }
+
+                // appendBuffer() will now use the timestamp offset and append window settings
+                // to filter and timestamp the data we're appending.
+                //
+                // Note: While this demo uses very little memory, more complex use cases need
+                // to be careful about memory usage or garbage collection may remove ranges of
+                // media in unexpected places.
+                if (index == 0) {
+                  let s = Math.round(arrayBufferCopy.byteLength * 0.97);
+                  sourceBuffer.appendBuffer(arrayBufferCopy.slice(s));
+                }
+                else {
+                  sourceBuffer.appendBuffer(arrayBufferCopy);
+                }
+              })
+              
+            }
+
+          // Retrieve an audio segment via XHR.  For simplicity, we're retrieving the
+          // entire segment at once, but we could also retrieve it in chunks and append
+          // each chunk separately.  MSE will take care of assembling the pieces.
+          fetch('file:///home/aschey/windows/shared_files/Music/Rolo Tomassi/Time Will Die and Love Will Bury It/Rolo Tomassi - Time Will Die And Love Will Bury It - 05 Balancing The Dark.mp3')
+          .then(response => response.arrayBuffer()) 
+          .then(function(data) { onAudioLoaded(data, 0); } )
+        }, false);
+        audio.src = window.URL.createObjectURL(mediaSource);
+      }
+      test1();
     </script>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
