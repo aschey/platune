@@ -70,6 +70,7 @@ export const SongGrid: React.FC<{}> = () => {
                 <Column name='album artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].albumArtist}</Text></Cell>}/>
                 <Column name='artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].artist}</Text></Cell>}/>
                 <Column name='album' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].album}</Text></Cell>}/>
+                <Column name='track' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].track > 0 ? songs[rowIndex].track : ''}</Text></Cell>}/>
                 <Column name='path' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].path}</Text></Cell>}/>
             </Table>
             <Audio songQueue={songQueue} onFinished={onSongFinished}/>

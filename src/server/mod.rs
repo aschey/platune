@@ -355,6 +355,7 @@ pub trait SongExt {
 
 impl SongExt for Vec<Song> {
     fn sort_case_insensitive(&mut self, field: String) {
+        &self.sort_by(|l, r| Ord::cmp(&l.track, &r.track));
         &self.sort_by(|l, r| Ord::cmp(&l.album.to_lowercase(), &r.album.to_lowercase()));
         &self.sort_by(|l, r| Ord::cmp(&l.artist.to_lowercase(), &r.artist.to_lowercase()));
         &self.sort_by(|l, r| Ord::cmp(&l.album_artist.to_lowercase(), &r.album_artist.to_lowercase()));
@@ -626,18 +627,16 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
         .inner_join(artist)
         .inner_join(album)
         .inner_join(album_artist.on(schema::album_artist::album_artist_id.eq(schema::album::album_artist_id)))
-        .select((song_title, artist_name, album_artist_name, album_name, get_song_path()))
-        //.order(artist_name)
-        .limit(request.limit)
-        .offset(request.offset)
-        .load::<(String, String, String, String, String)>(&connection).unwrap()
+        .select((song_title, artist_name, album_artist_name, album_name, track_number, get_song_path()))
+        .load::<(String, String, String, String, i32, String)>(&connection).unwrap()
         .iter()
         .map(|s| Song { 
             name: s.0.to_owned(), 
             artist: s.1.to_owned(), 
             album_artist: s.2.to_owned(),
             album: s.3.to_owned(),
-            path: s.4.to_owned() })
+            track: s.4,
+            path: s.5.to_owned() })
         .collect::<Vec<_>>();
     &songs.sort_case_insensitive("album artist".to_owned());
     return Ok(Json(songs));
@@ -721,7 +720,8 @@ pub struct Song {
     pub artist: String,
     pub album_artist: String,
     pub name: String,
-    pub album: String
+    pub album: String,
+    pub track: i32
 }
 
 #[derive(Deserialize, Apiv2Schema)]

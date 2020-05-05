@@ -3,5 +3,6 @@ export interface Song {
     artist: string,
     albumArtist: string,
     name: string,
-    album: string
+    album: string,
+    track: number
 }
