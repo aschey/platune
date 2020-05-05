@@ -185,11 +185,14 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
                     import_album_artist: if f.album_artists.len() > 0 && f.album_artists[0] != "" { f.album_artists[0].to_owned() } else { f.artist },
                     import_song_path_windows: "".to_string(),
                     import_song_path_unix: "".to_string(),
-                    //import_song_path: to_url_path(full_path.to_owned()),
                     import_title: f.title,
                     import_track_number: f.track_number,
                     import_disc_number: f.disc_number,
-                    import_year: f.year
+                    import_year: f.year,
+                    import_duration: f.duration,
+                    import_sample_rate: f.sample_rate,
+                    import_bit_rate: f.bitrate,
+                    import_album_art: if f.album_art.len() > 0 { Some(f.album_art) } else { None } 
                 };
                 //let original2 = original.clone();
                 //let other2 = other.clone();
@@ -292,8 +295,11 @@ async fn get_all_files_parallel(root: String, other: String) {
     
     let _ = diesel::sql_query(
         "
-        insert into song(song_path_unix, song_path_windows, metadata_modified_date, artist_id, song_title, album_id, track_number, play_count, disc_number, song_year, song_month, song_day, is_deleted)
-        select import_song_path_unix, import_song_path_windows, strftime('%s', 'now'), artist.artist_id, import_title, album.album_id, import_track_number, 0, import_disc_number, import_year, 0, 0, false
+        insert into song(song_path_unix, song_path_windows, metadata_modified_date, artist_id, song_title, 
+            album_id, track_number, play_count, disc_number, song_year, song_month, song_day, duration,
+            sample_rate, bit_rate, album_art, is_deleted)
+        select import_song_path_unix, import_song_path_windows, strftime('%s', 'now'), artist.artist_id, import_title, album.album_id, import_track_number, 0, 
+            import_disc_number, import_year, 0, 0, import_duration, import_sample_rate, import_bit_rate, import_album_art, false
         from import_temp
         inner join artist on artist_name = import_artist
         inner join album_artist on album_artist_name = import_album_artist

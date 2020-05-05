@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS song (
     song_month INTEGER NOT NULL,
     song_day INTEGER NOT NULL,
     is_deleted BOOLEAN NOT NULL,
+    duration INTEGER NOT NULL,
+    sample_rate INTEGER NOT NULL,
+    bit_rate INTEGER NOT NULL,
+    album_art BLOB NULL,
     FOREIGN KEY(artist_id) REFERENCES artist(artist_id),
     FOREIGN KEY(album_id) REFERENCES album(album_id)
 )

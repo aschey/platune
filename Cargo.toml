@@ -28,6 +28,6 @@ dotenv = "0.15.0"
 sysinfo = "0.13.1"
 itertools = "0.9.0"
 failure = "0.1.7"
-katatsuki = { path = "../seiri/katatsuki/katatsuki-rs" }
+katatsuki = { git = "https://github.com/aschey/seiri", rev = "1d38b83" }
 num_cpus = "1.13.0"
 async-std = { version = "1.5.0", features = ["attributes"] }

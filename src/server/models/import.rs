@@ -11,5 +11,10 @@ pub struct NewImport {
     pub import_album: String,
     pub import_track_number: i32,
     pub import_disc_number: i32,
-    pub import_year: i32
+    pub import_year: i32,
+    pub import_duration: i32,
+    pub import_sample_rate: i32,
+    pub import_bit_rate: i32,
+    pub import_album_art: Option<Vec<u8>>
+
 }

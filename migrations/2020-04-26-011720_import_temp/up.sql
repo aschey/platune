@@ -8,5 +8,9 @@ CREATE TABLE IF NOT EXISTS import_temp (
     import_album TEXT NOT NULL,
     import_track_number INTEGER NOT NULL,
     import_disc_number INTEGER NOT NULL,
-    import_year INTEGER NOT NULL
+    import_year INTEGER NOT NULL,
+    import_duration INTEGER NOT NULL,
+    import_sample_rate INTEGER NOT NULL,
+    import_bit_rate INTEGER NOT NULL,
+    import_album_art BLOB NULL
 )

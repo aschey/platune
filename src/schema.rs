@@ -52,6 +52,10 @@ table! {
         import_track_number -> Integer,
         import_disc_number -> Integer,
         import_year -> Integer,
+        import_duration -> Integer,
+        import_sample_rate -> Integer,
+        import_bit_rate -> Integer,
+        import_album_art -> Nullable<Binary>,
     }
 }
 
@@ -79,6 +83,10 @@ table! {
         song_month -> Integer,
         song_day -> Integer,
         is_deleted -> Bool,
+        duration -> Integer,
+        sample_rate -> Integer,
+        bit_rate -> Integer,
+        album_art -> Nullable<Binary>,
     }
 }
 
