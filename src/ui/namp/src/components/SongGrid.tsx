@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Table, Cell, Column, SelectionModes, IRegion, RowLoadingOption, TableLoadingOption, RenderMode } from '@blueprintjs/table';
 import { Text, Label, ProgressBar, Intent } from '@blueprintjs/core';
+import Observer from '@researchgate/react-intersection-observer';
 import { getJson } from '../fetchUtil';
 import { Song } from '../models/song';
 import { range, sleep } from '../util';
@@ -47,20 +48,20 @@ export const SongGrid: React.FC<{}> = () => {
 
     return (
         <div style={{height: window.innerHeight * 1.5}}>
-                <Table 
-                    numRows={songs.length} 
-                    selectionModes={SelectionModes.ROWS_AND_CELLS}                 
-                    forceRerenderOnSelectionChange={false} 
-                    selectedRegionTransform={(region, event) => ({rows: region.rows})} 
-                    enableRowResizing={false}
-                    onSelection={onSelection}>
-                    <Column name='title' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].name}</Text></Cell>}/>
-                    <Column name='album artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].albumArtist}</Text></Cell>}/>
-                    <Column name='artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].artist}</Text></Cell>}/>
-                    <Column name='album' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].album}</Text></Cell>}/>
-                    <Column name='path' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].path}</Text></Cell>}/>
-                </Table>
-                <Audio songQueue={songQueue} onFinished={onSongFinished}/>
+            <Table 
+                numRows={songs.length} 
+                selectionModes={SelectionModes.ROWS_AND_CELLS}                 
+                forceRerenderOnSelectionChange={false} 
+                selectedRegionTransform={(region, event) => ({rows: region.rows})} 
+                enableRowResizing={false}
+                onSelection={onSelection}>
+                <Column name='title' cellRenderer={(rowIndex) => <Cell><Observer onChange={(a, b) => console.log(rowIndex)}><Text>{songs[rowIndex].name}</Text></Observer></Cell> }/>
+                <Column name='album artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].albumArtist}</Text></Cell>}/>
+                <Column name='artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].artist}</Text></Cell>}/>
+                <Column name='album' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].album}</Text></Cell>}/>
+                <Column name='path' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].path}</Text></Cell>}/>
+            </Table>
+            <Audio songQueue={songQueue} onFinished={onSongFinished}/>
         </div>
     )
 }
