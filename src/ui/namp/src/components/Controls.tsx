@@ -38,49 +38,48 @@ export const Controls: React.FC<{}> = () => {
                 </FlexRow>
                 <FlexRow  style={{width: window.innerWidth * .8}}>
                 <Slider
-          mode={1}
-          step={1}
-          domain={domain}
-          rootStyle={sliderStyle}
-          onChange={(a) => {}}
-          values={[150] as ReadonlyArray<number>}
-        >
-          <Rail>
-            {({ getRailProps }) => (
-              <div style={railStyle} {...getRailProps()} />
-            )}
-          </Rail>
-          <Handles>
-            {({ handles, getHandleProps }) => (
-              <div className="slider-handles">
-                {handles.map(handle => (
-                  <Handle
-                    key={handle.id}
-                    handle={handle}
+                    mode={1}
+                    step={1}
                     domain={domain}
-                    getHandleProps={getHandleProps}
-                  />
-                ))}
-              </div>
-            )}
-          </Handles>
-          <Tracks right={false}>
-            {({ tracks, getTrackProps }) => (
-              <div className="slider-tracks">
-                {tracks.map(({ id, source, target }) => (
-                  <Track
-                    key={id}
-                    source={source}
-                    target={target}
-                    getTrackProps={getTrackProps}
-                  />
-                ))}
-              </div>
-            )}
-          </Tracks>
-        </Slider>
-                </FlexRow>
-                
+                    rootStyle={sliderStyle}
+                    onChange={(a) => {}}
+                    values={[150] as ReadonlyArray<number>}
+                    >
+                    <Rail>
+                        {({ getRailProps }) => (
+                        <div style={railStyle} {...getRailProps()} />
+                        )}
+                    </Rail>
+                    <Handles>
+                        {({ handles, getHandleProps }) => (
+                        <div className="slider-handles">
+                            {handles.map(handle => (
+                            <Handle
+                                key={handle.id}
+                                handle={handle}
+                                domain={domain}
+                                getHandleProps={getHandleProps}
+                            />
+                            ))}
+                        </div>
+                        )}
+                        </Handles>
+                        <Tracks right={false}>
+                            {({ tracks, getTrackProps }) => (
+                            <div className="slider-tracks">
+                                {tracks.map(({ id, source, target }) => (
+                                <Track
+                                    key={id}
+                                    source={source}
+                                    target={target}
+                                    getTrackProps={getTrackProps}
+                                />
+                                ))}
+                            </div>
+                            )}
+                        </Tracks>
+                    </Slider>
+                </FlexRow>      
             </FlexCol>
         </FlexRow>
     );
@@ -93,7 +92,7 @@ interface IHandleProps {
     getHandleProps: GetHandleProps;
   }
   
-  export const Handle: React.SFC<IHandleProps> = ({
+  export const Handle: React.FC<IHandleProps> = ({
     domain: [min, max],
     handle: { id, value, percent },
     getHandleProps
@@ -129,7 +128,7 @@ interface IHandleProps {
     getTrackProps: GetTrackProps;
   }
   
-  export const Track: React.SFC<ITrackProps> = ({
+  export const Track: React.FC<ITrackProps> = ({
     source,
     target,
     getTrackProps
@@ -139,7 +138,7 @@ interface IHandleProps {
         position: 'absolute',
         height: 5,
         zIndex: 1,
-        backgroundColor: '#7aa0c4',
+        background: `linear-gradient(to right, rgba(25,94,145,1) 0%, rgba(20,186,142,1) 100%) fixed`,
         borderRadius: 7,
         cursor: 'pointer',
         left: `${source.percent}%`,
