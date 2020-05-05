@@ -9,10 +9,11 @@ let mainWindow: BrowserWindow | null;
 let server: net.Server | null;
 
 function createWindow() {
-    mainWindow = new BrowserWindow({width: 900, height: 680, icon: path.join(__dirname, '../src/res/logo.png'), webPreferences: { 
+    mainWindow = new BrowserWindow({width: 900, height: 680, backgroundColor: '#000', icon: path.join(__dirname, '../src/res/logo.png'), webPreferences: { 
         webSecurity: !isDev, 
         nodeIntegration: true, 
-        nodeIntegrationInWorker: true 
+        nodeIntegrationInWorker: false,
+        backgroundThrottling: false
     }});
     mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
     
@@ -24,7 +25,8 @@ function createWindow() {
 }
 
 app.on('ready', () => {
-  const spawnServer = true;
+  
+  const spawnServer = false;
   if (spawnServer) {
     server = net.createServer();
     server.listen(8001);

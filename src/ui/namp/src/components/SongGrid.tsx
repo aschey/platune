@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Cell, Column, SelectionModes, IRegion } from '@blueprintjs/table';
-import { Text } from '@blueprintjs/core';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Table, Cell, Column, SelectionModes, IRegion, RowLoadingOption, TableLoadingOption, RenderMode } from '@blueprintjs/table';
+import { Text, Label, ProgressBar, Intent } from '@blueprintjs/core';
+import Observer from '@researchgate/react-intersection-observer';
 import { getJson } from '../fetchUtil';
 import { Song } from '../models/song';
 import { range, sleep } from '../util';
-var Sound = require('react-sound').default;
+import { Audio } from './Audio';
 
 export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
-    const [selectedRow, setSelectedRow] = useState<number>(-1);
+    const playingRow = useRef<number>(-1);
+    const [songQueue, setSongQueue] = useState<string[]>([]);
     const numTries = 10;
 
     const loadSongs = async () => {
         for (let i of range(numTries)) {
             try {
-                console.log(i);
-                const songs = await getJson<Song[]>('/songs');
+                const songs = await getJson<Song[]>('/songs?offset=0&limit=200');
                 return songs;
             }
             catch (e) {
@@ -32,30 +33,35 @@ export const SongGrid: React.FC<{}> = () => {
         loadSongs().then(setSongs);
     }, []);
 
-    const titleRenderer = (rowIndex: number) => {
-        return (
-            <Cell>
-                <Text>
-                    {songs[rowIndex].name}
-                </Text>
-                <Sound
-                    autoLoad={false}
-                    volume={30}
-                    url={songs[rowIndex].path.replace('http://localhost:5000', 'file://')}
-                    playStatus={rowIndex === selectedRow ? Sound.status.PLAYING : Sound.status.STOPPED}
-                />
-            </Cell>
-        )
+    const onSongFinished = () => {
+        setSongQueue([songs[playingRow.current + 2].path]);
+        playingRow.current++;
     }
+
+    const onSelection = (p: IRegion[]) => {
+        if (p.length > 0 && p[0] !== null && p[0] !== undefined && p[0].rows !== null && p[0].rows !== undefined) {
+            const songIndex = p[0].rows[0];
+            playingRow.current = songIndex;
+            setSongQueue([songs[songIndex].path, songs[songIndex + 1].path]);
+        }
+    }
+
     return (
-        <Table numRows={songs.length} selectionModes={SelectionModes.ROWS_ONLY} onSelection={(p: IRegion[]) => {
-                if (p.length > 0 && p[0] !== null && p[0] !== undefined && p[0].rows !== null && p[0].rows !== undefined) {
-                    setSelectedRow(p[0].rows[0]);
-                }
-            }
-            }>
-            <Column name='title' cellRenderer={titleRenderer}/>
-            <Column name='artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].artist}</Text></Cell>}/>
-        </Table>
+        <div style={{height: window.innerHeight * 4}}>
+            <Table 
+                numRows={songs.length} 
+                selectionModes={SelectionModes.ROWS_AND_CELLS}                 
+                forceRerenderOnSelectionChange={false} 
+                selectedRegionTransform={(region, event) => ({rows: region.rows})} 
+                enableRowResizing={false}
+                onSelection={onSelection}>
+                <Column name='title' cellRenderer={(rowIndex) => <Cell><Observer onChange={(a, b) => console.log(rowIndex)}><Text>{songs[rowIndex].name}</Text></Observer></Cell> }/>
+                <Column name='album artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].albumArtist}</Text></Cell>}/>
+                <Column name='artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].artist}</Text></Cell>}/>
+                <Column name='album' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].album}</Text></Cell>}/>
+                <Column name='path' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].path}</Text></Cell>}/>
+            </Table>
+            <Audio songQueue={songQueue} onFinished={onSongFinished}/>
+        </div>
     )
 }

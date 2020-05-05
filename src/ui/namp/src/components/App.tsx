@@ -14,21 +14,13 @@ export interface ITreeState {
 
 
 const App: React.FC<{}> = () => {
-
-    //console.log(ipcRenderer.sendSync('synchronous-message', 'ping')) // prints "pong"
-    
-    ipcRenderer.on('test', (event: any, arg: any) => {
-      console.log(arg) // prints "pong"
-    })
-    ipcRenderer.send('asynchronous-message', 'ping')
     return (
         <div className="bp3-dark">
             <MainNavBar/>
-        <div style={{paddingTop: 50}}>
-        <SongGrid/>
+            <div style={{paddingTop: 40}}>
+                <SongGrid/>
+            </div>
         </div>
-        
-    </div>
     );
 }
 

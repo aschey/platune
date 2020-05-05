@@ -1,5 +1,7 @@
 export interface Song {
     path: string,
     artist: string,
-    name: string
+    albumArtist: string,
+    name: string,
+    album: string
 }

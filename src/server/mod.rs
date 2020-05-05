@@ -12,11 +12,12 @@ use std::{vec::Vec, env};
 use diesel;
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
-use models::{folder::*, mount::*, import::*, song::*};
+use models::{folder::*, mount::*, import::*};
 use crate::schema::folder::dsl::*;
 use crate::schema::mount::dsl::*;
 use crate::schema::import_temp::dsl::*;
 use crate::schema::artist::dsl::*;
+use crate::schema::album_artist::dsl::*;
 use crate::schema::album::dsl::*;
 use crate::schema::song::dsl::*;
 use crate::schema;
@@ -269,10 +270,10 @@ async fn get_all_files_parallel(root: String, other: String) {
 
     let _ = diesel::sql_query(
         "
-        insert into artist(artist_name)
+        insert into album_artist(album_artist_name)
         select import_album_artist from import_temp
-        left outer join artist on artist_name = import_album_artist
-        where artist_name is null
+        left outer join album_artist on album_artist_name = import_album_artist
+        where album_artist_name is null
         group by import_album_artist
         "
     ).execute(&connection).unwrap();
@@ -280,11 +281,11 @@ async fn get_all_files_parallel(root: String, other: String) {
     let _ = diesel::sql_query(
         "
         insert into album(album_name, album_year, album_month, album_day, album_artist_id)
-        select import_album, case when count(distinct import_year) > 1 then 0 else import_year end, 0, 0, artist_id
+        select import_album, case when count(distinct import_year) > 1 then 0 else import_year end, 0, 0,  album_artist.album_artist_id
         from import_temp
-        inner join artist on artist_name = import_album_artist
-        left outer join album on album_name = import_album and album_artist_id = artist_id
-        where album_name is null and album_artist_id is null
+        inner join album_artist on album_artist_name = import_album_artist
+        left outer join album on album_name = import_album and album.album_artist_id = album_artist.album_artist_id
+        where album_name is null and album.album_artist_id is null
         group by import_album_artist, import_album
         "
     ).execute(&connection).unwrap();
@@ -295,7 +296,8 @@ async fn get_all_files_parallel(root: String, other: String) {
         select import_song_path_unix, import_song_path_windows, strftime('%s', 'now'), artist.artist_id, import_title, album.album_id, import_track_number, 0, import_disc_number, import_year, 0, 0, false
         from import_temp
         inner join artist on artist_name = import_artist
-        inner join album on album_name = import_album and album_artist_id = artist.artist_id
+        inner join album_artist on album_artist_name = import_album_artist
+        inner join album on album_name = import_album and album.album_artist_id = album_artist.album_artist_id
         left outer join song on song_path_unix = import_song_path_unix or song_path_windows = import_song_path_windows
         where song.song_path_unix is null or song.song_path_windows is null
         "
@@ -606,17 +608,24 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 }
 
 #[api_v2_operation]
-async fn get_songs() -> Result<Json<Vec<Song>>, ()> {
+async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
     let connection = establish_connection();
     let songs = song
         .inner_join(artist)
         .inner_join(album)
-        .select((song_title, artist_name, get_song_path()))
+        .inner_join(album_artist.on(schema::album_artist::album_artist_id.eq(schema::album::album_artist_id)))
+        .select((song_title, artist_name, album_artist_name, album_name, get_song_path()))
         .order(artist_name)
-        .limit(100)
-        .load::<(String, String, String)>(&connection).unwrap()
+        .limit(request.limit)
+        .offset(request.offset)
+        .load::<(String, String, String, String, String)>(&connection).unwrap()
         .iter()
-        .map(|s| Song { name: s.0.to_owned(), artist: s.1.to_owned(), path: "http://localhost:5000".to_owned() + &s.2.to_owned() })
+        .map(|s| Song { 
+            name: s.0.to_owned(), 
+            artist: s.1.to_owned(), 
+            album_artist: s.2.to_owned(),
+            album: s.3.to_owned(),
+            path: s.4.to_owned() })
         .collect::<Vec<_>>();
     return Ok(Json(songs));
 }
@@ -690,4 +699,21 @@ struct DirRequest {
 #[serde(rename_all = "camelCase")]
 struct FolderUpdate {
     folders: Vec<String>,
+}
+
+#[derive(Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+pub struct Song {
+    pub path: String,
+    pub artist: String,
+    pub album_artist: String,
+    pub name: String,
+    pub album: String
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct SongRequest {
+    offset: i64,
+    limit: i64
 }
