@@ -9,6 +9,7 @@ import { Audio } from './Audio';
 
 export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
+    const [height, setHeight] = useState<number>(window.innerHeight - 39);
     const playingRow = useRef<number>(-1);
     const [songQueue, setSongQueue] = useState<string[]>([]);
     const numTries = 10;
@@ -16,7 +17,7 @@ export const SongGrid: React.FC<{}> = () => {
     const loadSongs = async () => {
         for (let i of range(numTries)) {
             try {
-                const songs = await getJson<Song[]>('/songs?offset=0&limit=200');
+                const songs = await getJson<Song[]>('/songs?offset=0&limit=15000');
                 return songs;
             }
             catch (e) {
@@ -33,6 +34,16 @@ export const SongGrid: React.FC<{}> = () => {
         loadSongs().then(setSongs);
     }, []);
 
+    useEffect(() => {
+        // Hack to get around a weird rendering issue
+        // For some reason, it seems like the height needs to cause an overflow while the songs are loaded in order for it to render correctly
+        // Once the songs load, we can set the correct height
+        if (songs.length) {
+            setHeight(window.innerHeight - 40);
+        }
+        
+    }, [songs]);
+
     const onSongFinished = () => {
         setSongQueue([songs[playingRow.current + 2].path]);
         playingRow.current++;
@@ -47,7 +58,7 @@ export const SongGrid: React.FC<{}> = () => {
     }
 
     return (
-        <div style={{height: window.innerHeight * 4}}>
+        <div style={{height: height}}>
             <Table 
                 numRows={songs.length} 
                 selectionModes={SelectionModes.ROWS_AND_CELLS}                 

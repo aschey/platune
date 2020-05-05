@@ -32,6 +32,8 @@ itself down if the app is no longer running.
 - Choose database path
 - Map paths between hard drive partitions
 - Host configured files as static files
+- Import and sync new files into database
 
 ### Features in Progress
-- main song grid
+- Song queue with gapless audio support
+- Loading songs on main page
