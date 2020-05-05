@@ -41,7 +41,7 @@ export const SongGrid: React.FC<{}> = () => {
         // For some reason, it seems like the height needs to cause an overflow while the songs are loaded in order for it to render correctly
         // Once the songs load, we can set the correct height
         if (songs.length) {
-            setHeight(window.innerHeight - 90);
+            setHeight(window.innerHeight - 40 - 80);
         }
         
     }, [songs]);
