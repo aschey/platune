@@ -16,7 +16,7 @@ export const SongGrid: React.FC<{}> = () => {
     const loadSongs = async () => {
         for (let i of range(numTries)) {
             try {
-                const songs = await getJson<Song[]>('/songs?offset=0&limit=70');
+                const songs = await getJson<Song[]>('/songs?offset=0&limit=200');
                 return songs;
             }
             catch (e) {
@@ -47,7 +47,7 @@ export const SongGrid: React.FC<{}> = () => {
     }
 
     return (
-        <div style={{height: window.innerHeight * 1.5}}>
+        <div style={{height: window.innerHeight * 4}}>
             <Table 
                 numRows={songs.length} 
                 selectionModes={SelectionModes.ROWS_AND_CELLS}                 

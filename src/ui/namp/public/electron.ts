@@ -5,7 +5,6 @@ import { spawn } from 'child_process';
 import zmq from 'zeromq';
 import net from 'net';
 
-app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 let mainWindow: BrowserWindow | null;
 let server: net.Server | null;
 
@@ -14,8 +13,7 @@ function createWindow() {
         webSecurity: !isDev, 
         nodeIntegration: true, 
         nodeIntegrationInWorker: false,
-        backgroundThrottling: false,
-        autoplayPolicy: 'no-user-gesture-required'
+        backgroundThrottling: false
     }});
     mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
     
