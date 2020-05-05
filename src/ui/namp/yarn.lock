@@ -957,12 +957,12 @@
     lodash "^4.17.13"
     to-fast-properties "^2.0.0"
 
-"@blueprintjs/core@^3.26.0":
-  version "3.26.0"
-  resolved "https://registry.yarnpkg.com/@blueprintjs/core/-/core-3.26.0.tgz#b56470517fa57734434e1fcb552676c1b2aab4f4"
-  integrity sha512-A/jC9JCktOp9RMaWDD3XumYMk6QgYNYNwvzZLw7wcZT1PkzoNotdeyAT5d0+Y2lJtwCrKwLEd+6qbTx9eI1DqQ==
+"@blueprintjs/core@^3.26.1":
+  version "3.26.1"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/core/-/core-3.26.1.tgz#371b6c83a937efb6d9a6947c3c5b55dba09bb838"
+  integrity sha512-f5U9RBvSMV/eLEXlBeaYbx+LRAcrsSrnK8gScM4Jwnuto6d9m6CeVxNe6YkQxvKOs4lhiC+UdPN2A9yJcXrGHA==
   dependencies:
-    "@blueprintjs/icons" "^3.15.1"
+    "@blueprintjs/icons" "^3.16.0"
     "@types/dom4" "^2.0.1"
     classnames "^2.2"
     dom4 "^2.1.5"
@@ -974,29 +974,29 @@
     resize-observer-polyfill "^1.5.1"
     tslib "~1.10.0"
 
-"@blueprintjs/icons@^3.15.1":
-  version "3.15.1"
-  resolved "https://registry.yarnpkg.com/@blueprintjs/icons/-/icons-3.15.1.tgz#81b278d237169afaba0fb7ac0547d95b53b4255d"
-  integrity sha512-W20MJ+LL0IHiYMmsxzWPKs9BF9tDOG7T/8VvLVeQdqD+pzVHcus7T6g41gTRIqL4Gx9nLCPKTYunazoGn/03xg==
+"@blueprintjs/icons@^3.16.0":
+  version "3.16.0"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/icons/-/icons-3.16.0.tgz#902c74a36ff24ad76fa309cca25b6877c2a9c027"
+  integrity sha512-VVBvgnpz8eQFhnX5OQGLdRqka9DU/CTtF3w9vnwKK2r9N/xRF0BPe9Ev1RzuUzP4GJG4GUIRaqiAX9+l/FviDg==
   dependencies:
     classnames "^2.2"
     tslib "~1.10.0"
 
-"@blueprintjs/select@^3.12.2":
-  version "3.12.2"
-  resolved "https://registry.yarnpkg.com/@blueprintjs/select/-/select-3.12.2.tgz#1bec7530125e731f1b9ca69a4316783891f629a2"
-  integrity sha512-29IGTE/Dc1Osts4HPQGHndQa/c+nQ8uh1fa0ZXEJi2eF4xofsVy0GRL+SpeY9w5FFUlupGzQm6c7qsFKWkltnA==
+"@blueprintjs/select@^3.12.3":
+  version "3.12.3"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/select/-/select-3.12.3.tgz#27a660d794b2464da2453991dedd115186766a92"
+  integrity sha512-WU6RGk2NSlPS4VjcpljmGQY+w4ezMCazoQfh37JMDNq5Xa/wzrKaleXifMmZUUWJNvjtsZ0sNDNLzI+DGuX0dQ==
   dependencies:
-    "@blueprintjs/core" "^3.26.0"
+    "@blueprintjs/core" "^3.26.1"
     classnames "^2.2"
     tslib "~1.10.0"
 
-"@blueprintjs/table@^3.8.4":
-  version "3.8.4"
-  resolved "https://registry.yarnpkg.com/@blueprintjs/table/-/table-3.8.4.tgz#f20c151673ce747a10109a2f27ea78063cafe28c"
-  integrity sha512-hQkNX2q81s5PuKCuO56PqSYxZ1X61KEIPbRvZRqAQgLqTwhKZzZuM9NcyW3DSoszycfMd8jixYtlWadV719pWg==
+"@blueprintjs/table@^3.8.5":
+  version "3.8.5"
+  resolved "https://registry.yarnpkg.com/@blueprintjs/table/-/table-3.8.5.tgz#db376754036b63e84d1d7d62961433a4a855c09b"
+  integrity sha512-2htupMHs4YgZFQAA0tjBodLW272+SNW9zdnB399m/hfwvAPb0QDzY3S5e1qqsMFhrNQ7Lp8KAm7MqIzIIv5enw==
   dependencies:
-    "@blueprintjs/core" "^3.26.0"
+    "@blueprintjs/core" "^3.26.1"
     classnames "^2.2"
     lodash "^4.17.15"
     prop-types "^15.6.0"
@@ -1282,11 +1282,6 @@
   dependencies:
     call-me-maybe "^1.0.1"
     glob-to-regexp "^0.3.0"
-
-"@msgpack/msgpack@^1.12.1":
-  version "1.12.1"
-  resolved "https://registry.yarnpkg.com/@msgpack/msgpack/-/msgpack-1.12.1.tgz#aab1084bc33c955501bc0f202099e38304143e0b"
-  integrity sha512-nGwwmkdm3tuLdEkWMIwLBgFBfMFILILxcZIQY0dfqsdboN2iZdKfOYKUOKoa0wXw1FL1PL3yEYGPCXhwodQDTA==
 
 "@nodelib/fs.stat@^1.1.2":
   version "1.1.3"
