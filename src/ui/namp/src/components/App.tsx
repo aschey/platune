@@ -17,11 +17,10 @@ const App: React.FC<{}> = () => {
     return (
         <div className="bp3-dark">
             <MainNavBar/>
-        <div style={{paddingTop: 50}}>
-        <SongGrid/>
+            <div style={{paddingTop: 40}}>
+                <SongGrid/>
+            </div>
         </div>
-        
-    </div>
     );
 }
 

@@ -2,6 +2,10 @@
   text-align: center;
 }
 
+html {
+  background-color: #30404d;
+}
+
 .App-logo {
   height: 40vmin;
   pointer-events: none;
@@ -52,15 +56,6 @@
   border-radius: 10px;
   -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5); 
   box-shadow: inset 0 0 6px rgba(0,0,0,0.5); 
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .bp3-dialog-header {

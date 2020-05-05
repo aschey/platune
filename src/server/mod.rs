@@ -608,7 +608,7 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 }
 
 #[api_v2_operation]
-async fn get_songs() -> Result<Json<Vec<Song>>, ()> {
+async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
     let connection = establish_connection();
     let songs = song
         .inner_join(artist)
@@ -616,7 +616,8 @@ async fn get_songs() -> Result<Json<Vec<Song>>, ()> {
         .inner_join(album_artist.on(schema::album_artist::album_artist_id.eq(schema::album::album_artist_id)))
         .select((song_title, artist_name, album_artist_name, album_name, get_song_path()))
         .order(artist_name)
-        //.limit(100)
+        .limit(request.limit)
+        .offset(request.offset)
         .load::<(String, String, String, String, String)>(&connection).unwrap()
         .iter()
         .map(|s| Song { 
@@ -708,4 +709,11 @@ pub struct Song {
     pub album_artist: String,
     pub name: String,
     pub album: String
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct SongRequest {
+    offset: i64,
+    limit: i64
 }
