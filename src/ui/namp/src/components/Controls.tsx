@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Text, Label, ProgressBar, Intent, Button, Icon } from '@blueprintjs/core';
+import { Text, Label, ProgressBar, Intent, Button, Icon, AnchorButton } from '@blueprintjs/core';
 import { Slider, Rail, Handles, Tracks, Ticks, SliderItem, GetHandleProps, GetTrackProps } from "react-compound-slider";
 import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
+import { range } from '../util';
 
 export const Controls: React.FC<{}> = () => {
+    const [isPlaying, setIsPlaying] = useState(false);
+
     const domain: ReadonlyArray<number> = [100, 500];
     const sliderStyle: React.CSSProperties = {
         margin: '5%',
@@ -25,16 +28,14 @@ export const Controls: React.FC<{}> = () => {
     return (
         <FlexRow style={{height: 80, alignItems: 'center'}}>
             <FlexCol style={{alignItems: 'center', border: '1px solid #263540', boxShadow: '1px 1px #263540', background: '#334654', borderRadius: '10px', marginLeft: 30, marginRight: 30}}>
-                <FlexRow style={{alignItems: 'center', paddingTop: 5}}>
-                    <Button intent={Intent.PRIMARY} outlined icon='fast-backward' style={{borderRadius: '50%', width: 30, height: 30}}/>
+                <FlexRow style={{alignItems: 'center', paddingTop: 10}}>
+                    <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-backward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                     <div style={{width: 5}}/>
-                    <Button intent={Intent.WARNING} outlined icon='pause' style={{borderRadius: '50%', width: 35, height: 35}}/>
+                    <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} outlined icon={isPlaying ? 'pause' : 'play'} style={{borderRadius: '50%', width: 40, height: 40}} onClick={() => setIsPlaying(!isPlaying)}/>
                     <div style={{width: 5}}/>
-                    <Button intent={Intent.SUCCESS} outlined icon='play' style={{borderRadius: '50%', width: 40, height: 40}}/>
+                    <Button className='nofocus' intent={Intent.DANGER} outlined icon='stop' style={{borderRadius: '50%', width: 40, height: 40}} onClick={() => setIsPlaying(false)}/>
                     <div style={{width: 5}}/>
-                    <Button intent={Intent.DANGER} outlined icon='stop' style={{borderRadius: '50%', width: 35, height: 35}}/>
-                    <div style={{width: 5}}/>
-                    <Button intent={Intent.PRIMARY} outlined icon='fast-forward' style={{borderRadius: '50%', width: 30, height: 30}}/>
+                    <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-forward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                 </FlexRow>
                 <FlexRow  style={{width: window.innerWidth * .8}}>
                 <Slider
@@ -127,7 +128,7 @@ interface IHandleProps {
     target: SliderItem;
     getTrackProps: GetTrackProps;
   }
-  
+  //let val = `linear-gradient(to right, ${range(100).map(val => `rgba(${Math.round(Math.random() * 100)},${Math.round(Math.random() * 100)},${Math.round(Math.random() * 100)},1) ${val}%`).join(',')}) fixed`;
   export const Track: React.FC<ITrackProps> = ({
     source,
     target,

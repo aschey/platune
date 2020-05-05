@@ -72,12 +72,12 @@ export const SongGrid: React.FC<{}> = () => {
                 enableRowResizing={false}
                 onColumnWidthChanged={() => {setHeight(window.innerHeight); setTimeout(() => setHeight(window.innerHeight - 90), 1);}}
                 onSelection={onSelection}>
-                <Column name='Title' cellRenderer={(rowIndex) => <Cell><Observer onChange={(a, b) => console.log(rowIndex)}><Text>{songs[rowIndex].name}</Text></Observer></Cell> }/>
-                <Column name='Album Artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].albumArtist}</Text></Cell>}/>
-                <Column name='Artist' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].artist}</Text></Cell>}/>
-                <Column name='Album' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].album}</Text></Cell>}/>
-                <Column name='Track' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].track > 0 ? songs[rowIndex].track : ''}</Text></Cell>}/>
-                <Column name='Path' cellRenderer={(rowIndex) => <Cell><Text>{songs[rowIndex].path}</Text></Cell>}/>
+                <Column name='Title' cellRenderer={(rowIndex) => <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}><Text>{songs[rowIndex].name}</Text></Cell> }/>
+                <Column name='Album Artist' cellRenderer={(rowIndex) => <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}><Text>{songs[rowIndex].albumArtist}</Text></Cell>}/>
+                <Column name='Artist' cellRenderer={(rowIndex) => <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}><Text>{songs[rowIndex].artist}</Text></Cell>}/>
+                <Column name='Album' cellRenderer={(rowIndex) => <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}><Text>{songs[rowIndex].album}</Text></Cell>}/>
+                <Column name='Track' cellRenderer={(rowIndex) => <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}><Text>{songs[rowIndex].track > 0 ? songs[rowIndex].track : ''}</Text></Cell>}/>
+                <Column name='Path' cellRenderer={(rowIndex) => <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}><Text>{songs[rowIndex].path}</Text></Cell>}/>
             </Table>
             <Audio songQueue={songQueue} onFinished={onSongFinished}/>
         </div>
