@@ -1,7 +1,3 @@
-.App {
-  text-align: center;
-}
-
 html {
   background-color: #30404d;
 }
@@ -35,7 +31,7 @@ html {
 }
 
 .scroll {
-  overflow-y: scroll;
+  overflow: scroll;
 }
 
 .App-link {
@@ -44,6 +40,7 @@ html {
 
 ::-webkit-scrollbar {
   width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
@@ -56,6 +53,10 @@ html {
   border-radius: 10px;
   -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.5); 
   box-shadow: inset 0 0 6px rgba(0,0,0,0.5); 
+}
+
+::-webkit-scrollbar-corner {
+    background: rgba(0,0,0,0);
 }
 
 .nofocus:focus {

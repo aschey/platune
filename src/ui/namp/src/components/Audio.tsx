@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import context from '../context';
 
-interface AudioProps {
-    songQueue: string[],
-    onFinished: () => void
-}
+class AudioQueue {
+    switchTime: number;
+    index: number;
+    finishCounter: number;
+    constructor() {
+        this.switchTime = 0;
+        this.index = 0;
+        this.finishCounter = 0;
+    }
 
-export const Audio: React.FC<AudioProps> = ({songQueue, onFinished}) => {
-    const switchTime = useRef<number>(0);
-    const index = useRef<number>(0);
-    const finishCounter = useRef<number>(0);
-
-    const findStartGapDuration = (audioBuffer: AudioBuffer) => {
+    findStartGapDuration = (audioBuffer: AudioBuffer) => {
         // Get the raw audio data for the left & right channels.
         const l = audioBuffer.getChannelData(0);
         const r = audioBuffer.getChannelData(1);
@@ -32,7 +32,7 @@ export const Audio: React.FC<AudioProps> = ({songQueue, onFinished}) => {
         return audioBuffer.duration;
     }
 
-    const findEndGapDuration = (audioBuffer: AudioBuffer) => {
+    findEndGapDuration = (audioBuffer: AudioBuffer) => {
         // Get the raw audio data for the left & right channels.
         const l = audioBuffer.getChannelData(0);
         const r = audioBuffer.getChannelData(1);
@@ -52,8 +52,8 @@ export const Audio: React.FC<AudioProps> = ({songQueue, onFinished}) => {
         // Hmm, the clip is entirely silent
         return audioBuffer.duration;
     }
-    
-    const load = useCallback(async (song: string, context: AudioContext) => {
+
+    load = async (song: string, context: AudioContext) => {
         //const context = new AudioContext();
         const data = await fetch(song);
         const arrayBuffer = await data.arrayBuffer();
@@ -65,58 +65,62 @@ export const Audio: React.FC<AudioProps> = ({songQueue, onFinished}) => {
             //context,
             audioBuffer,
             source,
-            startGap: findStartGapDuration(audioBuffer),
-            endGap: findEndGapDuration(audioBuffer)
+            startGap: this.findStartGapDuration(audioBuffer),
+            endGap: this.findEndGapDuration(audioBuffer)
         }
-    }, []);
+    }
 
-    const schedule = useCallback(async (song: string, context: AudioContext) => {
-        console.log('here');
-        const startOffset = index.current === 0 ? 0.0 : 0; // percentage - this will need to get passed in for pause/resume
-        const songData = await load(`file://${song}`, context);
+    schedule = async (song: string, context: AudioContext, onFinished: (playingRow: number) => void, playingRow: number) => {
+        const startOffset = this.index === 0 ? 0 : 0; // percentage - this will need to get passed in for pause/resume
+        const songData = await this.load(`file://${song}`, context);
         let startSeconds = startOffset > 0 ? Math.round(songData.audioBuffer.duration * startOffset) : songData.startGap;
-        if (switchTime.current === 0) {
-            switchTime.current = context.currentTime;
+        let currentSwitchTime = this.switchTime;
+        if (this.switchTime === 0) {
+            //switchTime.current = context.currentTime;
+            currentSwitchTime = context.currentTime;
         }
-        const nextSwitchTime = switchTime.current + songData.audioBuffer.duration - startSeconds;
-        let start = switchTime.current === 0 ? context.currentTime : switchTime.current;
+        const nextSwitchTime = currentSwitchTime + songData.audioBuffer.duration - startSeconds;
+        let start = currentSwitchTime === 0 ? context.currentTime : currentSwitchTime;
         
         songData.source.start(start, startSeconds);
-        console.log('start' + index.current, start, startSeconds);
         songData.source.stop(nextSwitchTime);
-        console.log('stop' + index.current, nextSwitchTime);
+        let self = this;
         songData.source.addEventListener('ended', function(b) {
-            console.log('ended');
-            finishCounter.current++;
-            if (finishCounter.current % 2 === 1) {
-                onFinished();
+            self.finishCounter++;
+            //dispatch({type: 'updateFinishCounter'});
+            if (self.finishCounter % 2 === 0) {
+                onFinished(playingRow);
             }
         });
         
-        switchTime.current = nextSwitchTime;
-        index.current++;
-    }, [load, onFinished]);
+        //switchTime.current = nextSwitchTime;
+        this.switchTime = nextSwitchTime;
+        //dispatch({type: 'updateSwitchTime', newVal: nextSwitchTime});
+        //index.current++;
+        this.index++;
+        //dispatch({type: 'updateIndex'});
+    }
+    
+    scheduleAll = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
 
-    useEffect(() => {        
-        const scheduleAll = async () => {
-            console.log('test');
-            if (songQueue.length) {
-                // const newQueue = [
-                //     '/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a',
-                //     '/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a'
-                // ]
-                const newQueue = songQueue.slice(0);
-                while (newQueue.length) {
-                    const song = newQueue.shift();
-                    console.log(song);
-                    if (song) {
-                        await schedule(song, context);
-                    }
+        if (songQueue.length) {
+            // const newQueue = [
+            //     '/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a',
+            //     '/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a'
+            // ]
+            const newQueue = songQueue.slice(0);
+            while (newQueue.length) {
+                const song = newQueue.shift();
+     
+                console.log(song);
+                if (song) {
+                    await this.schedule(song, context, onFinished, playingRow);
+                    playingRow++;
+                    
                 }
             }
         }
-        scheduleAll();
-    }, [schedule, load, songQueue]);
-
-    return <></>
+    }
 }
+
+export const audioQueue = new AudioQueue();
