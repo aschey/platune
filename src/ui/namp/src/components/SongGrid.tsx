@@ -198,8 +198,9 @@ export const SongGrid: React.FC<{}> = () => {
     }
 
     const onPlay = () => {
-        setPlayingRow(selectedRow);
-        startQueue(selectedRow);
+        const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
+        setPlayingRow(rowToPlay);
+        startQueue(rowToPlay);
     }
 
     const onStop = () => {
