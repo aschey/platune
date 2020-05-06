@@ -20,6 +20,7 @@ export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
     const [height, setHeight] = useState(window.innerHeight - 39);
     const [playingRow, setPlayingRow] = useState(-1);
+    const [selectedRow, setSelectedRow] = useState(-1);
     const [editingRow, setEditingRow] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
 
@@ -79,6 +80,7 @@ export const SongGrid: React.FC<{}> = () => {
             setEditingRow(-1);
         }
         setPlayingRow(songIndex);
+        audioQueue.stop();
         startQueue(songIndex);
     }
 
@@ -92,6 +94,7 @@ export const SongGrid: React.FC<{}> = () => {
     const onSelection = (p: IRegion[]) => {
         if (p.length > 0 && p[0] !== null && p[0] !== undefined && p[0].rows !== null && p[0].rows !== undefined) {
             const songIndex = p[0].rows[0];
+            setSelectedRow(songIndex);
             if (songIndex === editingRow) {
                 return;
             }
@@ -195,7 +198,13 @@ export const SongGrid: React.FC<{}> = () => {
     }
 
     const onPlay = () => {
-        startQueue(playingRow);
+        setPlayingRow(selectedRow);
+        startQueue(selectedRow);
+    }
+
+    const onStop = () => {
+        audioQueue.stop();
+        setPlayingRow(-1);
     }
 
     const width = window.innerWidth;
@@ -225,7 +234,7 @@ export const SongGrid: React.FC<{}> = () => {
                 <Column name='Path' cellRenderer={(rowIndex) => pathRenderer(rowIndex)}/>
             </Table>
         </div>
-        <Controls isPlaying={isPlaying} setIsPlaying={setIsPlaying} onPause={onPause} onPlay={onPlay}/>
+        <Controls isPlaying={isPlaying} setIsPlaying={setIsPlaying} onPause={onPause} onPlay={onPlay} onStop={onStop}/>
         </>
     )
 }

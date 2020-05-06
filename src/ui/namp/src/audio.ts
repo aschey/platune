@@ -99,7 +99,7 @@ class AudioQueue {
         let self = this;
         songData.source.addEventListener('ended', function(b) {
             // don't fire when paused because we don't want to play the next track
-            if (self.currentPauseTime > 0 && !self.sources.length) {
+            if (!self.sources.length) {
                 return;
             }
             self.finishCounter++;
@@ -151,10 +151,9 @@ class AudioQueue {
         this.reset();
     }
 
-    public restart = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
+    public stop() {
         this.currentPauseTime = 0;
         this.reset();
-        await this.scheduleAll(songQueue, playingRow, onFinished, 0);
     }
 }
 

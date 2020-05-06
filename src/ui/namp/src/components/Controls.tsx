@@ -9,10 +9,11 @@ interface ControlProps {
     isPlaying: boolean,
     setIsPlaying: (isPlaying: boolean) => void,
     onPause: () => void,
-    onPlay: () => void
+    onPlay: () => void,
+    onStop: () => void
 }
 
-export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPause, onPlay}) => {
+export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPause, onPlay, onStop}) => {
     const domain: ReadonlyArray<number> = [100, 500];
     const sliderStyle: React.CSSProperties = {
         margin: '5%',
@@ -39,6 +40,12 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
         }
         setIsPlaying(!isPlaying);
     }
+
+    const stopClick = () => {
+        onStop();
+        setIsPlaying(false);
+    }
+
     return (
         <FlexRow style={{height: 80, alignItems: 'center'}}>
             <FlexCol style={{alignItems: 'center', border: '1px solid #263540', boxShadow: '1px 1px #263540', background: '#334654', borderRadius: '10px', marginLeft: 30, marginRight: 30}}>
@@ -47,7 +54,7 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
                     <div style={{width: 5}}/>
                     <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} outlined icon={isPlaying ? 'pause' : 'play'} style={{borderRadius: '50%', width: 40, height: 40}} onClick={playPauseClick}/>
                     <div style={{width: 5}}/>
-                    <Button className='nofocus' intent={Intent.DANGER} outlined icon='stop' style={{borderRadius: '50%', width: 40, height: 40}} onClick={() => setIsPlaying(false)}/>
+                    <Button className='nofocus' intent={Intent.DANGER} outlined icon='stop' style={{borderRadius: '50%', width: 40, height: 40}} onClick={stopClick}/>
                     <div style={{width: 5}}/>
                     <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-forward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                 </FlexRow>
