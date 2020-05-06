@@ -9,6 +9,7 @@
     "url": "https://github.com/aschey"
   },
   "build": {
+    "extends": null,
     "appId": "com.namp",
     "productName": "NAMP",
     "copyright": "Copyright © 2020 ${author}",
@@ -17,6 +18,7 @@
     },
     "files": [
       "build/**/*",
+      "dist/**/*",
       "node_modules/**/*"
     ],
     "directories": {
