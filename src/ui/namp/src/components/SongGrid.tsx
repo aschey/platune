@@ -170,7 +170,7 @@ export const SongGrid: React.FC<{}> = () => {
 
     const rowHeaderNameRenderer = (name: string, rowIndex: number | undefined) => {
         let chosenIndex = rowIndex ?? 0;
-        if (chosenIndex === playingRow) {
+        if (chosenIndex === playingRow && isPlaying) {
             return (
                 <div style={{lineHeight: 2}} onDoubleClick={() => onDoubleClick(chosenIndex)}>
                     <Icon intent={Intent.SUCCESS} icon="volume-up"/>
