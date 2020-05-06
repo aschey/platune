@@ -4,11 +4,13 @@ import isDev from 'electron-is-dev';
 import { spawn } from 'child_process';
 import zmq from 'zeromq';
 import net from 'net';
+import contextMenu from 'electron-context-menu';
 
 let mainWindow: BrowserWindow | null;
 let server: net.Server | null;
 
 function createWindow() {
+    const dispose = contextMenu();
     mainWindow = new BrowserWindow({width: 900, height: 680, backgroundColor: '#000', icon: path.join(__dirname, '../src/res/logo.png'), webPreferences: { 
         webSecurity: !isDev, 
         nodeIntegration: true, 

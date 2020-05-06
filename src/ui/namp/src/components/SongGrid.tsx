@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Table, Cell, Column, SelectionModes, IRegion, RowLoadingOption, TableLoadingOption, RenderMode } from '@blueprintjs/table';
+import { Table, Cell, Column, SelectionModes, IRegion, RowLoadingOption, TableLoadingOption, RenderMode, RowHeaderCell } from '@blueprintjs/table';
 import { Text, Label, ProgressBar, Intent, Icon, Button, EditableText } from '@blueprintjs/core';
 import Observer from '@researchgate/react-intersection-observer';
 import { getJson } from '../fetchUtil';
@@ -11,11 +11,17 @@ import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
 import { toastSuccess } from '../appToaster';
 
+const useForceUpdate = () => {
+    const [value, setValue] = useState(0);
+    return () => setValue(value => ++value);
+}
+
 export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
     const [height, setHeight] = useState(window.innerHeight - 39);
     const [playingRow, setPlayingRow] = useState(-1);
     const [editingRow, setEditingRow] = useState(-1);
+    const forceUpdate = useForceUpdate();
 
     const numTries = 10;
 
@@ -49,10 +55,13 @@ export const SongGrid: React.FC<{}> = () => {
         
     }, [songs]);
 
-    
+    useEffect(() => {
+        // Batch rendering mode seems to cause React to skip re-rendering sometimes
+        // Need to use this to ensure it updates
+        forceUpdate();
+    }, [playingRow])
 
     const onSongFinished = (playingRow: number) => {
-        console.log(playingRow + 1);
         setPlayingRow(playingRow + 1);
         audioQueue.scheduleAll([songs[playingRow + 2].path], playingRow + 1, onSongFinished);
     }
@@ -70,7 +79,7 @@ export const SongGrid: React.FC<{}> = () => {
                 setEditingRow(-1);
             }
             setPlayingRow(songIndex);
- 
+
             audioQueue.scheduleAll([
                 songs[songIndex].path,
                 songs[songIndex + 1].path
@@ -120,6 +129,26 @@ export const SongGrid: React.FC<{}> = () => {
         </Cell>);
     }
 
+    const rowHeaderNameRenderer = (name: string, rowIndex: number | undefined) => {
+        if (rowIndex === playingRow) {
+            return (
+                <div style={{lineHeight: 2}}>
+                    <Icon intent={Intent.SUCCESS} icon="volume-up"/>
+                </div>
+            );
+        }
+        return (
+            <Text>{rowIndex}</Text> 
+        );
+    }
+
+    const rowHeaderRenderer = (rowIndex: number) => {
+        if (rowIndex === playingRow) {
+            return <RowHeaderCell index={rowIndex} nameRenderer={rowHeaderNameRenderer}/>
+        }
+        return <RowHeaderCell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}} index={rowIndex} nameRenderer={rowHeaderNameRenderer}/>
+    }
+
     const width = window.innerWidth;
     const remainingWidth = width - 30 - 55 - 40;
     return (
@@ -130,12 +159,15 @@ export const SongGrid: React.FC<{}> = () => {
                 rowHeights={songs.map(() => 25)}
                 columnWidths={[30, remainingWidth * .2, remainingWidth * .15, remainingWidth * .15, remainingWidth * .2, 55, remainingWidth * .3]}
                 selectionModes={SelectionModes.ROWS_AND_CELLS}                 
-                forceRerenderOnSelectionChange={false} 
+                forceRerenderOnSelectionChange={true} 
+                renderMode={RenderMode.BATCH_ON_UPDATE}
                 selectedRegionTransform={(region, event) => ({rows: region.rows})} 
                 enableRowResizing={false}
                 onColumnWidthChanged={() => {setHeight(window.innerHeight); setTimeout(() => setHeight(window.innerHeight - 90), 1);}}
-                onSelection={onSelection}>
-                <Column name = ''  cellRenderer={editCellRenderer}/>
+                onSelection={onSelection}
+                rowHeaderCellRenderer={rowHeaderRenderer}
+                >
+                <Column name = '' cellRenderer={editCellRenderer}/>
                 <Column name='Title' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'name') }/>
                 <Column name='Album Artist' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'albumArtist')}/>
                 <Column name='Artist' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'artist')}/>

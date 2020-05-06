@@ -76,7 +76,6 @@ class AudioQueue {
         let startSeconds = startOffset > 0 ? Math.round(songData.audioBuffer.duration * startOffset) : songData.startGap;
         let currentSwitchTime = this.switchTime;
         if (this.switchTime === 0) {
-            //switchTime.current = context.currentTime;
             currentSwitchTime = context.currentTime;
         }
         const nextSwitchTime = currentSwitchTime + songData.audioBuffer.duration - startSeconds;
@@ -87,37 +86,24 @@ class AudioQueue {
         let self = this;
         songData.source.addEventListener('ended', function(b) {
             self.finishCounter++;
-            //dispatch({type: 'updateFinishCounter'});
             if (self.finishCounter % 2 === 0) {
                 onFinished(playingRow);
             }
         });
-        
-        //switchTime.current = nextSwitchTime;
         this.switchTime = nextSwitchTime;
-        //dispatch({type: 'updateSwitchTime', newVal: nextSwitchTime});
-        //index.current++;
         this.index++;
-        //dispatch({type: 'updateIndex'});
     }
     
     scheduleAll = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
-
         if (songQueue.length) {
             // const newQueue = [
             //     '/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a',
             //     '/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a'
             // ]
-            const newQueue = songQueue.slice(0);
-            while (newQueue.length) {
-                const song = newQueue.shift();
-     
+            for (let song of songQueue) {
                 console.log(song);
-                if (song) {
-                    await this.schedule(song, context, onFinished, playingRow);
-                    playingRow++;
-                    
-                }
+                await this.schedule(song, context, onFinished, playingRow);
+                playingRow++;
             }
         }
     }
