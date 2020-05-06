@@ -66,9 +66,25 @@ export const SongGrid: React.FC<{}> = () => {
         audioQueue.scheduleAll([songs[playingRow + 2].path], playingRow + 1, onSongFinished);
     }
 
+    const onDoubleClick = (songIndex: number) => {
+        if (songIndex === editingRow) {
+            return;
+        }
+        if (editingRow > -1) {
+            // save
+            toastSuccess();
+            setEditingRow(-1);
+        }
+        setPlayingRow(songIndex);
+
+        audioQueue.scheduleAll([
+            songs[songIndex].path,
+            songs[songIndex + 1].path
+        ], songIndex, onSongFinished);
+    }
+
     const onSelection = (p: IRegion[]) => {
         if (p.length > 0 && p[0] !== null && p[0] !== undefined && p[0].rows !== null && p[0].rows !== undefined) {
-            
             const songIndex = p[0].rows[0];
             if (songIndex === editingRow) {
                 return;
@@ -78,12 +94,6 @@ export const SongGrid: React.FC<{}> = () => {
                 toastSuccess();
                 setEditingRow(-1);
             }
-            setPlayingRow(songIndex);
-
-            audioQueue.scheduleAll([
-                songs[songIndex].path,
-                songs[songIndex + 1].path
-            ], songIndex, onSongFinished);
         }
     }
 
@@ -106,17 +116,27 @@ export const SongGrid: React.FC<{}> = () => {
         </Cell>);
     }
 
-    const cellRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album' | 'track' | 'path') => {
-        let value = songs[rowIndex][field].toString();
-        if (field === 'track' && value === '0') {
+    const trackRenderer = (rowIndex: number) => {
+        let value = songs[rowIndex].track.toString();
+        if (value === '0') {
             value = '';
         }
-        if (rowIndex === editingRow && field !== 'path') {
+        return cellRenderer(rowIndex, value);
+    }
+
+    const pathRenderer = (rowIndex: number) => {
+        let value = songs[rowIndex].path;
+        return cellRenderer(rowIndex, value, false);
+    }
+
+    const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
+        if (rowIndex === editingRow && canEdit) {
             return (
                 <Cell intent={Intent.PRIMARY}>
                     <EditableText value={value}/>
                 </Cell>);
         }
+
         if (rowIndex === playingRow) {
             return (
                 <Cell intent={Intent.SUCCESS}>
@@ -124,13 +144,22 @@ export const SongGrid: React.FC<{}> = () => {
                 </Cell>);
         }
         return (
-        <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}>
-            <Text>{value}</Text>
-        </Cell>);
+            <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}}>
+                <div onDoubleClick={() => onDoubleClick(rowIndex)}>
+                    <Text>{value}</Text>
+                </div>
+            </Cell>
+        );
+    }
+
+    const genericCellRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album') => {
+        let value = songs[rowIndex][field].toString();
+        return cellRenderer(rowIndex, value);
     }
 
     const rowHeaderNameRenderer = (name: string, rowIndex: number | undefined) => {
-        if (rowIndex === playingRow) {
+        let chosenIndex = rowIndex ?? 0;
+        if (chosenIndex === playingRow) {
             return (
                 <div style={{lineHeight: 2}}>
                     <Icon intent={Intent.SUCCESS} icon="volume-up"/>
@@ -138,7 +167,10 @@ export const SongGrid: React.FC<{}> = () => {
             );
         }
         return (
-            <Text>{rowIndex}</Text> 
+            <div onDoubleClick={() => onDoubleClick(chosenIndex)}>
+                <Text>{rowIndex}</Text> 
+            </div>
+            
         );
     }
 
@@ -168,12 +200,12 @@ export const SongGrid: React.FC<{}> = () => {
                 rowHeaderCellRenderer={rowHeaderRenderer}
                 >
                 <Column name = '' cellRenderer={editCellRenderer}/>
-                <Column name='Title' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'name') }/>
-                <Column name='Album Artist' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'albumArtist')}/>
-                <Column name='Artist' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'artist')}/>
-                <Column name='Album' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'album')}/>
-                <Column name='Track' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'track')}/>
-                <Column name='Path' cellRenderer={(rowIndex) => cellRenderer(rowIndex, 'path')}/>
+                <Column name='Title' cellRenderer={(rowIndex) => genericCellRenderer(rowIndex, 'name') }/>
+                <Column name='Album Artist' cellRenderer={(rowIndex) => genericCellRenderer(rowIndex, 'albumArtist')}/>
+                <Column name='Artist' cellRenderer={(rowIndex) => genericCellRenderer(rowIndex, 'artist')}/>
+                <Column name='Album' cellRenderer={(rowIndex) => genericCellRenderer(rowIndex, 'album')}/>
+                <Column name='Track' cellRenderer={(rowIndex) => trackRenderer(rowIndex)}/>
+                <Column name='Path' cellRenderer={(rowIndex) => pathRenderer(rowIndex)}/>
             </Table>
         </div>
         <Controls/>
