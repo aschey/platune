@@ -5,9 +5,14 @@ import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
 import { range } from '../util';
 
-export const Controls: React.FC<{}> = () => {
-    const [isPlaying, setIsPlaying] = useState(false);
+interface ControlProps {
+    isPlaying: boolean,
+    setIsPlaying: (isPlaying: boolean) => void,
+    onPause: () => void,
+    onPlay: () => void
+}
 
+export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPause, onPlay}) => {
     const domain: ReadonlyArray<number> = [100, 500];
     const sliderStyle: React.CSSProperties = {
         margin: '5%',
@@ -15,23 +20,32 @@ export const Controls: React.FC<{}> = () => {
         width: '90%',
         marginBottom: 10,
         marginTop: 10
-      };
-      const railStyle: React.CSSProperties = {
+    };
+    const railStyle: React.CSSProperties = {
         position: 'absolute',
         width: '100%',
         height: 5,
         borderRadius: 7,
         cursor: 'pointer',
         backgroundColor: 'rgb(155,155,155)'
-      };
-      
+    };
+    
+    const playPauseClick = () => {
+        if (isPlaying) {
+            onPause();
+        }
+        else {
+            onPlay();
+        }
+        setIsPlaying(!isPlaying);
+    }
     return (
         <FlexRow style={{height: 80, alignItems: 'center'}}>
             <FlexCol style={{alignItems: 'center', border: '1px solid #263540', boxShadow: '1px 1px #263540', background: '#334654', borderRadius: '10px', marginLeft: 30, marginRight: 30}}>
                 <FlexRow style={{alignItems: 'center', paddingTop: 10}}>
                     <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-backward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                     <div style={{width: 5}}/>
-                    <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} outlined icon={isPlaying ? 'pause' : 'play'} style={{borderRadius: '50%', width: 40, height: 40}} onClick={() => setIsPlaying(!isPlaying)}/>
+                    <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} outlined icon={isPlaying ? 'pause' : 'play'} style={{borderRadius: '50%', width: 40, height: 40}} onClick={playPauseClick}/>
                     <div style={{width: 5}}/>
                     <Button className='nofocus' intent={Intent.DANGER} outlined icon='stop' style={{borderRadius: '50%', width: 40, height: 40}} onClick={() => setIsPlaying(false)}/>
                     <div style={{width: 5}}/>

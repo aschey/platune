@@ -21,6 +21,8 @@ export const SongGrid: React.FC<{}> = () => {
     const [height, setHeight] = useState(window.innerHeight - 39);
     const [playingRow, setPlayingRow] = useState(-1);
     const [editingRow, setEditingRow] = useState(-1);
+    const [isPlaying, setIsPlaying] = useState(false);
+
     const forceUpdate = useForceUpdate();
 
     const numTries = 10;
@@ -59,11 +61,12 @@ export const SongGrid: React.FC<{}> = () => {
         // Batch rendering mode seems to cause React to skip re-rendering sometimes
         // Need to use this to ensure it updates
         forceUpdate();
+        setIsPlaying(playingRow > -1);
     }, [playingRow])
 
     const onSongFinished = (playingRow: number) => {
         setPlayingRow(playingRow + 1);
-        audioQueue.scheduleAll([songs[playingRow + 2].path], playingRow + 1, onSongFinished);
+        audioQueue.start([songs[playingRow + 2].path], playingRow + 1, onSongFinished);
     }
 
     const onDoubleClick = (songIndex: number) => {
@@ -76,8 +79,11 @@ export const SongGrid: React.FC<{}> = () => {
             setEditingRow(-1);
         }
         setPlayingRow(songIndex);
+        startQueue(songIndex);
+    }
 
-        audioQueue.scheduleAll([
+    const startQueue = (songIndex: number) => {
+        audioQueue.start([
             songs[songIndex].path,
             songs[songIndex + 1].path
         ], songIndex, onSongFinished);
@@ -140,7 +146,9 @@ export const SongGrid: React.FC<{}> = () => {
         if (rowIndex === playingRow) {
             return (
                 <Cell intent={Intent.SUCCESS}>
-                    <Text>{value}</Text>
+                    <div onDoubleClick={() => onDoubleClick(rowIndex)}>
+                        <Text>{value}</Text>
+                    </div>
                 </Cell>);
         }
         return (
@@ -161,7 +169,7 @@ export const SongGrid: React.FC<{}> = () => {
         let chosenIndex = rowIndex ?? 0;
         if (chosenIndex === playingRow) {
             return (
-                <div style={{lineHeight: 2}}>
+                <div style={{lineHeight: 2}} onDoubleClick={() => onDoubleClick(chosenIndex)}>
                     <Icon intent={Intent.SUCCESS} icon="volume-up"/>
                 </div>
             );
@@ -179,6 +187,15 @@ export const SongGrid: React.FC<{}> = () => {
             return <RowHeaderCell index={rowIndex} nameRenderer={rowHeaderNameRenderer}/>
         }
         return <RowHeaderCell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a'}} index={rowIndex} nameRenderer={rowHeaderNameRenderer}/>
+    }
+
+    const onPause = () => {
+        audioQueue.pause();
+        setIsPlaying(false);
+    }
+
+    const onPlay = () => {
+        startQueue(playingRow);
     }
 
     const width = window.innerWidth;
@@ -208,7 +225,7 @@ export const SongGrid: React.FC<{}> = () => {
                 <Column name='Path' cellRenderer={(rowIndex) => pathRenderer(rowIndex)}/>
             </Table>
         </div>
-        <Controls/>
+        <Controls isPlaying={isPlaying} setIsPlaying={setIsPlaying} onPause={onPause} onPlay={onPlay}/>
         </>
     )
 }
