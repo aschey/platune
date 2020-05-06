@@ -33,6 +33,7 @@ itself down if the app is no longer running.
 - Map paths between hard drive partitions
 - Host configured files as static files
 - Import and sync new files into database
+- Play/pause/stop
 
 ### Features in Progress
 - Song queue with gapless audio support

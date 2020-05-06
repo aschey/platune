@@ -12,7 +12,7 @@ class AudioQueue {
     finishCounter: number;
     context: AudioContext;
     sources: ScheduledSource[];
-    currentPauseTime: number;
+    isPaused: boolean;
 
     constructor() {
         this.switchTime = 0;
@@ -20,7 +20,7 @@ class AudioQueue {
         this.finishCounter = 0;
         this.context = new AudioContext();
         this.sources = [];
-        this.currentPauseTime = 0;
+        this.isPaused = false;
     }
 
     private findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -81,10 +81,10 @@ class AudioQueue {
         }
     }
 
-    private schedule = async (song: string, onFinished: (playingRow: number) => void, playingRow: number, startOffset: number = 0) => {
+    private schedule = async (song: string, onFinished: (playingRow: number) => void, playingRow: number) => {
         //const startOffset = this.index === 0 ? 0 : 0; // percentage - this will need to get passed in for pause/resume
         const songData = await this.load(`file://${song}`, this.context);
-        let startSeconds = startOffset > 0 ? startOffset : songData.startGap;
+        let startSeconds = songData.startGap;
         let currentSwitchTime = this.switchTime;
         if (this.switchTime === 0) {
             currentSwitchTime = this.context.currentTime;
@@ -98,16 +98,17 @@ class AudioQueue {
         this.sources.push({source: songData.source, start, stop: nextSwitchTime })
         let self = this;
         songData.source.addEventListener('ended', function(b) {
-            // don't fire when paused because we don't want to play the next track
+            // don't fire when stopped because we don't want to play the next track
             if (!self.sources.length) {
                 return;
             }
             self.finishCounter++;
+            // This event fires when stop is called and when the stream finishes so only fire the event one of those times
             if (self.finishCounter % 2 === 0) {
                 // first source in the queue finished, don't need it anymore
                 self.sources.shift();
                 // current song finished, reset pause time for next song
-                self.currentPauseTime = 0;
+                //self.currentPauseTime = 0;
                 onFinished(playingRow);
             }
         });
@@ -123,36 +124,31 @@ class AudioQueue {
         this.sources = [];
     }
     
-    private scheduleAll = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void, resumeTime: number) => {
+    private scheduleAll = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
         if (songQueue.length) {
             for (let song of songQueue) {
                 console.log(song);
-                await this.schedule(song, onFinished, playingRow, resumeTime);
-                // Only use resume time for first song
-                resumeTime = 0;
+                await this.schedule(song, onFinished, playingRow);
                 playingRow++;
             }
         }
     }
 
     public start = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
-        await this.scheduleAll(songQueue, playingRow, onFinished, this.currentPauseTime);
+        if (this.isPaused) {
+            this.context.resume();
+            this.isPaused = false;
+            return;
+        }
+        await this.scheduleAll(songQueue, playingRow, onFinished);
     }
 
     public pause() {
-        if (!this.sources.length) {
-            return;
-        }
-        const current = this.sources[0];
-        if (!current) {
-            return;
-        }
-        this.currentPauseTime = this.context.currentTime - current.start + this.currentPauseTime;
-        this.reset();
+        this.context.suspend();
+        this.isPaused = true;
     }
 
     public stop() {
-        this.currentPauseTime = 0;
         this.reset();
     }
 }
