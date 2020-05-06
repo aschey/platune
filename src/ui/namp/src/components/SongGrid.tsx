@@ -5,7 +5,7 @@ import Observer from '@researchgate/react-intersection-observer';
 import { getJson } from '../fetchUtil';
 import { Song } from '../models/song';
 import { range, sleep } from '../util';
-import { audioQueue } from './Audio';
+import { audioQueue } from '../audio';
 import { Controls } from './Controls';
 import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';

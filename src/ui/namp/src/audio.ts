@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
-import context from '../context';
-
 class AudioQueue {
     switchTime: number;
     index: number;
     finishCounter: number;
+    context: AudioContext;
     constructor() {
         this.switchTime = 0;
         this.index = 0;
         this.finishCounter = 0;
+        this.context = new AudioContext();
     }
 
     findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -70,16 +69,16 @@ class AudioQueue {
         }
     }
 
-    schedule = async (song: string, context: AudioContext, onFinished: (playingRow: number) => void, playingRow: number) => {
+    schedule = async (song: string, onFinished: (playingRow: number) => void, playingRow: number) => {
         const startOffset = this.index === 0 ? 0 : 0; // percentage - this will need to get passed in for pause/resume
-        const songData = await this.load(`file://${song}`, context);
+        const songData = await this.load(`file://${song}`, this.context);
         let startSeconds = startOffset > 0 ? Math.round(songData.audioBuffer.duration * startOffset) : songData.startGap;
         let currentSwitchTime = this.switchTime;
         if (this.switchTime === 0) {
-            currentSwitchTime = context.currentTime;
+            currentSwitchTime = this.context.currentTime;
         }
         const nextSwitchTime = currentSwitchTime + songData.audioBuffer.duration - startSeconds;
-        let start = currentSwitchTime === 0 ? context.currentTime : currentSwitchTime;
+        let start = currentSwitchTime === 0 ? this.context.currentTime : currentSwitchTime;
         
         songData.source.start(start, startSeconds);
         songData.source.stop(nextSwitchTime);
@@ -102,7 +101,7 @@ class AudioQueue {
             // ]
             for (let song of songQueue) {
                 console.log(song);
-                await this.schedule(song, context, onFinished, playingRow);
+                await this.schedule(song, onFinished, playingRow);
                 playingRow++;
             }
         }
