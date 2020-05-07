@@ -3,7 +3,8 @@ import { sleep } from "./util";
 interface ScheduledSource {
     start: number,
     stop: number,
-    source: AudioBufferSourceNode
+    source: AudioBufferSourceNode,
+    id: number
 }
 
 class AudioQueue {
@@ -13,6 +14,7 @@ class AudioQueue {
     context: AudioContext;
     sources: ScheduledSource[];
     isPaused: boolean;
+    pausedTrackId: number;
 
     constructor() {
         this.switchTime = 0;
@@ -21,6 +23,7 @@ class AudioQueue {
         this.context = new AudioContext();
         this.sources = [];
         this.isPaused = false;
+        this.pausedTrackId = -1;
     }
 
     private findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -95,7 +98,7 @@ class AudioQueue {
         songData.source.start(start, startSeconds);
         console.log('starting at', startSeconds);
         songData.source.stop(nextSwitchTime);
-        this.sources.push({source: songData.source, start, stop: nextSwitchTime })
+        this.sources.push({source: songData.source, start, stop: nextSwitchTime, id: playingRow })
         let self = this;
         songData.source.addEventListener('ended', function(b) {
             // don't fire when stopped because we don't want to play the next track
@@ -136,9 +139,13 @@ class AudioQueue {
 
     public start = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
         if (this.isPaused) {
-            this.context.resume();
             this.isPaused = false;
-            return;
+            // todo: mute volume while resetting to prevent click
+            this.context.resume();
+            if (this.sources.length && playingRow !== this.sources[0].id) {
+                this.reset();
+                return;
+            }
         }
         await this.scheduleAll(songQueue, playingRow, onFinished);
     }

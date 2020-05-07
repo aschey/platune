@@ -67,7 +67,7 @@ export const SongGrid: React.FC<{}> = () => {
 
     const onSongFinished = (playingRow: number) => {
         setPlayingRow(playingRow + 1);
-        audioQueue.start([songs[playingRow + 2].path], playingRow + 1, onSongFinished);
+        audioQueue.start([songs[playingRow + 2].path], playingRow + 2, onSongFinished);
     }
 
     const onDoubleClick = (songIndex: number) => {
