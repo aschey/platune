@@ -46,13 +46,9 @@ export const Demo: React.FC<{}> = () => {
         loadSongs().then(setSongs);
     }, []);
 
-//   render() {
-//     const list = new Array(15000).fill(true).map(() => ({
-//         name: 'a',
-//         description: 'a',
-//         location: 'a'
-//       }));
-//     const { widths } = this.state;
+    useEffect(() => {
+        setIsPlaying(playingRow > -1);
+    }, [playingRow])
 
     const headerRenderer = (props: TableHeaderProps) => {
         return (
@@ -159,7 +155,7 @@ export const Demo: React.FC<{}> = () => {
 
     return (
         <>
-        <div style={{overflowX: 'scroll', height: window.innerHeight - 140}}>
+        <div style={{height: window.innerHeight - 140}}>
             <Table
             width={window.innerWidth - 20}
             height={window.innerHeight - 160}

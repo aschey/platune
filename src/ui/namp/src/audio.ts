@@ -14,7 +14,6 @@ class AudioQueue {
     context: AudioContext;
     sources: ScheduledSource[];
     isPaused: boolean;
-    pausedTrackId: number;
 
     constructor() {
         this.switchTime = 0;
@@ -23,7 +22,6 @@ class AudioQueue {
         this.context = new AudioContext();
         this.sources = [];
         this.isPaused = false;
-        this.pausedTrackId = -1;
     }
 
     private findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -88,6 +86,7 @@ class AudioQueue {
         //const startOffset = this.index === 0 ? 0 : 0; // percentage - this will need to get passed in for pause/resume
         const songData = await this.load(`file://${song}`, this.context);
         let startSeconds = songData.startGap;
+
         let currentSwitchTime = this.switchTime;
         if (this.switchTime === 0) {
             currentSwitchTime = this.context.currentTime;
@@ -100,20 +99,15 @@ class AudioQueue {
         songData.source.stop(nextSwitchTime);
         this.sources.push({source: songData.source, start, stop: nextSwitchTime, id: playingRow })
         let self = this;
-        songData.source.addEventListener('ended', function(b) {
-            // don't fire when stopped because we don't want to play the next track
-            if (!self.sources.length) {
+        songData.source.addEventListener('ended', function(_) {
+            // don't fire when stopped because we don't want to play the next track (sources will be empty when stopped)
+            // Sometimes this event fires twice so check the source to ensure we only call onFinished once
+            if (!self.sources.length || this !== self.sources[0].source) {
                 return;
             }
-            self.finishCounter++;
-            // This event fires when stop is called and when the stream finishes so only fire the event one of those times
-            if (self.finishCounter % 2 === 0) {
-                // first source in the queue finished, don't need it anymore
-                self.sources.shift();
-                // current song finished, reset pause time for next song
-                //self.currentPauseTime = 0;
-                onFinished(playingRow);
-            }
+            // first source in the queue finished, don't need it anymore
+            self.sources.shift();
+            onFinished(playingRow);
         });
         this.switchTime = nextSwitchTime;
         this.index++;
