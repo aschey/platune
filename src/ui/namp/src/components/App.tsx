@@ -6,6 +6,7 @@ import { FolderPicker } from './FolderPicker';
 import { MainNavBar } from './MainNavBar';
 import { SongGrid } from './SongGrid';
 import { ipcRenderer } from 'electron';
+import { Demo } from './SongGrid2';
 
 export interface ITreeState {
   nodes: ITreeNode[];
@@ -18,7 +19,7 @@ const App: React.FC<{}> = () => {
         <div className="bp3-dark">
             <MainNavBar/>
             <div style={{paddingTop: 40}}>
-                <SongGrid/>
+                <Demo/>
             </div>
         </div>
     );
