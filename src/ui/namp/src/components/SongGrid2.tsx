@@ -9,6 +9,7 @@ import { Cell } from "@blueprintjs/table";
 import { Intent, EditableText, Text } from "@blueprintjs/core";
 import { toastSuccess } from "../appToaster";
 import { audioQueue } from "../audio";
+import { Controls } from "./Controls";
 
 export const Demo: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
@@ -140,11 +141,28 @@ export const Demo: React.FC<{}> = () => {
         </Cell>
     }
 
+    const onPause = () => {
+        audioQueue.pause();
+        setIsPlaying(false);
+    }
+
+    const onPlay = () => {
+        const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
+        setPlayingRow(rowToPlay);
+        startQueue(rowToPlay);
+    }
+
+    const onStop = () => {
+        audioQueue.stop();
+        setPlayingRow(-1);
+    }
+
     return (
-        <div style={{height: window.innerHeight - 40, overflowX: 'scroll'}}>
+        <>
+        <div style={{overflowX: 'scroll', height: window.innerHeight - 140}}>
             <Table
-            width={window.innerWidth}
-            height={window.innerHeight - 50}
+            width={window.innerWidth - 20}
+            height={window.innerHeight - 160}
             headerHeight={20}
             rowHeight={20}
             rowCount={songs.length}
@@ -172,6 +190,7 @@ export const Demo: React.FC<{}> = () => {
         />
         </Table>
         </div>
-       
+        <Controls isPlaying={isPlaying} setIsPlaying={setIsPlaying} onPause={onPause} onPlay={onPlay} onStop={onStop}/>
+       </>
     );
 }

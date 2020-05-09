@@ -117,7 +117,7 @@ html {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  transform: translate(5px) !important;
+  transform: translate(6px) !important;
 }
 
 .ReactVirtualized__Table__rowColumn {
