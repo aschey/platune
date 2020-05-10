@@ -115,6 +115,12 @@ html {
   background: #2c3d4a;
 }
 
+.gridCell {
+  display: flex;
+  flex: 1;
+  height: 20;
+}
+
 .DragHandle {
   flex: 0 0 16px;
   z-index: 2;

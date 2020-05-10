@@ -6,10 +6,11 @@ import { range, sleep } from "../util";
 import { getJson } from "../fetchUtil";
 import _ from "lodash";
 import { Cell } from "@blueprintjs/table";
-import { Intent, EditableText, Text } from "@blueprintjs/core";
+import { Intent, EditableText, Text, Button } from "@blueprintjs/core";
 import { toastSuccess } from "../appToaster";
 import { audioQueue } from "../audio";
 import { Controls } from "./Controls";
+import { FlexCol } from "./FlexCol";
 
 export const Demo: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
@@ -70,6 +71,26 @@ export const Demo: React.FC<{}> = () => {
         );
     };
 
+
+    const editCellRenderer = (rowIndex: number) => {
+        const isEditingRow = editingRow === rowIndex;
+        return (
+        <div className='bp3-table-cell gridCell striped'>
+            <FlexCol>
+                <Button small minimal intent={isEditingRow || rowIndex === playingRow ? Intent.SUCCESS : Intent.NONE} icon={isEditingRow ? 'saved' : 'edit'} onClick={() => {
+                    if (isEditingRow) {
+                        // save
+                        toastSuccess();
+                        setEditingRow(-1);
+                    }
+                    else {
+                        setEditingRow(rowIndex);
+                    }
+                }}/>
+            </FlexCol>
+        </div>);
+    }
+
     const onDoubleClick = (songIndex: number) => {
         if (songIndex === editingRow) {
             return;
@@ -99,26 +120,26 @@ export const Demo: React.FC<{}> = () => {
     const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
         if (rowIndex === editingRow && canEdit) {
             return (
-                <div className='bp3-table-cell bp3-intent-primary' style={{display: 'flex', flex: 1, height: 20}} onDoubleClick={() => onDoubleClick(rowIndex)}>
+                <div className='bp3-table-cell bp3-intent-primary gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
                     <EditableText value={value}/>
                 </div>);
         }
 
         if (rowIndex === playingRow) {
             return (
-                <div className='bp3-table-cell bp3-intent-success' style={{display: 'flex', flex: 1, height: 20}} onDoubleClick={() => onDoubleClick(rowIndex)}>
+                <div className='bp3-table-cell bp3-intent-success gridCell'onDoubleClick={() => onDoubleClick(rowIndex)}>
                     {value}
                 </div>);
         }
         if (rowIndex === selectedRow) {
             return (
-                <div className='bp3-table-cell' style={{display: 'flex', flex: 1, height: 20}} onDoubleClick={() => onDoubleClick(rowIndex)}>
+                <div className='bp3-table-cell gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
                     {value}
                 </div>
             );
         }
         return (
-            <div className='bp3-table-cell striped' style={{display: 'flex', flex: 1, height: 20}} onDoubleClick={() => onDoubleClick(rowIndex)}>
+            <div className='bp3-table-cell striped gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
                 {value}
             </div>
         );
@@ -172,6 +193,13 @@ export const Demo: React.FC<{}> = () => {
             rowRenderer={rowRenderer}
             rowGetter={({ index }) => songs[index]}
         >
+        <Column
+            headerRenderer={headerRenderer}
+            dataKey=""
+            label=""
+            cellRenderer={({rowIndex, dataKey})=> editCellRenderer(rowIndex)}
+            width={50}
+            />
         <Column
             headerRenderer={headerRenderer}
             dataKey="name"

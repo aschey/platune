@@ -97,7 +97,7 @@ class AudioQueue {
         songData.source.start(start, startSeconds);
         console.log('starting at', startSeconds);
         songData.source.stop(nextSwitchTime);
-        this.sources.push({source: songData.source, start, stop: nextSwitchTime, id: playingRow })
+        this.sources.push({source: songData.source, start, stop: nextSwitchTime, id: playingRow });
         let self = this;
         songData.source.addEventListener('ended', function(_) {
             // don't fire when stopped because we don't want to play the next track (sources will be empty when stopped)
@@ -136,9 +136,12 @@ class AudioQueue {
             this.isPaused = false;
             // todo: mute volume while resetting to prevent click
             this.context.resume();
-            if (this.sources.length && playingRow !== this.sources[0].id) {
-                this.reset();
+            // Starting the song that's currently paused, don't reschedule
+            if (this.sources.length && playingRow === this.sources[0].id) {
                 return;
+            }
+            else {
+                this.reset();
             }
         }
         await this.scheduleAll(songQueue, playingRow, onFinished);
