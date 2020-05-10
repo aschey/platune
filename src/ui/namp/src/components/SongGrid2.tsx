@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Column, Table, TableHeaderRenderer, TableHeaderProps } from "react-virtualized";
+import { Column, Table, TableHeaderRenderer, TableHeaderProps, defaultTableRowRenderer, TableRowProps, RowMouseEventHandlerParams } from "react-virtualized";
 import Draggable from "react-draggable";
 import { Song } from "../models/song";
 import { range, sleep } from "../util";
@@ -110,8 +110,15 @@ export const Demo: React.FC<{}> = () => {
                     {value}
                 </div>);
         }
+        if (rowIndex === selectedRow) {
+            return (
+                <div className='bp3-table-cell' style={{display: 'flex', flex: 1, height: 20}} onDoubleClick={() => onDoubleClick(rowIndex)}>
+                    {value}
+                </div>
+            );
+        }
         return (
-            <div className='bp3-table-cell' style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a', display: 'flex', flex: 1, height: 20}} onDoubleClick={() => onDoubleClick(rowIndex)}>
+            <div className='bp3-table-cell striped' style={{display: 'flex', flex: 1, height: 20}} onDoubleClick={() => onDoubleClick(rowIndex)}>
                 {value}
             </div>
         );
@@ -129,12 +136,12 @@ export const Demo: React.FC<{}> = () => {
         setWidths(newWidths);
     }
 
-    const newRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album') => {
-        return <Cell style={{backgroundColor: rowIndex % 2 == 0 ? '#334554' : '#2c3d4a', display: 'flex', flexGrow: 1, margin: 0}}>
-            <div onDoubleClick={() => onDoubleClick(rowIndex)}>
-                {songs[rowIndex][field]}
-            </div>
-        </Cell>
+    const rowRenderer = (props: TableRowProps) => {
+        if (props.index === selectedRow) {
+            props.className += ' selected';
+        }
+        props.onRowClick = () => {setSelectedRow(props.index)};
+        return defaultTableRowRenderer(props);
     }
 
     const onPause = () => {
@@ -162,6 +169,7 @@ export const Demo: React.FC<{}> = () => {
             headerHeight={20}
             rowHeight={20}
             rowCount={songs.length}
+            rowRenderer={rowRenderer}
             rowGetter={({ index }) => songs[index]}
         >
         <Column

@@ -95,6 +95,26 @@ html {
   flex: auto;
 }
 
+.ReactVirtualized__Grid {
+  outline: none;
+}
+
+.selected .bp3-table-cell {
+  background: rgba(125, 188, 255, 0.6);
+}
+
+.ReactVirtualized__Table__row {
+  outline: none;
+}
+
+.ReactVirtualized__Grid__innerScrollContainer > div:nth-of-type(odd) div.striped {
+  background: #334554;
+}
+
+.ReactVirtualized__Grid__innerScrollContainer > div:nth-of-type(even) div.striped {
+  background: #2c3d4a;
+}
+
 .DragHandle {
   flex: 0 0 16px;
   z-index: 2;
