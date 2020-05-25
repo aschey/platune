@@ -242,24 +242,28 @@ export const Demo: React.FC<{}> = () => {
             width={widths.albumArtist}
         />
         <Column
+            headerRenderer={headerRenderer}
             dataKey='artist'
             label='Artist'
             cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'artist') }
             width={widths.artist}
         />
         <Column
+            headerRenderer={headerRenderer}
             dataKey='album'
             label='Album'
             cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'album') }
             width={widths.album}
         />
         <Column
+            headerRenderer={headerRenderer}
             dataKey='track'
             label='Track'
             cellRenderer={({rowIndex})=> trackRenderer(rowIndex) }
             width={widths.track}
         />
         <Column
+            headerRenderer={headerRenderer}
             dataKey='path'
             label='Path'
             cellRenderer={({rowIndex}) => pathRenderer(rowIndex) }
