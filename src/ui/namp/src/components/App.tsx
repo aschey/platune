@@ -4,9 +4,8 @@ import '../css/App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
 import { FolderPicker } from './FolderPicker';
 import { MainNavBar } from './MainNavBar';
-import { SongGrid } from './SongGrid';
 import { ipcRenderer } from 'electron';
-import { Demo } from './SongGrid2';
+import { SongGrid } from './SongGrid';
 
 export interface ITreeState {
   nodes: ITreeNode[];
@@ -19,7 +18,7 @@ const App: React.FC<{}> = () => {
         <div className="bp3-dark">
             <MainNavBar/>
             <div style={{paddingTop: 40}}>
-                <Demo/>
+                <SongGrid/>
             </div>
         </div>
     );
