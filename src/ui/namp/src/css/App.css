@@ -67,6 +67,10 @@ html {
   margin-bottom: 20px;
 }
 
+.bp3-table-cell {
+  line-height: 25px;
+}
+
 .bp3-select-popover.small .bp3-menu {
   min-width: 70px;
 }
@@ -118,7 +122,7 @@ html {
 .gridCell {
   display: flex;
   flex: 1;
-  height: 20;
+  height: 25px;
 }
 
 .DragHandle {

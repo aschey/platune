@@ -75,7 +75,7 @@ export const Demo: React.FC<{}> = () => {
     const editCellRenderer = (rowIndex: number) => {
         const isEditingRow = editingRow === rowIndex;
         return (
-        <div className='bp3-table-cell gridCell striped'>
+        <div className='bp3-table-cell gridCell striped' style={{padding: 0}}>
             <FlexCol>
                 <Button small minimal intent={isEditingRow || rowIndex === playingRow ? Intent.SUCCESS : Intent.NONE} icon={isEditingRow ? 'saved' : 'edit'} onClick={() => {
                     if (isEditingRow) {
@@ -187,8 +187,8 @@ export const Demo: React.FC<{}> = () => {
             <Table
             width={window.innerWidth - 20}
             height={window.innerHeight - 160}
-            headerHeight={20}
-            rowHeight={20}
+            headerHeight={25}
+            rowHeight={25}
             rowCount={songs.length}
             rowRenderer={rowRenderer}
             rowGetter={({ index }) => songs[index]}
@@ -198,7 +198,7 @@ export const Demo: React.FC<{}> = () => {
             dataKey=""
             label=""
             cellRenderer={({rowIndex, dataKey})=> editCellRenderer(rowIndex)}
-            width={50}
+            width={30}
             />
         <Column
             headerRenderer={headerRenderer}
