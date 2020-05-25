@@ -12,6 +12,7 @@ code {
     monospace;
 }
 @import "~normalize.css";
+@import "~react-virtualized/styles.css";
 @import "~@blueprintjs/core/lib/css/blueprint.css";
 @import "~@blueprintjs/table/lib/css/table.css";
 @import "~@blueprintjs/select/lib/css/blueprint-select.css";
