@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Column, Table, TableHeaderRenderer, TableHeaderProps, defaultTableRowRenderer, TableRowProps, RowMouseEventHandlerParams } from "react-virtualized";
 import Draggable from "react-draggable";
 import { Song } from "../models/song";
-import { range, sleep } from "../util";
+import { range, sleep, formatMs } from "../util";
 import { getJson } from "../fetchUtil";
 import _ from "lodash";
 import { Intent, EditableText, Text, Button } from "@blueprintjs/core";
@@ -23,7 +23,8 @@ export const SongGrid: React.FC<{}> = () => {
         albumArtist: 250,
         artist: 250,
         album: 250,
-        track: 60,
+        track: 70,
+        time: 65,
         path: 400
     });
 
@@ -147,7 +148,7 @@ export const SongGrid: React.FC<{}> = () => {
         );
     }
 
-    const genericCellRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album') => {
+    const genericCellRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time') => {
         let value = songs[rowIndex][field].toString();
         return cellRenderer(rowIndex, value);
     }
@@ -158,6 +159,12 @@ export const SongGrid: React.FC<{}> = () => {
             value = '';
         }
         return cellRenderer(rowIndex, value);
+    }
+
+    const timeRenderer = (rowIndex: number) => {
+        let value = songs[rowIndex]['time'];
+        let fmtValue = formatMs(value);
+        return cellRenderer(rowIndex, fmtValue);
     }
 
     const pathRenderer = (rowIndex: number) => {
@@ -258,6 +265,13 @@ export const SongGrid: React.FC<{}> = () => {
                         dataKey='track'
                         label='Track'
                         cellRenderer={({rowIndex})=> trackRenderer(rowIndex) }
+                        width={widths.track}
+                    />
+                    <Column
+                        headerRenderer={headerRenderer}
+                        dataKey='time'
+                        label='Time'
+                        cellRenderer={({rowIndex})=> timeRenderer(rowIndex) }
                         width={widths.track}
                     />
                     <Column

@@ -23,7 +23,6 @@ itself down if the app is no longer running.
 - Support sync between Android and desktop
 - Share data between different hard drive partitions and operating systems
 - Possibly install the web server as a systemd/windows service instead of spinning it up on the fly, might be more robust
-- Add option to install as a separate client/server system to be used as a hosted web app
 - Some kind of shortcut to easily play/pause/change volume, etc. Maybe system hotkeys, taskbar icon, and/or browser extension.
 - Remote control desktop player from Android app
 
@@ -34,7 +33,9 @@ itself down if the app is no longer running.
 - Host configured files as static files
 - Import and sync new files into database
 - Play/pause/stop
+- Basic grid with song data
 
 ### Features in Progress
 - Song queue with gapless audio support
-- Loading songs on main page
+- Edit song data
+- Song progress bar

@@ -634,8 +634,8 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
         .inner_join(artist)
         .inner_join(album)
         .inner_join(album_artist.on(schema::album_artist::album_artist_id.eq(schema::album::album_artist_id)))
-        .select((song_title, artist_name, album_artist_name, album_name, track_number, disc_number, get_song_path()))
-        .load::<(String, String, String, String, i32, i32, String)>(&connection).unwrap()
+        .select((song_title, artist_name, album_artist_name, album_name, track_number, disc_number, duration, get_song_path()))
+        .load::<(String, String, String, String, i32, i32, i32, String)>(&connection).unwrap()
         .iter()
         .map(|s| Song { 
             name: s.0.to_owned(), 
@@ -644,7 +644,8 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
             album: s.3.to_owned(),
             track: s.4,
             disc: s.5,
-            path: s.6.to_owned() })
+            time: s.6,
+            path: s.7.to_owned() })
         .collect::<Vec<_>>();
     &songs.sort_case_insensitive("album artist".to_owned());
     return Ok(Json(songs));
@@ -730,7 +731,8 @@ pub struct Song {
     pub name: String,
     pub album: String,
     pub track: i32,
-    pub disc: i32
+    pub disc: i32,
+    pub time: i32
 }
 
 #[derive(Deserialize, Apiv2Schema)]
