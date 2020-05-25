@@ -20,9 +20,13 @@ export const Demo: React.FC<{}> = () => {
     const [editingRow, setEditingRow] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
     const [widths, setWidths] = useState({
-        name: 200,
-        albumArtist: 200,
-        artist: 200
+        edit: 30,
+        name: 300,
+        albumArtist: 250,
+        artist: 250,
+        album: 250,
+        track: 60,
+        path: 400
     });
 
     const numTries = 10;
@@ -118,10 +122,10 @@ export const Demo: React.FC<{}> = () => {
     }
 
     const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
-        if (rowIndex === editingRow && canEdit) {
+        if (rowIndex === editingRow) {
             return (
                 <div className='bp3-table-cell bp3-intent-primary gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
-                    <EditableText value={value}/>
+                    { canEdit ? <EditableText defaultValue={value}/> : value }
                 </div>);
         }
 
@@ -150,6 +154,19 @@ export const Demo: React.FC<{}> = () => {
         return cellRenderer(rowIndex, value);
     }
 
+    const trackRenderer = (rowIndex: number) => {
+        let value = songs[rowIndex].track.toString();
+        if (value === '0') {
+            value = '';
+        }
+        return cellRenderer(rowIndex, value);
+    }
+
+    const pathRenderer = (rowIndex: number) => {
+        let value = songs[rowIndex].path;
+        return cellRenderer(rowIndex, value, false);
+    }
+
     const resizeRow = (props: {dataKey: string, deltaX: number}) => {
         const newWidths: any =_.cloneDeep(widths);
         
@@ -161,7 +178,17 @@ export const Demo: React.FC<{}> = () => {
         if (props.index === selectedRow) {
             props.className += ' selected';
         }
-        props.onRowClick = () => {setSelectedRow(props.index)};
+        props.onRowClick = () => {
+            setSelectedRow(props.index);
+            if (props.index === editingRow) {
+                return;
+            }
+            if (editingRow > -1) {
+                // save
+                toastSuccess();
+                setEditingRow(-1);
+            }
+        };
         return defaultTableRowRenderer(props);
     }
 
@@ -195,30 +222,48 @@ export const Demo: React.FC<{}> = () => {
         >
         <Column
             headerRenderer={headerRenderer}
-            dataKey=""
-            label=""
+            dataKey=''
+            label=''
             cellRenderer={({rowIndex, dataKey})=> editCellRenderer(rowIndex)}
-            width={30}
+            width={widths.edit}
             />
         <Column
             headerRenderer={headerRenderer}
-            dataKey="name"
-            label="Title"
+            dataKey='name'
+            label='Title'
             cellRenderer={({rowIndex, dataKey})=> genericCellRenderer(rowIndex, 'name')}
             width={widths.name}
         />
         <Column
             headerRenderer={headerRenderer}
-            dataKey="albumArtist"
-            label="Album Artist"
+            dataKey='albumArtist'
+            label='Album Artist'
             cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'albumArtist') }
             width={widths.albumArtist}
         />
         <Column
-            dataKey="artist"
-            label="Artist"
+            dataKey='artist'
+            label='Artist'
             cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'artist') }
             width={widths.artist}
+        />
+        <Column
+            dataKey='album'
+            label='Album'
+            cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'album') }
+            width={widths.album}
+        />
+        <Column
+            dataKey='track'
+            label='Track'
+            cellRenderer={({rowIndex})=> trackRenderer(rowIndex) }
+            width={widths.track}
+        />
+        <Column
+            dataKey='path'
+            label='Path'
+            cellRenderer={({rowIndex}) => pathRenderer(rowIndex) }
+            width={widths.path}
         />
         </Table>
         </div>
