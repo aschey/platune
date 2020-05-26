@@ -16,7 +16,9 @@ export const SongGrid: React.FC<{}> = () => {
     const [playingRow, setPlayingRow] = useState(-1);
     const [playingMillis, setPlayingMillis] = useState(-1);
     const [progress, setProgress] = useState(-1);
-    const [startTime, setStartTime] = useState(new Date().getTime());
+    const [startTime, setStartTime] = useState(0);
+    const [pauseTime, setPauseTime] = useState(0);
+    const [pauseStart, setPauseStart] = useState(0);
     const [selectedRow, setSelectedRow] = useState(-1);
     const [editingRow, setEditingRow] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -82,9 +84,14 @@ export const SongGrid: React.FC<{}> = () => {
             return;
         }
         const updateInterval = 60;
-        const interval = setInterval(() => setProgress(new Date().getTime() - startTime), updateInterval);
+        setPlayingMillis(songs[playingRow].time);
+        const interval = setInterval(() => {
+            if (isPlaying) {
+                setProgress(new Date().getTime() - pauseTime - startTime);
+            }
+        }, updateInterval);
         return () => clearTimeout(interval);
-    }, [playingRow]);
+    }, [playingRow, isPlaying, pauseTime, songs, startTime]);
 
 
     const editCellRenderer = (rowIndex: number) => {
@@ -115,9 +122,7 @@ export const SongGrid: React.FC<{}> = () => {
             toastSuccess();
             setEditingRow(-1);
         }
-        setStartTime(new Date().getTime());
-        setPlayingRow(songIndex);
-        setPlayingMillis(songs[songIndex].time);
+        updatePlayingRow(songIndex);
         audioQueue.stop();
         startQueue(songIndex);
     }
@@ -129,11 +134,14 @@ export const SongGrid: React.FC<{}> = () => {
         ], songIndex, onSongFinished);
     }
 
-    const onSongFinished = (playingRow: number) => {
-        //setProgress(0);
+    const updatePlayingRow = (rowIndex: number) => {
+        setPauseTime(0);
         setStartTime(new Date().getTime());
-        setPlayingRow(playingRow + 1);
-        setPlayingMillis(songs[playingRow + 1].time);
+        setPlayingRow(rowIndex);
+    }
+
+    const onSongFinished = (playingRow: number) => {
+        updatePlayingRow(playingRow + 1);
         audioQueue.start([songs[playingRow + 2].path], playingRow + 2, onSongFinished);
     }
 
@@ -217,17 +225,23 @@ export const SongGrid: React.FC<{}> = () => {
     const onPause = () => {
         audioQueue.pause();
         setIsPlaying(false);
+        setPauseStart(new Date().getTime());
     }
 
     const onPlay = () => {
         const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
-        setPlayingRow(rowToPlay);
+        updatePlayingRow(rowToPlay);
+        if (pauseStart > 0) {
+            setPauseTime(prev => prev + (new Date().getTime() - pauseStart));
+            setPauseStart(0);
+        }
         startQueue(rowToPlay);
     }
 
     const onStop = () => {
         audioQueue.stop();
-        setPlayingRow(-1);
+        setPauseStart(0);
+        updatePlayingRow(-1);
     }
 
     return (
