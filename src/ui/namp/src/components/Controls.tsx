@@ -7,14 +7,16 @@ import { range } from '../util';
 
 interface ControlProps {
     isPlaying: boolean,
+    progress: number,
+    songMillis: number,
     setIsPlaying: (isPlaying: boolean) => void,
     onPause: () => void,
     onPlay: () => void,
     onStop: () => void
 }
 
-export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPause, onPlay, onStop}) => {
-    const domain: ReadonlyArray<number> = [100, 500];
+export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPause, onPlay, onStop, progress, songMillis}) => {
+    const domain: ReadonlyArray<number> = [0, songMillis];
     const sliderStyle: React.CSSProperties = {
         margin: '5%',
         position: 'relative',
@@ -65,7 +67,7 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
                     domain={domain}
                     rootStyle={sliderStyle}
                     onChange={(a) => {}}
-                    values={[150] as ReadonlyArray<number>}
+                    values={[progress] as ReadonlyArray<number>}
                     >
                     <Rail>
                         {({ getRailProps }) => (

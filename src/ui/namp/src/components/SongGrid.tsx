@@ -14,6 +14,9 @@ import { FlexCol } from "./FlexCol";
 export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
     const [playingRow, setPlayingRow] = useState(-1);
+    const [playingMillis, setPlayingMillis] = useState(-1);
+    const [progress, setProgress] = useState(-1);
+    const [startTime, setStartTime] = useState(new Date().getTime());
     const [selectedRow, setSelectedRow] = useState(-1);
     const [editingRow, setEditingRow] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -74,6 +77,15 @@ export const SongGrid: React.FC<{}> = () => {
         );
     };
 
+    useEffect(() => {
+        if (playingRow === -1) {
+            return;
+        }
+        const updateInterval = 60;
+        const interval = setInterval(() => setProgress(new Date().getTime() - startTime), updateInterval);
+        return () => clearTimeout(interval);
+    }, [playingRow]);
+
 
     const editCellRenderer = (rowIndex: number) => {
         const isEditingRow = editingRow === rowIndex;
@@ -103,20 +115,25 @@ export const SongGrid: React.FC<{}> = () => {
             toastSuccess();
             setEditingRow(-1);
         }
+        setStartTime(new Date().getTime());
         setPlayingRow(songIndex);
+        setPlayingMillis(songs[songIndex].time);
         audioQueue.stop();
         startQueue(songIndex);
     }
 
     const startQueue = (songIndex: number) => {
-        audioQueue.start([
+        return audioQueue.start([
             songs[songIndex].path,
             songs[songIndex + 1].path
         ], songIndex, onSongFinished);
     }
 
     const onSongFinished = (playingRow: number) => {
+        //setProgress(0);
+        setStartTime(new Date().getTime());
         setPlayingRow(playingRow + 1);
+        setPlayingMillis(songs[playingRow + 1].time);
         audioQueue.start([songs[playingRow + 2].path], playingRow + 2, onSongFinished);
     }
 
@@ -283,7 +300,15 @@ export const SongGrid: React.FC<{}> = () => {
                     />
                 </Table>
             </div>
-            <Controls isPlaying={isPlaying} setIsPlaying={setIsPlaying} onPause={onPause} onPlay={onPlay} onStop={onStop}/>
+            <Controls 
+                isPlaying={isPlaying} 
+                setIsPlaying={setIsPlaying} 
+                onPause={onPause} 
+                onPlay={onPlay} 
+                onStop={onStop} 
+                songMillis={playingMillis} 
+                progress={progress}
+            />
         </>
     );
 }
