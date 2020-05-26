@@ -24,7 +24,7 @@ export const SongGrid: React.FC<{}> = () => {
         artist: 250,
         album: 250,
         track: 70,
-        time: 65,
+        time: 60,
         path: 400
     });
 
@@ -272,7 +272,7 @@ export const SongGrid: React.FC<{}> = () => {
                         dataKey='time'
                         label='Time'
                         cellRenderer={({rowIndex})=> timeRenderer(rowIndex) }
-                        width={widths.track}
+                        width={widths.time}
                     />
                     <Column
                         headerRenderer={headerRenderer}

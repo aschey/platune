@@ -187,7 +187,7 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
                     import_song_path_unix: "".to_string(),
                     import_title: f.title,
                     import_track_number: f.track_number,
-                    import_disc_number: f.disc_number,
+                    import_disc_number: if f.disc_number > 0 { f.disc_number } else { 1 },
                     import_year: f.year,
                     import_duration: f.duration,
                     import_sample_rate: f.sample_rate,
@@ -362,8 +362,8 @@ pub trait SongExt {
 impl SongExt for Vec<Song> {
     fn sort_case_insensitive(&mut self, field: String) {
         &self.sort_by(|l, r| Ord::cmp(&l.track, &r.track));
-        &self.sort_by(|l, r| Ord::cmp(&l.album.to_lowercase(), &r.album.to_lowercase()));
         &self.sort_by(|l, r| Ord::cmp(&l.disc, &r.disc));
+        &self.sort_by(|l, r| Ord::cmp(&l.album.to_lowercase(), &r.album.to_lowercase()));
         &self.sort_by(|l, r| Ord::cmp(&l.artist.to_lowercase(), &r.artist.to_lowercase()));
         &self.sort_by(|l, r| Ord::cmp(&l.album_artist.to_lowercase(), &r.album_artist.to_lowercase()));
     }

@@ -27,7 +27,7 @@ class AudioQueue {
     private findStartGapDuration = (audioBuffer: AudioBuffer) => {
         // Get the raw audio data for the left & right channels.
         const l = audioBuffer.getChannelData(0);
-        const r = audioBuffer.getChannelData(1);
+        const r = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : l;
         // Each is an array of numbers between -1 and 1 describing
         // the waveform, sample by sample.
 
@@ -48,7 +48,7 @@ class AudioQueue {
     private findEndGapDuration = (audioBuffer: AudioBuffer) => {
         // Get the raw audio data for the left & right channels.
         const l = audioBuffer.getChannelData(0);
-        const r = audioBuffer.getChannelData(1);
+        const r = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : l;
         // Each is an array of numbers between -1 and 1 describing
         // the waveform, sample by sample.
 
