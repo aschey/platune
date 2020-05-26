@@ -230,10 +230,12 @@ export const SongGrid: React.FC<{}> = () => {
 
     const onPlay = () => {
         const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
-        updatePlayingRow(rowToPlay);
         if (pauseStart > 0) {
             setPauseTime(prev => prev + (new Date().getTime() - pauseStart));
             setPauseStart(0);
+        }
+        else {
+            updatePlayingRow(rowToPlay);
         }
         startQueue(rowToPlay);
     }
