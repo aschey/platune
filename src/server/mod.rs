@@ -658,8 +658,9 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
 #[api_v2_operation]
 async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
     let connection = establish_connection();
+    let req_obj = request.into_inner();
     let art = song
-        .filter(song_id.eq(request.into_inner().song_id))
+        .filter(song_id.eq(req_obj.song_id))
         .select(album_art)
         .first::<Option<Vec<u8>>>(&connection)
         .unwrap();
@@ -669,13 +670,20 @@ async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
         let o = image::io::Reader::new(std::io::Cursor::new(&img))
             .with_guessed_format()
             .unwrap();
-        if o.format() == Some(image::ImageFormat::Png) {
+        
+        let format = o.format();
+        let res = o.decode().unwrap().resize(req_obj.width, req_obj.height, image::imageops::FilterType::CatmullRom);
+        
+        let mut buf = Vec::new();
+        if format == Some(image::ImageFormat::Png) {
             builder.set(actix_http::http::header::ContentType::png());
+            let write_res = res.write_to(&mut buf, image::ImageFormat::Png);
         }
         else {
             builder.set(actix_http::http::header::ContentType::jpeg());
+            let write_res = res.write_to(&mut buf, image::ImageFormat::Jpeg);
         }
-        return builder.body(img);
+        return builder.body(buf);
     }
     else {
         return builder.finish();
@@ -776,5 +784,7 @@ struct SongRequest {
 #[derive(Deserialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct ArtRequest {
-    song_id: i32
+    song_id: i32,
+    width: u32,
+    height: u32
 }
