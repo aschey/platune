@@ -33,6 +33,7 @@ use async_std::prelude::*;
 use futures::join;
 use async_std::task;
 use std::time::SystemTime;
+use image::{GenericImageView, ImageBuffer, RgbImage, imageops};
 
 use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
@@ -119,6 +120,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .service(web::resource("/getNtfsMounts").route(web::get().to(get_ntfs_mounts)))
         .service(web::resource("/updatePathMappings").route(web::put().to(update_path_mappings)))
         .service(web::resource("/songs").route(web::get().to(get_songs)))
+        .service(web::resource("/albumArt").route(web::get().to(get_album_art)))
         .with_json_spec_at("/spec")
         .build()
         // static files
@@ -645,10 +647,39 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
             track: s.4,
             disc: s.5,
             time: s.6,
-            path: s.7.to_owned() })
+            path: s.7.to_owned()
+        })
         .collect::<Vec<_>>();
     &songs.sort_case_insensitive("album artist".to_owned());
+    
     return Ok(Json(songs));
+}
+
+#[api_v2_operation]
+async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
+    let connection = establish_connection();
+    let art = song
+        .filter(song_id.eq(request.into_inner().song_id))
+        .select(album_art)
+        .first::<Option<Vec<u8>>>(&connection)
+        .unwrap();
+    let mut builder = actix_http::Response::Ok();
+    if art.is_some() {
+        let img = art.unwrap();
+        let o = image::io::Reader::new(std::io::Cursor::new(&img))
+            .with_guessed_format()
+            .unwrap();
+        if o.format() == Some(image::ImageFormat::Png) {
+            builder.set(actix_http::http::header::ContentType::png());
+        }
+        else {
+            builder.set(actix_http::http::header::ContentType::jpeg());
+        }
+        return builder.body(img);
+    }
+    else {
+        return builder.finish();
+    }
 }
 
 #[api_v2_operation]
@@ -740,4 +771,10 @@ pub struct Song {
 struct SongRequest {
     offset: i64,
     limit: i64
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct ArtRequest {
+    song_id: i32
 }
