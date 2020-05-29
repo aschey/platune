@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Column, Table, TableHeaderRenderer, TableHeaderProps, defaultTableRowRenderer, TableRowProps, RowMouseEventHandlerParams } from "react-virtualized";
+import { Column, Table, TableHeaderRenderer, TableHeaderProps, defaultTableRowRenderer, TableRowProps, RowMouseEventHandlerParams, CellMeasurerCache, CellMeasurer } from "react-virtualized";
 import Draggable from "react-draggable";
 import { Song } from "../models/song";
 import { range, sleep, formatMs } from "../util";
 import { getJson } from "../fetchUtil";
-import _ from "lodash";
+import _, { Dictionary } from "lodash";
 import { Intent, EditableText, Text, Button } from "@blueprintjs/core";
 import { toastSuccess } from "../appToaster";
 import { audioQueue } from "../audio";
 import { Controls } from "./Controls";
 import { FlexCol } from "./FlexCol";
+import { FlexRow } from "./FlexRow";
 
 export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
+    const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
+    const [albumKeys, setAlbumKeys] = useState<string[]>([]);
     const [playingRow, setPlayingRow] = useState(-1);
     const [playingMillis, setPlayingMillis] = useState(-1);
     const [progress, setProgress] = useState(-1);
@@ -52,7 +55,12 @@ export const SongGrid: React.FC<{}> = () => {
     }
 
     useEffect(() => {
-        loadSongs().then(setSongs);
+        loadSongs().then(s => {
+            setSongs(s);
+            let g = _.groupBy(s, ss => ss.artist + " " + ss.album);
+            setGroupedSongs(g);
+            setAlbumKeys(_.keys(g));
+        });
     }, []);
 
     useEffect(() => {
@@ -246,85 +254,145 @@ export const SongGrid: React.FC<{}> = () => {
         updatePlayingRow(-1);
     }
 
+    const cache = new CellMeasurerCache({
+        defaultWidth: 150,
+        fixedWidth: true,
+    });
+
+    const otherGrid =
+        <div style={{height: window.innerHeight - 140}}>
+            <Table
+            width={window.innerWidth - 20}
+            height={window.innerHeight - 160}
+            headerHeight={25}
+            rowCount={albumKeys.length}
+            rowRenderer={rowRenderer}
+            rowHeight={cache.rowHeight}
+            rowGetter={({ index }) => groupedSongs[albumKeys[index]]}
+            >
+                <Column
+                    headerRenderer={headerRenderer}
+                    dataKey='name'
+                    label='Title'
+                    cellRenderer={({rowIndex, dataKey})=> {
+                        let g = groupedSongs[albumKeys[rowIndex]][0];
+                        return <div onDoubleClick={() => onDoubleClick(rowIndex)}>
+                            <FlexCol>
+                                <div>{g.artist}</div>
+                                <div>{g.album}</div>
+                            </FlexCol>
+                        
+                    </div>
+                    }}
+                    width={widths.name}
+                />
+                <Column
+                    headerRenderer={headerRenderer}
+                    dataKey='name'
+                    label='Title'
+                    cellRenderer={({rowIndex, dataKey, parent})=> {
+                        let g = groupedSongs[albumKeys[rowIndex]];
+                        return <CellMeasurer
+                            cache={cache}
+                            columnIndex={1}
+                            key={dataKey}
+                            parent={parent}
+                            rowIndex={rowIndex}>
+                            <div onDoubleClick={() => onDoubleClick(rowIndex)}>
+                            <FlexCol>
+                                {g.map(gg => <div>{gg.name}</div>)}
+                            </FlexCol>
+                        
+                            </div>
+                            </CellMeasurer>
+                    }}
+                    width={widths.name}
+                />
+            </Table>
+        </div>
+
+    const mainGrid = 
+    <div style={{height: window.innerHeight - 140}}>
+        <Table
+            width={window.innerWidth - 20}
+            height={window.innerHeight - 160}
+            headerHeight={25}
+            rowHeight={25}
+            rowCount={songs.length}
+            rowRenderer={rowRenderer}
+            rowGetter={({ index }) => songs[index]}
+            >
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey=''
+                label=''
+                cellRenderer={({rowIndex, dataKey})=> editCellRenderer(rowIndex)}
+                width={widths.edit}
+                />
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey='name'
+                label='Title'
+                cellRenderer={({rowIndex, dataKey})=> genericCellRenderer(rowIndex, 'name')}
+                width={widths.name}
+            />
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey='albumArtist'
+                label='Album Artist'
+                cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'albumArtist') }
+                width={widths.albumArtist}
+            />
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey='artist'
+                label='Artist'
+                cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'artist') }
+                width={widths.artist}
+            />
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey='album'
+                label='Album'
+                cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'album') }
+                width={widths.album}
+            />
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey='track'
+                label='Track'
+                cellRenderer={({rowIndex})=> trackRenderer(rowIndex) }
+                width={widths.track}
+            />
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey='time'
+                label='Time'
+                cellRenderer={({rowIndex})=> timeRenderer(rowIndex) }
+                width={widths.time}
+            />
+            <Column
+                headerRenderer={headerRenderer}
+                dataKey='path'
+                label='Path'
+                cellRenderer={({rowIndex}) => pathRenderer(rowIndex) }
+                width={widths.path}
+            />
+        </Table>
+    </div>;
+
     return (
         <>
-            <div style={{height: window.innerHeight - 140}}>
-                <Table
-                    width={window.innerWidth - 20}
-                    height={window.innerHeight - 160}
-                    headerHeight={25}
-                    rowHeight={25}
-                    rowCount={songs.length}
-                    rowRenderer={rowRenderer}
-                    rowGetter={({ index }) => songs[index]}
-                    >
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey=''
-                        label=''
-                        cellRenderer={({rowIndex, dataKey})=> editCellRenderer(rowIndex)}
-                        width={widths.edit}
-                        />
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey='name'
-                        label='Title'
-                        cellRenderer={({rowIndex, dataKey})=> genericCellRenderer(rowIndex, 'name')}
-                        width={widths.name}
-                    />
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey='albumArtist'
-                        label='Album Artist'
-                        cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'albumArtist') }
-                        width={widths.albumArtist}
-                    />
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey='artist'
-                        label='Artist'
-                        cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'artist') }
-                        width={widths.artist}
-                    />
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey='album'
-                        label='Album'
-                        cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'album') }
-                        width={widths.album}
-                    />
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey='track'
-                        label='Track'
-                        cellRenderer={({rowIndex})=> trackRenderer(rowIndex) }
-                        width={widths.track}
-                    />
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey='time'
-                        label='Time'
-                        cellRenderer={({rowIndex})=> timeRenderer(rowIndex) }
-                        width={widths.time}
-                    />
-                    <Column
-                        headerRenderer={headerRenderer}
-                        dataKey='path'
-                        label='Path'
-                        cellRenderer={({rowIndex}) => pathRenderer(rowIndex) }
-                        width={widths.path}
-                    />
-                </Table>
-            </div>
-            <Controls 
-                isPlaying={isPlaying} 
-                setIsPlaying={setIsPlaying} 
-                onPause={onPause} 
-                onPlay={onPlay} 
-                onStop={onStop} 
-                songMillis={playingMillis} 
-                progress={progress}
-            />
-        </>
+        {mainGrid}
+        <Controls 
+        isPlaying={isPlaying} 
+        setIsPlaying={setIsPlaying} 
+        onPause={onPause} 
+        onPlay={onPlay} 
+        onStop={onStop} 
+        songMillis={playingMillis} 
+        progress={progress}
+    />
+    </>
     );
 }
