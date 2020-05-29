@@ -66,14 +66,6 @@ fn get_delim_escaped() -> &'static str {
     return if IS_WINDOWS { "\\\\" } else { "/" };
 }
 
-fn to_url_path(drive_path: String) -> String {
-    if !IS_WINDOWS {
-        return drive_path;
-    }
-    let replaced = convert_delim_unix(drive_path.replace(":", ""));
-    return f!("/{replaced}");
-}
-
 #[cfg(windows)]
 fn get_path() -> schema::folder::full_path_windows { full_path_windows }
 #[cfg(unix)]
@@ -144,11 +136,6 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         })
         .service(fs::Files::new("/swagger", "./src/server/swagger").index_file("index.html"));
 
-        let connection = establish_connection();
-        let paths = folder.select(get_path()).load::<String>(&connection).unwrap();
-        for path in paths {
-            builder = builder.service(fs::Files::new(&to_url_path(path.to_owned()), path.to_owned()).show_files_listing());
-        }
         let app = builder
             // Paths are matched in order so this needs to be last
             .service(fs::Files::new("/", "./src/ui/namp/build").index_file("index.html"));
@@ -199,15 +186,15 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
                 //let original2 = original.clone();
                 //let other2 = other.clone();
                 if IS_WINDOWS {
-                    n.import_song_path_windows = to_url_path(full_path.to_owned());
+                    n.import_song_path_windows = full_path.to_owned();
                     if other2 != "" {
-                        n.import_song_path_unix = to_url_path(convert_delim(full_path.to_owned().replace(&original2, &other2)));
+                        n.import_song_path_unix = convert_delim(full_path.to_owned().replace(&original2, &other2));
                     }
                 }
                 else {
-                    n.import_song_path_unix = to_url_path(full_path.to_owned());
+                    n.import_song_path_unix = full_path.to_owned();
                     if other2 != "" {
-                        n.import_song_path_windows = to_url_path(convert_delim(full_path.to_owned().replace(&original2, &other2)));
+                        n.import_song_path_windows = convert_delim(full_path.to_owned().replace(&original2, &other2));
                     }
                 }
                 all_files.push(n);

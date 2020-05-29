@@ -57,7 +57,7 @@ export const SongGrid: React.FC<{}> = () => {
     useEffect(() => {
         loadSongs().then(s => {
             setSongs(s);
-            let g = _.groupBy(s, ss => ss.artist + " " + ss.album);
+            let g = _.groupBy(s, ss => ss.albumArtist + " " + ss.album);
             setGroupedSongs(g);
             setAlbumKeys(_.keys(g));
         });
@@ -272,8 +272,8 @@ export const SongGrid: React.FC<{}> = () => {
             >
                 <Column
                     headerRenderer={headerRenderer}
-                    dataKey='name'
-                    label='Title'
+                    dataKey='album'
+                    label='Album'
                     cellRenderer={({rowIndex, dataKey})=> {
                         let g = groupedSongs[albumKeys[rowIndex]][0];
                         return <div onDoubleClick={() => onDoubleClick(rowIndex)}>
@@ -284,7 +284,7 @@ export const SongGrid: React.FC<{}> = () => {
                         
                     </div>
                     }}
-                    width={widths.name}
+                    width={widths.album}
                 />
                 <Column
                     headerRenderer={headerRenderer}
@@ -307,6 +307,28 @@ export const SongGrid: React.FC<{}> = () => {
                             </CellMeasurer>
                     }}
                     width={widths.name}
+                />
+                <Column
+                    headerRenderer={headerRenderer}
+                    dataKey='time'
+                    label='Time'
+                    cellRenderer={({rowIndex, dataKey, parent})=> {
+                        let g = groupedSongs[albumKeys[rowIndex]];
+                        return <CellMeasurer
+                            cache={cache}
+                            columnIndex={2}
+                            key={dataKey}
+                            parent={parent}
+                            rowIndex={rowIndex}>
+                            <div onDoubleClick={() => onDoubleClick(rowIndex)}>
+                            <FlexCol>
+                                {g.map(gg => <div>{gg.time}</div>)}
+                            </FlexCol>
+                        
+                            </div>
+                            </CellMeasurer>
+                    }}
+                    width={widths.time}
                 />
             </Table>
         </div>
@@ -383,7 +405,7 @@ export const SongGrid: React.FC<{}> = () => {
 
     return (
         <>
-        {mainGrid}
+        {otherGrid}
         <Controls 
         isPlaying={isPlaying} 
         setIsPlaying={setIsPlaying} 
