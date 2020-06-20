@@ -276,10 +276,14 @@ export const SongGrid: React.FC<{}> = () => {
                     label='Album'
                     cellRenderer={({rowIndex, dataKey})=> {
                         let g = groupedSongs[albumKeys[rowIndex]][0];
-                        return <div onDoubleClick={() => onDoubleClick(rowIndex)}>
+                        return <div onDoubleClick={() => onDoubleClick(rowIndex)} key={g.id}>
                             <FlexCol>
                                 <div>{g.artist}</div>
                                 <div>{g.album}</div>
+                                {g.hasArt ? 
+                                    <div><img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}&width=50&height=50`}/></div> 
+                                    : null }
+                                
                             </FlexCol>
                         
                     </div>
@@ -300,7 +304,7 @@ export const SongGrid: React.FC<{}> = () => {
                             rowIndex={rowIndex}>
                             <div onDoubleClick={() => onDoubleClick(rowIndex)}>
                             <FlexCol>
-                                {g.map(gg => <div>{gg.name}</div>)}
+                                {g.map(gg => <div key={gg.id}>{gg.name}</div>)}
                             </FlexCol>
                         
                             </div>
@@ -322,7 +326,7 @@ export const SongGrid: React.FC<{}> = () => {
                             rowIndex={rowIndex}>
                             <div onDoubleClick={() => onDoubleClick(rowIndex)}>
                             <FlexCol>
-                                {g.map(gg => <div>{gg.time}</div>)}
+                                {g.map(gg => <div key={gg.id}>{gg.time}</div>)}
                             </FlexCol>
                         
                             </div>

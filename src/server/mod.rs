@@ -449,7 +449,7 @@ fn get_ntfs_mounts_helper() -> Vec<String> {
 #[api_v2_operation]
 async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
     let connection = establish_connection();
-    let mut fs_fuse = get_ntfs_mounts_helper();
+    let fs_fuse = get_ntfs_mounts_helper();
     //fs_fuse.push("/mnt/test".to_owned());
     let mapped = mount.select((unix_path, windows_path)).load::<(String, String)>(&connection).unwrap();
     if IS_WINDOWS {
@@ -623,18 +623,21 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
         .inner_join(artist)
         .inner_join(album)
         .inner_join(album_artist.on(schema::album_artist::album_artist_id.eq(schema::album::album_artist_id)))
-        .select((song_title, artist_name, album_artist_name, album_name, track_number, disc_number, duration, get_song_path()))
-        .load::<(String, String, String, String, i32, i32, i32, String)>(&connection).unwrap()
+        .select((song_id, song_title, artist_name, album_artist_name, album_name, 
+            track_number, disc_number, duration, get_song_path(), diesel::dsl::sql::<diesel::sql_types::Bool>("case when album_art is null then 0 else 1 end")))
+        .load::<(i32, String, String, String, String, i32, i32, i32, String, bool)>(&connection).unwrap()
         .iter()
         .map(|s| Song { 
-            name: s.0.to_owned(), 
-            artist: s.1.to_owned(), 
-            album_artist: s.2.to_owned(),
-            album: s.3.to_owned(),
-            track: s.4,
-            disc: s.5,
-            time: s.6,
-            path: s.7.to_owned()
+            id: s.0,
+            name: s.1.to_owned(), 
+            artist: s.2.to_owned(), 
+            album_artist: s.3.to_owned(),
+            album: s.4.to_owned(),
+            track: s.5,
+            disc: s.6,
+            time: s.7,
+            path: s.8.to_owned(),
+            has_art: s.9
         })
         .collect::<Vec<_>>();
     &songs.sort_case_insensitive("album artist".to_owned());
@@ -751,6 +754,7 @@ struct FolderUpdate {
 #[derive(Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 pub struct Song {
+    pub id: i32,
     pub path: String,
     pub artist: String,
     pub album_artist: String,
@@ -758,7 +762,8 @@ pub struct Song {
     pub album: String,
     pub track: i32,
     pub disc: i32,
-    pub time: i32
+    pub time: i32,
+    pub has_art: bool
 }
 
 #[derive(Deserialize, Apiv2Schema)]
