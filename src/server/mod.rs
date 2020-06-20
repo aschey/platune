@@ -656,24 +656,31 @@ async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
         .unwrap();
     let mut builder = actix_http::Response::Ok();
     if art.is_some() {
+        let resize = req_obj.width.is_some() && req_obj.height.is_some();
         let img = art.unwrap();
         let o = image::io::Reader::new(std::io::Cursor::new(&img))
             .with_guessed_format()
             .unwrap();
         
-        let format = o.format();
-        let res = o.decode().unwrap().resize(req_obj.width, req_obj.height, image::imageops::FilterType::CatmullRom);
+        let format = o.format().unwrap();
+        //
         
-        let mut buf = Vec::new();
-        if format == Some(image::ImageFormat::Png) {
+        //let mut buf = Vec::new();
+        if format == image::ImageFormat::Png {
             builder.set(actix_http::http::header::ContentType::png());
-            let write_res = res.write_to(&mut buf, image::ImageFormat::Png);
+            //let write_res = res.write_to(&mut buf, image::ImageFormat::Png);
         }
         else {
             builder.set(actix_http::http::header::ContentType::jpeg());
-            let write_res = res.write_to(&mut buf, image::ImageFormat::Jpeg);
+            //let write_res = res.write_to(&mut buf, image::ImageFormat::Jpeg);
         }
-        return builder.body(buf);
+        if resize {
+            let res = o.decode().unwrap().resize(req_obj.width.unwrap(), req_obj.height.unwrap(), image::imageops::FilterType::CatmullRom);
+            let mut buf = Vec::new();
+            let write_res = res.write_to(&mut buf, format);
+            return builder.body(buf);
+        }
+        return builder.body(img);
     }
     else {
         return builder.finish();
@@ -777,6 +784,6 @@ struct SongRequest {
 #[serde(rename_all = "camelCase")]
 struct ArtRequest {
     song_id: i32,
-    width: u32,
-    height: u32
+    width: Option<u32>,
+    height: Option<u32>
 }

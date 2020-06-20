@@ -101,7 +101,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({ setSelected }: Folde
         }
     }
 
-
     return (
         <Tree
             contents={nodes}

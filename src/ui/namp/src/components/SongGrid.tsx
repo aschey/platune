@@ -256,7 +256,9 @@ export const SongGrid: React.FC<{}> = () => {
 
     const cache = new CellMeasurerCache({
         defaultWidth: 150,
+        defaultHeight: 100,
         fixedWidth: true,
+        minHeight: 100
     });
 
     const otherGrid =
@@ -274,19 +276,26 @@ export const SongGrid: React.FC<{}> = () => {
                     headerRenderer={headerRenderer}
                     dataKey='album'
                     label='Album'
-                    cellRenderer={({rowIndex, dataKey})=> {
+                    cellRenderer={({rowIndex, dataKey, parent})=> {
                         let g = groupedSongs[albumKeys[rowIndex]][0];
-                        return <div onDoubleClick={() => onDoubleClick(rowIndex)} key={g.id}>
+                        return <CellMeasurer
+                        cache={cache}
+                        columnIndex={0}
+                        key={dataKey}
+                        parent={parent}
+                        rowIndex={rowIndex}>
+                            <div onDoubleClick={() => onDoubleClick(rowIndex)} key={g.id}>
                             <FlexCol>
                                 <div>{g.artist}</div>
                                 <div>{g.album}</div>
                                 {g.hasArt ? 
-                                    <div><img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}&width=50&height=50`}/></div> 
+                                    <div><img loading='eager' src={`http://localhost:5000/albumArt?songId=${g.id}`} style={{width: 50, height: 50}}/></div> 
                                     : null }
                                 
                             </FlexCol>
                         
                     </div>
+                    </CellMeasurer>
                     }}
                     width={widths.album}
                 />
@@ -325,7 +334,7 @@ export const SongGrid: React.FC<{}> = () => {
                             parent={parent}
                             rowIndex={rowIndex}>
                             <div onDoubleClick={() => onDoubleClick(rowIndex)}>
-                            <FlexCol>
+                            <FlexCol style={{paddingBottom: g.length > 5 ? 10 : 0}}>
                                 {g.map(gg => <div key={gg.id}>{gg.time}</div>)}
                             </FlexCol>
                         
