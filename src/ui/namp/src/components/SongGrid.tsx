@@ -270,6 +270,8 @@ export const SongGrid: React.FC<{}> = () => {
             rowCount={albumKeys.length}
             rowRenderer={rowRenderer}
             rowHeight={cache.rowHeight}
+            deferredMeasurementCache={cache}
+            estimatedRowSize={groupedSongs?.keys?.length > 0 ? songs.length / groupedSongs.keys.length * 20 : 200}
             rowGetter={({ index }) => groupedSongs[albumKeys[index]]}
             >
                 <Column
@@ -289,7 +291,7 @@ export const SongGrid: React.FC<{}> = () => {
                                 <div>{g.artist}</div>
                                 <div>{g.album}</div>
                                 {g.hasArt ? 
-                                    <div><img loading='eager' src={`http://localhost:5000/albumArt?songId=${g.id}`} style={{width: 50, height: 50}}/></div> 
+                                    <div><img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}`} style={{width: 50, height: 50}}/></div> 
                                     : null }
                                 
                             </FlexCol>
