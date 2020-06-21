@@ -56,6 +56,7 @@ export const SongGrid: React.FC<{}> = () => {
 
     useEffect(() => {
         loadSongs().then(s => {
+            s.forEach((song, i) => song.index = i);
             setSongs(s);
             let g = _.groupBy(s, ss => ss.albumArtist + " " + ss.album);
             setGroupedSongs(g);
@@ -156,26 +157,26 @@ export const SongGrid: React.FC<{}> = () => {
     const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
         if (rowIndex === editingRow) {
             return (
-                <div className='bp3-table-cell bp3-intent-primary gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
+                <div key={rowIndex} className='bp3-table-cell bp3-intent-primary gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
                     { canEdit ? <EditableText defaultValue={value}/> : value }
                 </div>);
         }
 
         if (rowIndex === playingRow) {
             return (
-                <div className='bp3-table-cell bp3-intent-success gridCell'onDoubleClick={() => onDoubleClick(rowIndex)}>
+                <div key={rowIndex} className='bp3-table-cell bp3-intent-success gridCell'onDoubleClick={() => onDoubleClick(rowIndex)}>
                     {value}
                 </div>);
         }
         if (rowIndex === selectedRow) {
             return (
-                <div className='bp3-table-cell gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
+                <div key={rowIndex} className='bp3-table-cell gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
                     {value}
                 </div>
             );
         }
         return (
-            <div className='bp3-table-cell striped gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
+            <div key={rowIndex} className='bp3-table-cell striped gridCell' onDoubleClick={() => onDoubleClick(rowIndex)}>
                 {value}
             </div>
         );
@@ -254,13 +255,6 @@ export const SongGrid: React.FC<{}> = () => {
         updatePlayingRow(-1);
     }
 
-    const cache = new CellMeasurerCache({
-        defaultWidth: 150,
-        defaultHeight: 100,
-        fixedWidth: true,
-        minHeight: 100
-    });
-
     const otherGrid =
         <div style={{height: window.innerHeight - 140}}>
             <Table
@@ -269,9 +263,8 @@ export const SongGrid: React.FC<{}> = () => {
             headerHeight={25}
             rowCount={albumKeys.length}
             rowRenderer={rowRenderer}
-            rowHeight={cache.rowHeight}
-            deferredMeasurementCache={cache}
-            estimatedRowSize={groupedSongs?.keys?.length > 0 ? songs.length / groupedSongs.keys.length * 20 : 200}
+            estimatedRowSize={groupedSongs?.keys?.length > 0 ? songs.length / groupedSongs.keys.length * 25 : 250}
+            rowHeight={index => Math.max(groupedSongs[albumKeys[index.index]].length * 25, 100)}
             rowGetter={({ index }) => groupedSongs[albumKeys[index]]}
             >
                 <Column
@@ -280,24 +273,16 @@ export const SongGrid: React.FC<{}> = () => {
                     label='Album'
                     cellRenderer={({rowIndex, dataKey, parent})=> {
                         let g = groupedSongs[albumKeys[rowIndex]][0];
-                        return <CellMeasurer
-                        cache={cache}
-                        columnIndex={0}
-                        key={dataKey}
-                        parent={parent}
-                        rowIndex={rowIndex}>
-                            <div onDoubleClick={() => onDoubleClick(rowIndex)} key={g.id}>
-                            <FlexCol>
+                        return <FlexCol>
                                 <div>{g.artist}</div>
                                 <div>{g.album}</div>
                                 {g.hasArt ? 
-                                    <div><img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}`} style={{width: 50, height: 50}}/></div> 
+                                    <img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}`} width={50} height={50} />
                                     : null }
                                 
-                            </FlexCol>
+                    </FlexCol>
                         
-                    </div>
-                    </CellMeasurer>
+            
                     }}
                     width={widths.album}
                 />
@@ -307,43 +292,47 @@ export const SongGrid: React.FC<{}> = () => {
                     label='Title'
                     cellRenderer={({rowIndex, dataKey, parent})=> {
                         let g = groupedSongs[albumKeys[rowIndex]];
-                        return <CellMeasurer
-                            cache={cache}
-                            columnIndex={1}
-                            key={dataKey}
-                            parent={parent}
-                            rowIndex={rowIndex}>
-                            <div onDoubleClick={() => onDoubleClick(rowIndex)}>
-                            <FlexCol>
-                                {g.map(gg => <div key={gg.id}>{gg.name}</div>)}
+                        return <FlexCol>
+                                {g.map(gg => genericCellRenderer(gg.index, 'name'))}
                             </FlexCol>
-                        
-                            </div>
-                            </CellMeasurer>
                     }}
                     width={widths.name}
                 />
                 <Column
                     headerRenderer={headerRenderer}
+                    dataKey='track'
+                    label='Track'
+                    cellRenderer={({rowIndex})=> {
+                        let g = groupedSongs[albumKeys[rowIndex]];
+                        return <FlexCol>
+                            {g.map(gg => trackRenderer(gg.index))}
+                        </FlexCol>
+                    } }
+                    width={widths.track}
+                />
+                <Column
+                    headerRenderer={headerRenderer}
                     dataKey='time'
                     label='Time'
-                    cellRenderer={({rowIndex, dataKey, parent})=> {
+                    cellRenderer={({rowIndex}) => {
                         let g = groupedSongs[albumKeys[rowIndex]];
-                        return <CellMeasurer
-                            cache={cache}
-                            columnIndex={2}
-                            key={dataKey}
-                            parent={parent}
-                            rowIndex={rowIndex}>
-                            <div onDoubleClick={() => onDoubleClick(rowIndex)}>
-                            <FlexCol style={{paddingBottom: g.length > 5 ? 10 : 0}}>
-                                {g.map(gg => <div key={gg.id}>{gg.time}</div>)}
-                            </FlexCol>
-                        
-                            </div>
-                            </CellMeasurer>
+                        return <FlexCol>
+                            {g.map(gg => timeRenderer(gg.index))}
+                        </FlexCol>
                     }}
                     width={widths.time}
+                />
+                <Column
+                    headerRenderer={headerRenderer}
+                    dataKey='path'
+                    label='Path'
+                    cellRenderer={({rowIndex}) => {
+                        let g = groupedSongs[albumKeys[rowIndex]];
+                        return <FlexCol>
+                            {g.map(gg => pathRenderer(gg.index))}
+                        </FlexCol>
+                    }}
+                    width={widths.path}
                 />
             </Table>
         </div>
