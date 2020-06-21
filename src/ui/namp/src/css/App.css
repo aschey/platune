@@ -103,7 +103,7 @@ html {
   outline: none;
 }
 
-.selected .bp3-table-cell {
+.selected.bp3-table-cell {
   background: rgba(125, 188, 255, 0.6);
 }
 
@@ -111,11 +111,15 @@ html {
   outline: none;
 }
 
-.ReactVirtualized__Grid__innerScrollContainer > div:nth-of-type(odd) div.striped {
+.ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
+.ReactVirtualized__Grid__innerScrollContainer .rowParent .striped:nth-of-type(odd)
+{
   background: #334554;
 }
 
-.ReactVirtualized__Grid__innerScrollContainer > div:nth-of-type(even) div.striped {
+.ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
+.ReactVirtualized__Grid__innerScrollContainer .rowParent .striped:nth-of-type(even)
+{
   background: #2c3d4a;
 }
 

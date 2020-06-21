@@ -27,7 +27,10 @@ function createWindow() {
 }
 
 app.on('ready', async () => {
-  await installExtensions();
+  if (isDev) {
+    await installExtensions();
+  }
+  
   const spawnServer = false;
   if (spawnServer) {
     server = net.createServer();
@@ -54,7 +57,6 @@ app.on('activate', () => {
 
 const installExtensions = async () => {
   const installer = require('electron-devtools-installer');
-  //console.log(installer);
   const forceDownload = true;
   const extensions = [
     'REACT_DEVELOPER_TOOLS',
