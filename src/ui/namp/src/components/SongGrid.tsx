@@ -23,9 +23,20 @@ export const SongGrid: React.FC<{}> = () => {
     const [pauseTime, setPauseTime] = useState(0);
     const [pauseStart, setPauseStart] = useState(0);
     const [selectedRow, setSelectedRow] = useState(-1);
+    const [selectedAlbumRow, setSelectedAlbumRow] = useState(-1);
     const [editingRow, setEditingRow] = useState(-1);
     const [isPlaying, setIsPlaying] = useState(false);
     const [widths, setWidths] = useState({
+        edit: 30,
+        name: 300,
+        albumArtist: 250,
+        artist: 250,
+        album: 250,
+        track: 70,
+        time: 60,
+        path: 400
+    });
+    const [widths2, setWidths2] = useState({
         edit: 30,
         name: 300,
         albumArtist: 250,
@@ -106,7 +117,7 @@ export const SongGrid: React.FC<{}> = () => {
     const editCellRenderer = (rowIndex: number) => {
         const isEditingRow = editingRow === rowIndex;
         return (
-        <div className='bp3-table-cell gridCell striped' style={{padding: 0}}>
+        <div className='bp3-table-cell gridCell striped' style={{padding: 0}} key={rowIndex}>
             <FlexCol>
                 <Button small minimal intent={isEditingRow || rowIndex === playingRow ? Intent.SUCCESS : Intent.NONE} icon={isEditingRow ? 'saved' : 'edit'} onClick={() => {
                     if (isEditingRow) {
@@ -231,10 +242,31 @@ export const SongGrid: React.FC<{}> = () => {
           toastSuccess();
           setEditingRow(-1);
       }
+      const cur = songs[index];
+      let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
+      setSelectedAlbumRow(albumIndex);
     }
 
     const rowRenderer = (props: TableRowProps) => {
         props.className += ' row';
+        return defaultTableRowRenderer(props);
+    }
+
+    const rowRenderer2 = (props: TableRowProps) => {
+        props.style.border = '1px solid rgb(38, 53, 64)';
+        props.style.boxShadow = 'rgb(38, 53, 64) 1px 1px';
+        props.style.background = 'rgb(51, 70, 84)';
+        props.style.borderRadius = 10;
+        props.style.transition = 'top 0.5s, height 0.5s, background 0.5s';
+        if (props.index === selectedAlbumRow) {
+            props.style.top -= 10;
+            props.style.height += 10;
+            props.style.background = '#2c3d4a';
+        }
+        else {
+            props.style.height -=10;
+        }
+        props.style.width -= 20;
         return defaultTableRowRenderer(props);
     }
 
@@ -262,6 +294,13 @@ export const SongGrid: React.FC<{}> = () => {
         updatePlayingRow(-1);
     }
 
+    const mulitSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
+        let g = groupedSongs[albumKeys[rowIndex]];
+        return <div className='rowParent'>
+                    {g.map(gg => cellRenderer(gg.index))}
+                </div>
+    }
+
     const otherGrid =
         <div style={{height: window.innerHeight - 140}}>
             <Table
@@ -269,8 +308,10 @@ export const SongGrid: React.FC<{}> = () => {
             height={window.innerHeight - 160}
             headerHeight={25}
             rowCount={albumKeys.length}
+            rowRenderer={rowRenderer2}
+            overscanRowCount={0}
             estimatedRowSize={groupedSongs?.keys?.length > 0 ? songs.length / groupedSongs.keys.length * 25 : 250}
-            rowHeight={index => Math.max(groupedSongs[albumKeys[index.index]].length * 25, 125)}
+            rowHeight={index => Math.max(groupedSongs[albumKeys[index.index]].length * 25 + 20, 145)}
             rowGetter={({ index }) => groupedSongs[albumKeys[index]]}
             >
                 <Column
@@ -278,8 +319,12 @@ export const SongGrid: React.FC<{}> = () => {
                     dataKey='album'
                     label='Album'
                     cellRenderer={({rowIndex, dataKey, parent})=> {
+                        let gg = groupedSongs[albumKeys[rowIndex]];
                         let g = groupedSongs[albumKeys[rowIndex]][0];
-                        return <FlexCol>
+                        return <FlexCol 
+                            style={{height: Math.max(gg.length * 25, 125)}} 
+                            onClick = {() => setSelectedAlbumRow(rowIndex)}
+                            >
                                 <div>{g.artist}</div>
                                 <div>{g.album}</div>
                                 {g.hasArt ? 
@@ -296,61 +341,36 @@ export const SongGrid: React.FC<{}> = () => {
                   headerRenderer={headerRenderer}
                   dataKey=''
                   label=''
-                  cellRenderer={({rowIndex, dataKey})=>{
-                    let g = groupedSongs[albumKeys[rowIndex]];
-                    return <div className='rowParent'>
-                                {g.map(gg => editCellRenderer(gg.index))}
-                            </div>
-                    
-                  } }
+                  cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, editCellRenderer)}
                   width={widths.edit}
                 />
                 <Column
                     headerRenderer={headerRenderer}
                     dataKey='name'
                     label='Title'
-                    cellRenderer={({rowIndex, dataKey, parent})=> {
-                        let g = groupedSongs[albumKeys[rowIndex]];
-                        return <div className='rowParent'>
-                                {g.map(gg => genericCellRenderer(gg.index, 'name'))}
-                            </div>
-                    }}
+                    cellRenderer={({rowIndex, dataKey, parent}) => 
+                        mulitSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
                     width={widths.name}
                 />
                 <Column
                     headerRenderer={headerRenderer}
                     dataKey='track'
                     label='Track'
-                    cellRenderer={({rowIndex})=> {
-                        let g = groupedSongs[albumKeys[rowIndex]];
-                        return <div className='rowParent'>
-                            {g.map(gg => trackRenderer(gg.index))}
-                        </div>
-                    } }
+                    cellRenderer={({rowIndex})=> mulitSongRenderer(rowIndex, trackRenderer)}
                     width={widths.track}
                 />
                 <Column
                     headerRenderer={headerRenderer}
                     dataKey='time'
                     label='Time'
-                    cellRenderer={({rowIndex}) => {
-                        let g = groupedSongs[albumKeys[rowIndex]];
-                        return <div className='rowParent'>
-                            {g.map(gg => timeRenderer(gg.index))}
-                        </div>
-                    }}
+                    cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, timeRenderer)}
                     width={widths.time}
                 />
                 <Column
                     headerRenderer={headerRenderer}
                     dataKey='path'
                     label='Path'
-                    cellRenderer={({rowIndex}) => {
-                        let g = groupedSongs[albumKeys[rowIndex]];
-                        return <div className='rowParent'>
-                            {g.map(gg => pathRenderer(gg.index))}
-                        </div>
-                    }}
+                    cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, pathRenderer)}
                     width={widths.path}
                 />
             </Table>

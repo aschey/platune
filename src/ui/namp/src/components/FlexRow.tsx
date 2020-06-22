@@ -1,9 +1,9 @@
 import React from 'react';
 
-export const FlexRow: React.FC<{children: React.ReactNode, style?: React.CSSProperties, flex?: number}> = ({children, style, flex}) => {
+export const FlexRow: React.FC<React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>> = (props) => {
     return (
-    <div style={{...style, display: 'flex', flex: flex ?? 1, flexDirection: 'row'}}>
-        {children}
-    </div>
+        <div style={{...props.style, display: 'flex', flex: 1, flexDirection: 'column'}} {...props}>
+            {props.children}
+        </div>
     )
 }

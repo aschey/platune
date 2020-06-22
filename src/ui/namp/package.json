@@ -59,8 +59,9 @@
     "eject": "react-scripts eject",
     "dev": "tsc --project tsconfig-electron.json && concurrently \"cross-env BROWSER=none yarn start\" \"wait-on http://localhost:3000 && electron .\"",
     "postinstall": "electron-builder install-app-deps",
-    "prelinux-pack": "tsc --project tsconfig-electron.json && yarn build",
-    "prewindows-pack": "tsc --project tsconfig-electron.json && yarn build",
+    "before-pack": "rm -rf dist && tsc --project tsconfig-electron.json && yarn build",
+    "prelinux-pack": "yarn run before-pack",
+    "prewindows-pack": "yarn run before-pack",
     "linux-pack": "electron-builder build --linux",
     "windows-pack": "electron-builder build --windows"
   },
