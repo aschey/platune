@@ -98,7 +98,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     let mut sys = actix_rt::System::new("server");
 
     let srv = HttpServer::new(|| { 
-        let mut builder = App::new()
+        let builder = App::new()
         .wrap(Cors::new().finish())
         .wrap_api()
         // REST endpoints
@@ -113,6 +113,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .service(web::resource("/updatePathMappings").route(web::put().to(update_path_mappings)))
         .service(web::resource("/songs").route(web::get().to(get_songs)))
         .service(web::resource("/albumArt").route(web::get().to(get_album_art)))
+        .service(web::resource("/albumArtColors").route(web::get().to(get_art_colors)))
         .with_json_spec_at("/spec")
         .build()
         // static files
@@ -663,16 +664,11 @@ async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
             .unwrap();
         
         let format = o.format().unwrap();
-        //
-        
-        //let mut buf = Vec::new();
         if format == image::ImageFormat::Png {
             builder.set(actix_http::http::header::ContentType::png());
-            //let write_res = res.write_to(&mut buf, image::ImageFormat::Png);
         }
         else {
             builder.set(actix_http::http::header::ContentType::jpeg());
-            //let write_res = res.write_to(&mut buf, image::ImageFormat::Jpeg);
         }
         if resize {
             let res = o.decode().unwrap().resize(req_obj.width.unwrap(), req_obj.height.unwrap(), image::imageops::FilterType::CatmullRom);
@@ -686,6 +682,37 @@ async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
         return builder.finish();
     }
 }
+
+#[api_v2_operation]
+async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()>{
+    //let req_song_id = 690;
+    let connection = establish_connection();
+    
+    let art = song
+        .filter(song_id.eq(request.song_id))
+        .select(album_art)
+        .first::<Option<Vec<u8>>>(&connection)
+        .unwrap().unwrap();
+   // let mut builder = actix_http::Response::Ok();
+    let o = image::io::Reader::new(std::io::Cursor::new(&art))
+        .with_guessed_format()
+        .unwrap();
+    
+    //let format = o.format().unwrap();
+    //let res = o.decode().unwrap().resize(100, 100, image::imageops::FilterType::CatmullRom);
+    //let mut buf = Vec::new();
+    //let write_res = res.write_to(&mut buf, format);
+    let palette = color_thief::get_palette(&o.decode().unwrap().as_rgb8().unwrap(), color_thief::ColorFormat::Rgb, 10, 2);
+    match palette {
+        Ok(pal) => Ok(Json(pal.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect())),
+        Err(e) => {
+            println!("{:?}", e);
+            panic!("err");
+        }
+    }
+   // palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b});
+    //return Ok(Json(palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect()));
+    }
 
 #[api_v2_operation]
 async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()>, HttpError>  {
@@ -738,6 +765,14 @@ struct Dir {
 struct DirResponse {
     dirs: Vec<Dir>,
 }
+
+#[derive(Serialize, Apiv2Schema)]
+struct Rgb {
+    r: u8,
+    g: u8,
+    b: u8
+}
+
 
 #[derive(Serialize, Deserialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]

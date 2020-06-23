@@ -621,6 +621,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "color-thief"
+version = "0.1.0"
+source = "git+https://github.com/RazrFalcon/color-thief-rs#bb7e77c22cfd1451e99ecbf0c2b11318e3961626"
+dependencies = [
+ "rgb",
+]
+
+[[package]]
 name = "color_quant"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1485,6 +1493,7 @@ dependencies = [
  "actix-service",
  "actix-web",
  "async-std",
+ "color-thief",
  "diesel",
  "dirs",
  "dotenv",
@@ -1965,6 +1974,12 @@ dependencies = [
  "hostname",
  "quick-error",
 ]
+
+[[package]]
+name = "rgb"
+version = "0.8.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6714061b32e0b0527005d5874c28a57d905559fecfacd361462ad0b01e701996"
 
 [[package]]
 name = "rust-argon2"

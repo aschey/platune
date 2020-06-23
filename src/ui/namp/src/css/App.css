@@ -112,13 +112,13 @@ html {
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
-.ReactVirtualized__Grid__innerScrollContainer .rowParent .striped:nth-of-type(odd)
+.ReactVirtualized__Table__row:not(.selectedRow) .rowParent .striped:nth-of-type(odd)
 {
   background: #334554;
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
-.ReactVirtualized__Grid__innerScrollContainer .rowParent .striped:nth-of-type(even)
+.ReactVirtualized__Table__row:not(.selectedRow) .rowParent .striped:nth-of-type(even)
 {
   background: #2c3d4a;
 }
@@ -168,10 +168,27 @@ html {
 
 :root {
   --text-color: white;
+  --bg-color: white;
+  --stripe-even: white;
+  --stripe-odd: black;
+}
+
+.selectedRow {
+  background-color: var(--bg-color) !important;
 }
 
 .selectedRow div {
   color: var(--text-color) !important;
   transition: all 0.3s;
   font-weight: bold;
+}
+
+.ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(odd)
+{
+  background: var(--stripe-odd);
+}
+
+.ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(even)
+{
+  background: var(--stripe-even);
 }
