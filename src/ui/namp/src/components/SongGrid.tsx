@@ -277,9 +277,10 @@ export const SongGrid: React.FC<{}> = () => {
         props.style.background = 'rgb(51, 70, 84)';
         props.style.borderRadius = 10;
         props.style.transition = 'all 0.3s';
+        props.style.left = 10;
         if (props.index === selectedAlbumRow) {
-            props.style.top -= 10;
-            props.style.height += 10;
+            //props.style.top -= 10;
+            //props.style.height += 5;
             props.className += ' selectedRow';
             //props.style.background = '#2c3d4a';
             let g = groupedSongs[albumKeys[props.index]][0];
@@ -294,9 +295,10 @@ export const SongGrid: React.FC<{}> = () => {
             
         }
         else {
-            props.style.height -= 10;
+            //props.style.height -= 15;
         }
-        props.style.width -= 20;
+        props.style.height -= 15;
+        props.style.width -= 30;
         return defaultTableRowRenderer(props);
     }
 
@@ -361,7 +363,7 @@ export const SongGrid: React.FC<{}> = () => {
                         let gg = groupedSongs[albumKeys[rowIndex]];
                         let g = groupedSongs[albumKeys[rowIndex]][0];
                         return <FlexCol 
-                            style={{height: Math.max(gg.length * 25, 125)}} 
+                            style={{paddingTop: 5, height: Math.max(gg.length * 25, 125)}} 
                             onClick = {() => {
                                 loadColors(g.id).then(colors => {
                                     const bg = colors[0];
@@ -369,9 +371,9 @@ export const SongGrid: React.FC<{}> = () => {
                                     const stripe1 = lighten(bg, 0.05);
                                     const stripe2 = lighten(bg, 0.1);
                                     document.documentElement.style.setProperty('--text-color', `rgb(${fg.r},${fg.g},${fg.b})`);
-                                    document.documentElement.style.setProperty('--bg-color', `rgb(${bg.r},${bg.g},${bg.b})`);
-                                    document.documentElement.style.setProperty('--stripe-even', `rgb(${stripe1.r},${stripe1.g},${stripe1.b})`);
-                                    document.documentElement.style.setProperty('--stripe-odd', `rgb(${stripe2.r},${stripe2.g},${stripe2.b})`);
+                                    document.documentElement.style.setProperty('--bg-color', `rgba(${bg.r},${bg.g},${bg.b}, 0.5)`);
+                                    document.documentElement.style.setProperty('--stripe-even', `rgba(${stripe1.r},${stripe1.g},${stripe1.b}, 0.5)`);
+                                    document.documentElement.style.setProperty('--stripe-odd', `rgb(${stripe2.r},${stripe2.g},${stripe2.b}, 0.5)`);
                                     setSelectedAlbumRow(rowIndex);
                                 });  
                             }}
