@@ -165,3 +165,13 @@ html {
 .ReactVirtualized__Table__headerTruncatedText {
   margin-left: 10px;
 }
+
+:root {
+  --text-color: white;
+}
+
+.selectedRow div {
+  color: var(--text-color) !important;
+  transition: all 0.3s;
+  font-weight: bold;
+}

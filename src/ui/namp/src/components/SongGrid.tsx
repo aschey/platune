@@ -257,14 +257,16 @@ export const SongGrid: React.FC<{}> = () => {
         props.style.boxShadow = 'rgb(38, 53, 64) 1px 1px';
         props.style.background = 'rgb(51, 70, 84)';
         props.style.borderRadius = 10;
-        props.style.transition = 'top 0.5s, height 0.5s, background 0.5s';
+        props.style.transition = 'all 0.3s';
         if (props.index === selectedAlbumRow) {
             props.style.top -= 10;
             props.style.height += 10;
             props.style.background = '#2c3d4a';
+            document.documentElement.style.setProperty('--text-color', 'white');
+            props.className += ' selectedRow';
         }
         else {
-            props.style.height -=10;
+            props.style.height -= 10;
         }
         props.style.width -= 20;
         return defaultTableRowRenderer(props);
