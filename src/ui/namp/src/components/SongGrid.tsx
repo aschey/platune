@@ -101,6 +101,7 @@ export const SongGrid: React.FC<{}> = () => {
                     axis='none'
                     defaultClassName="DragHandle"
                     defaultClassNameDragging="DragHandleActive"
+                    bounds={{right: 10, left: 0, top: 0, bottom: 0}}
                     onDrag={(event, { deltaX }) => {
                         resizeRow({dataKey: props.dataKey, deltaX});
                     }}
@@ -276,7 +277,7 @@ export const SongGrid: React.FC<{}> = () => {
         props.style.boxShadow = 'rgb(38, 53, 64) 1px 1px';
         props.style.background = 'rgb(51, 70, 84)';
         props.style.borderRadius = 10;
-        props.style.transition = 'all 0.3s';
+        props.style.transition = 'var(--transition);';
         props.style.left = 10;
         if (props.index === selectedAlbumRow) {
             //props.style.top -= 10;
@@ -371,7 +372,8 @@ export const SongGrid: React.FC<{}> = () => {
                                     const stripe1 = lighten(bg, 0.05);
                                     const stripe2 = lighten(bg, 0.1);
                                     document.documentElement.style.setProperty('--text-color', `rgb(${fg.r},${fg.g},${fg.b})`);
-                                    document.documentElement.style.setProperty('--bg-color', `rgba(${bg.r},${bg.g},${bg.b}, 0.5)`);
+                                    document.documentElement.style.setProperty('--bg-1', `rgba(${bg.r},${bg.g},${bg.b}, 0.2)`);
+                                    document.documentElement.style.setProperty('--bg-2', `rgba(${bg.r},${bg.g},${bg.b}, 0.4)`);
                                     document.documentElement.style.setProperty('--stripe-even', `rgba(${stripe1.r},${stripe1.g},${stripe1.b}, 0.5)`);
                                     document.documentElement.style.setProperty('--stripe-odd', `rgb(${stripe2.r},${stripe2.g},${stripe2.b}, 0.5)`);
                                     setSelectedAlbumRow(rowIndex);
