@@ -174,7 +174,7 @@ html {
   --bg-2: white;
   --stripe-even: white;
   --stripe-odd: black;
-  --transition: color 1s, background 1s;
+  --transition: color 1s, background 1s, border 1s, box-shadow 1s;
 }
 
 .selectedRow {

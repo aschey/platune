@@ -130,7 +130,7 @@ export const SongGrid: React.FC<{}> = () => {
     const editCellRenderer = (rowIndex: number) => {
         const isEditingRow = editingRow === rowIndex;
         return (
-        <div className='bp3-table-cell gridCell striped' style={{padding: 0}} key={rowIndex}>
+        <div className='bp3-table-cell gridCell striped' style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
             <FlexCol>
                 <Button small minimal intent={isEditingRow || rowIndex === playingRow ? Intent.SUCCESS : Intent.NONE} icon={isEditingRow ? 'saved' : 'edit'} onClick={() => {
                     if (isEditingRow) {
@@ -374,8 +374,8 @@ export const SongGrid: React.FC<{}> = () => {
                                     document.documentElement.style.setProperty('--text-color', `rgb(${fg.r},${fg.g},${fg.b})`);
                                     document.documentElement.style.setProperty('--bg-1', `rgba(${bg.r},${bg.g},${bg.b}, 0.2)`);
                                     document.documentElement.style.setProperty('--bg-2', `rgba(${bg.r},${bg.g},${bg.b}, 0.4)`);
-                                    document.documentElement.style.setProperty('--stripe-even', `rgba(${stripe1.r},${stripe1.g},${stripe1.b}, 0.5)`);
-                                    document.documentElement.style.setProperty('--stripe-odd', `rgb(${stripe2.r},${stripe2.g},${stripe2.b}, 0.5)`);
+                                    document.documentElement.style.setProperty('--stripe-even', `rgba(${stripe1.r},${stripe1.g},${stripe1.b}, 0.7)`);
+                                    document.documentElement.style.setProperty('--stripe-odd', `rgb(${stripe2.r},${stripe2.g},${stripe2.b}, 0.7)`);
                                     setSelectedAlbumRow(rowIndex);
                                 });  
                             }}
