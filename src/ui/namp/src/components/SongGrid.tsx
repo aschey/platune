@@ -276,7 +276,7 @@ export const SongGrid: React.FC<{}> = () => {
         props.style.border = '1px solid rgb(38, 53, 64)';
         props.style.boxShadow = 'rgb(38, 53, 64) 1px 1px';
         props.style.background = 'rgb(51, 70, 84)';
-        props.style.borderRadius = 10;
+        props.style.borderRadius = 5;
         props.style.transition = 'var(--transition);';
         props.style.left = 10;
         if (props.index === selectedAlbumRow) {
@@ -334,15 +334,6 @@ export const SongGrid: React.FC<{}> = () => {
                 </div>
     }
 
-    const lighten = (color: Rgb, correctionFactor: number) => {
-        //const correctionFactor = 0.5;
-        const red = (255 - color.r) * correctionFactor + color.r;
-        const green = (255 - color.g) * correctionFactor + color.g;
-        const blue = (255 - color.b) * correctionFactor + color.b;
-        const lighterColor: Rgb = { r: red, g: green, b: blue };
-        return lighterColor;
-    }
-
     const otherGrid =
         <div style={{height: window.innerHeight - 140}}>
             <Table
@@ -369,8 +360,8 @@ export const SongGrid: React.FC<{}> = () => {
                                 loadColors(g.id).then(colors => {
                                     const bg = colors[0];
                                     const fg = colors[1];
-                                    const stripe1 = lighten(bg, 0.05);
-                                    const stripe2 = lighten(bg, 0.1);
+                                    const stripe1 = bg;
+                                    const stripe2 = bg;
                                     document.documentElement.style.setProperty('--text-color', `rgb(${fg.r},${fg.g},${fg.b})`);
                                     document.documentElement.style.setProperty('--bg-1', `rgba(${bg.r},${bg.g},${bg.b}, 0.2)`);
                                     document.documentElement.style.setProperty('--bg-2', `rgba(${bg.r},${bg.g},${bg.b}, 0.4)`);

@@ -683,6 +683,28 @@ async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
     }
 }
 
+fn get_brightness(rgb: &Rgb) -> f32 {
+    return 0.2126 * (rgb.r as f32) + 0.7152 * (rgb.g as f32) + 0.0722 * (rgb.b as f32);
+}
+
+fn lighten (color: Rgb, correction_factor: f32) -> Rgb {
+    //const correctionFactor = 0.5;
+    let red = (255 - color.r) as f32 * correction_factor + color.r as f32;
+    let green = (255 - color.g) as f32 * correction_factor + color.g as f32;
+    let blue = (255 - color.b) as f32 * correction_factor + color.b as f32;
+    let lighter_color = Rgb { r: red as u8, g: green as u8, b: blue as u8};
+    return lighter_color;
+}
+
+fn darken (color: Rgb, correction_factor: f32) -> Rgb {
+    //const correctionFactor = 0.5;
+    let red = color.r as f32 * (1.0 - correction_factor);
+    let green = color.g as f32 * (1.0 - correction_factor);
+    let blue = color.b as f32 * (1.0 - correction_factor);
+    let darker_color = Rgb { r: red as u8, g: green as u8, b: blue as u8};
+    return darker_color;
+}
+
 #[api_v2_operation]
 async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()>{
     //let req_song_id = 690;
@@ -697,21 +719,27 @@ async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()
     let o = image::io::Reader::new(std::io::Cursor::new(&art))
         .with_guessed_format()
         .unwrap();
-    
-    //let format = o.format().unwrap();
-    //let res = o.decode().unwrap().resize(100, 100, image::imageops::FilterType::CatmullRom);
-    //let mut buf = Vec::new();
-    //let write_res = res.write_to(&mut buf, format);
-    let palette = color_thief::get_palette(&o.decode().unwrap().as_rgb8().unwrap(), color_thief::ColorFormat::Rgb, 10, 2);
-    match palette {
-        Ok(pal) => Ok(Json(pal.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect())),
-        Err(e) => {
-            println!("{:?}", e);
-            panic!("err");
-        }
+    let colors = 3 as usize;
+    let num_colors = 2 as u8;
+    let palette = color_thief::get_palette(&o.decode().unwrap().as_rgb8().unwrap(), color_thief::ColorFormat::Rgb, 10, num_colors).unwrap();
+    let pal = palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect::<Vec<_>>();
+    let mut temp = pal.iter().clone().map(get_brightness).enumerate().collect::<Vec<_>>();
+
+    &mut temp.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    let mut bg = pal[temp[0].0];
+    let mut fg = pal[temp[colors-1].0];
+    let bg_thresh = 70.0;
+    let fg_thresh = 150.0;
+    if temp[0].1 > bg_thresh {
+        let to_darken = 1.0 - bg_thresh/temp[0].1;
+        bg = darken(bg, to_darken);
     }
-   // palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b});
-    //return Ok(Json(palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect()));
+    if temp[colors-1].1 < fg_thresh {
+        let to_lighten = 1.0 - temp[colors-1].1/fg_thresh;
+        fg = lighten(fg, to_lighten);
+    }
+
+    return Ok(Json(vec![bg, fg]));
     }
 
 #[api_v2_operation]
@@ -766,7 +794,7 @@ struct DirResponse {
     dirs: Vec<Dir>,
 }
 
-#[derive(Serialize, Apiv2Schema)]
+#[derive(Serialize, Apiv2Schema, Copy, Clone)]
 struct Rgb {
     r: u8,
     g: u8,
