@@ -1,3 +1,5 @@
+import {Rgb} from './models/rgb';
+
 export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms)); 
 
 export const range = (n: number) => Array.from({length: n}, (value, key) => key);
@@ -14,3 +16,9 @@ export const formatMs = (ms: number) => {
 }
 
 const padNum = (num: number) => num.toString().padStart(2, '0');
+
+export const setCssVar = (name: string, value: string) =>
+    document.documentElement.style.setProperty(name, value);
+
+export const formatRgb = (rgb: Rgb) => `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+export const formatRgba = (rgb: Rgb, a: number) => `rgba(${rgb.r},${rgb.g},${rgb.b}, ${a})`;

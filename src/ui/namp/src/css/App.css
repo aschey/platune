@@ -111,6 +111,10 @@ html {
   outline: none;
 }
 
+.ReactVirtualized__Table__headerRow {
+  padding-left: 10px;
+}
+
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
 .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd)
 {
@@ -172,8 +176,7 @@ html {
   --text-color: white;
   --bg-1: white;
   --bg-2: white;
-  --stripe-even: white;
-  --stripe-odd: black;
+  --stripe: white;
   --transition: color 1s, background 1s, border 1s, box-shadow 1s;
 }
 
@@ -193,5 +196,5 @@ html {
 .ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(even)
 {
   transition: var(--transition);
-  background: var(--stripe-even);
+  background: var(--stripe);
 } 

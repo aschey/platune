@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Column, Table, TableHeaderRenderer, TableHeaderProps, defaultTableRowRenderer, TableRowProps, RowMouseEventHandlerParams, CellMeasurerCache, CellMeasurer } from "react-virtualized";
 import Draggable from "react-draggable";
 import { Song } from "../models/song";
-import { range, sleep, formatMs } from "../util";
+import { range, sleep, formatMs, formatRgb, setCssVar, formatRgba } from "../util";
 import { getJson } from "../fetchUtil";
 import _, { Dictionary } from "lodash";
 import { Intent, EditableText, Text, Button } from "@blueprintjs/core";
@@ -12,12 +12,7 @@ import { Controls } from "./Controls";
 import { FlexCol } from "./FlexCol";
 import { FlexRow } from "./FlexRow";
 import { getProcessMemoryInfo } from "process";
-
-interface Rgb {
-    r: number,
-    g: number,
-    b: number
-}
+import { Rgb } from "../models/rgb";
 
 export const SongGrid: React.FC<{}> = () => {
     const [songs, setSongs] = useState<Song[]>([]);
@@ -360,13 +355,10 @@ export const SongGrid: React.FC<{}> = () => {
                                 loadColors(g.id).then(colors => {
                                     const bg = colors[0];
                                     const fg = colors[1];
-                                    const stripe1 = bg;
-                                    const stripe2 = bg;
-                                    document.documentElement.style.setProperty('--text-color', `rgb(${fg.r},${fg.g},${fg.b})`);
-                                    document.documentElement.style.setProperty('--bg-1', `rgba(${bg.r},${bg.g},${bg.b}, 0.2)`);
-                                    document.documentElement.style.setProperty('--bg-2', `rgba(${bg.r},${bg.g},${bg.b}, 0.4)`);
-                                    document.documentElement.style.setProperty('--stripe-even', `rgba(${stripe1.r},${stripe1.g},${stripe1.b}, 0.7)`);
-                                    document.documentElement.style.setProperty('--stripe-odd', `rgb(${stripe2.r},${stripe2.g},${stripe2.b}, 0.7)`);
+                                    setCssVar('--text-color', formatRgb(fg));
+                                    setCssVar('--bg-1', formatRgba(bg, 0.2));
+                                    setCssVar('--bg-2', formatRgba(bg, 0.4));
+                                    setCssVar('--stripe', formatRgba(bg, 0.7));
                                     setSelectedAlbumRow(rowIndex);
                                 });  
                             }}
