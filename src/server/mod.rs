@@ -744,14 +744,14 @@ async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()
     &mut temp.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     
     let bg_thresh = 70.0;
-    let fg_thresh = 170.0;
+    let fg_thresh = 140.0;
     let secondary_min = 100.0;
     let secondary_max = 100.0;
     let bg = adjust_darken(pal[temp[0].0], temp[0].1, bg_thresh);
     let fg = adjust_lighten(pal[temp[colors-1].0], temp[colors-1].1, fg_thresh);
     let secondary = adjust_darken(pal[temp[1].0], temp[1].1, secondary_max);
     let third = adjust_darken(pal[temp[2].0], temp[2].1, secondary_max);
-    let fourth = darken(fg, 0.2);
+    let fourth = lighten(fg, 0.8);
 
     return Ok(Json(vec![bg, fg, secondary, third, fourth]));
     }

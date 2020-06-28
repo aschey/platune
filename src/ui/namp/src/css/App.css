@@ -127,14 +127,14 @@ html {
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
-.ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd)
+.ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd):not(.selected)
 {
   transition: var(--transition);
   background: #334554;
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
-.ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even)
+.ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even):not(.selected)
 {
   transition: var(--transition);
   background: #2c3d4a;
@@ -195,30 +195,40 @@ html {
 }
 
 .selectedRow div:not(.editing) {
+  transition: var(--transition);
   color: var(--text-color) !important;
 }
 
 .editing {
+  transition: var(--transition);
   color: var(--editing-color) !important;
 }
 
-.ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(even) {
+.ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(even):not(.selected) {
   transition: var(--transition);
   background: var(--stripe);
 } 
 
 div.playing {
+  transition: var(--transition);
   background: var(--playing-bg);
 }
 
 button.playing {
+  transition: var(--transition);
   background: var(--playing-bg) !important;
 }
 
 .playing svg {
+  transition: var(--transition);
   color: var(--text-color);
 }
 
 .editing {
+  transition: var(--transition);
   color: var(--editing-color) !important;
+}
+
+.bp3-editable-text-content {
+  transition: var(--transition);
 }

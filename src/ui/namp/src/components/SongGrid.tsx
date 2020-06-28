@@ -124,9 +124,11 @@ export const SongGrid: React.FC<{}> = () => {
 
     const editCellRenderer = (rowIndex: number) => {
         const isEditingRow = editingRow === rowIndex;
+        const isSelectedRow = selectedRow === rowIndex;
         const isPlayingRow = playingRow === rowIndex;
+        const classes = `${isEditingRow ? 'editing' : ''} ${isSelectedRow ? 'selected' : ''}`;
         return (
-        <div className='bp3-table-cell gridCell striped' style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
+        <div className={`bp3-table-cell gridCell striped ${classes}`} style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
             <FlexCol>
                 <Button small minimal className={rowIndex === playingRow ? 'playing' : ''} icon={isEditingRow ?  'saved' : isPlayingRow ? 'volume-up' : 'edit'} onClick={() => {
                     const cur = songs[rowIndex];
