@@ -124,16 +124,21 @@ export const SongGrid: React.FC<{}> = () => {
 
     const editCellRenderer = (rowIndex: number) => {
         const isEditingRow = editingRow === rowIndex;
+        const isPlayingRow = playingRow === rowIndex;
         return (
         <div className='bp3-table-cell gridCell striped' style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
             <FlexCol>
-                <Button small minimal intent={isEditingRow || rowIndex === playingRow ? Intent.SUCCESS : Intent.NONE} icon={isEditingRow ? 'saved' : 'edit'} onClick={() => {
+                <Button small minimal className={rowIndex === playingRow ? 'playing' : ''} icon={isEditingRow ?  'saved' : isPlayingRow ? 'volume-up' : 'edit'} onClick={() => {
+                    const cur = songs[rowIndex];
+                    let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
+                    updateColors(cur.id, albumIndex);
                     if (isEditingRow) {
                         // save
                         toastSuccess();
                         setEditingRow(-1);
                     }
                     else {
+                        setSelectedRow(rowIndex);
                         setEditingRow(rowIndex);
                     }
                 }}/>
@@ -176,16 +181,16 @@ export const SongGrid: React.FC<{}> = () => {
     const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
         if (rowIndex === editingRow) {
             return (
-                <div key={rowIndex} className='bp3-table-cell bp3-intent-primary gridCell' 
+                <div key={rowIndex} className='bp3-table-cell selected gridCell editing' 
                   onDoubleClick={() => onDoubleClick(rowIndex)}
                   onClick={() => onRowClick(rowIndex)}>
-                    { canEdit ? <EditableText defaultValue={value}/> : value }
+                    { canEdit ? <EditableText defaultValue={value} className='editing'/> : value }
                 </div>);
         }
 
         if (rowIndex === playingRow) {
             return (
-                <div key={rowIndex} className='bp3-table-cell bp3-intent-success gridCell'
+                <div key={rowIndex} className='bp3-table-cell playing gridCell'
                   onDoubleClick={() => onDoubleClick(rowIndex)}
                   onClick={() => onRowClick(rowIndex)}>
                     {value}
@@ -241,25 +246,34 @@ export const SongGrid: React.FC<{}> = () => {
     }
 
     const onRowClick = (index: number) => {
-      setSelectedRow(index);
-      if (index === editingRow) {
-          return;
-      }
-      if (editingRow > -1) {
-          // save
-          toastSuccess();
-          setEditingRow(-1);
-      }
-      const cur = songs[index];
-      let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
-      loadColors(cur.id).then(colors => {
+        setSelectedRow(index);
+        const cur = songs[index];
+        let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
+        updateColors(cur.id, albumIndex);
+
+        if (index === editingRow) {
+            return;
+        }
+        if (editingRow > -1) {
+            // save
+            toastSuccess();
+            setEditingRow(-1);
+        }
+    }
+
+    const updateColors = async (songIndex: number, albumIndex: number) => {
+        const colors = await loadColors(songIndex);
         const bg = colors[0];
         const fg = colors[1];
-        document.documentElement.style.setProperty('--text-color', `rgb(${fg.r},${fg.g},${fg.b})`);
-        document.documentElement.style.setProperty('--bg-color', `rgb(${bg.r},${bg.g},${bg.b})`);
+        const secondary = colors[2];
+        setCssVar('--text-color', formatRgb(fg));
+        setCssVar('--bg-1', formatRgba(bg, 0.2));
+        setCssVar('--bg-2', formatRgba(bg, 0.4));
+        setCssVar('--stripe', formatRgba(bg, 0.7));
+        setCssVar('--selected-bg', formatRgba(secondary, 0.6));
+        setCssVar('--playing-bg', formatRgba(colors[3], 0.6));
+        setCssVar('--editing-color', formatRgb(colors[4]));
         setSelectedAlbumRow(albumIndex);
-    });  
-      
     }
 
     const rowRenderer = (props: TableRowProps) => {
@@ -272,27 +286,12 @@ export const SongGrid: React.FC<{}> = () => {
         props.style.boxShadow = 'rgb(38, 53, 64) 1px 1px';
         props.style.background = 'rgb(51, 70, 84)';
         props.style.borderRadius = 5;
-        props.style.transition = 'var(--transition);';
+        props.style.transition = 'var(--transition)';
         props.style.left = 10;
         if (props.index === selectedAlbumRow) {
-            //props.style.top -= 10;
-            //props.style.height += 5;
             props.className += ' selectedRow';
-            //props.style.background = '#2c3d4a';
-            let g = groupedSongs[albumKeys[props.index]][0];
-            // if (g.hasArt) {
-            //     loadColors(g.id).then(colors => {
-            //         const bg = colors[0];
-            //         const fg = colors[1];
-            //         document.documentElement.style.setProperty('--text-color', `rgb(${fg.r},${fg.g},${fg.b})`);
-            //         document.documentElement.style.setProperty('--bg-color', `rgb(${bg.r},${bg.g},${bg.b})`);
-            //     });  
-            // }
-            
         }
-        else {
-            //props.style.height -= 15;
-        }
+        
         props.style.height -= 15;
         props.style.width -= 30;
         return defaultTableRowRenderer(props);
@@ -351,17 +350,7 @@ export const SongGrid: React.FC<{}> = () => {
                         let g = groupedSongs[albumKeys[rowIndex]][0];
                         return <FlexCol 
                             style={{paddingTop: 5, height: Math.max(gg.length * 25, 125)}} 
-                            onClick = {() => {
-                                loadColors(g.id).then(colors => {
-                                    const bg = colors[0];
-                                    const fg = colors[1];
-                                    setCssVar('--text-color', formatRgb(fg));
-                                    setCssVar('--bg-1', formatRgba(bg, 0.2));
-                                    setCssVar('--bg-2', formatRgba(bg, 0.4));
-                                    setCssVar('--stripe', formatRgba(bg, 0.7));
-                                    setSelectedAlbumRow(rowIndex);
-                                });  
-                            }}
+                            onClick = {() => updateColors(g.id, rowIndex)}
                             >
                                 <div>{g.artist}</div>
                                 <div>{g.album}</div>

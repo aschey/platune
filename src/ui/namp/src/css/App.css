@@ -1,3 +1,14 @@
+:root {
+  --text-color: white;
+  --editing-color: white;
+  --selected-bg: rgba(125, 188, 255, 0.6);
+  --bg-1: white;
+  --bg-2: white;
+  --stripe: white;
+  --playing-bg: white;
+  --transition: color 1s, background 1s, border 1s, box-shadow 1s;
+}
+
 html {
   background-color: #30404d;
 }
@@ -104,7 +115,7 @@ html {
 }
 
 .selected.bp3-table-cell {
-  background: rgba(125, 188, 255, 0.6);
+  background: var(--selected-bg);
 }
 
 .ReactVirtualized__Table__row {
@@ -172,14 +183,6 @@ html {
   margin-left: 10px;
 }
 
-:root {
-  --text-color: white;
-  --bg-1: white;
-  --bg-2: white;
-  --stripe: white;
-  --transition: color 1s, background 1s, border 1s, box-shadow 1s;
-}
-
 .selectedRow {
   transition: var(--transition);
   border: 1px solid var(--bg-1) !important;
@@ -188,13 +191,34 @@ html {
 
 .selectedRow div {
   transition: var(--transition);
-  color: var(--text-color) !important;
   font-weight: 600;
-
 }
 
-.ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(even)
-{
+.selectedRow div:not(.editing) {
+  color: var(--text-color) !important;
+}
+
+.editing {
+  color: var(--editing-color) !important;
+}
+
+.ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(even) {
   transition: var(--transition);
   background: var(--stripe);
 } 
+
+div.playing {
+  background: var(--playing-bg);
+}
+
+button.playing {
+  background: var(--playing-bg) !important;
+}
+
+.playing svg {
+  color: var(--text-color);
+}
+
+.editing {
+  color: var(--editing-color) !important;
+}

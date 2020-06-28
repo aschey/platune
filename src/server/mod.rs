@@ -705,6 +705,22 @@ fn darken (color: Rgb, correction_factor: f32) -> Rgb {
     return darker_color;
 }
 
+fn adjust_darken(mut color: Rgb, luminance: f32, threshold: f32) -> Rgb {
+    if luminance > threshold {
+        let to_darken = 1.0 - threshold/luminance;
+        color = darken(color, to_darken);
+    }
+    return color;
+}
+
+fn adjust_lighten(mut color: Rgb, luminance: f32, threshold: f32) -> Rgb {
+    if luminance < threshold {
+        let to_lighten = 1.0 - luminance/threshold;
+        color = lighten(color, to_lighten);
+    }
+    return color;
+}
+
 #[api_v2_operation]
 async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()>{
     //let req_song_id = 690;
@@ -719,27 +735,25 @@ async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()
     let o = image::io::Reader::new(std::io::Cursor::new(&art))
         .with_guessed_format()
         .unwrap();
-    let colors = 3 as usize;
-    let num_colors = 2 as u8;
+    let colors = 4 as usize;
+    let num_colors = 3 as u8;
     let palette = color_thief::get_palette(&o.decode().unwrap().as_rgb8().unwrap(), color_thief::ColorFormat::Rgb, 10, num_colors).unwrap();
     let pal = palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect::<Vec<_>>();
     let mut temp = pal.iter().clone().map(get_brightness).enumerate().collect::<Vec<_>>();
 
     &mut temp.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
-    let mut bg = pal[temp[0].0];
-    let mut fg = pal[temp[colors-1].0];
+    
     let bg_thresh = 70.0;
-    let fg_thresh = 150.0;
-    if temp[0].1 > bg_thresh {
-        let to_darken = 1.0 - bg_thresh/temp[0].1;
-        bg = darken(bg, to_darken);
-    }
-    if temp[colors-1].1 < fg_thresh {
-        let to_lighten = 1.0 - temp[colors-1].1/fg_thresh;
-        fg = lighten(fg, to_lighten);
-    }
+    let fg_thresh = 170.0;
+    let secondary_min = 100.0;
+    let secondary_max = 100.0;
+    let bg = adjust_darken(pal[temp[0].0], temp[0].1, bg_thresh);
+    let fg = adjust_lighten(pal[temp[colors-1].0], temp[colors-1].1, fg_thresh);
+    let secondary = adjust_darken(pal[temp[1].0], temp[1].1, secondary_max);
+    let third = adjust_darken(pal[temp[2].0], temp[2].1, secondary_max);
+    let fourth = darken(fg, 0.2);
 
-    return Ok(Json(vec![bg, fg]));
+    return Ok(Json(vec![bg, fg, secondary, third, fourth]));
     }
 
 #[api_v2_operation]
