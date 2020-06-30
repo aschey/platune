@@ -14,7 +14,11 @@ import { FlexRow } from "./FlexRow";
 import { getProcessMemoryInfo } from "process";
 import { Rgb } from "../models/rgb";
 
-export const SongGrid: React.FC<{}> = () => {
+interface SongGridProps {
+    selectedGrid: string;
+}
+
+export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
     const [songs, setSongs] = useState<Song[]>([]);
     const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
     const [albumKeys, setAlbumKeys] = useState<string[]>([]);
@@ -48,6 +52,9 @@ export const SongGrid: React.FC<{}> = () => {
         time: 60,
         path: 400
     });
+
+    const mainRef = React.createRef<Table>();
+    const otherRef = React.createRef<Table>();
 
     const numTries = 10;
 
@@ -84,7 +91,16 @@ export const SongGrid: React.FC<{}> = () => {
 
     useEffect(() => {
         setIsPlaying(playingRow > -1);
-    }, [playingRow])
+    }, [playingRow]);
+
+    useEffect(() => {
+        if (selectedGrid === 'song') {
+            mainRef.current?.recomputeRowHeights();
+        }
+        else {
+            otherRef.current?.recomputeRowHeights();
+        }
+    }, [selectedGrid])
 
     const headerRenderer = (props: TableHeaderProps) => {
         return (
@@ -333,6 +349,7 @@ export const SongGrid: React.FC<{}> = () => {
     const otherGrid =
         <div style={{height: window.innerHeight - 140}}>
             <Table
+            ref={otherRef}
             width={window.innerWidth - 20}
             height={window.innerHeight - 160}
             headerHeight={25}
@@ -404,10 +421,11 @@ export const SongGrid: React.FC<{}> = () => {
                 />
             </Table>
         </div>
-
+ 
     const mainGrid = 
     <div style={{height: window.innerHeight - 140}}>
         <Table
+            ref={mainRef}
             width={window.innerWidth - 20}
             height={window.innerHeight - 160}
             headerHeight={25}
@@ -477,7 +495,7 @@ export const SongGrid: React.FC<{}> = () => {
 
     return (
         <>
-        {otherGrid}
+        {selectedGrid === 'song' ? mainGrid : otherGrid}
         <Controls 
         isPlaying={isPlaying} 
         setIsPlaying={setIsPlaying} 

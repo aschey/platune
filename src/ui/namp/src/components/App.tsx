@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import logo from './logo.svg';
 import '../css/App.css';
 import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree } from "@blueprintjs/core";
@@ -14,11 +14,12 @@ export interface ITreeState {
 
 
 const App: React.FC<{}> = () => {
+    const [selectedGrid, setSelectedGrid] = useState('song');
     return (
         <div className="bp3-dark">
-            <MainNavBar/>
+            <MainNavBar selectedGrid={selectedGrid} setSelectedGrid={setSelectedGrid}/>
             <div style={{paddingTop: 40}}>
-                <SongGrid/>
+                <SongGrid selectedGrid={selectedGrid}/>
             </div>
         </div>
     );

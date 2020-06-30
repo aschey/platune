@@ -232,3 +232,7 @@ button.playing {
 .bp3-editable-text-content {
   transition: var(--transition);
 }
+
+svg[data-icon="list-detail-view"] {
+  transform: rotate(180deg);
+}

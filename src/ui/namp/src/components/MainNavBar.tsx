@@ -1,17 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar, NavbarGroup, Alignment, NavbarHeading, NavbarDivider, Button, Classes, Popover, MenuItem, Menu, Position, Icon } from '@blueprintjs/core';
+import { Navbar, NavbarGroup, Alignment, NavbarHeading, NavbarDivider, Button, Classes, Popover, MenuItem, Menu, Position, Icon, ButtonGroup, Intent } from '@blueprintjs/core';
 import { Settings } from './Settings';
 import logo from '../res/logo.png';
 import logoDark from '../res/logo-dark.png';
+import lune from '../res/lune-text.png';
+import { FlexRow } from './FlexRow';
+import { FlexCol } from './FlexCol';
 
-
-export const MainNavBar: React.FC<{}> = () => {
+interface MainNavBarProps {
+    setSelectedGrid: (grid: string) => void;
+    selectedGrid: string;
+}
+export const MainNavBar: React.FC<MainNavBarProps> = ({selectedGrid, setSelectedGrid}) => {
     return (
         <Navbar fixedToTop style={{height: '40px'}}>
-            <NavbarGroup align={Alignment.LEFT} style={{height: '40px'}}>
-                <NavbarHeading style={{marginRight: '0px', marginTop: '3px'}}><img src={logoDark}/></NavbarHeading>
+            <NavbarGroup align={Alignment.LEFT} style={{height: 40, paddingTop: 1}}>
+                <NavbarHeading style={{marginRight: 0, marginTop: 4, paddingRight: 7}}><img src={lune} width={92} height={28}/></NavbarHeading>
                 <NavbarDivider />
                 <Settings/>
+            </NavbarGroup>
+            <NavbarGroup align={Alignment.RIGHT} style={{height: 40, paddingTop: 1}}>
+                <ButtonGroup minimal>
+                    <Button outlined intent={selectedGrid === 'song' ? Intent.PRIMARY : Intent.NONE} icon='list' onClick={() => setSelectedGrid('song')}/>
+                    <Button outlined intent={selectedGrid === 'album' ? Intent.PRIMARY : Intent.NONE} icon='list-detail-view' onClick={() => setSelectedGrid('album')}/>
+                </ButtonGroup>
             </NavbarGroup>
         </Navbar>
     );
