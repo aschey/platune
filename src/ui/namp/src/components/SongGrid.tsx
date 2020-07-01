@@ -40,7 +40,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         album: 250,
         track: 70,
         time: 60,
-        path: 400
+        path: 300
     });
     const [widths2, setWidths2] = useState({
         edit: 30,
@@ -96,9 +96,11 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
     useEffect(() => {
         if (selectedGrid === 'song') {
             mainRef.current?.recomputeRowHeights();
+            setCssVar('--header-padding', '5px');
         }
         else {
             otherRef.current?.recomputeRowHeights();
+            setCssVar('--header-padding', '16px')
         }
     }, [selectedGrid])
 
@@ -112,12 +114,12 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                     axis='none'
                     defaultClassName="DragHandle"
                     defaultClassNameDragging="DragHandleActive"
-                    bounds={{right: 10, left: 0, top: 0, bottom: 0}}
+                    //bounds={{right: 100, left: 100, top: 0, bottom: 0}}
                     onDrag={(event, { deltaX }) => {
                         resizeRow({dataKey: props.dataKey, deltaX});
                     }}
                 >
-                    <span className="DragHandleIcon" style={{transform: 'translate(5px, 0) !important'}}>⋮</span>
+                    <span className="DragHandleIcon">⋮</span>
                 </Draggable>
             </>
         );
@@ -381,14 +383,16 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                         
             
                     }}
-                    width={widths.album}
+                    width={widths2.album}
+                    minWidth={widths2.album}
                 />
                 <Column
                   headerRenderer={headerRenderer}
                   dataKey=''
                   label=''
                   cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, editCellRenderer)}
-                  width={widths.edit}
+                  width={widths2.edit}
+                  minWidth={widths2.edit}
                 />
                 <Column
                     headerRenderer={headerRenderer}
@@ -396,28 +400,32 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                     label='Title'
                     cellRenderer={({rowIndex, dataKey, parent}) => 
                         mulitSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
-                    width={widths.name}
+                    width={widths2.name}
+                    minWidth={widths2.name}
                 />
                 <Column
                     headerRenderer={headerRenderer}
                     dataKey='track'
                     label='Track'
                     cellRenderer={({rowIndex})=> mulitSongRenderer(rowIndex, trackRenderer)}
-                    width={widths.track}
+                    width={widths2.track}
+                    minWidth={widths2.track}
                 />
                 <Column
                     headerRenderer={headerRenderer}
                     dataKey='time'
                     label='Time'
                     cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, timeRenderer)}
-                    width={widths.time}
+                    width={widths2.time}
+                    minWidth={widths2.time}
                 />
                 <Column
                     headerRenderer={headerRenderer}
                     dataKey='path'
                     label='Path'
                     cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, pathRenderer)}
-                    width={widths.path}
+                    width={widths2.path}
+                    minWidth={widths2.path}
                 />
             </Table>
         </div>
@@ -440,6 +448,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label=''
                 cellRenderer={({rowIndex, dataKey})=> editCellRenderer(rowIndex)}
                 width={widths.edit}
+                minWidth={widths.edit}
                 />
             <Column
                 headerRenderer={headerRenderer}
@@ -447,6 +456,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label='Title'
                 cellRenderer={({rowIndex, dataKey})=> genericCellRenderer(rowIndex, 'name')}
                 width={widths.name}
+                minWidth={widths.name}
             />
             <Column
                 headerRenderer={headerRenderer}
@@ -454,6 +464,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label='Album Artist'
                 cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'albumArtist') }
                 width={widths.albumArtist}
+                minWidth={widths.albumArtist}
             />
             <Column
                 headerRenderer={headerRenderer}
@@ -461,6 +472,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label='Artist'
                 cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'artist') }
                 width={widths.artist}
+                minWidth={widths.artist}
             />
             <Column
                 headerRenderer={headerRenderer}
@@ -468,6 +480,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label='Album'
                 cellRenderer={({rowIndex})=> genericCellRenderer(rowIndex, 'album') }
                 width={widths.album}
+                minWidth={widths.album}
             />
             <Column
                 headerRenderer={headerRenderer}
@@ -475,6 +488,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label='Track'
                 cellRenderer={({rowIndex})=> trackRenderer(rowIndex) }
                 width={widths.track}
+                minWidth={widths.track}
             />
             <Column
                 headerRenderer={headerRenderer}
@@ -482,6 +496,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label='Time'
                 cellRenderer={({rowIndex})=> timeRenderer(rowIndex) }
                 width={widths.time}
+                minWidth={widths.time}
             />
             <Column
                 headerRenderer={headerRenderer}
@@ -489,6 +504,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                 label='Path'
                 cellRenderer={({rowIndex}) => pathRenderer(rowIndex) }
                 width={widths.path}
+                minWidth={widths.path}
             />
         </Table>
     </div>;

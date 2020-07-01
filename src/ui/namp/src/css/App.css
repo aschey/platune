@@ -7,6 +7,7 @@
   --stripe: white;
   --playing-bg: white;
   --transition: color 1s, background 1s, border 1s, box-shadow 1s;
+  --header-padding: 0;
 }
 
 html {
@@ -123,7 +124,7 @@ html {
 }
 
 .ReactVirtualized__Table__headerRow {
-  padding-left: 10px;
+  padding-left: var(--header-padding);
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
@@ -168,7 +169,7 @@ html {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  transform: translate(6px) !important;
+  transform: var(--header-translate) !important;
 }
 
 .ReactVirtualized__Table__rowColumn {
@@ -180,7 +181,7 @@ html {
 }
 
 .ReactVirtualized__Table__headerTruncatedText {
-  margin-left: 10px;
+  margin-left: min(5%, 10px);
 }
 
 .selectedRow {
