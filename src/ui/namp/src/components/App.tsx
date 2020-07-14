@@ -11,7 +11,6 @@ export interface ITreeState {
   homeDir: string;
 }
 
-
 const App: React.FC<{}> = () => {
     const [selectedGrid, setSelectedGrid] = useState('song');
     return (

@@ -7,7 +7,7 @@ export const darkTheme: Theme = {
     intentWarning: Colors.ORANGE3,
     intentDanger: Colors.RED3,
     backgroundMain: Colors.DARK_GRAY4,
-    backgroundSecondary: Colors.DARK_GRAY5,
+    backgroundSecondary: '#334654',
     textMain: Colors.LIGHT_GRAY2,
     textSecondary: Colors.LIGHT_GRAY3,
     textPrimary: Colors.BLUE5,
@@ -16,5 +16,6 @@ export const darkTheme: Theme = {
     textDanger: Colors.RED5,
     tableBackgroundColor: Colors.DARK_GRAY4,
     gridStripe1: '#334554',
-    gridStripe2: '#2c3d4a'
+    gridStripe2: '#2c3d4a',
+    navbarBackground: Colors.DARK_GRAY5
 }

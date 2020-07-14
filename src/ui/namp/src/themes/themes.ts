@@ -23,4 +23,6 @@ export const applyTheme = (theme: string) => {
         setCssVar(`--${intent.toLowerCase()}-hover`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -20)));
         setCssVar(`--${intent.toLowerCase()}-active`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -25)));
     }
+
+    setCssVar('--card-shadow', hexToRgb(shadeColor(themeObj[`backgroundSecondary`], -20)));
 }

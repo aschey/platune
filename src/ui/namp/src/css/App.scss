@@ -48,6 +48,14 @@ html,body {
   height: 25px;
 }
 
+.card {
+  border: 1px solid rgba(var(--card-shadow), 1);
+  box-shadow: rgba(var(--card-shadow), 1) 1px 1px;
+  background: rgba(var(--background-secondary), 1);
+  border-radius: 5;
+  transition: var(--transition);
+}
+
 .ReactVirtualized__Table {
   display: inline-block;
   border: 2px solid rgba(0, 0, 0, 0.1);

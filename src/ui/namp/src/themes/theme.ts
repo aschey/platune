@@ -15,7 +15,8 @@ export interface Theme {
     textDanger: string,
     tableBackgroundColor: string,
     gridStripe1: string,
-    gridStripe2: string
+    gridStripe2: string,
+    navbarBackground: string,
     [key: string]: string
 }
 

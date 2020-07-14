@@ -302,11 +302,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
     }
 
     const rowRenderer2 = (props: TableRowProps) => {
-        props.style.border = '1px solid rgb(38, 53, 64)';
-        props.style.boxShadow = 'rgb(38, 53, 64) 1px 1px';
-        props.style.background = 'rgb(51, 70, 84)';
-        props.style.borderRadius = 5;
-        props.style.transition = 'var(--transition)';
+        props.className += ' card';
         props.style.left = 10;
         if (props.index === selectedAlbumRow) {
             props.className += ' selectedRow';

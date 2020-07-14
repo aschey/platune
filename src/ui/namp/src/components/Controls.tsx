@@ -50,7 +50,7 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
 
     return (
         <FlexRow style={{height: 80, alignItems: 'center'}}>
-            <FlexCol style={{alignItems: 'center', border: '1px solid #263540', boxShadow: '1px 1px #263540', background: '#334654', borderRadius: '10px', marginLeft: 30, marginRight: 30}}>
+            <FlexCol style={{alignItems: 'center', borderRadius: 10, marginLeft: 30, marginRight: 30}} className='card'>
                 <FlexRow style={{alignItems: 'center', paddingTop: 10}}>
                     <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-backward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                     <div style={{width: 5}}/>
