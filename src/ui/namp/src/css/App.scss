@@ -1,4 +1,11 @@
+
 :root {
+  --backgroundPrimary: none;
+  --textPrimary: none;
+  --primary: none;
+  --danger: none;
+  --warning: none;
+  --success: none;
   --text-color: white;
   --editing-color: white;
   --selected-bg: rgba(125, 188, 255, 0.6);
@@ -10,30 +17,14 @@
   --header-padding: 0;
 }
 
-html {
-  background-color: #30404d;
+html,body {
+  background: rgba(var(--backgroundPrimary), 1);
+  color: rgba(var(--textPrimary), 1);
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+.bp3-navbar {
+  background-color: var(--backgroundPrimary);
+  color: var(--textPrimary);
 }
 
 .Expand-Column {
@@ -75,25 +66,7 @@ html {
   outline: none;
 }
 
-.bp3-dialog-header {
-  margin-bottom: 20px;
-}
 
-.bp3-table-cell {
-  line-height: 25px;
-}
-
-.bp3-select-popover.small .bp3-menu {
-  min-width: 70px;
-}
-
-.bp3-table-selection-enabled .bp3-table-cell {
-    cursor: auto;
-}
-
-.bp3-table-selection-enabled.bp3-table-row-headers .bp3-table-header {
-    cursor: auto;
-}
 
 .ReactVirtualized__Table {
   display: inline-block;
@@ -113,10 +86,6 @@ html {
 
 .ReactVirtualized__Grid {
   outline: none;
-}
-
-.selected.bp3-table-cell {
-  background: var(--selected-bg);
 }
 
 .ReactVirtualized__Table__row {
@@ -181,7 +150,7 @@ html {
 }
 
 .ReactVirtualized__Table__headerTruncatedText {
-  margin-left: min(5%, 10px);
+  margin-left: unquote("min(5%, 10px)");
 }
 
 .selectedRow {
@@ -228,10 +197,6 @@ button.playing {
 .editing {
   transition: var(--transition);
   color: var(--editing-color) !important;
-}
-
-.bp3-editable-text-content {
-  transition: var(--transition);
 }
 
 svg[data-icon="list-detail-view"] {

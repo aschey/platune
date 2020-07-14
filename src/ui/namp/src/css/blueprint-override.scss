@@ -1,0 +1,70 @@
+
+
+$intent-colors: 
+  primary,
+  success,
+  warning,
+  danger;
+$test1: var(--textPrimary);
+$test2: rgba($test1, 0.6);
+.bp3-dialog {
+  background: $test2;
+  color: rgba(var(--textPrimary), 1);
+}
+
+.bp3-table-container, .bp3-table-quadrant, .bp3-table-row-headers, 
+.bp3-table-menu, .bp3-table-column-headers, .bp3-dialog-header, .bp3-heading {
+  background: rgba(var(--backgroundSecondary), 1);
+  color: rgba(var(--textPrimary), 1);
+}
+
+.bp3-table-quadrant-main .bp3-table-cell-client {
+  background: rgba(var(--backgroundSecondary), 1);
+  color: rgba(var(--textPrimary), 1);
+}
+
+.bp3-tab {
+  color: rgba(var(--textPrimary), 1);
+}
+
+.bp3-dialog-header {
+  margin-bottom: 20px;
+}
+
+.bp3-table-cell {
+  line-height: 25px;
+}
+
+.bp3-select-popover.small .bp3-menu {
+  min-width: 70px;
+}
+
+.bp3-table-selection-enabled .bp3-table-cell {
+  cursor: auto;
+}
+
+.bp3-table-selection-enabled.bp3-table-row-headers .bp3-table-header {
+  cursor: auto;
+}
+
+.selected.bp3-table-cell {
+  background: var(--selected-bg);
+}
+
+.bp3-editable-text-content {
+  transition: var(--transition);
+}
+
+@each $intent in $intent-colors {
+  .bp3-button.bp3-intent-#{$intent} {
+    background-color: rgba(var(--#{$intent}), 1);
+  }
+
+  .bp3-button.bp3-outlined.bp3-intent-#{$intent} {
+    border-color: rgba(var(--#{$intent}), 0.6);
+    color: rgba(var(--#{$intent}), 0.6);
+    background-color: inherit;
+  }
+}
+
+@import "~@blueprintjs/core/lib/scss/variables.scss";

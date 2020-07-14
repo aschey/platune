@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import logo from './logo.svg';
-import '../css/App.css';
 import { Icon, Intent, ITreeNode, Position, Tooltip, Tree, Classes, IconName } from "@blueprintjs/core";
 import { getJson } from '../fetchUtil';
 import { Dir } from '../models/dir';
