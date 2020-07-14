@@ -12,7 +12,7 @@ code {
     monospace;
 }
 
-@import "./App.scss";
+@import "./variables.scss";
 @import "~normalize.css";
 @import "~react-virtualized/styles.css";
 @import "~@blueprintjs/core/src/blueprint.scss";
@@ -20,4 +20,5 @@ code {
 
 @import "~@blueprintjs/select/src/blueprint-select.scss";
 @import "~@blueprintjs/icons/lib/css/blueprint-icons.css";
-@import "./blueprint-override.scss"
+@import "./blueprint-override.scss";
+@import "./App.scss";
