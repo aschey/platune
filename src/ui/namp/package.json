@@ -85,7 +85,7 @@
     "@rescripts/rescript-env": "^0.0.12",
     "concurrently": "^5.2.0",
     "cross-env": "^7.0.2",
-    "electron": "^9.1.0",
+    "electron": "^8.4.0",
     "electron-builder": "^22.5.1",
     "electron-devtools-installer": "^3.0.0",
     "electron-react-devtools": "^0.5.3",
