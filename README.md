@@ -33,9 +33,11 @@ itself down if the app is no longer running.
 - Host configured files as static files
 - Import and sync new files into database
 - Play/pause/stop
-- Basic grid with song data
+- Song listview
+- Album grid
 
 ### Features in Progress
 - Song queue with gapless audio support
 - Edit song data
 - Song progress bar
+- Theming

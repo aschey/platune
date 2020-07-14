@@ -1,6 +1,6 @@
 :root {
-  --backgroundMain: none;
-  --tableBackgroundColor: none;
+  --background-main: none;
+  --table-background-color: none;
   --text-color: white;
   --editing-color: white;
   --selected-bg: rgba(125, 188, 255, 0.6);
@@ -12,30 +12,30 @@
   --header-padding: 0;
 }
 
-$pt-intent-primary: var(--intentPrimary);
-$pt-intent-success: var(--intentSuccess);
-$pt-intent-warning: var(--intentWarning);
-$pt-intent-danger: var(--intentDanger);
+$pt-intent-primary: var(--intent-primary);
+$pt-intent-success: var(--intent-success);
+$pt-intent-warning: var(--intent-warning);
+$pt-intent-danger: var(--intent-danger);
 
 $pt-intent-text-colors: (
-  "primary": var(--textPrimary),
-  "success": var(--textSuccess),
-  "warning": var(--textWarning),
-  "danger" : var(--textDanger)
+  "primary": var(--text-primary),
+  "success": var(--text-success),
+  "warning": var(--text-warning),
+  "danger" : var(--text-danger)
 );
 
 $pt-dark-intent-text-colors: (
-  "primary": var(--textPrimary),
-  "success": var(--textSuccess),
-  "warning": var(--textWarning),
-  "danger" : var(--textDanger)
+  "primary": var(--text-primary),
+  "success": var(--text-success),
+  "warning": var(--text-warning),
+  "danger" : var(--text-danger)
 );
 
 $button-intents: (
-  "primary": ($pt-intent-primary, var(--hoverPrimary), var(--activePrimary)),
-  "success": ($pt-intent-success, var(--hoverSuccess), var(--activeSuccess)),
-  "warning": ($pt-intent-warning, var(--hoverWarning), var(--activeWarning)),
-  "danger": ($pt-intent-danger, var(--hoverDanger), var(--activeDanger)),
+  "primary": ($pt-intent-primary, var(--primary-hover), var(--primary-active)),
+  "success": ($pt-intent-success, var(--success-hover), var(--success-active)),
+  "warning": ($pt-intent-warning, var(--warning-hover), var(--warning-active)),
+  "danger": ($pt-intent-danger, var(--danger-hover), var(--danger-active)),
 );
 
 $selectable-header-menu-selected-background: #000;
@@ -44,8 +44,8 @@ $dark-selectable-header-menu-selected-background: #000;
 $dark-selectable-header-menu-selected-hover-background: #000;
 
 html,body {
-  background: rgba(var(--backgroundMain), 1);
-  color: rgba(var(--textMain), 1);
+  background: rgba(var(--background-main), 1);
+  color: rgba(var(--text-main), 1);
 }
 
 .Expand-Column {
@@ -121,14 +121,14 @@ html,body {
 .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd):not(.selected)
 {
   transition: var(--transition);
-  background: rgba(var(--gridStripe1), 1);
+  background: rgba(var(--grid-stripe1), 1);
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
 .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even):not(.selected)
 {
   transition: var(--transition);
-  background: rgba(var(--gridStripe2), 1);
+  background: rgba(var(--grid-stripe2), 1);
 }
 
 .DragHandle {

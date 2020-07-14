@@ -11,18 +11,16 @@ export const themes: Record<string, Theme> = {
 
 const intents = ['Primary', 'Success', 'Warning', 'Danger'];
 
-const capitalize = (s: string) => {
-    return s.charAt(0).toUpperCase() + s.slice(1)
-}
+const camelCaseToKebabCase = (str: string) => str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 
 export const applyTheme = (theme: string) => {
     let themeObj = themes[theme];
     for (let prop of Object.getOwnPropertyNames(themeObj)) {
-        setCssVar(`--${prop}`, hexToRgb(themeObj[prop]));
+        setCssVar(`--${camelCaseToKebabCase(prop)}`, hexToRgb(themeObj[prop]));
     }
 
     for (let intent of intents) {
-        setCssVar(`--hover${intent}`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -20)));
-        setCssVar(`--active${intent}`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -25)));
+        setCssVar(`--${intent.toLowerCase()}-hover`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -20)));
+        setCssVar(`--${intent.toLowerCase()}-active`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -25)));
     }
 }
