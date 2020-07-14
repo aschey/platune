@@ -1,14 +1,21 @@
 import { darkTheme } from "./dark";
 
 export interface Theme {
-    textPrimary: string,
+    intentPrimary: string,
+    intentSuccess: string,
+    intentWarning: string,
+    intentDanger: string,
+    textMain: string,
     textSecondary: string,
-    backgroundPrimary: string,
+    backgroundMain: string,
     backgroundSecondary: string,
-    success: string,
-    primary: string,
-    warning: string,
-    danger: string
+    textSuccess: string,
+    textPrimary: string,
+    textWarning: string,
+    textDanger: string,
+    tableBackgroundColor: string,
+    gridStripe1: string,
+    gridStripe2: string
     [key: string]: string
 }
 

@@ -1,11 +1,6 @@
-
 :root {
-  --backgroundPrimary: none;
-  --textPrimary: none;
-  --primary: none;
-  --danger: none;
-  --warning: none;
-  --success: none;
+  --backgroundMain: none;
+  --tableBackgroundColor: none;
   --text-color: white;
   --editing-color: white;
   --selected-bg: rgba(125, 188, 255, 0.6);
@@ -17,14 +12,40 @@
   --header-padding: 0;
 }
 
-html,body {
-  background: rgba(var(--backgroundPrimary), 1);
-  color: rgba(var(--textPrimary), 1);
-}
+$pt-intent-primary: var(--intentPrimary);
+$pt-intent-success: var(--intentSuccess);
+$pt-intent-warning: var(--intentWarning);
+$pt-intent-danger: var(--intentDanger);
 
-.bp3-navbar {
-  background-color: var(--backgroundPrimary);
-  color: var(--textPrimary);
+$pt-intent-text-colors: (
+  "primary": var(--textPrimary),
+  "success": var(--textSuccess),
+  "warning": var(--textWarning),
+  "danger" : var(--textDanger)
+);
+
+$pt-dark-intent-text-colors: (
+  "primary": var(--textPrimary),
+  "success": var(--textSuccess),
+  "warning": var(--textWarning),
+  "danger" : var(--textDanger)
+);
+
+$button-intents: (
+  "primary": ($pt-intent-primary, var(--hoverPrimary), var(--activePrimary)),
+  "success": ($pt-intent-success, var(--hoverSuccess), var(--activeSuccess)),
+  "warning": ($pt-intent-warning, var(--hoverWarning), var(--activeWarning)),
+  "danger": ($pt-intent-danger, var(--hoverDanger), var(--activeDanger)),
+);
+
+$selectable-header-menu-selected-background: #000;
+$selectable-header-menu-selected-hover-background: #000;
+$dark-selectable-header-menu-selected-background: #000;
+$dark-selectable-header-menu-selected-hover-background: #000;
+
+html,body {
+  background: rgba(var(--backgroundMain), 1);
+  color: rgba(var(--textMain), 1);
 }
 
 .Expand-Column {
@@ -100,20 +121,14 @@ html,body {
 .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd):not(.selected)
 {
   transition: var(--transition);
-  background: #334554;
+  background: rgba(var(--gridStripe1), 1);
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
 .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even):not(.selected)
 {
   transition: var(--transition);
-  background: #2c3d4a;
-}
-
-.gridCell {
-  display: flex;
-  flex: 1;
-  height: 25px;
+  background: rgba(var(--gridStripe2), 1);
 }
 
 .DragHandle {
