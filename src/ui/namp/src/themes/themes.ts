@@ -24,5 +24,6 @@ export const applyTheme = (theme: string) => {
         setCssVar(`--${intent.toLowerCase()}-active`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -25)));
     }
 
-    setCssVar('--card-shadow', hexToRgb(shadeColor(themeObj[`backgroundSecondary`], -20)));
+    setCssVar('--card-shadow', hexToRgb(shadeColor(themeObj['backgroundSecondary'], -20)));
+    setCssVar('--dialog-header', hexToRgb(shadeColor(themeObj['dialogBackground'], 5)));
 }

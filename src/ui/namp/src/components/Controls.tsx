@@ -49,9 +49,9 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
     }
 
     return (
-        <FlexRow style={{height: 80, alignItems: 'center'}}>
-            <FlexCol style={{alignItems: 'center', borderRadius: 10, marginLeft: 30, marginRight: 30}} className='card'>
-                <FlexRow style={{alignItems: 'center', paddingTop: 10}}>
+        <FlexRow style={{alignItems: 'center'}}>
+            <FlexCol style={{alignItems: 'center', borderRadius: 10, marginLeft: 10, marginRight: 10, height: 100}} className='card'>
+                <FlexRow style={{alignItems: 'center', paddingTop: 25}}>
                     <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-backward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                     <div style={{width: 5}}/>
                     <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} outlined icon={isPlaying ? 'pause' : 'play'} style={{borderRadius: '50%', width: 40, height: 40}} onClick={playPauseClick}/>
@@ -60,7 +60,7 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
                     <div style={{width: 5}}/>
                     <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-forward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                 </FlexRow>
-                <FlexRow  style={{width: window.innerWidth * .8}}>
+                <FlexRow  style={{width: '100%'}}>
                 <Slider
                     mode={1}
                     step={1}

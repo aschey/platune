@@ -14,8 +14,10 @@ export const lightTheme: Theme = {
     textSuccess: Colors.GREEN3,
     textWarning: Colors.ORANGE3,
     textDanger: Colors.RED3,
+    textMuted: Colors.GRAY5,
     tableBackgroundColor: Colors.LIGHT_GRAY5,
     gridStripe1: '#334554',
     gridStripe2: '#2c3d4a',
-    navbarBackground: Colors.GRAY5
+    navbarBackground: Colors.GRAY5,
+    dialogBackground: Colors.DARK_GRAY3
 }

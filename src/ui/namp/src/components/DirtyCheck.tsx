@@ -36,7 +36,7 @@ export const DirtyCheck: <T>(props: DirtyCheckProps<T>) => React.ReactElement<Di
     return (
         <>
         {children}
-        <Alert intent={Intent.DANGER} isOpen={alertOpen} className={`bp3-dark`} onConfirm={onAlertConfirm} confirmButtonText='Discard' cancelButtonText='Cancel' onCancel={onAlertCancel}>
+        <Alert intent={Intent.DANGER} isOpen={alertOpen} onConfirm={onAlertConfirm} confirmButtonText='Discard' cancelButtonText='Cancel' onCancel={onAlertCancel}>
             You have unsaved changes
         </Alert>
         </>

@@ -82,7 +82,7 @@ export const FolderView: React.FC<FolderViewProps> = ({width, height, panelWidth
                     </FlexRow>
                 </FlexCol>
             </FlexRow>
-            <Alert intent={Intent.DANGER} isOpen={errorText.length > 0} className={`bp3-dark`} onClose={() => setErrorText('')}>
+            <Alert intent={Intent.DANGER} isOpen={errorText.length > 0} onClose={() => setErrorText('')}>
                 {errorText}
             </Alert>
         </>

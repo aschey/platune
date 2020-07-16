@@ -52,7 +52,7 @@ html,body {
   border: 1px solid rgba(var(--card-shadow), 1);
   box-shadow: rgba(var(--card-shadow), 1) 1px 1px;
   background: rgba(var(--background-secondary), 1);
-  border-radius: 5;
+  border-radius: 5px;
   transition: var(--transition);
 }
 
@@ -160,6 +160,10 @@ html,body {
   transition: var(--transition);
   background: var(--stripe);
 } 
+
+.ReactVirtualized__Table__rowColumn:first-of-type {
+  margin: 0;
+}
 
 div.playing {
   transition: var(--transition);

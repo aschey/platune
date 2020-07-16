@@ -25,3 +25,11 @@
 .bp3-editable-text-content {
   transition: var(--transition);
 }
+
+.bp3-dialog {
+  background: rgba(var(--dialog-background), 1);
+}
+
+.bp3-dialog-header {
+  background: rgba(var(--dialog-header), 1);
+}

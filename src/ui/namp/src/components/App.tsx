@@ -14,12 +14,12 @@ export interface ITreeState {
 const App: React.FC<{}> = () => {
     const [selectedGrid, setSelectedGrid] = useState('song');
     return (
-        <div className='bp3-dark'>
+        <>
             <MainNavBar selectedGrid={selectedGrid} setSelectedGrid={setSelectedGrid}/>
             <div style={{paddingTop: 40}}>
                 <SongGrid selectedGrid={selectedGrid}/>
             </div>
-        </div>
+        </>
     );
 }
 

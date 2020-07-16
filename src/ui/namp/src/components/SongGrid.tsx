@@ -259,10 +259,15 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
     }
 
     const resizeRow = (props: {dataKey: string, deltaX: number}) => {
-        const newWidths: any =_.cloneDeep(widths);
+        const newWidths: any =_.cloneDeep(selectedGrid === 'song' ? widths : widths2);
         
         newWidths[props.dataKey] += props.deltaX;
-        setWidths(newWidths);
+        if (selectedGrid === 'song') {
+            setWidths(newWidths);
+        }
+        else {
+            setWidths2(newWidths);
+        }
     }
 
     const onRowClick = (index: number) => {
@@ -345,11 +350,11 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
     }
 
     const otherGrid =
-        <div style={{height: window.innerHeight - 140}}>
+        <div style={{height: window.innerHeight - 155}}>
             <Table
             ref={otherRef}
-            width={window.innerWidth - 20}
-            height={window.innerHeight - 160}
+            width={window.innerWidth - 15}
+            height={window.innerHeight - 175}
             headerHeight={25}
             rowCount={albumKeys.length}
             rowRenderer={rowRenderer2}
@@ -383,12 +388,12 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                     minWidth={widths2.album}
                 />
                 <Column
-                  headerRenderer={headerRenderer}
-                  dataKey=''
-                  label=''
-                  cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, editCellRenderer)}
-                  width={widths2.edit}
-                  minWidth={widths2.edit}
+                    headerRenderer={headerRenderer}
+                    dataKey=''
+                    label=''
+                    cellRenderer={({rowIndex}) => mulitSongRenderer(rowIndex, editCellRenderer)}
+                    width={widths2.edit}
+                    minWidth={widths2.edit}
                 />
                 <Column
                     headerRenderer={headerRenderer}
@@ -427,11 +432,12 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         </div>
  
     const mainGrid = 
-    <div style={{height: window.innerHeight - 140}}>
+    <div style={{height: window.innerHeight - 150}}>
         <Table
             ref={mainRef}
-            width={window.innerWidth - 20}
-            height={window.innerHeight - 160}
+            style={{marginLeft: 10}}
+            width={window.innerWidth - 25}
+            height={window.innerHeight - 165}
             headerHeight={25}
             rowHeight={25}
             rowCount={songs.length}
