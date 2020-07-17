@@ -146,7 +146,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         const isPlayingRow = playingRow === rowIndex;
         const classes = `${isEditingRow ? 'editing' : ''} ${isSelectedRow ? 'selected' : ''}`;
         return (
-        <div className={`bp3-table-cell gridCell striped ${classes}`} style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
+        <div className={`bp3-table-cell grid-cell striped ${classes}`} style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
             <FlexCol>
                 <Button small minimal className={rowIndex === playingRow ? 'playing' : ''} icon={isEditingRow ?  'saved' : isPlayingRow ? 'volume-up' : 'edit'} onClick={() => {
                     const cur = songs[rowIndex];
@@ -201,7 +201,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
     const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
         if (rowIndex === editingRow) {
             return (
-                <div key={rowIndex} className='bp3-table-cell selected gridCell editing' 
+                <div key={rowIndex} className='bp3-table-cell selected grid-cell editing' 
                   onDoubleClick={() => onDoubleClick(rowIndex)}
                   onClick={() => onRowClick(rowIndex)}>
                     { canEdit ? <EditableText defaultValue={value} className='editing'/> : value }
@@ -210,7 +210,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
 
         if (rowIndex === playingRow) {
             return (
-                <div key={rowIndex} className='bp3-table-cell playing gridCell'
+                <div key={rowIndex} className='bp3-table-cell playing grid-cell'
                   onDoubleClick={() => onDoubleClick(rowIndex)}
                   onClick={() => onRowClick(rowIndex)}>
                     {value}
@@ -218,7 +218,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         }
         if (rowIndex === selectedRow) {
             return (
-                <div key={rowIndex} className='bp3-table-cell gridCell selected' 
+                <div key={rowIndex} className='bp3-table-cell grid-cell selected' 
                   onDoubleClick={() => onDoubleClick(rowIndex)}
                   onClick={() => onRowClick(rowIndex)}>
                     {value}
@@ -226,7 +226,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
             );
         }
         return (
-            <div key={rowIndex} className='bp3-table-cell striped gridCell' 
+            <div key={rowIndex} className='bp3-table-cell striped grid-cell' 
               onDoubleClick={() => onDoubleClick(rowIndex)}
               onClick={() => onRowClick(rowIndex)}>
                 {value}
@@ -374,7 +374,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                             style={{paddingTop: 5, height: Math.max(gg.length * 25, 125)}} 
                             onClick = {() => updateColors(g.id, rowIndex)}
                             >
-                                <div>{g.artist}</div>
+                                <div>{g.albumArtist}</div>
                                 <div>{g.album}</div>
                                 {g.hasArt ? 
                                     <img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}`} width={75} height={75} />

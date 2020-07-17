@@ -737,7 +737,9 @@ async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()
         .unwrap();
     let colors = 4 as usize;
     let num_colors = 3 as u8;
-    let palette = color_thief::get_palette(&o.decode().unwrap().as_rgb8().unwrap(), color_thief::ColorFormat::Rgb, 10, num_colors).unwrap();
+    let decoded = o.decode().unwrap();
+    let rgba_img = decoded.to_rgba();
+    let palette = color_thief::get_palette(&rgba_img, color_thief::ColorFormat::Rgba, 10, num_colors).unwrap();
     let pal = palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect::<Vec<_>>();
     let mut temp = pal.iter().clone().map(get_brightness).enumerate().collect::<Vec<_>>();
 

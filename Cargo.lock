@@ -622,8 +622,8 @@ dependencies = [
 
 [[package]]
 name = "color-thief"
-version = "0.1.0"
-source = "git+https://github.com/RazrFalcon/color-thief-rs#bb7e77c22cfd1451e99ecbf0c2b11318e3961626"
+version = "0.2.0"
+source = "git+https://github.com/aschey/color-thief-rs#d09b655038615fb7704008612e5261e30a17ca65"
 dependencies = [
  "rgb",
 ]

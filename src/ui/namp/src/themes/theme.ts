@@ -14,7 +14,7 @@ export interface Theme {
     textWarning: string,
     textDanger: string,
     textMuted: string,
-    tableBackgroundColor: string,
+    tableBackground: string,
     gridStripe1: string,
     gridStripe2: string,
     navbarBackground: string,

@@ -15,7 +15,7 @@ export const darkTheme: Theme = {
     textWarning: Colors.ORANGE5,
     textDanger: Colors.RED5,
     textMuted: Colors.GRAY5,
-    tableBackgroundColor: Colors.DARK_GRAY4,
+    tableBackground: Colors.DARK_GRAY4,
     gridStripe1: '#334554',
     gridStripe2: '#2c3d4a',
     navbarBackground: Colors.DARK_GRAY5,

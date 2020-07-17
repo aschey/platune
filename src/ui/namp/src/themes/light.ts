@@ -15,7 +15,7 @@ export const lightTheme: Theme = {
     textWarning: Colors.ORANGE3,
     textDanger: Colors.RED3,
     textMuted: Colors.GRAY5,
-    tableBackgroundColor: Colors.LIGHT_GRAY5,
+    tableBackground: Colors.LIGHT_GRAY5,
     gridStripe1: '#334554',
     gridStripe2: '#2c3d4a',
     navbarBackground: Colors.GRAY5,

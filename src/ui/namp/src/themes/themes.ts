@@ -15,15 +15,18 @@ const camelCaseToKebabCase = (str: string) => str.replace(/([a-z0-9])([A-Z])/g, 
 
 export const applyTheme = (theme: string) => {
     let themeObj = themes[theme];
+    const cssColorBlend = (prop: string, amount: number) => hexToRgb(shadeColor(themeObj[prop], amount));
+    
     for (let prop of Object.getOwnPropertyNames(themeObj)) {
         setCssVar(`--${camelCaseToKebabCase(prop)}`, hexToRgb(themeObj[prop]));
     }
 
     for (let intent of intents) {
-        setCssVar(`--${intent.toLowerCase()}-hover`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -20)));
-        setCssVar(`--${intent.toLowerCase()}-active`, hexToRgb(shadeColor(themeObj[`intent${intent}`], -25)));
+        setCssVar(`--${intent.toLowerCase()}-hover`, cssColorBlend(`intent${intent}`, -20));
+        setCssVar(`--${intent.toLowerCase()}-active`, cssColorBlend(`intent${intent}`, -25));
     }
 
-    setCssVar('--card-shadow', hexToRgb(shadeColor(themeObj['backgroundSecondary'], -20)));
-    setCssVar('--dialog-header', hexToRgb(shadeColor(themeObj['dialogBackground'], 5)));
+    setCssVar('--card-shadow', cssColorBlend('backgroundSecondary', -20));
+    setCssVar('--dialog-header', cssColorBlend('dialogBackground', 5));
+    setCssVar('--cell-background', cssColorBlend('tableBackground', 10));
 }

@@ -1,13 +1,12 @@
 :root {
     --background-main: none;
-    --table-background-color: none;
-    --text-color: white;
-    --editing-color: white;
+    --text-color: none;
+    --editing-color: none;
     --selected-bg: rgba(125, 188, 255, 0.6);
-    --bg-1: white;
-    --bg-2: white;
-    --stripe: white;
-    --playing-bg: white;
+    --bg-1: none;
+    --bg-2: none;
+    --stripe: none;
+    --playing-bg: none;
     --transition: color 1s, background 1s, border 1s, box-shadow 1s;
     --header-padding: 0;
 }
@@ -45,9 +44,9 @@ $dark-selectable-header-menu-selected-hover-background: #000;
 $table-cell-odd: #000;
 
 $navbar-background-color: var(--navbar-background);
-$dark-navbar-background-color: var(--navbar-background);
 
-$table-background-color: var(--background-secondary);
+$table-background-color: var(--table-background);
+$cell-background-color: var(--cell-background);
 
 $pt-text-color: var(--text-main);
 $pt-text-color-muted: var(--text-muted);
