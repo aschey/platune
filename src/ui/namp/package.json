@@ -87,7 +87,7 @@
     "cross-env": "^7.0.2",
     "electron": "^8.4.0",
     "electron-builder": "^22.5.1",
-    "electron-devtools-installer": "^3.0.0",
+    "electron-devtools-installer": "^3.1.1",
     "electron-react-devtools": "^0.5.3",
     "electron-rebuild": "^1.10.1",
     "wait-on": "^4.0.2"

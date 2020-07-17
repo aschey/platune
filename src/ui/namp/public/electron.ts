@@ -56,14 +56,7 @@ app.on('activate', () => {
 });
 
 const installExtensions = async () => {
-  const installer = require('electron-devtools-installer');
+  const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
   const forceDownload = true;
-  const extensions = [
-    'REACT_DEVELOPER_TOOLS',
-    'REACT_PERF'
-  ]
-
-  return Promise
-    .all(extensions.map(name => installer.default(installer[name], forceDownload)))
-    .catch(console.log)
+  await installExtension(REACT_DEVELOPER_TOOLS, forceDownload);
 }
