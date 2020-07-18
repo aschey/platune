@@ -29,4 +29,6 @@ export const applyTheme = (theme: string) => {
     setCssVar('--card-shadow', cssColorBlend('backgroundSecondary', -20));
     setCssVar('--dialog-header', cssColorBlend('dialogBackground', 5));
     setCssVar('--cell-background', cssColorBlend('tableBackground', 10));
+    setCssVar('--button-background-hover', cssColorBlend('buttonBackground', 10));
+    setCssVar('--button-background-active', cssColorBlend('buttonBackground', 20));
 }

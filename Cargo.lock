@@ -622,8 +622,9 @@ dependencies = [
 
 [[package]]
 name = "color-thief"
-version = "0.2.0"
-source = "git+https://github.com/aschey/color-thief-rs#d09b655038615fb7704008612e5261e30a17ca65"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "720cc3cf333a5de6196c41c9824d80553bdbb491cb802e67be6bdd9dfd1e9df8"
 dependencies = [
  "rgb",
 ]

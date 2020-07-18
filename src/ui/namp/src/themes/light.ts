@@ -19,5 +19,6 @@ export const lightTheme: Theme = {
     gridStripe1: '#334554',
     gridStripe2: '#2c3d4a',
     navbarBackground: Colors.GRAY5,
-    dialogBackground: Colors.DARK_GRAY3
+    dialogBackground: Colors.DARK_GRAY3,
+    buttonBackground: Colors.DARK_GRAY5
 }

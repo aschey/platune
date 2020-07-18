@@ -19,6 +19,7 @@ export interface Theme {
     gridStripe2: string,
     navbarBackground: string,
     dialogBackground: string,
+    buttonBackground: string,
     [key: string]: string
 }
 
