@@ -1,5 +1,3 @@
-import { darkTheme } from "./dark";
-
 export interface Theme {
     intentPrimary: string,
     intentSuccess: string,

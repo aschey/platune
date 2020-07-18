@@ -14,11 +14,11 @@ export const lightTheme: Theme = {
     textSuccess: Colors.GREEN3,
     textWarning: Colors.ORANGE3,
     textDanger: Colors.RED3,
-    textMuted: Colors.GRAY5,
+    textMuted: Colors.GRAY1,
     tableBackground: Colors.LIGHT_GRAY5,
-    gridStripe1: '#334554',
-    gridStripe2: '#2c3d4a',
+    gridStripe1: '#e4e7eb',
+    gridStripe2: '#d5e0e8',
     navbarBackground: Colors.GRAY5,
-    dialogBackground: Colors.DARK_GRAY3,
-    buttonBackground: Colors.DARK_GRAY5
+    dialogBackground: Colors.WHITE,
+    buttonBackground: Colors.LIGHT_GRAY1
 }
