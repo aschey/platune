@@ -98,7 +98,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
     let mut sys = actix_rt::System::new("server");
 
     let srv = HttpServer::new(|| { 
-        let builder = App::new()
+        let mut builder = App::new()
         .wrap(Cors::new().finish())
         .wrap_api()
         // REST endpoints
@@ -137,12 +137,18 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         })
         .service(fs::Files::new("/swagger", "./src/server/swagger").index_file("index.html"));
 
+        let connection = establish_connection();
+        let paths = folder.select(get_path()).load::<String>(&connection).unwrap();
+        for path in paths {
+            builder = builder.service(fs::Files::new(&to_url_path(path.to_owned()), path.to_owned()).show_files_listing());
+        }
+
         let app = builder
             // Paths are matched in order so this needs to be last
             .service(fs::Files::new("/", "./src/ui/namp/build").index_file("index.html"));
         return app;
     })
-    .bind("127.0.0.1:5000")?
+    .bind("0.0.0.0:5000")?
     .run();
 
     // send server controller to main thread
@@ -150,6 +156,14 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
 
     // run future
     sys.block_on(srv)
+}
+
+fn to_url_path(drive_path: String) -> String {
+    if !IS_WINDOWS {
+        return drive_path;
+    }
+    let replaced = convert_delim_unix(drive_path.replace(":", ""));
+    return f!("/{replaced}");
 }
 
 fn get_timestamp(time: SystemTime) -> i32 {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Column, Table, TableHeaderRenderer, TableHeaderProps, defaultTableRowRenderer, TableRowProps, RowMouseEventHandlerParams, CellMeasurerCache, CellMeasurer } from "react-virtualized";
 import Draggable from "react-draggable";
 import { Song } from "../models/song";
-import { range, sleep, formatMs, formatRgb, setCssVar, formatRgba } from "../util";
+import { range, sleep, formatMs, formatRgb, setCssVar } from "../util";
 import { getJson } from "../fetchUtil";
 import _, { Dictionary } from "lodash";
 import { Intent, EditableText, Text, Button } from "@blueprintjs/core";
@@ -144,14 +144,17 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         const isEditingRow = editingRow === rowIndex;
         const isSelectedRow = selectedRow === rowIndex;
         const isPlayingRow = playingRow === rowIndex;
-        const classes = `${isEditingRow ? 'editing' : ''} ${isSelectedRow ? 'selected' : ''}`;
+        const classes = `${isEditingRow ? 'editing' : ''} ${isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : ''}`;
         return (
         <div className={`bp3-table-cell grid-cell striped ${classes}`} style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
             <FlexCol>
-                <Button small minimal className={rowIndex === playingRow ? 'playing' : ''} icon={isEditingRow ?  'saved' : isPlayingRow ? 'volume-up' : 'edit'} onClick={() => {
+                <Button small minimal className={isPlayingRow ? 'playing' : ''} icon={isEditingRow ? 'saved' : isPlayingRow ? 'volume-up' : 'edit'} onClick={() => {
                     const cur = songs[rowIndex];
                     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
-                    updateColors(cur.id, albumIndex);
+                    if (selectedGrid === 'album') {
+                        updateSelectedAlbum(cur.id, albumIndex);
+                    }
+                    
                     if (isEditingRow) {
                         // save
                         toastSuccess();
@@ -274,7 +277,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         setSelectedRow(index);
         const cur = songs[index];
         let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
-        updateColors(cur.id, albumIndex);
+        updateSelectedAlbum(cur.id, albumIndex);
 
         if (index === editingRow) {
             return;
@@ -286,19 +289,27 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         }
     }
 
+    const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
+
+    const updateSelectedAlbum = async (songIndex: number, albumIndex: number) => {
+        if (getAlbumSongs(albumIndex)[0].hasArt) {
+            updateColors(songIndex, albumIndex);
+        }
+        setSelectedAlbumRow(albumIndex);
+    }
+
     const updateColors = async (songIndex: number, albumIndex: number) => {
         const colors = await loadColors(songIndex);
         const bg = colors[0];
         const fg = colors[1];
         const secondary = colors[2];
-        setCssVar('--text-color', formatRgb(fg));
-        setCssVar('--bg-1', formatRgba(bg, 0.2));
-        setCssVar('--bg-2', formatRgba(bg, 0.4));
-        setCssVar('--stripe', formatRgba(bg, 0.7));
-        setCssVar('--selected-bg', formatRgba(secondary, 0.6));
-        setCssVar('--playing-bg', formatRgba(colors[3], 0.6));
-        setCssVar('--editing-color', formatRgb(colors[4]));
-        setSelectedAlbumRow(albumIndex);
+        setCssVar('--grid-selected-text-color', formatRgb(fg));
+        setCssVar('--grid-selected-shadow-1', formatRgb(bg));
+        setCssVar('--grid-selected-shadow-2', formatRgb(bg));
+        setCssVar('--grid-selected-stripe-even', formatRgb(bg));
+        setCssVar('--grid-selected-background', formatRgb(secondary));
+        setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
+        setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
     }
 
     const rowRenderer = (props: TableRowProps) => {
@@ -310,7 +321,10 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
         props.className += ' card';
         props.style.left = 10;
         if (props.index === selectedAlbumRow) {
-            props.className += ' selectedRow';
+            props.className += ' album-selected-row';
+        }
+        if (groupedSongs[albumKeys[props.index]][0].hasArt) {
+            props.className += ' has-art';
         }
         
         props.style.height -= 15;
@@ -372,7 +386,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
                         let g = groupedSongs[albumKeys[rowIndex]][0];
                         return <FlexCol 
                             style={{paddingTop: 5, height: Math.max(gg.length * 25, 125)}} 
-                            onClick = {() => updateColors(g.id, rowIndex)}
+                            onClick = {() => updateSelectedAlbum(g.id, rowIndex)}
                             >
                                 <div>{g.albumArtist}</div>
                                 <div>{g.album}</div>

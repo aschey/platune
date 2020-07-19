@@ -20,8 +20,7 @@ const padNum = (num: number) => num.toString().padStart(2, '0');
 export const setCssVar = (name: string, value: string) =>
     document.documentElement.style.setProperty(name, value);
 
-export const formatRgb = (rgb: Rgb) => `rgb(${rgb.r},${rgb.g},${rgb.b})`;
-export const formatRgba = (rgb: Rgb, a: number) => `rgba(${rgb.r},${rgb.g},${rgb.b}, ${a})`;
+export const formatRgb = (rgb: Rgb) => `${rgb.r},${rgb.g},${rgb.b}`;
 
 export const hexToRgb = (hex: string) => {
     let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);

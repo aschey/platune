@@ -11,13 +11,14 @@ export interface Theme {
     textPrimary: string,
     textWarning: string,
     textDanger: string,
-    textMuted: string,
     tableBackground: string,
     gridStripe1: string,
     gridStripe2: string,
     navbarBackground: string,
     dialogBackground: string,
     buttonBackground: string,
+    gridSelectedBackground: string,
+    gridSelectedShadow: string
     [key: string]: string
 }
 

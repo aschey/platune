@@ -1,6 +1,7 @@
 html,body {
   background: rgba(var(--background-main), 1);
   color: rgba(var(--text-main), 1);
+  transition: var(--transition);
 }
 
 .Expand-Column {
@@ -84,18 +85,42 @@ html,body {
   padding-left: var(--header-padding);
 }
 
+.album-selected-row.has-art {
+  .selected.grid-cell {
+    background: rgba(var(--grid-selected-background), 0.5);
+  }
+
+  .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
+  .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd):not(.selected)
+  {
+    transition: var(--transition);
+    background: rgba(var(--grid-stripe1), 1);
+  }
+
+  .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
+  .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even):not(.selected)
+  {
+    transition: var(--transition);
+    background: rgba(var(--grid-stripe2), 1);
+  }
+}
+
+.selected.grid-cell {
+  background: rgba(var(--grid-selected-background-default), 0.5);
+}
+
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
 .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd):not(.selected)
 {
   transition: var(--transition);
-  background: rgba(var(--grid-stripe1), 1);
+  background: rgba(var(--grid-stripe1-default), 1);
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
 .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even):not(.selected)
 {
   transition: var(--transition);
-  background: rgba(var(--grid-stripe2), 1);
+  background: rgba(var(--grid-stripe2-default), 1);
 }
 
 .DragHandle {
@@ -135,30 +160,38 @@ html,body {
   margin-left: unquote("min(5%, 10px)");
 }
 
-.selectedRow {
+.album-selected-row.has-art {
   transition: var(--transition);
-  border: 1px solid var(--bg-1) !important;
-  box-shadow: 0 0 0 1px var(--bg-1),0 4px 8px var(--bg-2),0 18px 46px 6px var(--bg-2) !important;
+  border: 1px solid rgba(var(--grid-selected-shadow-1), 1) !important;
+  box-shadow: 0 0 0 1px rgba(var(--grid-selected-shadow-1), 0.2), 0 4px 8px rgba(var(--grid-selected-shadow-2), 0.4), 
+    0 18px 46px 6px rgba(var(--grid-selected-shadow-2), 0.4) !important;
 }
 
-.selectedRow div {
+.album-selected-row {
+  transition: var(--transition);
+  border: 1px solid rgba(var(--grid-selected-shadow-1-default), 1) !important;
+  box-shadow: 0 0 0 1px rgba(var(--grid-selected-shadow-1-default), 0.2), 0 4px 8px rgba(var(--grid-selected-shadow-2-default), 0.4), 
+    0 18px 46px 6px rgba(var(--grid-selected-shadow-2-default), 0.4) !important;
+}
+
+.album-selected-row div {
   transition: var(--transition);
   font-weight: 600;
 }
 
-.selectedRow div:not(.editing) {
+.has-art.album-selected-row div:not(.editing) {
   transition: var(--transition);
-  color: var(--text-color) !important;
+  color: rgba(var(--grid-selected-text-color), 1) !important;
 }
 
 .editing {
   transition: var(--transition);
-  color: var(--editing-color) !important;
+  color: rgba(var(--grid-selected-editing-row-background), 1) !important;
 }
 
-.ReactVirtualized__Table__row.selectedRow .rowParent .striped:nth-of-type(even):not(.selected) {
+.has-art.ReactVirtualized__Table__row.album-selected-row .rowParent .striped:nth-of-type(even):not(.selected) {
   transition: var(--transition);
-  background: var(--stripe);
+  background: rgba(var(--grid-selected-stripe-even), 1);
 } 
 
 .ReactVirtualized__Table__rowColumn:first-of-type {
@@ -167,24 +200,28 @@ html,body {
 
 div.playing {
   transition: var(--transition);
-  background: var(--playing-bg);
+  background: rgba(var(--album-playing-row-background), 0.6) !important;
 }
 
 button.playing {
   transition: var(--transition);
-  background: var(--playing-bg) !important;
+  background: none !important;
 }
 
 .playing svg {
   transition: var(--transition);
-  color: var(--text-color);
+  color: rgba(var(--text-color), 1);
 }
 
 .editing {
   transition: var(--transition);
-  color: var(--editing-color) !important;
+  color: rgba(var(---grid-selected-editing-row-color), 1) !important;
 }
 
 svg[data-icon="list-detail-view"] {
   transform: rotate(180deg);
+}
+
+img {
+  image-rendering: crisp-edges;
 }

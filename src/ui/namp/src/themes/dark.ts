@@ -9,16 +9,17 @@ export const darkTheme: Theme = {
     backgroundMain: Colors.DARK_GRAY4,
     backgroundSecondary: '#334654',
     textMain: Colors.LIGHT_GRAY2,
-    textSecondary: Colors.LIGHT_GRAY3,
+    textSecondary: Colors.GRAY5,
     textPrimary: Colors.BLUE5,
     textSuccess: Colors.GREEN5,
     textWarning: Colors.ORANGE5,
     textDanger: Colors.RED5,
-    textMuted: Colors.GRAY5,
     tableBackground: Colors.DARK_GRAY4,
     gridStripe1: '#334554',
     gridStripe2: '#2c3d4a',
     navbarBackground: Colors.DARK_GRAY5,
     dialogBackground: Colors.DARK_GRAY3,
-    buttonBackground: Colors.DARK_GRAY5
+    buttonBackground: Colors.DARK_GRAY5,
+    gridSelectedBackground: '#1c5691',
+    gridSelectedShadow: '#131e29'
 }

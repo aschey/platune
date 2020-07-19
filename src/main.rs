@@ -21,7 +21,22 @@ fn stop_server(srv: actix_server::Server, t: std::thread::JoinHandle<()>) {
 fn main() {
     let direct = true;
     let (tx, rx) = mpsc::channel();
-    
+
+    let _ = thread::spawn(move || {
+        let distro = whoami::distro();
+        let device_name = whoami::devicename();
+        let addr = pnet_datalink::interfaces().iter().find(|i| !i.is_loopback()).unwrap().ips[0].ip();
+        let server_info = f!("{distro}|{device_name}|{addr}:5000");
+        let socket = std::net::UdpSocket::bind("0.0.0.0:0").unwrap();
+        socket.set_broadcast(true).unwrap();
+        loop {
+            let server_info_bytes = server_info.as_bytes();
+            //println!("{:?}",server_info);
+            socket.send_to(&server_info_bytes, "255.255.255.255:34254").unwrap();
+            std::thread::sleep(std::time::Duration::from_secs(5));
+        }
+    });
+
     if direct {
         //task::block_on(server::get_all_files());
         let _ = server::run_server(tx);

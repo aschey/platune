@@ -9,6 +9,7 @@ import { PathPicker } from './PathPicker';
 import { MultilineText } from './MultilineText';
 import { PathMapping } from './PathMapping';
 import { NtfsMapping } from '../models/ntfsMapping';
+import { applyTheme } from '../themes/themes';
 
 export const Settings: React.FC<{}> = () => {
     const [isOpen, setIsOpen] = useState<boolean>(false);

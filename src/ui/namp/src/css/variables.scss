@@ -1,12 +1,4 @@
 :root {
-    --background-main: none;
-    --text-color: none;
-    --editing-color: none;
-    --selected-bg: rgba(125, 188, 255, 0.6);
-    --bg-1: none;
-    --bg-2: none;
-    --stripe: none;
-    --playing-bg: none;
     --transition: color 1s, background 1s, border 1s, box-shadow 1s;
     --header-padding: 0;
 }
@@ -51,8 +43,7 @@ $header-hover-background-color: var(--table-background);
 $input-background-color: var(--background-secondary);
 $popover-background-color: var(--background-secondary);
 $pt-text-color: var(--text-main);
-$pt-text-color-muted: var(--text-muted);
-$pt-dark-text-color-muted: var(--text-muted);
+$pt-text-color-muted: var(--text-secondary);
 $button-background-color:  var(--button-background);
 $button-background-color-hover: var(--button-background-hover);
 $button-background-color-active: var(--button-background-active);

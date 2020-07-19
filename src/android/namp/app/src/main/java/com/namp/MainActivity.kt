@@ -7,6 +7,9 @@ import android.view.Menu
 import android.view.MenuItem
 
 import kotlinx.android.synthetic.main.activity_main.*
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,6 +22,8 @@ class MainActivity : AppCompatActivity() {
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
         }
+        val threadWithRunnable = Thread(udp_DataArrival())
+        threadWithRunnable.start()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -34,6 +39,34 @@ class MainActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_settings -> true
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+}
+
+class udp_DataArrival: Runnable {
+    public override fun run() {
+        println("${Thread.currentThread()} Runnable Thread Started.")
+        while (true){
+            receiveUDP()
+        }
+    }
+
+    private fun receiveUDP() {
+        val buffer = ByteArray(5000)
+        var socket: DatagramSocket? = null
+        try {
+            socket = DatagramSocket(34254, InetAddress.getByName("0.0.0.0"))
+            socket.broadcast = true
+            val packet = DatagramPacket(buffer, buffer.size)
+            socket.receive(packet)
+            val message = String(packet.data.takeWhile { b -> b > 0 }.toByteArray())
+            val (distro, deviceName, address) = message.split('|', limit = 3)
+            println("$distro, $deviceName, $address")
+        } catch (e: Exception) {
+            println("open fun receiveUDP catch exception." + e.toString())
+            e.printStackTrace()
+        } finally {
+            socket?.close()
         }
     }
 }
