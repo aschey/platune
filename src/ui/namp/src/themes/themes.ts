@@ -1,8 +1,8 @@
 import { Theme } from "./theme";
 import { darkTheme } from "./dark";
 import { lightTheme } from "./light";
-import { setCssVar, hexToRgb } from "../util";
-import { shadeColor } from "./colorMixer";
+import { setCssVar } from "../util";
+import { shadeColor, hexToRgbStr } from "./colorMixer";
 
 export const themes: Record<string, Theme> = {
     'dark': darkTheme,
@@ -17,14 +17,14 @@ const camelCaseToCssVar = (str: string) => `--${camelCaseToKebabCase(str)}`;
 
 export const applyTheme = (theme: string) => {
     let themeObj = themes[theme];
-    const cssColorBlend = (prop: string, amount: number) => hexToRgb(shadeColor(themeObj[prop], amount));
+    const cssColorBlend = (prop: string, amount: number) => hexToRgbStr(shadeColor(themeObj[prop], amount));
     
     for (let prop of Object.getOwnPropertyNames(themeObj)) {
-        setCssVar(camelCaseToCssVar(prop), hexToRgb(themeObj[prop]));
+        setCssVar(camelCaseToCssVar(prop), hexToRgbStr(themeObj[prop]));
     }
 
     for (let defaultVar of addDefaults) {
-        setCssVar(`${camelCaseToCssVar(defaultVar)}-default`, hexToRgb(themeObj[defaultVar]));
+        setCssVar(`${camelCaseToCssVar(defaultVar)}-default`, hexToRgbStr(themeObj[defaultVar]));
     }
 
     for (let intent of intents) {
@@ -37,6 +37,6 @@ export const applyTheme = (theme: string) => {
     setCssVar('--cell-background', cssColorBlend('tableBackground', 10));
     setCssVar('--button-background-hover', cssColorBlend('buttonBackground', 10));
     setCssVar('--button-background-active', cssColorBlend('buttonBackground', 20));
-    setCssVar('--grid-selected-shadow-1-default', hexToRgb(themeObj['gridSelectedShadow']));
+    setCssVar('--grid-selected-shadow-1-default', hexToRgbStr(themeObj['gridSelectedShadow']));
     setCssVar('--grid-selected-shadow-2-default', cssColorBlend('gridSelectedShadow', 10));
 }

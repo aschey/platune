@@ -9,15 +9,16 @@ import { FlexCol } from './FlexCol';
 interface MainNavBarProps {
     setSelectedGrid: (grid: string) => void;
     selectedGrid: string;
-    theme: string;
+    isLightTheme: boolean;
+    updateTheme: (newThemeName: string) => void
 }
-export const MainNavBar: React.FC<MainNavBarProps> = ({selectedGrid, setSelectedGrid, theme}) => {
+export const MainNavBar: React.FC<MainNavBarProps> = ({selectedGrid, setSelectedGrid, isLightTheme, updateTheme}) => {
     return (
         <Navbar fixedToTop style={{height: '40px'}}>
             <NavbarGroup align={Alignment.LEFT} style={{height: 40, paddingTop: 1}}>
-                <NavbarHeading style={{marginRight: 0, marginTop: 4, paddingRight: 7}}><img src={theme === 'dark' ? lune : luneDark} width={92} height={28}/></NavbarHeading>
+                <NavbarHeading style={{marginRight: 0, marginTop: 4, paddingRight: 7}}><img src={isLightTheme ? luneDark : lune} width={92} height={28}/></NavbarHeading>
                 <NavbarDivider />
-                <Settings/>
+                <Settings updateTheme={updateTheme}/>
             </NavbarGroup>
             <NavbarGroup align={Alignment.RIGHT} style={{height: 40, paddingTop: 1}}>
                 <ButtonGroup minimal>

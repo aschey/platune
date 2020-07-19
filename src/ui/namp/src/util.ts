@@ -21,11 +21,3 @@ export const setCssVar = (name: string, value: string) =>
     document.documentElement.style.setProperty(name, value);
 
 export const formatRgb = (rgb: Rgb) => `${rgb.r},${rgb.g},${rgb.b}`;
-
-export const hexToRgb = (hex: string) => {
-    let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (result === null) {
-        return '';
-    }
-    return `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}`;
-}

@@ -1,6 +1,6 @@
 :root {
     --transition: color 1s, background 1s, border 1s, box-shadow 1s;
-    --header-padding: 0;
+    --header-translate: translate(-6px, 0px);
 }
 
 $pt-intent-primary: var(--intent-primary);

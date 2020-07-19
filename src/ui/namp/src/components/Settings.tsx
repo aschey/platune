@@ -11,7 +11,7 @@ import { PathMapping } from './PathMapping';
 import { NtfsMapping } from '../models/ntfsMapping';
 import { applyTheme } from '../themes/themes';
 
-export const Settings: React.FC<{}> = () => {
+export const Settings: React.FC<{updateTheme: (newThemeName: string) => void}> = ({updateTheme}) => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [closePending, setClosePending] = useState<boolean>(false);
     const [rows, setRows] = useState<Array<string>>([]);

@@ -23,16 +23,17 @@ fn stop_server(srv: actix_server::Server, t: std::thread::JoinHandle<()>) {
 fn get_ip() -> String {
     let device_name = whoami::devicename();
     let output = std::process::Command::new("powershell")
-    .args(&["-Command", &f!("Test-Connection {device_name} -Count 1 | Select IPV4Address")])
-    .output().unwrap();
-    let addr = regex::Regex::new(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").unwrap().find(std::str::from_utf8(&output.stdout).unwrap()).unwrap().as_str();
+        .args(&["-Command", &f!("Test-Connection {device_name} -Count 1 | Select IPV4Address")])
+        .output().unwrap();
+    let addr = regex::Regex::new(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").unwrap()
+        .find(std::str::from_utf8(&output.stdout).unwrap()).unwrap().as_str();
     return addr.to_owned();
 }
 
 #[cfg(not(windows))]
-// Doing this reliably on all *nix flavors is too complicated without a crate
 fn get_ip() -> String {
-    let addr = pnet_datalink::interfaces().iter().find(|i| !i.is_loopback()).unwrap().ips[0].ip();
+    let addr = pnet_datalink::interfaces().iter()
+        .find(|i| !i.is_loopback() && i.ips.len() > 0).unwrap().ips[0].ip();
     return addr.to_string();
 }
 
