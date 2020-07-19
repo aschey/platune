@@ -32,7 +32,6 @@ export const hexToRgbStr = (hex: string) => _.join(hexToRgb(hex), ',');
 
 // https://awik.io/determine-color-bright-dark-using-javascript/
 export const isLight = (hex: string) => {
-    debugger;
     const [r, g, b] = hexToRgb(hex);
     return Math.sqrt(0.299 * (r ** 2) + 0.114 * (b ** 2) + 0.587 * (g ** 2)) > 127.5;
 }

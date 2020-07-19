@@ -10,25 +10,23 @@ import { lightTheme } from '../themes/light';
 import { darkTheme } from '../themes/dark';
 import { isLight } from '../themes/colorMixer';
 
-const themeName = 'dark';
+const themeName = 'light';
+const theme = lightTheme;
 applyTheme(themeName);
 
 const App: React.FC<{}> = () => {
-
-    const theme = themeName === 'dark' ? darkTheme : lightTheme;
     const [selectedGrid, setSelectedGrid] = useState('song');
     const [themeDetails, setThemeDetails] = useState(isLight(theme.backgroundMain));
     const updateTheme = (newThemeName: string) => {
         applyTheme(newThemeName);
         const newTheme = newThemeName === 'light' ? lightTheme : darkTheme;
-        debugger;
         setThemeDetails(isLight(newTheme.backgroundMain));
     }
     return (
         <>
             <MainNavBar selectedGrid={selectedGrid} setSelectedGrid={setSelectedGrid} isLightTheme={themeDetails} updateTheme={updateTheme}/>
             <div style={{paddingTop: 40}}>
-                <SongGrid selectedGrid={selectedGrid}/>
+                <SongGrid selectedGrid={selectedGrid} isLightTheme={themeDetails}/>
             </div>
         </>
     );

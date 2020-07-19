@@ -16,9 +16,10 @@ import { Rgb } from "../models/rgb";
 
 interface SongGridProps {
     selectedGrid: string;
+    isLightTheme: boolean;
 }
 
-export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
+export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) => {
     const [songs, setSongs] = useState<Song[]>([]);
     const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
     const [albumKeys, setAlbumKeys] = useState<string[]>([]);
@@ -75,7 +76,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid}) => {
     }
 
     const loadColors = async (songId: number) => {
-        const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}`);
+        const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}&isLight=${isLightTheme}`);
         return colors;
     }
 

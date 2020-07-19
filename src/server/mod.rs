@@ -736,8 +736,7 @@ fn adjust_lighten(mut color: Rgb, luminance: f32, threshold: f32) -> Rgb {
 }
 
 #[api_v2_operation]
-async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()>{
-    //let req_song_id = 690;
+async fn get_art_colors(request: Query<ArtColorsRequest>) -> Result<Json<Vec<Rgb>>, ()>{
     let connection = establish_connection();
     
     let art = song
@@ -745,7 +744,7 @@ async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()
         .select(album_art)
         .first::<Option<Vec<u8>>>(&connection)
         .unwrap().unwrap();
-   // let mut builder = actix_http::Response::Ok();
+
     let o = image::io::Reader::new(std::io::Cursor::new(&art))
         .with_guessed_format()
         .unwrap();
@@ -756,21 +755,41 @@ async fn get_art_colors(request: Query<ArtRequest>) -> Result<Json<Vec<Rgb>>, ()
     let palette = color_thief::get_palette(&rgba_img, color_thief::ColorFormat::Rgba, 10, num_colors).unwrap();
     let pal = palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect::<Vec<_>>();
     let mut temp = pal.iter().clone().map(get_brightness).enumerate().collect::<Vec<_>>();
-
-    &mut temp.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
     
-    let bg_thresh = 70.0;
-    let fg_thresh = 140.0;
-    let secondary_min = 100.0;
-    let secondary_max = 100.0;
-    let bg = adjust_darken(pal[temp[0].0], temp[0].1, bg_thresh);
-    let fg = adjust_lighten(pal[temp[colors-1].0], temp[colors-1].1, fg_thresh);
-    let secondary = adjust_darken(pal[temp[1].0], temp[1].1, secondary_max);
-    let third = adjust_darken(pal[temp[2].0], temp[2].1, secondary_max);
-    let fourth = lighten(fg, 0.8);
 
-    return Ok(Json(vec![bg, fg, secondary, third, fourth]));
+    if request.is_light {
+        let pal = palette.iter().map(|p| Rgb {r: p.r, g: p.g, b: p.b}).collect::<Vec<_>>();
+        let mut temp = pal.iter().clone().map(get_brightness).enumerate().collect::<Vec<_>>();
+
+        &mut temp.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        let temp2 = temp.iter().rev().collect::<Vec<_>>();
+        let bg_thresh = 180.0;
+        let fg_thresh = 70.0;
+        let secondary_min = 160.0;
+        let secondary_max = 160.0;
+        let bg = adjust_lighten(pal[temp2[0].0], temp2[0].1, bg_thresh);
+        let fg = adjust_darken(pal[temp2[colors-1].0], temp2[colors-1].1, fg_thresh);
+        let secondary = adjust_lighten(pal[temp2[1].0], temp2[1].1, secondary_min);
+        let third = adjust_lighten(pal[temp2[2].0], temp2[2].1, secondary_min);
+        let fourth = lighten(fg, 0.4);
+    
+        return Ok(Json(vec![bg, fg, secondary, third, fourth]));
     }
+    else {
+        &mut temp.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        let bg_thresh = 70.0;
+        let fg_thresh = 140.0;
+        let secondary_min = 100.0;
+        let secondary_max = 100.0;
+        let bg = adjust_darken(pal[temp[0].0], temp[0].1, bg_thresh);
+        let fg = adjust_lighten(pal[temp[colors-1].0], temp[colors-1].1, fg_thresh);
+        let secondary = adjust_darken(pal[temp[1].0], temp[1].1, secondary_max);
+        let third = adjust_darken(pal[temp[2].0], temp[2].1, secondary_max);
+        let fourth = lighten(fg, 0.8);
+    
+        return Ok(Json(vec![bg, fg, secondary, third, fourth]));
+    }
+}
 
 #[api_v2_operation]
 async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()>, HttpError>  {
@@ -879,4 +898,11 @@ struct ArtRequest {
     song_id: i32,
     width: Option<u32>,
     height: Option<u32>
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct ArtColorsRequest {
+    song_id: i32,
+    is_light: bool
 }
