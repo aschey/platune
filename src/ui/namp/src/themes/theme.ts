@@ -18,7 +18,8 @@ export interface Theme {
     dialogBackground: string,
     buttonBackground: string,
     gridSelectedBackground: string,
-    gridSelectedShadow: string
+    gridSelectedShadow: string,
+    playingRowBackground: string
     [key: string]: string
 }
 

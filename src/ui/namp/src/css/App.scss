@@ -89,24 +89,10 @@ html,body {
   .selected.grid-cell {
     background: rgba(var(--grid-selected-background), 0.5);
   }
-
-  .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
-  .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd):not(.selected)
-  {
-    transition: var(--transition);
-    background: rgba(var(--grid-stripe1), 1);
-  }
-
-  .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
-  .ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even):not(.selected)
-  {
-    transition: var(--transition);
-    background: rgba(var(--grid-stripe2), 1);
-  }
 }
 
-.selected.grid-cell {
-  background: rgba(var(--grid-selected-background-default), 0.5);
+.selected.bp3-table-cell {
+  background: rgba(var(--grid-selected-background-default), 0.5) !important;
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
@@ -184,10 +170,14 @@ html,body {
   color: rgba(var(--grid-selected-text-color), 1) !important;
 }
 
-.editing {
-  transition: var(--transition);
+.has-art .editing {
   transition: var(--transition);
   color: rgba(var(--grid-selected-editing-row-color), 1) !important;
+}
+
+:not(.has-art) .editing {
+  transition: var(--transition);
+  color: rgba(var(--text-secondary), 1) !important;
 }
 
 .has-art.ReactVirtualized__Table__row.album-selected-row .rowParent .striped:nth-of-type(even):not(.selected) {
@@ -199,9 +189,14 @@ html,body {
   margin: 0;
 }
 
-div.playing {
+.has-art div.playing {
   transition: var(--transition);
   background: rgba(var(--grid-selected-playing-row-background), 0.6) !important;
+}
+
+div.playing {
+  transition: var(--transition);
+  background: rgba(var(--playing-row-background), 0.6) !important;
 }
 
 button.playing {
