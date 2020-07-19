@@ -19,6 +19,7 @@ fn stop_server(srv: actix_server::Server, t: std::thread::JoinHandle<()>) {
 }
 
 #[cfg(windows)]
+// pnet has native dependencies on Windows that I don't want to deal with
 fn get_ip() -> String {
     let device_name = whoami::devicename();
     let output = std::process::Command::new("powershell")
@@ -26,6 +27,13 @@ fn get_ip() -> String {
     .output().unwrap();
     let addr = regex::Regex::new(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}").unwrap().find(std::str::from_utf8(&output.stdout).unwrap()).unwrap().as_str();
     return addr.to_owned();
+}
+
+#[cfg(not(windows))]
+// Doing this reliably on all *nix flavors is too complicated without a crate
+fn get_ip() -> String {
+    let addr = pnet_datalink::interfaces().iter().find(|i| !i.is_loopback()).unwrap().ips[0].ip();
+    return addr.to_string();
 }
 
 fn main() {
