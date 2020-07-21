@@ -83,6 +83,9 @@ html,body {
 
 .ReactVirtualized__Table__headerRow {
   padding-left: var(--header-padding);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 1;
 }
 
 .album-selected-row.has-art {
@@ -143,7 +146,7 @@ html,body {
 }
 
 .ReactVirtualized__Table__headerTruncatedText {
-  margin-left: unquote("min(5%, 10px)");
+  transform: translate(-5px, 0);
 }
 
 .album-selected-row.has-art {

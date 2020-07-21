@@ -368,7 +368,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
         <div style={{height: window.innerHeight - 155}}>
             <Table
             ref={otherRef}
-            width={window.innerWidth - 15}
+            width={window.innerWidth - 5}
             height={window.innerHeight - 175}
             headerHeight={25}
             rowCount={albumKeys.length}
@@ -386,7 +386,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
                         let gg = groupedSongs[albumKeys[rowIndex]];
                         let g = groupedSongs[albumKeys[rowIndex]][0];
                         return <FlexCol 
-                            style={{paddingTop: 5, height: Math.max(gg.length * 25, 125)}} 
+                            style={{paddingTop: 5, paddingLeft: 10, height: Math.max(gg.length * 25, 125)}} 
                             onClick = {() => updateSelectedAlbum(g.id, rowIndex)}
                             >
                                 <div>{g.albumArtist}</div>
@@ -450,8 +450,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
     <div style={{height: window.innerHeight - 150}}>
         <Table
             ref={mainRef}
-            style={{marginLeft: 10}}
-            width={window.innerWidth - 25}
+            width={window.innerWidth - 5}
             height={window.innerHeight - 165}
             headerHeight={25}
             rowHeight={25}

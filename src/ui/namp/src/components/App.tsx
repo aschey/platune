@@ -10,8 +10,8 @@ import { lightTheme } from '../themes/light';
 import { darkTheme } from '../themes/dark';
 import { isLight } from '../themes/colorMixer';
 
-const themeName = 'light';
-const theme = lightTheme;
+const themeName = 'dark';
+const theme = darkTheme;
 applyTheme(themeName);
 
 const App: React.FC<{}> = () => {

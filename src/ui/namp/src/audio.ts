@@ -4,6 +4,7 @@ interface ScheduledSource {
     start: number,
     stop: number,
     source: AudioBufferSourceNode,
+    analyser: AnalyserNode,
     id: number
 }
 
@@ -14,6 +15,7 @@ class AudioQueue {
     context: AudioContext;
     sources: ScheduledSource[];
     isPaused: boolean;
+    currentAnalyser: AnalyserNode | null;
 
     constructor() {
         this.switchTime = 0;
@@ -22,6 +24,7 @@ class AudioQueue {
         this.context = new AudioContext();
         this.sources = [];
         this.isPaused = false;
+        this.currentAnalyser = null;
     }
 
     private findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -74,8 +77,11 @@ class AudioQueue {
         const source = context.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(context.destination);
+        let analyser = context.createAnalyser();
+        source.connect(analyser);
         return {
             audioBuffer,
+            analyser,
             source,
             startGap: this.findStartGapDuration(audioBuffer),
             endGap: this.findEndGapDuration(audioBuffer)
@@ -97,7 +103,7 @@ class AudioQueue {
         songData.source.start(start, startSeconds);
         console.log('starting at', startSeconds);
         songData.source.stop(nextSwitchTime);
-        this.sources.push({source: songData.source, start, stop: nextSwitchTime, id: playingRow });
+        this.sources.push({source: songData.source, analyser: songData.analyser, start, stop: nextSwitchTime, id: playingRow });
         let self = this;
         songData.source.addEventListener('ended', function(_) {
             // don't fire when stopped because we don't want to play the next track (sources will be empty when stopped)
@@ -107,10 +113,14 @@ class AudioQueue {
             }
             // first source in the queue finished, don't need it anymore
             self.sources.shift();
+            if (self.sources.length) {
+                self.currentAnalyser = self.sources[0].analyser;
+            }
             onFinished(playingRow);
         });
         this.switchTime = nextSwitchTime;
         this.index++;
+        return songData.analyser;
     }
 
     private reset = () => {
@@ -125,7 +135,10 @@ class AudioQueue {
         if (songQueue.length) {
             for (let song of songQueue) {
                 console.log(song);
-                await this.schedule(song, onFinished, playingRow);
+                let analyser = await this.schedule(song, onFinished, playingRow);
+                if (song === songQueue[0]) {
+                    this.currentAnalyser = analyser;
+                }
                 playingRow++;
             }
         }
