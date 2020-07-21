@@ -49,44 +49,53 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
     }
 
     return (
-        <FlexRow style={{alignItems: 'center'}}>
-            <FlexCol style={{alignItems: 'center', borderRadius: 10, marginLeft: 10, marginRight: 10, height: 100}} className='card'>
-                <FlexRow style={{alignItems: 'center', paddingTop: 25}}>
-                    <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-backward' style={{borderRadius: '50%', width: 35, height: 35}}/>
+        <>
+        <FlexRow style={{alignItems: 'center', paddingTop: 17, width: '100%'}}>
+        <FlexCol style={{minWidth: '80%'}}>
+        <FlexRow >
+            
+            <FlexCol style={{alignItems: 'center'}}>
+                <FlexRow style={{alignItems: 'center'}}>
+                    <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-backward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                     <div style={{width: 5}}/>
-                    <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} outlined icon={isPlaying ? 'pause' : 'play'} style={{borderRadius: '50%', width: 40, height: 40}} onClick={playPauseClick}/>
+                    <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} minimal icon={isPlaying ? 'pause' : 'play'} style={{borderRadius: '50%', width: 40, height: 40}} onClick={playPauseClick}/>
                     <div style={{width: 5}}/>
-                    <Button className='nofocus' intent={Intent.DANGER} outlined icon='stop' style={{borderRadius: '50%', width: 40, height: 40}} onClick={stopClick}/>
+                    <Button className='nofocus' intent={Intent.DANGER} minimal icon='stop' style={{borderRadius: '50%', width: 40, height: 40}} onClick={stopClick}/>
                     <div style={{width: 5}}/>
-                    <Button className='nofocus' intent={Intent.PRIMARY} outlined icon='fast-forward' style={{borderRadius: '50%', width: 35, height: 35}}/>
+                    <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-forward' style={{borderRadius: '50%', width: 35, height: 35}}/>
                 </FlexRow>
-                <FlexRow  style={{width: '100%'}}>
-                <Slider
-                    mode={1}
-                    step={1}
-                    domain={domain}
-                    rootStyle={sliderStyle}
-                    onChange={(a) => {}}
-                    values={[progress] as ReadonlyArray<number>}
-                    >
-                    <Rail>
-                        {({ getRailProps }) => (
-                        <div style={railStyle} {...getRailProps()} />
-                        )}
-                    </Rail>
-                    <Handles>
-                        {({ handles, getHandleProps }) => (
-                        <div className="slider-handles">
-                            {handles.map(handle => (
-                            <Handle
-                                key={handle.id}
-                                handle={handle}
-                                domain={domain}
-                                getHandleProps={getHandleProps}
-                            />
-                            ))}
-                        </div>
-                        )}
+                
+            </FlexCol>
+            
+        </FlexRow>
+        <div style={{height:5}}/>
+        <FlexRow  style={{width: '100%', minHeight: 20, maxHeight: 20}}>
+                    <Slider
+                        mode={1}
+                        step={1}
+                        domain={domain}
+                        rootStyle={sliderStyle}
+                        onChange={(a) => {}}
+                        values={[progress] as ReadonlyArray<number>}
+                        >
+                        <Rail>
+                            {({ getRailProps }) => (
+                            <div style={railStyle} {...getRailProps()} />
+                            )}
+                        </Rail>
+                        <Handles>
+                            {({ handles, getHandleProps }) => (
+                            <div className="slider-handles">
+                                {handles.map(handle => (
+                                <Handle
+                                    key={handle.id}
+                                    handle={handle}
+                                    domain={domain}
+                                    getHandleProps={getHandleProps}
+                                />
+                                ))}
+                            </div>
+                            )}
                         </Handles>
                         <Tracks right={false}>
                             {({ tracks, getTrackProps }) => (
@@ -104,8 +113,17 @@ export const Controls: React.FC<ControlProps> = ({isPlaying, setIsPlaying, onPau
                         </Tracks>
                     </Slider>
                 </FlexRow>      
-            </FlexCol>
+        </FlexCol>
+        <FlexCol style={{background: 'rgba(0,0,0,0.6)', borderLeft: '1px solid black', minHeight: 75}}>
+            
+        </FlexCol>
         </FlexRow>
+        
+        
+        <div style={{minHeight: 15, minWidth: '100%', position: 'fixed', bottom: 0, background: 'rgb(17, 17, 18)'}}>
+            <Text>test</Text>
+        </div>
+        </>
     );
     
 }

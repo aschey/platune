@@ -451,7 +451,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
         <Table
             ref={mainRef}
             width={window.innerWidth - 5}
-            height={window.innerHeight - 165}
+            height={window.innerHeight - 135}
             headerHeight={25}
             rowHeight={25}
             rowCount={songs.length}
