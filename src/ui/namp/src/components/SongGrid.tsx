@@ -365,11 +365,11 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
     }
 
     const otherGrid =
-        <div style={{height: window.innerHeight - 155}}>
+        <div style={{height: window.innerHeight - 110}}>
             <Table
             ref={otherRef}
             width={window.innerWidth - 5}
-            height={window.innerHeight - 175}
+            height={window.innerHeight - 110}
             headerHeight={25}
             rowCount={albumKeys.length}
             rowRenderer={rowRenderer2}
@@ -447,11 +447,11 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
         </div>
  
     const mainGrid = 
-    <div style={{height: window.innerHeight - 150}}>
+    <div style={{height: window.innerHeight - 110}}>
         <Table
             ref={mainRef}
             width={window.innerWidth - 5}
-            height={window.innerHeight - 135}
+            height={window.innerHeight - 110}
             headerHeight={25}
             rowHeight={25}
             rowCount={songs.length}

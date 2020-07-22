@@ -19,7 +19,8 @@ export interface Theme {
     buttonBackground: string,
     gridSelectedBackground: string,
     gridSelectedShadow: string,
-    playingRowBackground: string
+    playingRowBackground: string,
+    windowControlsColor: string
     [key: string]: string
 }
 

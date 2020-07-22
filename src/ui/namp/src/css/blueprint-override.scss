@@ -33,3 +33,7 @@
 .bp3-table-quadrant-main .bp3-table-cell-client {
   background: rgba(var(--background-secondary), 1);
 }
+
+.bp3-navbar {
+    -webkit-app-region: drag
+}
