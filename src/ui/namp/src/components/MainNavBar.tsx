@@ -49,7 +49,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                     <Button intent={Intent.WARNING} className='hover-intent' onClick={() => getWindow()?.minimize()}>
                         <FontAwesomeIcon icon={faWindowMinimize} />
                     </Button>
-                    <Button intent={Intent.SUCCESS} className='hover-intent' onClick={() => {
+                    <Button intent={Intent.SUCCESS} className='hover-intent' style={{transform: 'translate(0, 1px)'}} onClick={() => {
                         const window = getWindow();
                         if (window?.isMaximized()) {
                             window?.restore();
@@ -62,7 +62,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                         <FontAwesomeIcon icon={faSquare} />
                     </Button>
                     <Button intent={Intent.DANGER} className='hover-intent' onClick={() => getWindow()?.close()}>
-                        <FontAwesomeIcon icon={faTimes} />
+                        <FontAwesomeIcon icon={faTimes} style={{transform: 'translate(0, 1px)'}} />
                     </Button>
                 </ButtonGroup>
             </NavbarGroup>

@@ -536,6 +536,7 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
         onStop={onStop} 
         songMillis={playingMillis} 
         progress={progress}
+        playingSong={playingRow > -1 ? songs[playingRow] : null}
     />
     </>
     );
