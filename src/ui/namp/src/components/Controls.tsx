@@ -18,7 +18,7 @@ interface ControlProps {
     songMillis: number,
     playingSong: Song | null,
     setIsPlaying: (isPlaying: boolean) => void,
-    onPause: () => void,
+    onPause: () => Promise<void>,
     onPlay: () => void,
     onStop: () => void
 }
@@ -36,9 +36,9 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
         setColorAdjust(shadeColor(theme.songTimeColor, (progress / songMillis) * songColorAdjust));
     }, [progress, songMillis]);
 
-    const playPauseClick = () => {
+    const playPauseClick = async () => {
         if (isPlaying) {
-            onPause();
+            await onPause();
         }
         else {
             onPlay();

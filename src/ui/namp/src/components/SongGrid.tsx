@@ -333,8 +333,8 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
         return defaultTableRowRenderer(props);
     }
 
-    const onPause = () => {
-        audioQueue.pause();
+    const onPause = async () => {
+        await audioQueue.pause();
         setIsPlaying(false);
         setPauseStart(new Date().getTime());
     }

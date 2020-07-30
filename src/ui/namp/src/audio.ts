@@ -157,7 +157,7 @@ class AudioQueue {
     public start = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
         if (this.isPaused) {
             this.isPaused = false;
-            // todo: mute volume while resetting to prevent click
+            this.setVolumeTemporary(this.volume);
             this.context.resume();
             // Starting the song that's currently paused, don't reschedule
             if (this.sources.length && playingRow === this.sources[0].id) {
@@ -170,16 +170,23 @@ class AudioQueue {
         await this.scheduleAll(songQueue, playingRow, onFinished);
     }
 
-    public setVolume(volume: number) {
+    private setVolumeTemporary(volume: number) {
         if (this.currentGain) {
             this.currentGain.gain.value = volume;
         }
-        this.volume = volume;
         this.sources.forEach(s => s.gain.gain.value = volume);
     }
 
-    public pause() {
-        this.context.suspend();
+    public setVolume(volume: number) {
+        this.setVolumeTemporary(volume);
+        this.volume = volume;
+    }
+
+    public async pause() {
+        this.setVolumeTemporary(0);
+        // Seems like there's a slight delay before the volume change takes so we have to wait for it to complete
+        await sleep(100);
+        await this.context.suspend();
         this.isPaused = true;
     }
 
