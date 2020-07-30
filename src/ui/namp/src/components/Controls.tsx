@@ -102,13 +102,14 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
     }
 
     return (
-        <div style={{ display: 'grid', gridTemplateRows: '10px 60px', gridTemplateColumns: window.innerWidth > 1400 ? `1fr 4fr 175px 4fr 1fr` : `1fr 4fr 175px 3fr 2fr` }}>
+        <div style={{ display: 'grid', gridTemplateRows: '10px 60px', gridTemplateColumns: window.innerWidth > 1600 ? `5fr 175px 4fr 1fr` : `5fr 175px 3fr 2fr` }}>
             <div style={{ gridColumn: '1 / 6' }}>
                 <SongProgress songMillis={songMillis} progress={progress} />
             </div>
-            <FlexRow style={{ alignItems: 'center', marginLeft: 10 }}>
+
+            <FlexRow style={{ marginLeft: 10, alignItems: 'center' }}>
                 {playingSong?.hasArt ? <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} /> : null}
-                <FlexCol style={{ paddingLeft: 10 }}>
+                <div style={{ paddingLeft: 10, paddingRight: 100 }}>
                     <FlexRow>
                         {playingSong?.name}
                     </FlexRow>
@@ -118,17 +119,17 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
                     <FlexRow>
                         {playingSong?.artist}
                     </FlexRow>
+                </div>
+                <FlexCol>
+                    {songMillis > 0 ?
+                        <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
+                            <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
+                            <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>/{formatMs(songMillis)}</div>
+                        </FlexRow> : null
+                    }
                 </FlexCol>
             </FlexRow>
-            <FlexCol>
-                {songMillis > 0 ?
-                    <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
-                        <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
-                        <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>/{formatMs(songMillis)}</div>
-                    </FlexRow> : null
-                }
 
-            </FlexCol>
             <FlexCol style={{ alignItems: 'center' }}>
                 <FlexRow style={{ alignItems: 'center' }}>
                     <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-backward' style={{ borderRadius: '50%', width: 40, height: 40 }} />
