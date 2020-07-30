@@ -26,9 +26,12 @@
     }
   },
   "dependencies": {
-    "@blueprintjs/core": "file:/home/aschey/code/blueprint/packages/core",
-    "@blueprintjs/select": "file:/home/aschey/code/blueprint/packages/select",
-    "@blueprintjs/table": "file:/home/aschey/code/blueprint/packages/table",
+    "@blueprintjs/core": "file:/Users/asche/code/blueprint/packages/core",
+    "@blueprintjs/select": "file:/Users/asche/code/blueprint/packages/select",
+    "@blueprintjs/table": "file:/Users/asche/code/blueprint/packages/table",
+    "@fortawesome/fontawesome-svg-core": "^1.2.30",
+    "@fortawesome/free-solid-svg-icons": "^5.14.0",
+    "@fortawesome/react-fontawesome": "^0.1.11",
     "@testing-library/jest-dom": "^4.2.4",
     "@testing-library/react": "^9.3.2",
     "@testing-library/user-event": "^7.1.2",

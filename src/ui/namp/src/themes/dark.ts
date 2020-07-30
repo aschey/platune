@@ -22,5 +22,6 @@ export const darkTheme: Theme = {
     buttonBackground: Colors.DARK_GRAY5,
     gridSelectedBackground: '#1c5691',
     gridSelectedShadow: '#131e29',
-    playingRowBackground: Colors.GREEN3
+    playingRowBackground: Colors.GREEN3,
+    windowControlsColor: '#69848a'
 }

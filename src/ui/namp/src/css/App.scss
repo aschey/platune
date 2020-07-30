@@ -4,6 +4,10 @@ html,body {
   transition: var(--transition);
 }
 
+button {
+    -webkit-app-region: no-drag;
+  }
+
 .Expand-Column {
   display: flex;
   flex-direction: column;
@@ -216,6 +220,6 @@ svg[data-icon="list-detail-view"] {
   transform: rotate(180deg);
 }
 
-img {
-  image-rendering: crisp-edges;
+.bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
+    color: rgba(var(--window-controls-color), 1);
 }

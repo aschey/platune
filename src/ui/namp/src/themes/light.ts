@@ -22,5 +22,6 @@ export const lightTheme: Theme = {
     buttonBackground: Colors.LIGHT_GRAY1,
     gridSelectedBackground: '#83b7eb',
     gridSelectedShadow: '#868e96',
-    playingRowBackground: Colors.GREEN3
+    playingRowBackground: Colors.GREEN3,
+    windowControlsColor: '#909d9e'
 }
