@@ -101,7 +101,7 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
         }
     }
 
-    return <div style={{ display: 'grid', gridTemplateRows: '10px 60px', gridTemplateColumns: '40% 20% 20% 10% 10%', minHeight: 70 }}>
+    return <div style={{ display: 'grid', gridTemplateRows: '10px 60px', gridTemplateColumns: `4fr 175px 1fr 2fr 1fr` }}>
         <div style={{ gridColumn: '1 / 6' }}>
             <SongProgress songMillis={songMillis} progress={progress} />
         </div>
@@ -130,18 +130,19 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
                 <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-forward' style={{ borderRadius: '50%', width: 40, height: 40 }} />
             </FlexRow>
         </FlexCol>
-        <FlexCol className='card visualizer' style={{ marginTop: 5, marginBottom: 5, borderRadius: 10 }}>
-            <canvas ref={canvasRef} />
-        </FlexCol>
+        
         <FlexCol>
             <FlexRow style={{ fontSize: 16, alignItems: 'center', alignSelf: 'center' }}>
                 <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
                 <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>/{formatMs(songMillis)}</div>
             </FlexRow>
         </FlexCol>
+        <FlexCol className='card visualizer' style={{ marginTop: 7, marginBottom: 7, marginRight: '10%', borderRadius: 10 }}>
+            <canvas ref={canvasRef} />
+        </FlexCol>
         <FlexRow style={{ fontSize: 16, minWidth: '100%', alignItems: 'center' }}>
             <Icon icon='volume-up' />
-            <FlexCol style={{ marginLeft: 10, marginRight: '20%', paddingBottom: 5 }}>
+            <FlexCol style={{ marginLeft: 10, marginRight: '20%', paddingBottom: 4 }}>
                 <Volume />
             </FlexCol>
         </FlexRow>

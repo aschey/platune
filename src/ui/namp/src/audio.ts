@@ -75,9 +75,9 @@ class AudioQueue {
     }
 
     private load = async (song: string, context: AudioContext) => {
-        //const context = new AudioContext();
         const data = await fetch(song);
         const arrayBuffer = await data.arrayBuffer();
+        // Todo: cache audio buffers if they are large enough to warrant caching
         const audioBuffer = await context.decodeAudioData(arrayBuffer);
         const source = context.createBufferSource();
         const analyser = context.createAnalyser();

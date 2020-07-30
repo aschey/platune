@@ -5,6 +5,9 @@ export const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, 
 export const range = (n: number) => Array.from({length: n}, (value, key) => key);
 
 export const formatMs = (ms: number) => {
+    if (ms < 0) {
+        ms = 0;
+    }
     const millisInSec = 1000;
     const secsInHr = 3600;
     const secsInMin = 60;
