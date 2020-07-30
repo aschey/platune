@@ -6,10 +6,11 @@ import { FlexCol } from './FlexCol';
 import { range, formatMs, sleep } from '../util';
 import { SongProgress } from './SongProgress';
 import { Volume } from './Volume';
-import { shadeColor } from '../themes/colorMixer';
+import { shadeColor, hexToRgb, isLight } from '../themes/colorMixer';
 import { Song } from '../models/song';
 import { audioQueue } from '../audio';
 import _ from 'lodash';
+import { theme } from './App';
 
 interface ControlProps {
     isPlaying: boolean,
@@ -25,13 +26,14 @@ interface ControlProps {
 export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPause, onPlay, onStop, progress, songMillis, playingSong }) => {
     let [coloradjust, setColorAdjust] = useState('#000000');
     let canvasRef = React.createRef<HTMLCanvasElement>();
+    const songColorAdjust = isLight(theme.backgroundMain) ? 150 : -40;
 
     useEffect(() => {
         visualizer();
     });
 
     useEffect(() => {
-        setColorAdjust(shadeColor('#92c3e0', -1 * (progress / songMillis) * 40));
+        setColorAdjust(shadeColor(theme.songTimeColor, (progress / songMillis) * songColorAdjust));
     }, [progress, songMillis]);
 
     const playPauseClick = () => {
@@ -50,7 +52,7 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
     }
 
     const visualizer = async () => {
-        if (audioQueue.currentAnalyser) {
+        if (audioQueue.currentAnalyser && isPlaying) {
             audioQueue.currentAnalyser.fftSize = 2048;
             const bufferLength = audioQueue.currentAnalyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
@@ -64,16 +66,16 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
                 canvasCtx?.clearRect(0, 0, width, height);
                 requestAnimationFrame(async () => {
                     audioQueue.currentAnalyser?.getByteFrequencyData(dataArray);
-                    const bufferLength = _.takeWhile(dataArray, d => d > 0).length;
+                    const dataLength = _.takeWhile(dataArray, d => d > 0).length;
                     canvasCtx.fillStyle = 'rgba(0,0,0,0)';
 
                     canvasCtx.fillRect(0, 0, width, height);
-                    canvasCtx.strokeStyle = 'rgba(43, 101, 227, 0.5)';
+                    canvasCtx.strokeStyle = `rgba(${hexToRgb(theme.visualizerColor)}, 0.5)`;
                     canvasCtx.lineWidth = 2;
                     canvasCtx.beginPath();
-                    const sliceWidth = width * 1.0 / bufferLength;
+                    const sliceWidth = width * 1.0 / dataLength;
                     let x = 0;
-                    for (var i = 0; i < bufferLength; i++) {
+                    for (var i = 0; i < dataLength; i++) {
 
                         var v = dataArray[i] / 128.0;
                         var y = v * height / 2;
@@ -128,13 +130,13 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
                 <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-forward' style={{ borderRadius: '50%', width: 40, height: 40 }} />
             </FlexRow>
         </FlexCol>
-        <FlexCol className='card' style={{ marginTop: 5, marginBottom: 5, background: 'rgba(37, 49, 59, 0.2)', borderRadius: 10 }}>
+        <FlexCol className='card visualizer' style={{ marginTop: 5, marginBottom: 5, borderRadius: 10 }}>
             <canvas ref={canvasRef} />
         </FlexCol>
         <FlexCol>
             <FlexRow style={{ fontSize: 16, alignItems: 'center', alignSelf: 'center' }}>
                 <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
-                <div style={{ color: shadeColor('#92c3e0', -40) }}>/{formatMs(songMillis)}</div>
+                <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>/{formatMs(songMillis)}</div>
             </FlexRow>
         </FlexCol>
         <FlexRow style={{ fontSize: 16, minWidth: '100%', alignItems: 'center' }}>

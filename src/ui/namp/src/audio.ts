@@ -106,6 +106,10 @@ class AudioQueue {
         if (this.switchTime === 0) {
             currentSwitchTime = this.context.currentTime;
         }
+        if (this.sources.length === 0) {
+            audioQueue.currentAnalyser = songData.analyser;
+            audioQueue.currentGain = songData.gain;
+        }
         const nextSwitchTime = currentSwitchTime + songData.audioBuffer.duration - startSeconds;
         let start = currentSwitchTime === 0 ? this.context.currentTime : currentSwitchTime;
         
@@ -130,7 +134,6 @@ class AudioQueue {
         });
         this.switchTime = nextSwitchTime;
         this.index++;
-        return songData;
     }
 
     private reset = () => {
@@ -145,11 +148,7 @@ class AudioQueue {
         if (songQueue.length) {
             for (let song of songQueue) {
                 console.log(song);
-                let { analyser, gain } = await this.schedule(song, onFinished, playingRow);
-                if (song === songQueue[0]) {
-                    this.currentAnalyser = analyser;
-                    this.currentGain = gain;
-                }
+                await this.schedule(song, onFinished, playingRow);
                 playingRow++;
             }
         }
@@ -175,8 +174,8 @@ class AudioQueue {
         if (this.currentGain) {
             this.currentGain.gain.value = volume;
         }
-        
         this.volume = volume;
+        this.sources.forEach(s => s.gain.gain.value = volume);
     }
 
     public pause() {

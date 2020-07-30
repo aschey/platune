@@ -23,5 +23,7 @@ export const lightTheme: Theme = {
     gridSelectedBackground: '#83b7eb',
     gridSelectedShadow: '#868e96',
     playingRowBackground: Colors.GREEN3,
-    windowControlsColor: '#909d9e'
+    windowControlsColor: '#909d9e',
+    songTimeColor: '#36494d',
+    visualizerColor: '#0234a1'
 }

@@ -11,7 +11,7 @@ import { darkTheme } from '../themes/dark';
 import { isLight } from '../themes/colorMixer';
 
 const themeName = 'dark';
-const theme = darkTheme;
+export const theme = darkTheme;
 applyTheme(themeName);
 
 const App: React.FC<{}> = () => {

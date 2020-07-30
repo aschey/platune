@@ -39,4 +39,5 @@ export const applyTheme = (theme: string) => {
     setCssVar('--button-background-active', cssColorBlend('buttonBackground', 20));
     setCssVar('--grid-selected-shadow-1-default', hexToRgbStr(themeObj['gridSelectedShadow']));
     setCssVar('--grid-selected-shadow-2-default', cssColorBlend('gridSelectedShadow', 10));
+    setCssVar('--visualizer-background', cssColorBlend('backgroundMain', -20));
 }

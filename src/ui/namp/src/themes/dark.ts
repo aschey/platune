@@ -23,5 +23,7 @@ export const darkTheme: Theme = {
     gridSelectedBackground: '#1c5691',
     gridSelectedShadow: '#131e29',
     playingRowBackground: Colors.GREEN3,
-    windowControlsColor: '#69848a'
+    windowControlsColor: '#69848a',
+    songTimeColor: '#92c3e0',
+    visualizerColor: '#2b65e3'
 }

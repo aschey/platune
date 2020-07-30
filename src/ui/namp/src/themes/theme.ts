@@ -20,7 +20,9 @@ export interface Theme {
     gridSelectedBackground: string,
     gridSelectedShadow: string,
     playingRowBackground: string,
-    windowControlsColor: string
+    windowControlsColor: string,
+    songTimeColor: string,
+    visualizerColor: string,
     [key: string]: string
 }
 
