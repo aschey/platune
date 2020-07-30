@@ -101,52 +101,57 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
         }
     }
 
-    return <div style={{ display: 'grid', gridTemplateRows: '10px 60px', gridTemplateColumns: `4fr 175px 1fr 2fr 1fr` }}>
-        <div style={{ gridColumn: '1 / 6' }}>
-            <SongProgress songMillis={songMillis} progress={progress} />
-        </div>
-        <FlexRow style={{ alignItems: 'center', marginLeft: 10 }}>
-            {playingSong?.hasArt ? <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} /> : null}
-            <FlexCol style={{ paddingLeft: 10 }}>
-                <FlexRow>
-                    {playingSong?.name}
-                </FlexRow>
-                <FlexRow>
-                    {playingSong?.album}
-                </FlexRow>
-                <FlexRow>
-                    {playingSong?.artist}
+    return (
+        <div style={{ display: 'grid', gridTemplateRows: '10px 60px', gridTemplateColumns: window.innerWidth > 1400 ? `1fr 4fr 175px 4fr 1fr` : `1fr 4fr 175px 3fr 2fr` }}>
+            <div style={{ gridColumn: '1 / 6' }}>
+                <SongProgress songMillis={songMillis} progress={progress} />
+            </div>
+            <FlexRow style={{ alignItems: 'center', marginLeft: 10 }}>
+                {playingSong?.hasArt ? <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} /> : null}
+                <FlexCol style={{ paddingLeft: 10 }}>
+                    <FlexRow>
+                        {playingSong?.name}
+                    </FlexRow>
+                    <FlexRow>
+                        {playingSong?.album}
+                    </FlexRow>
+                    <FlexRow>
+                        {playingSong?.artist}
+                    </FlexRow>
+                </FlexCol>
+            </FlexRow>
+            <FlexCol>
+                {songMillis > 0 ?
+                    <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
+                        <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
+                        <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>/{formatMs(songMillis)}</div>
+                    </FlexRow> : null
+                }
+
+            </FlexCol>
+            <FlexCol style={{ alignItems: 'center' }}>
+                <FlexRow style={{ alignItems: 'center' }}>
+                    <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-backward' style={{ borderRadius: '50%', width: 40, height: 40 }} />
+                    <div style={{ width: 5 }} />
+                    <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} minimal icon={isPlaying ? 'pause' : 'play'} style={{ borderRadius: '50%', width: 40, height: 40 }} onClick={playPauseClick} />
+                    <div style={{ width: 5 }} />
+                    <Button className='nofocus' intent={Intent.DANGER} minimal icon='stop' style={{ borderRadius: '50%', width: 40, height: 40 }} onClick={stopClick} />
+                    <div style={{ width: 5 }} />
+                    <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-forward' style={{ borderRadius: '50%', width: 40, height: 40 }} />
                 </FlexRow>
             </FlexCol>
-        </FlexRow>
-        <FlexCol style={{ alignItems: 'center' }}>
-            <FlexRow style={{ alignItems: 'center' }}>
-                <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-backward' style={{ borderRadius: '50%', width: 40, height: 40 }} />
-                <div style={{ width: 5 }} />
-                <Button className='nofocus' intent={isPlaying ? Intent.WARNING : Intent.SUCCESS} minimal icon={isPlaying ? 'pause' : 'play'} style={{ borderRadius: '50%', width: 40, height: 40 }} onClick={playPauseClick} />
-                <div style={{ width: 5 }} />
-                <Button className='nofocus' intent={Intent.DANGER} minimal icon='stop' style={{ borderRadius: '50%', width: 40, height: 40 }} onClick={stopClick} />
-                <div style={{ width: 5 }} />
-                <Button className='nofocus' intent={Intent.PRIMARY} minimal icon='fast-forward' style={{ borderRadius: '50%', width: 40, height: 40 }} />
-            </FlexRow>
-        </FlexCol>
-        
-        <FlexCol>
-            <FlexRow style={{ fontSize: 16, alignItems: 'center', alignSelf: 'center' }}>
-                <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
-                <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>/{formatMs(songMillis)}</div>
-            </FlexRow>
-        </FlexCol>
-        <FlexCol className='card visualizer' style={{ marginTop: 7, marginBottom: 7, marginRight: '10%', borderRadius: 10 }}>
-            <canvas ref={canvasRef} />
-        </FlexCol>
-        <FlexRow style={{ fontSize: 16, minWidth: '100%', alignItems: 'center' }}>
-            <Icon icon='volume-up' />
-            <FlexCol style={{ marginLeft: 10, marginRight: '20%', paddingBottom: 4 }}>
-                <Volume />
+
+
+            <FlexCol className='card visualizer' style={{ marginTop: 7, marginBottom: 7, marginLeft: '10%', marginRight: '10%', borderRadius: 10 }}>
+                <canvas ref={canvasRef} />
             </FlexCol>
-        </FlexRow>
+            <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
+                <Icon icon='volume-up' />
+                <FlexCol style={{ alignSelf: 'center', alignContent: 'center', marginLeft: 10, marginRight: '20%', paddingBottom: 4 }}>
+                    <Volume />
+                </FlexCol>
+            </FlexRow>
 
 
-    </div>;
+        </div>);
 }

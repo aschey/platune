@@ -195,6 +195,9 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
         setPauseTime(0);
         setStartTime(new Date().getTime());
         setPlayingRow(rowIndex);
+        if (rowIndex < 0) {
+            setPlayingMillis(-1);
+        }
     }
 
     const onSongFinished = (playingRow: number) => {
