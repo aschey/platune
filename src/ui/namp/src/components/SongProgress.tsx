@@ -61,13 +61,8 @@ export const Track: React.FC<ITrackProps> = ({
     getTrackProps
 }) => (
         <div
+            className='song-progress-track'
             style={{
-                position: 'absolute',
-                height: 5,
-                zIndex: 1,
-                background: `linear-gradient(to right, rgba(25,94,145,1) 0%, rgba(20,186,142,1) 100%) fixed`,
-                borderRadius: 7,
-                cursor: 'pointer',
                 left: `${source.percent}%`,
                 width: `${target.percent - source.percent}%`
             }}

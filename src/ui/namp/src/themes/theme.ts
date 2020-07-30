@@ -23,6 +23,9 @@ export interface Theme {
     windowControlsColor: string,
     songTimeColor: string,
     visualizerColor: string,
+    volumeSliderColor: string,
+    songProgressColor1: string,
+    songProgressColor2: string,
     [key: string]: string
 }
 

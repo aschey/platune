@@ -35,9 +35,12 @@ itself down if the app is no longer running.
 - Play/pause/stop
 - Song listview
 - Album grid
-
-### Features in Progress
-- Song queue with gapless audio support
-- Edit song data
 - Song progress bar
 - Theming
+- Volume control
+- Audio visualizer
+- Song queue with gapless audio support
+
+### Features in Progress
+- Search
+- Tags

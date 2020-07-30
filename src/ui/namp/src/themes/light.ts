@@ -25,5 +25,8 @@ export const lightTheme: Theme = {
     playingRowBackground: Colors.GREEN3,
     windowControlsColor: '#909d9e',
     songTimeColor: '#36494d',
-    visualizerColor: '#0234a1'
+    visualizerColor: '#0234a1',
+    volumeSliderColor: '#2b87ff',
+    songProgressColor1: '#195e91',
+    songProgressColor2: '#14ba8e'
 }

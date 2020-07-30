@@ -37,3 +37,6 @@
 .bp3-navbar {
     -webkit-app-region: drag
 }
+.bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
+    color: rgba(var(--window-controls-color), 1);
+}

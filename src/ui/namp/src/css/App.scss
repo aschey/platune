@@ -229,6 +229,20 @@ svg[data-icon="list-detail-view"] {
   transform: rotate(180deg);
 }
 
-.bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
-    color: rgba(var(--window-controls-color), 1);
+.song-progress-track {
+    position: absolute;
+    height: 5px;
+    z-index: 1;
+    background: linear-gradient(to right, rgba(var(--song-progress-color1) ,1) 0%, rgba(var(--song-progress-color2),1) 100%) fixed;
+    border-radius: 7px;
+    cursor: pointer;
+}
+
+.volume-slider {
+    position: absolute;
+    height: 5px;
+    z-index: 1;
+    background: rgba(var(--volume-slider-color), 1);
+    border-radius: 7px;
+    cursor: pointer;
 }
