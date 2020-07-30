@@ -5,6 +5,7 @@ interface ScheduledSource {
     stop: number,
     source: AudioBufferSourceNode,
     analyser: AnalyserNode,
+    gain: GainNode,
     id: number
 }
 
@@ -16,6 +17,8 @@ class AudioQueue {
     sources: ScheduledSource[];
     isPaused: boolean;
     currentAnalyser: AnalyserNode | null;
+    private volume: number;
+    private currentGain: GainNode | null;
 
     constructor() {
         this.switchTime = 0;
@@ -25,6 +28,8 @@ class AudioQueue {
         this.sources = [];
         this.isPaused = false;
         this.currentAnalyser = null;
+        this.currentGain = null;
+        this.volume = 1;
     }
 
     private findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -75,13 +80,17 @@ class AudioQueue {
         const arrayBuffer = await data.arrayBuffer();
         const audioBuffer = await context.decodeAudioData(arrayBuffer);
         const source = context.createBufferSource();
+        const analyser = context.createAnalyser();
+        const gain = context.createGain();
         source.buffer = audioBuffer;
-        source.connect(context.destination);
-        let analyser = context.createAnalyser();
         source.connect(analyser);
+        source.connect(gain);
+        gain.connect(context.destination);
+        gain.gain.value = this.volume;
         return {
             audioBuffer,
             analyser,
+            gain,
             source,
             startGap: this.findStartGapDuration(audioBuffer),
             endGap: this.findEndGapDuration(audioBuffer)
@@ -103,7 +112,7 @@ class AudioQueue {
         songData.source.start(start, startSeconds);
         console.log('starting at', startSeconds);
         songData.source.stop(nextSwitchTime);
-        this.sources.push({source: songData.source, analyser: songData.analyser, start, stop: nextSwitchTime, id: playingRow });
+        this.sources.push({source: songData.source, analyser: songData.analyser, gain: songData.gain, start, stop: nextSwitchTime, id: playingRow });
         let self = this;
         songData.source.addEventListener('ended', function(_) {
             // don't fire when stopped because we don't want to play the next track (sources will be empty when stopped)
@@ -115,12 +124,13 @@ class AudioQueue {
             self.sources.shift();
             if (self.sources.length) {
                 self.currentAnalyser = self.sources[0].analyser;
+                self.currentGain = self.sources[0].gain;
             }
             onFinished(playingRow);
         });
         this.switchTime = nextSwitchTime;
         this.index++;
-        return songData.analyser;
+        return songData;
     }
 
     private reset = () => {
@@ -135,9 +145,10 @@ class AudioQueue {
         if (songQueue.length) {
             for (let song of songQueue) {
                 console.log(song);
-                let analyser = await this.schedule(song, onFinished, playingRow);
+                let { analyser, gain } = await this.schedule(song, onFinished, playingRow);
                 if (song === songQueue[0]) {
                     this.currentAnalyser = analyser;
+                    this.currentGain = gain;
                 }
                 playingRow++;
             }
@@ -158,6 +169,14 @@ class AudioQueue {
             }
         }
         await this.scheduleAll(songQueue, playingRow, onFinished);
+    }
+
+    public setVolume(volume: number) {
+        if (this.currentGain) {
+            this.currentGain.gain.value = volume;
+        }
+        
+        this.volume = volume;
     }
 
     public pause() {

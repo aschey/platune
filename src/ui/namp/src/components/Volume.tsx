@@ -1,5 +1,6 @@
 import React from 'react';
 import { Slider, Rail, Tracks, SliderItem, GetTrackProps } from 'react-compound-slider';
+import { audioQueue } from '../audio';
 export const Volume: React.FC<{}> = () => {
     const sliderStyle: React.CSSProperties = {
         position: 'relative',
@@ -18,11 +19,13 @@ export const Volume: React.FC<{}> = () => {
     };
     return <Slider
         mode={1}
-        step={1}
-        domain={[0, 100]}
+        step={0.05}
+        domain={[0, 1]}
         rootStyle={sliderStyle}
-        onChange={(a) => { }}
-        values={[0] as ReadonlyArray<number>}
+        onChange={values => { 
+            audioQueue.setVolume(values[0]);
+        }}
+        values={[1] as ReadonlyArray<number>}
     >
         <Rail>
             {({ getRailProps }) => (
