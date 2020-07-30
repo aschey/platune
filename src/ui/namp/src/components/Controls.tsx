@@ -23,7 +23,7 @@ interface ControlProps {
 export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPause, onPlay, onStop, progress, songMillis, playingSong }) => {
     let [coloradjust, setColorAdjust] = useState('#000000');
     useEffect(() => {
-        setColorAdjust(shadeColor('#92c3e0', -1 * (progress/songMillis)*40));
+        setColorAdjust(shadeColor('#92c3e0', -1 * (progress / songMillis) * 40));
     }, [progress, songMillis]);
 
     const playPauseClick = () => {
@@ -47,7 +47,7 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
         </div>
 
         <FlexRow style={{ alignItems: 'center', marginLeft: 10 }}>
-            {playingSong?.hasArt ? <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} /> : null }
+            {playingSong?.hasArt ? <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} /> : null}
             <FlexCol style={{ paddingLeft: 10 }}>
                 <FlexRow>
                     {playingSong?.name}
@@ -73,17 +73,19 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
             </FlexRow>
 
         </FlexCol>
-        <FlexCol className='card' style={{marginTop: 5, marginBottom: 5, background: 'rgba(37, 49, 59, 0.2)', borderRadius: 10 }}>
+        <FlexCol className='card' style={{ marginTop: 5, marginBottom: 5, background: 'rgba(37, 49, 59, 0.2)', borderRadius: 10 }}>
 
         </FlexCol>
-        <FlexRow style={{ fontSize: 16, marginLeft: '25%', alignItems: 'center' }}>
-            <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
-            <div style={{ color: shadeColor('#92c3e0', -40) }}>/{formatMs(songMillis)}</div>
-        </FlexRow>
+        <FlexCol>
+            <FlexRow style={{ fontSize: 16, alignItems: 'center', alignSelf: 'center' }}>
+                <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
+                <div style={{ color: shadeColor('#92c3e0', -40) }}>/{formatMs(songMillis)}</div>
+            </FlexRow>
+        </FlexCol>
 
         <FlexRow style={{ fontSize: 16, minWidth: '100%', alignItems: 'center' }}>
             <Icon icon='volume-up' />
-            <FlexCol style={{marginLeft: 10, marginRight: 10, paddingBottom: 5}}>
+            <FlexCol style={{ marginLeft: 10, marginRight: 10, paddingBottom: 5 }}>
                 <Volume />
 
             </FlexCol>
