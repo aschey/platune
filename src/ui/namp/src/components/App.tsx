@@ -24,7 +24,7 @@ const App: React.FC<{}> = () => {
     }
     return (
         <>
-            <MainNavBar selectedGrid={selectedGrid} setSelectedGrid={setSelectedGrid} isLightTheme={themeDetails} updateTheme={updateTheme}/>
+            <MainNavBar selectedGrid={selectedGrid} setSelectedGrid={setSelectedGrid} updateTheme={updateTheme}/>
             <div style={{paddingTop: 40}}>
                 <SongGrid selectedGrid={selectedGrid} isLightTheme={themeDetails}/>
             </div>

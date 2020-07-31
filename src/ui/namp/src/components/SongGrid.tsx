@@ -145,9 +145,9 @@ export const SongGrid: React.FC<SongGridProps> = ({selectedGrid, isLightTheme}) 
         const isEditingRow = editingRow === rowIndex;
         const isSelectedRow = selectedRow === rowIndex;
         const isPlayingRow = playingRow === rowIndex;
-        const classes = `${isEditingRow ? 'editing' : ''} ${isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : ''}`;
+        const classes = `${isEditingRow ? 'editing' : ''} ${isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : 'striped'}`;
         return (
-        <div className={`bp3-table-cell grid-cell striped ${classes}`} style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
+        <div className={`bp3-table-cell grid-cell ${classes}`} style={{padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid'}} key={rowIndex}>
             <FlexCol>
                 <Button small minimal className={isPlayingRow ? 'playing' : ''} icon={isEditingRow ? 'saved' : isPlayingRow ? 'volume-up' : 'edit'} onClick={() => {
                     const cur = songs[rowIndex];

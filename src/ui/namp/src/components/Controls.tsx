@@ -109,7 +109,7 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
 
             <FlexRow style={{ marginLeft: 10, alignItems: 'center' }}>
                 {playingSong?.hasArt ? <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} /> : null}
-                <div style={{ paddingLeft: 10, paddingRight: 100 }}>
+                <div style={{ paddingLeft: 10, paddingRight: '10%' }}>
                     <FlexRow>
                         {playingSong?.name}
                     </FlexRow>

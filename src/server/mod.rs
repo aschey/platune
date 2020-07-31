@@ -43,7 +43,7 @@ use paperclip::actix::{
     api_v2_errors
 };
 use failure::Fail;
-
+// https://www.sqlite.org/fts5.html#external_content_and_contentless_tables
 const IS_WINDOWS: bool = cfg!(windows);
 const DATABASE_URL: &str = "DATABASE_URL";
 fn get_delim() -> &'static str {
@@ -456,7 +456,6 @@ fn get_ntfs_mounts_helper() -> Vec<String> {
     let configured = get_configured_folders_helper();
     let configured_fuse = fuse_disks.into_iter()
         .filter(|f| configured.iter().any(|c| c.starts_with(f)))
-        //.map(|f| NtfsMapping { dir: f, drive: "C:".to_owned()})
         .collect::<Vec<_>>();
     return configured_fuse;
 }
@@ -465,7 +464,6 @@ fn get_ntfs_mounts_helper() -> Vec<String> {
 async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
     let connection = establish_connection();
     let fs_fuse = get_ntfs_mounts_helper();
-    //fs_fuse.push("/mnt/test".to_owned());
     let mapped = mount.select((unix_path, windows_path)).load::<(String, String)>(&connection).unwrap();
     if IS_WINDOWS {
         let all = mapped.iter().map(|m| NtfsMapping { dir: m.0.to_owned(), drive: m.1.to_owned()}).collect::<Vec<_>>();

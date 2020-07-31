@@ -108,7 +108,7 @@ canvas{
 }
 
 .selected.bp3-table-cell {
-  background: rgba(var(--grid-selected-background-default), 0.5) !important;
+  background: rgba(var(--grid-selected-background-default), 0.5);
 }
 
 .ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
@@ -165,15 +165,13 @@ canvas{
 .album-selected-row.has-art {
   transition: var(--transition);
   border: 1px solid rgba(var(--grid-selected-shadow-1), 1) !important;
-  box-shadow: 0 0 0 1px rgba(var(--grid-selected-shadow-1), 0.2), 0 4px 8px rgba(var(--grid-selected-shadow-2), 0.4), 
-    0 18px 46px 6px rgba(var(--grid-selected-shadow-2), 0.4) !important;
+  box-shadow: 3px 3px 3px 3px rgba(var(--grid-selected-shadow-1), 0.6) !important;
 }
 
 .album-selected-row {
   transition: var(--transition);
   border: 1px solid rgba(var(--grid-selected-shadow-1-default), 1) !important;
-  box-shadow: 0 0 0 1px rgba(var(--grid-selected-shadow-1-default), 0.2), 0 4px 8px rgba(var(--grid-selected-shadow-2-default), 0.4), 
-    0 18px 46px 6px rgba(var(--grid-selected-shadow-2-default), 0.4) !important;
+  box-shadow: 3px 3px 3px 3px rgba(var(--grid-selected-shadow-1-default), 0.6) !important;
 }
 
 .album-selected-row div {

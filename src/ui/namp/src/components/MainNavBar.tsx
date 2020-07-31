@@ -3,6 +3,7 @@ import { Navbar, NavbarGroup, Alignment, NavbarHeading, NavbarDivider, Button, C
 import { Settings } from './Settings';
 import luneDark from '../res/lune-text-dark.png';
 import lune from '../res/lune-text.png';
+import logo from '../res/drawing2.svg';
 import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -13,15 +14,14 @@ import { BrowserWindow, remote } from 'electron';
 interface MainNavBarProps {
     setSelectedGrid: (grid: string) => void;
     selectedGrid: string;
-    isLightTheme: boolean;
     updateTheme: (newThemeName: string) => void
 }
-export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, isLightTheme, updateTheme }) => {
+export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme }) => {
     const getWindow = () => remote.BrowserWindow.getFocusedWindow();
     return (
         <Navbar fixedToTop style={{ height: '40px', paddingRight: 5 }}>
             <NavbarGroup align={Alignment.LEFT} style={{ height: 40, paddingTop: 1 }}>
-                <NavbarHeading style={{ marginRight: 0, marginTop: 4, paddingRight: 7 }}><img src={isLightTheme ? luneDark : lune} width={92} height={28} /></NavbarHeading>
+                <NavbarHeading style={{ marginRight: 0, marginTop: 4, paddingRight: 7 }}><img src={logo} width={28} height={28} /></NavbarHeading>
                 <NavbarDivider />
                 <Button minimal icon='menu' />
                 <div style={{ width: 5 }} />

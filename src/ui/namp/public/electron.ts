@@ -11,7 +11,7 @@ let server: net.Server | null;
 
 function createWindow() {
     const dispose = contextMenu();
-    mainWindow = new BrowserWindow({width: 900, height: 680, frame: false, backgroundColor: '#000', icon: path.join(__dirname, '../src/res/logo.png'), webPreferences: { 
+    mainWindow = new BrowserWindow({width: 900, height: 680, frame: false, backgroundColor: '#000', icon: path.join(__dirname, '../public/favicon.ico'), webPreferences: { 
         webSecurity: !isDev, 
         nodeIntegration: true, 
         nodeIntegrationInWorker: false,
