@@ -48,5 +48,7 @@ $button-background-color:  var(--button-background);
 $button-background-color-hover: var(--button-background-hover);
 $button-background-color-active: var(--button-background-active);
 $button-background-color-disabled: rgba(var(--button-background), 0.5);
+$tooltip-text-color: var(--text-secondary);
+$tooltip-background-color: var(--background-secondary);
 
 $button-gradient: linear-gradient(to bottom, rgba(#fff, 0.05), rgba(#fff, 0));

@@ -17,7 +17,7 @@ export const darkTheme: Theme = {
     tableBackground: Colors.DARK_GRAY4,
     gridStripe1: '#334554',
     gridStripe2: '#2c3d4a',
-    navbarBackground: Colors.DARK_GRAY5,
+    navbarBackground: Colors.DARK_GRAY3,
     dialogBackground: Colors.DARK_GRAY3,
     buttonBackground: Colors.DARK_GRAY5,
     gridSelectedBackground: '#1c5691',
