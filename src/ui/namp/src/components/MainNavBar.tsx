@@ -10,12 +10,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faThList, faTimes } from '@fortawesome/free-solid-svg-icons'
 import { faSquare, faWindowMinimize, faWindowClose } from '@fortawesome/free-regular-svg-icons'
 import { BrowserWindow, remote } from 'electron';
+import { Suggest } from '@blueprintjs/select';
 
 interface MainNavBarProps {
     setSelectedGrid: (grid: string) => void;
     selectedGrid: string;
     updateTheme: (newThemeName: string) => void
 }
+const MusicSuggest = Suggest.ofType<{ name: string }>();
 export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme }) => {
     const getWindow = () => remote.BrowserWindow.getFocusedWindow();
     return (
@@ -27,6 +29,18 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                 <div style={{ width: 5 }} />
                 <Settings updateTheme={updateTheme} />
             </NavbarGroup>
+            <MusicSuggest
+                fill
+                className='search'
+                inputValueRenderer={val => val.name}
+                itemRenderer={(val, props) => <div>{val.name}</div>}
+                onItemSelect={(val, event) => { }}
+                initialContent={<div>test</div>}
+                items={[{ name: 'test' }]}
+                popoverProps={{ minimal: true }}
+                inputProps={{ leftIcon: 'search' }}
+                onQueryChange={(input, event) => { console.log(input) }}
+            />
             <NavbarGroup align={Alignment.RIGHT} style={{ height: 40, paddingTop: 1 }}>
                 <ButtonGroup minimal>
                     <Button
@@ -49,7 +63,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                     <Button intent={Intent.WARNING} className='hover-intent' onClick={() => getWindow()?.minimize()}>
                         <FontAwesomeIcon icon={faWindowMinimize} />
                     </Button>
-                    <Button intent={Intent.SUCCESS} className='hover-intent' style={{transform: 'translate(0, 1px)'}} onClick={() => {
+                    <Button intent={Intent.SUCCESS} className='hover-intent' style={{ transform: 'translate(0, 1px)' }} onClick={() => {
                         const window = getWindow();
                         if (window?.isMaximized()) {
                             window?.restore();
@@ -62,7 +76,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                         <FontAwesomeIcon icon={faSquare} />
                     </Button>
                     <Button intent={Intent.DANGER} className='hover-intent' onClick={() => getWindow()?.close()}>
-                        <FontAwesomeIcon icon={faTimes} style={{transform: 'translate(0, 1px)'}} />
+                        <FontAwesomeIcon icon={faTimes} style={{ transform: 'translate(0, 1px)' }} />
                     </Button>
                 </ButtonGroup>
             </NavbarGroup>
