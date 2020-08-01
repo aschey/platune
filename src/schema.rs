@@ -98,6 +98,17 @@ table! {
     }
 }
 
+// This entry must be recreated manually after a schema change
+// since it can't be tracked by Diesel due to the missing primary key
+table! {
+    search_index (rowid) {
+        rowid -> Integer,
+        entry_value -> Text,
+        entry_type -> Text,
+        assoc_id -> Integer,
+    }
+}
+
 joinable!(album -> album_artist (album_artist_id));
 joinable!(file_size -> song (song_id));
 joinable!(song -> album (album_id));

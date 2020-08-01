@@ -12,6 +12,7 @@ use std::{vec::Vec, env};
 use diesel;
 use diesel::sqlite::SqliteConnection;
 use diesel::prelude::*;
+use diesel::sql_types::*;
 use models::{folder::*, mount::*, import::*};
 use crate::schema::folder::dsl::*;
 use crate::schema::mount::dsl::*;
@@ -20,6 +21,7 @@ use crate::schema::artist::dsl::*;
 use crate::schema::album_artist::dsl::*;
 use crate::schema::album::dsl::*;
 use crate::schema::song::dsl::*;
+use crate::schema::search_index::dsl::*;
 use crate::schema;
 use sysinfo::{SystemExt, DiskExt};
 use itertools::Itertools;
@@ -114,6 +116,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
         .service(web::resource("/songs").route(web::get().to(get_songs)))
         .service(web::resource("/albumArt").route(web::get().to(get_album_art)))
         .service(web::resource("/albumArtColors").route(web::get().to(get_art_colors)))
+        .service(web::resource("/search").route(web::get().to(search)))
         .with_json_spec_at("/spec")
         .build()
         // static files
@@ -658,6 +661,36 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
     return Ok(Json(songs));
 }
 
+
+#[api_v2_operation]
+async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
+    let connection = establish_connection();
+    // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
+    let res = diesel::sql_query("
+        WITH CTE AS (
+            SELECT DISTINCT entry_value, entry_type, rank,
+            CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END artist,
+            ROW_NUMBER() OVER (PARTITION BY entry_value, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 ELSE 3 END ORDER BY entry_type DESC) row_num
+            FROM search_index
+            LEFT OUTER JOIN song s on s.song_id = assoc_id
+            LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
+            LEFT OUTER JOIN album al on al.album_id = assoc_id
+            LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+            WHERE search_index MATCH ?
+            LIMIT ?
+        )
+        SELECT entry_value, entry_type, artist FROM cte
+        WHERE row_num = 1
+        ORDER BY rank
+        LIMIT ?"
+        )
+        .bind::<diesel::sql_types::Text, _>(f!("entry_value:{request.search_string}"))
+        .bind::<diesel::sql_types::Integer, _>(request.limit * 2)
+        .bind::<diesel::sql_types::Integer, _>(request.limit)
+        .load::<SearchRes>(&connection).unwrap();
+    return Ok(Json(res));
+}
+
 #[api_v2_operation]
 async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
     let connection = establish_connection();
@@ -828,6 +861,17 @@ async fn get_db_path() -> Result<Json<Dir>, ()>{
     return Ok(Json(Dir { is_file: true, name: res.to_owned()}));
 }
 
+
+#[derive(QueryableByName, Serialize, Apiv2Schema)]
+struct SearchRes {
+    #[sql_type="Text"]
+    entry_value: String,
+    #[sql_type="Text"]
+    entry_type: String,
+    #[sql_type="Nullable<Text>"]
+    artist: Option<String>
+}
+
 #[derive(Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct Dir {
@@ -854,6 +898,13 @@ struct Rgb {
 struct NtfsMapping {
     dir: String,
     drive: String
+}
+
+#[derive(Serialize, Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct Search {
+    search_string: String,
+    limit: i32
 }
 
 #[derive(Deserialize, Apiv2Schema)]

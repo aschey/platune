@@ -3,3 +3,4 @@
 
 [print_schema]
 file = "src/schema.rs"
+filter = { except_tables = ["search_index","search_index_config", "search_index_content", "search_index_data", "search_index_docsize", "search_index_idx"]}

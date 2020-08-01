@@ -51,7 +51,7 @@ fn main() {
         socket.set_broadcast(true).unwrap();
         loop {
             let server_info_bytes = server_info.as_bytes();
-            println!("{:?}",server_info);
+            //println!("{:?}",server_info);
             socket.send_to(&server_info_bytes, "255.255.255.255:34254").unwrap();
             std::thread::sleep(std::time::Duration::from_secs(5));
         }
