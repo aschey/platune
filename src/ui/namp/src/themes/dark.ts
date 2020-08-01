@@ -28,5 +28,6 @@ export const darkTheme: Theme = {
     visualizerColor: '#2b65e3',
     volumeSliderColor: Colors.GRAY5,
     songProgressColor1: Colors.BLUE5,
-    songProgressColor2: Colors.BLUE5
+    songProgressColor2: Colors.BLUE5,
+    omnibarBackground: Colors.DARK_GRAY1
 }

@@ -40,3 +40,19 @@
 .bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
     color: rgba(var(--window-controls-color), 1);
 }
+
+.bp3-navbar-divider {
+    border-left: 1px solid rgba(var(--text-secondary), 0.1);
+}
+
+.bp3-omnibar {
+    background: rgba(var(--omnibar-background), 1);
+}
+
+.bp3-key {
+    background: rgba(var(--background-secondary), 1);
+}
+
+.bp3-dialog {
+    box-shadow: none;
+}

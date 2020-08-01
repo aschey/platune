@@ -26,6 +26,7 @@ export interface Theme {
     volumeSliderColor: string,
     songProgressColor1: string,
     songProgressColor2: string,
+    omnibarBackground: string,
     [key: string]: string
 }
 
