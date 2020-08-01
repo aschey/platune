@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navbar, NavbarGroup, Alignment, NavbarHeading, NavbarDivider, Button, Classes, Popover, MenuItem, Menu, Position, Icon, ButtonGroup, Intent, HotkeysTarget, IHotkeysProps, Hotkeys, Hotkey } from '@blueprintjs/core';
 import { Settings } from './Settings';
 import luneDark from '../res/lune-text-dark.png';
@@ -13,6 +13,7 @@ import { BrowserWindow, remote } from 'electron';
 import { Suggest, Omnibar } from '@blueprintjs/select';
 import { Song } from '../models/song';
 import { HotkeysEvents, HotkeyScope } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
+import { showHotkeysDialog } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysDialog';
 
 interface MainNavBarProps {
     setSelectedGrid: (grid: string) => void;
@@ -24,6 +25,7 @@ const MusicOmnibar = Omnibar.ofType<Song>();
 
 export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme }) => {
     const [omnibarOpen, setOmnibarOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
     const getWindow = () => remote.BrowserWindow.getFocusedWindow();
     const hotkeys = <Hotkeys>
         <Hotkey
@@ -48,13 +50,16 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
             preventDefault={true}
         />
     </Hotkeys>;
+    const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
     useEffect(() => {
-        const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
+
         document.addEventListener("keydown", globalHotkeysEvents.handleKeyDown);
         document.addEventListener("keyup", globalHotkeysEvents.handleKeyUp);
         if (globalHotkeysEvents) {
             globalHotkeysEvents.setHotkeys(hotkeys.props);
         }
+        //let e = new KeyboardEvent('keyDown', {shiftKey: true, key});
+        //globalHotkeysEvents.handleKeyDown({which: 191, shiftKey: true} as any)
         return () => {
             document.removeEventListener("keydown", globalHotkeysEvents.handleKeyDown);
             document.removeEventListener("keyup", globalHotkeysEvents.handleKeyUp);
@@ -68,9 +73,20 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                 <NavbarGroup align={Alignment.LEFT} style={{ height: 40, paddingTop: 1 }}>
                     <NavbarHeading style={{ marginRight: 0, marginTop: 4, paddingRight: 7 }}><img src={logo} width={28} height={28} /></NavbarHeading>
                     <NavbarDivider />
-                    <Button minimal icon='menu' />
+                    <Popover content={
+                        <Menu>
+                            <MenuItem icon='cog' text='Settings' onClick={() => setIsOpen(true)} />
+                            <MenuItem icon='help' text='Hotkeys' onClick={() =>
+                                globalHotkeysEvents.handleKeyDown({ which: 191, shiftKey: true } as any)
+                            } />
+                            <MenuItem icon='updated' text='Backup Now' />
+                        </Menu>
+                    }>
+                        <Button minimal icon='menu' />
+                    </Popover>
+
                     <div style={{ width: 5 }} />
-                    <Settings updateTheme={updateTheme} />
+
                 </NavbarGroup>
                 <MusicSuggest
                     fill
@@ -81,7 +97,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                     openOnKeyDown={true}
                     items={[]}
                     popoverProps={{ minimal: true }}
-                    inputProps={{ leftIcon: 'search' }}
+                    inputProps={{ leftIcon: 'search', rightElement: <Button minimal icon='small-cross' /> }}
                     onQueryChange={(input, event) => { console.log(input) }}
                 />
                 <MusicOmnibar
@@ -131,6 +147,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                     </ButtonGroup>
                 </NavbarGroup>
             </Navbar>
+            <Settings updateTheme={updateTheme} isOpen={isOpen} setIsOpen={setIsOpen} />
         </>
     );
 }

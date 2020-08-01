@@ -11,8 +11,7 @@ import { PathMapping } from './PathMapping';
 import { NtfsMapping } from '../models/ntfsMapping';
 import { applyTheme } from '../themes/themes';
 
-export const Settings: React.FC<{updateTheme: (newThemeName: string) => void}> = ({updateTheme}) => {
-    const [isOpen, setIsOpen] = useState<boolean>(false);
+export const Settings: React.FC<{updateTheme: (newThemeName: string) => void, isOpen: boolean, setIsOpen: (isOpen: boolean) => void}> = ({updateTheme, isOpen, setIsOpen}) => {
     const [closePending, setClosePending] = useState<boolean>(false);
     const [rows, setRows] = useState<Array<string>>([]);
     const [originalRows, setOriginalRows] = useState<Array<string>>([]);
@@ -142,11 +141,6 @@ export const Settings: React.FC<{updateTheme: (newThemeName: string) => void}> =
                 setOriginalMappings={setOriginalMappings}/>
         </DirtyCheck>
     return (
-        <>
-            <Tooltip content='Settings' hoverOpenDelay={500}>
-                <Button minimal icon='cog' onClick={() => setIsOpen(true)}/>
-            </Tooltip>
-            
             <Dialog
                 style={{width, height}}
                 icon='cog' 
@@ -165,6 +159,5 @@ export const Settings: React.FC<{updateTheme: (newThemeName: string) => void}> =
                     </Tabs>
                 </div>
             </Dialog>
-        </>
     )
 }
