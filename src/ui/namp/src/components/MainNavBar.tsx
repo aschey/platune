@@ -11,13 +11,14 @@ import { faThList, faTimes } from '@fortawesome/free-solid-svg-icons'
 import { faSquare, faWindowMinimize, faWindowClose } from '@fortawesome/free-regular-svg-icons'
 import { BrowserWindow, remote } from 'electron';
 import { Suggest } from '@blueprintjs/select';
+import { Song } from '../models/song';
 
 interface MainNavBarProps {
     setSelectedGrid: (grid: string) => void;
     selectedGrid: string;
     updateTheme: (newThemeName: string) => void
 }
-const MusicSuggest = Suggest.ofType<{ name: string }>();
+const MusicSuggest = Suggest.ofType<Song>();
 export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme }) => {
     const getWindow = () => remote.BrowserWindow.getFocusedWindow();
     return (
@@ -35,8 +36,8 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                 inputValueRenderer={val => val.name}
                 itemRenderer={(val, props) => <div>{val.name}</div>}
                 onItemSelect={(val, event) => { }}
-                initialContent={<div>test</div>}
-                items={[{ name: 'test' }]}
+                openOnKeyDown={true}
+                items={[]}
                 popoverProps={{ minimal: true }}
                 inputProps={{ leftIcon: 'search' }}
                 onQueryChange={(input, event) => { console.log(input) }}
