@@ -26,7 +26,7 @@ export const lightTheme: Theme = {
     windowControlsColor: '#909d9e',
     songTimeColor: '#36494d',
     visualizerColor: '#0234a1',
-    volumeSliderColor: Colors.DARK_GRAY3,
+    volumeSliderColor: Colors.DARK_GRAY4,
     songProgressColor1: Colors.BLUE5,
     songProgressColor2: Colors.BLUE5,
     omnibarBackground: Colors.WHITE

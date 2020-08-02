@@ -57,11 +57,10 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
     </Hotkeys>;
     const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
     const debounced = _.debounce(async (input: string) => {
-        let res = await getJson<Search[]>(`/search?limit=10&searchString=${input}*`);
+        let res = await getJson<Search[]>(`/search?limit=10&searchString=${input.split(/\s+/).map(s => `"${s}"`).join(' ')}*`);
         setSearchResults(res);
     });
     useEffect(() => {
-        console.log('here');
         document.addEventListener("keydown", globalHotkeysEvents.handleKeyDown);
         document.addEventListener("keyup", globalHotkeysEvents.handleKeyUp);
         if (globalHotkeysEvents) {
@@ -82,10 +81,18 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
 
     const searchItemRenderer = (searchRes: Search, props: IItemRendererProps) => {
         return (
-            <div style={{paddingBottom: props.index === searchResults.length - 1 ? 0 : 10}}>
+            <MenuItem 
+                key={props.index} 
+                active={props.modifiers.active}
+                style={{paddingBottom: props.index === searchResults.length - 1 ? 0 : 10}}
+                text={
+                    <>
                 <div>{searchRes.entryValue}</div>
-                <div style={{fontSize: 12, color: 'rgba(var(--text-secondary), 0.8)'}}>{searchRes.artist === null ? 'Artist' : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}</div>
-            </div>
+                <div style={{fontSize: 12, color: 'rgba(var(--text-secondary), 0.8)'}}>
+                    {searchRes.artist === null ? 'Artist' : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
+                </div>
+                </>}
+            />
         );
     }
 
@@ -128,7 +135,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                     className='search'
                     inputValueRenderer={val => val.entryValue}
                     itemRenderer={searchItemRenderer}
-                    onItemSelect={(val, event) => { }}
+                    onItemSelect={(val, event) => {  console.log('test')}}
                     openOnKeyDown={true}
                     items={searchResults}
                     popoverProps={{ minimal: true }}
