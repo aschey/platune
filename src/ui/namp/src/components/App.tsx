@@ -33,7 +33,8 @@ const App: React.FC<{}> = () => {
   useEffect(() => {
     if (gridRef.current) {
       const { unwrapGrid } = wrapGrid(gridRef.current);
-      setTimeout(() => unwrapGrid(), 1);
+      // Remove animations after resizing because they don't play nicely with the virtualized grid
+      setTimeout(unwrapGrid, 1);
     }
     setGridCols(`${sidePanelWidth}px ${window.innerWidth - sidePanelWidth}px`);
     if (sidePanelWidth > 0) {
