@@ -110,6 +110,47 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     };
   });
 
+  const escapeRegExpChars = (text: string) => {
+    return text.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1');
+  };
+
+  const searchTextColor = (active: boolean, alpha: number) =>
+    active ? `rgba(255,255,255,${alpha})` : 'rgba(var(--text-main), ${alpha})';
+  const highlightText = (text: string, query: string, active: boolean) => {
+    let lastIndex = 0;
+    const words = query
+      .split(/\s+/)
+      .filter(word => word.length > 0)
+      .map(escapeRegExpChars);
+    if (words.length === 0) {
+      return [text];
+    }
+    const regexp = new RegExp(words.join('|'), 'gi');
+    const tokens: React.ReactNode[] = [];
+    while (true) {
+      const match = regexp.exec(text);
+      if (!match) {
+        break;
+      }
+      const length = match[0].length;
+      const before = text.slice(lastIndex, regexp.lastIndex - length);
+      if (before.length > 0) {
+        tokens.push(before);
+      }
+      lastIndex = regexp.lastIndex;
+      tokens.push(
+        <strong style={{ color: searchTextColor(active, 1) }} key={lastIndex}>
+          {match[0]}
+        </strong>
+      );
+    }
+    const rest = text.slice(lastIndex);
+    if (rest.length > 0) {
+      tokens.push(rest);
+    }
+    return <div style={{ color: searchTextColor(active, 0.9) }}>{tokens}</div>;
+  };
+
   const searchItemRenderer = (searchRes: Search, props: IItemRendererProps) => {
     const active = props.modifiers.active;
     return (
@@ -120,7 +161,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         style={{ paddingBottom: props.index === searchResults.length - 1 ? 0 : 10 }}
         text={
           <>
-            <div>{searchRes.entryValue}</div>
+            <div>{highlightText(searchRes.entryValue, props.query, active)}</div>
             <div
               style={{ fontSize: 12, color: active ? 'rgba(255, 255, 255, 0.6)' : 'rgba(var(--text-secondary), 0.8)' }}
             >

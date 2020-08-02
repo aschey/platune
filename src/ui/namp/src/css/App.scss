@@ -3,6 +3,7 @@ body {
   background: rgba(var(--background-main), 1);
   color: rgba(var(--text-main), 1);
   transition: var(--transition);
+  overflow-x: hidden;
 }
 
 button,
