@@ -165,7 +165,9 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
             <div
               style={{ fontSize: 12, color: active ? 'rgba(255, 255, 255, 0.6)' : 'rgba(var(--text-secondary), 0.8)' }}
             >
-              {searchRes.artist === null ? 'Artist' : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
+              {searchRes.artist === null
+                ? searchRes.entryType.split('_').map(capitalize).join(' ')
+                : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
             </div>
           </>
         }

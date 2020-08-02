@@ -868,9 +868,11 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
 async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
     let connection = establish_connection();
     // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
+    // Adjust rankings to give slightly more weight to artists and albums
     let res = diesel::sql_query("
         WITH CTE AS (
-            SELECT DISTINCT entry_value, entry_type, rank,
+            SELECT DISTINCT entry_value, entry_type, rank, 
+            CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN aa.album_artist_id ELSE assoc_id END artist_id,
             CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END artist,
             ROW_NUMBER() OVER (PARTITION BY entry_value, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 ELSE 3 END ORDER BY entry_type DESC) row_num
             FROM search_index
@@ -881,9 +883,9 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
             WHERE search_index MATCH ?
             LIMIT ?
         )
-        SELECT entry_value, entry_type, artist FROM cte
+        SELECT entry_value, entry_type, artist, artist_id FROM cte
         WHERE row_num = 1
-        ORDER BY rank
+        ORDER BY rank * (CASE entry_type WHEN 'artist' THEN 1.5 WHEN 'album_artist' THEN 1.5 WHEN 'album' THEN 1.3 ELSE 1 END)
         LIMIT ?"
         )
         .bind::<diesel::sql_types::Text, _>(f!("entry_value:{request.search_string}"))
@@ -1125,6 +1127,8 @@ struct SearchRes {
     entry_type: String,
     #[sql_type = "Nullable<Text>"]
     artist: Option<String>,
+    #[sql_type = "Integer"]
+    artist_id: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]
@@ -1191,8 +1195,8 @@ pub struct Song {
 #[derive(Deserialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct SongRequest {
-    offset: i64,
-    limit: i64,
+    offset: Option<i32>,
+    limit: Option<i32>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]
