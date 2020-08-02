@@ -15,7 +15,7 @@ import { Song } from '../models/song';
 import { range, sleep, formatMs, formatRgb, setCssVar } from '../util';
 import { getJson } from '../fetchUtil';
 import _, { Dictionary } from 'lodash';
-import { Intent, EditableText, Text, Button } from '@blueprintjs/core';
+import { Intent, EditableText, Text, Button, Icon } from '@blueprintjs/core';
 import { toastSuccess } from '../appToaster';
 import { audioQueue } from '../audio';
 import { Controls } from './Controls';
@@ -27,9 +27,10 @@ import { Rgb } from '../models/rgb';
 interface SongGridProps {
   selectedGrid: string;
   isLightTheme: boolean;
+  width: number;
 }
 
-export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }) => {
+export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, width }) => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
@@ -100,6 +101,17 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
   }, []);
 
   useEffect(() => {
+    if (songs.length === 0) {
+      return;
+    }
+    const ref = selectedGrid === 'song' ? mainRef.current : otherRef.current;
+    ref?.forceUpdate();
+    ref?.forceUpdateGrid();
+    ref?.measureAllRows();
+    ref?.recomputeRowHeights();
+  }, [width, selectedGrid, songs, mainRef, otherRef]);
+
+  useEffect(() => {
     setIsPlaying(playingRow > -1);
   }, [playingRow]);
 
@@ -116,17 +128,17 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
   const headerRenderer = (props: TableHeaderProps) => {
     return (
       <>
-        <div className="ReactVirtualized__Table__headerTruncatedText">{props.label}</div>
+        <div className='ReactVirtualized__Table__headerTruncatedText'>{props.label}</div>
         <Draggable
-          axis="none"
-          defaultClassName="DragHandle"
-          defaultClassNameDragging="DragHandleActive"
+          axis='none'
+          defaultClassName='DragHandle'
+          defaultClassNameDragging='DragHandleActive'
           //bounds={{right: 100, left: 100, top: 0, bottom: 0}}
           onDrag={(event, { deltaX }) => {
             resizeRow({ dataKey: props.dataKey, deltaX });
           }}
         >
-          <span className="DragHandleIcon">⋮</span>
+          <span className='DragHandleIcon'>⋮</span>
         </Draggable>
       </>
     );
@@ -224,11 +236,11 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
       return (
         <div
           key={rowIndex}
-          className="bp3-table-cell selected grid-cell editing"
+          className='bp3-table-cell selected grid-cell editing'
           onDoubleClick={() => onDoubleClick(rowIndex)}
           onClick={() => onRowClick(rowIndex)}
         >
-          {canEdit ? <EditableText defaultValue={value} className="editing" /> : value}
+          {canEdit ? <EditableText defaultValue={value} className='editing' /> : value}
         </div>
       );
     }
@@ -237,7 +249,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
       return (
         <div
           key={rowIndex}
-          className="bp3-table-cell playing grid-cell"
+          className='bp3-table-cell playing grid-cell'
           onDoubleClick={() => onDoubleClick(rowIndex)}
           onClick={() => onRowClick(rowIndex)}
         >
@@ -249,7 +261,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
       return (
         <div
           key={rowIndex}
-          className="bp3-table-cell grid-cell selected"
+          className='bp3-table-cell grid-cell selected'
           onDoubleClick={() => onDoubleClick(rowIndex)}
           onClick={() => onRowClick(rowIndex)}
         >
@@ -260,7 +272,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
     return (
       <div
         key={rowIndex}
-        className="bp3-table-cell striped grid-cell"
+        className='bp3-table-cell striped grid-cell'
         onDoubleClick={() => onDoubleClick(rowIndex)}
         onClick={() => onRowClick(rowIndex)}
       >
@@ -388,14 +400,14 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
 
   const mulitSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
     let g = groupedSongs[albumKeys[rowIndex]];
-    return <div className="rowParent">{g.map(gg => cellRenderer(gg.index))}</div>;
+    return <div className='rowParent'>{g.map(gg => cellRenderer(gg.index))}</div>;
   };
 
   const otherGrid = (
     <div style={{ height: window.innerHeight - 110 }}>
       <Table
         ref={otherRef}
-        width={window.innerWidth - 5}
+        width={width - 5}
         height={window.innerHeight - 110}
         headerHeight={25}
         rowCount={albumKeys.length}
@@ -407,8 +419,8 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
       >
         <Column
           headerRenderer={headerRenderer}
-          dataKey="album"
-          label="Album"
+          dataKey='album'
+          label='Album'
           cellRenderer={({ rowIndex, dataKey, parent }) => {
             let gg = groupedSongs[albumKeys[rowIndex]];
             let g = groupedSongs[albumKeys[rowIndex]][0];
@@ -420,7 +432,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
                 <div>{g.albumArtist}</div>
                 <div>{g.album}</div>
                 {g.hasArt ? (
-                  <img loading="lazy" src={`http://localhost:5000/albumArt?songId=${g.id}`} width={75} height={75} />
+                  <img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}`} width={75} height={75} />
                 ) : null}
               </FlexCol>
             );
@@ -430,16 +442,16 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey=""
-          label=""
+          dataKey=''
+          label=''
           cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, editCellRenderer)}
           width={widths2.edit}
           minWidth={widths2.edit}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="name"
-          label="Title"
+          dataKey='name'
+          label='Title'
           cellRenderer={({ rowIndex, dataKey, parent }) =>
             mulitSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))
           }
@@ -448,24 +460,24 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="track"
-          label="Track"
+          dataKey='track'
+          label='Track'
           cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, trackRenderer)}
           width={widths2.track}
           minWidth={widths2.track}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="time"
-          label="Time"
+          dataKey='time'
+          label='Time'
           cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, timeRenderer)}
           width={widths2.time}
           minWidth={widths2.time}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="path"
-          label="Path"
+          dataKey='path'
+          label='Path'
           cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, pathRenderer)}
           width={widths2.path}
           minWidth={widths2.path}
@@ -478,7 +490,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
     <div style={{ height: window.innerHeight - 110 }}>
       <Table
         ref={mainRef}
-        width={window.innerWidth - 5}
+        width={width - 5}
         height={window.innerHeight - 110}
         headerHeight={25}
         rowHeight={25}
@@ -488,64 +500,63 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
       >
         <Column
           headerRenderer={headerRenderer}
-          dataKey=""
-          label=""
+          dataKey=''
           cellRenderer={({ rowIndex, dataKey }) => editCellRenderer(rowIndex)}
           width={widths.edit}
           minWidth={widths.edit}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="name"
-          label="Title"
+          dataKey='name'
+          label='Title'
           cellRenderer={({ rowIndex, dataKey }) => genericCellRenderer(rowIndex, 'name')}
           width={widths.name}
           minWidth={widths.name}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="albumArtist"
-          label="Album Artist"
+          dataKey='albumArtist'
+          label='Album Artist'
           cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'albumArtist')}
           width={widths.albumArtist}
           minWidth={widths.albumArtist}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="artist"
-          label="Artist"
+          dataKey='artist'
+          label='Artist'
           cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'artist')}
           width={widths.artist}
           minWidth={widths.artist}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="album"
-          label="Album"
+          dataKey='album'
+          label='Album'
           cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'album')}
           width={widths.album}
           minWidth={widths.album}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="track"
-          label="Track"
+          dataKey='track'
+          label='Track'
           cellRenderer={({ rowIndex }) => trackRenderer(rowIndex)}
           width={widths.track}
           minWidth={widths.track}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="time"
-          label="Time"
+          dataKey='time'
+          label='Time'
           cellRenderer={({ rowIndex }) => timeRenderer(rowIndex)}
           width={widths.time}
           minWidth={widths.time}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey="path"
-          label="Path"
+          dataKey='path'
+          label='Path'
           cellRenderer={({ rowIndex }) => pathRenderer(rowIndex)}
           width={widths.path}
           minWidth={widths.path}
@@ -556,7 +567,8 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme }
 
   return (
     <>
-      {selectedGrid === 'song' ? mainGrid : otherGrid}
+      <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
+
       <Controls
         isPlaying={isPlaying}
         setIsPlaying={setIsPlaying}

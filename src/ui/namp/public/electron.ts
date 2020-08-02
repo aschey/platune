@@ -12,8 +12,8 @@ let server: net.Server | null;
 function createWindow() {
   const dispose = contextMenu();
   mainWindow = new BrowserWindow({
-    width: 900,
-    height: 680,
+    width: 1200,
+    height: 800,
     frame: false,
     backgroundColor: '#000',
     icon: path.join(__dirname, '../public/favicon.ico'),

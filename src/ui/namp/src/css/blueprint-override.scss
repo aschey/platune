@@ -41,7 +41,13 @@
 .bp3-navbar * {
   transition: var(--transition);
 }
-.bp3-button[class*='bp3-intent-'].hover-intent:not(:hover) {
+.bp3-navbar button {
+  transition: none;
+}
+.bp3-navbar button * {
+  transition: none;
+}
+.bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
   color: rgba(var(--window-controls-color), 1);
 }
 

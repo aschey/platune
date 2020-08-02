@@ -26,9 +26,9 @@
     }
   },
   "dependencies": {
-    "@blueprintjs/core": "file:/home/aschey/code/blueprint/packages/core",
-    "@blueprintjs/select": "file:/home/aschey/code/blueprint/packages/select",
-    "@blueprintjs/table": "file:/home/aschey/code/blueprint/packages/table",
+    "@blueprintjs/core": "file:/users/asche/code/blueprint/packages/core",
+    "@blueprintjs/select": "file:/users/asche/code/blueprint/packages/select",
+    "@blueprintjs/table": "file:/users/asche/code/blueprint/packages/table",
     "@fortawesome/fontawesome-svg-core": "^1.2.30",
     "@fortawesome/free-regular-svg-icons": "^5.14.0",
     "@fortawesome/free-solid-svg-icons": "^5.14.0",
@@ -43,6 +43,7 @@
     "@types/react-dom": "^16.9.0",
     "@types/react-virtualized": "^9.21.9",
     "@types/zeromq": "^4.6.3",
+    "animate-css-grid": "^1.4.3",
     "electron-context-menu": "^2.0.0",
     "electron-is-dev": "^1.2.0",
     "lodash": "^4.17.15",

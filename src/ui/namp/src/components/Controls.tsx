@@ -43,7 +43,7 @@ export const Controls: React.FC<ControlProps> = ({
 
   useEffect(() => {
     setColorAdjust(shadeColor(theme.songTimeColor, (progress / songMillis) * songColorAdjust));
-  }, [progress, songMillis]);
+  }, [progress, songMillis, songColorAdjust]);
 
   const playPauseClick = async () => {
     if (isPlaying) {
@@ -110,6 +110,7 @@ export const Controls: React.FC<ControlProps> = ({
     <div
       style={{
         display: 'grid',
+        gridColumn: '1 / 3',
         gridTemplateRows: '10px 60px',
         gridTemplateColumns: window.innerWidth > 1600 ? `5fr 175px 4fr 1fr` : `5fr 175px 3fr 2fr`,
       }}
@@ -140,15 +141,15 @@ export const Controls: React.FC<ControlProps> = ({
       <FlexCol style={{ alignItems: 'center' }}>
         <FlexRow style={{ alignItems: 'center' }}>
           <Button
-            className="nofocus"
+            className='nofocus'
             intent={Intent.PRIMARY}
             minimal
-            icon="fast-backward"
+            icon='fast-backward'
             style={{ borderRadius: '50%', width: 40, height: 40 }}
           />
           <div style={{ width: 5 }} />
           <Button
-            className="nofocus"
+            className='nofocus'
             intent={isPlaying ? Intent.WARNING : Intent.SUCCESS}
             minimal
             icon={isPlaying ? 'pause' : 'play'}
@@ -157,32 +158,32 @@ export const Controls: React.FC<ControlProps> = ({
           />
           <div style={{ width: 5 }} />
           <Button
-            className="nofocus"
+            className='nofocus'
             intent={Intent.DANGER}
             minimal
-            icon="stop"
+            icon='stop'
             style={{ borderRadius: '50%', width: 40, height: 40 }}
             onClick={stopClick}
           />
           <div style={{ width: 5 }} />
           <Button
-            className="nofocus"
+            className='nofocus'
             intent={Intent.PRIMARY}
             minimal
-            icon="fast-forward"
+            icon='fast-forward'
             style={{ borderRadius: '50%', width: 40, height: 40 }}
           />
         </FlexRow>
       </FlexCol>
 
       <FlexCol
-        className="card visualizer"
+        className='card visualizer'
         style={{ marginTop: 7, marginBottom: 7, marginLeft: '10%', marginRight: '10%', borderRadius: 10 }}
       >
         <canvas ref={canvasRef} />
       </FlexCol>
       <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
-        <Icon icon="volume-up" />
+        <Icon icon='volume-up' />
         <FlexCol
           style={{ alignSelf: 'center', alignContent: 'center', marginLeft: 10, marginRight: '20%', paddingBottom: 4 }}
         >

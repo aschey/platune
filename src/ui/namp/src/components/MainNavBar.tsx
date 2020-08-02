@@ -42,11 +42,20 @@ interface MainNavBarProps {
   selectedGrid: string;
   updateTheme: (newThemeName: string) => void;
   isLight: boolean;
+  sidePanelWidth: number;
+  setSidePanelWidth: (width: number) => void;
 }
 const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
 
-export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme, isLight }) => {
+export const MainNavBar: React.FC<MainNavBarProps> = ({
+  selectedGrid,
+  setSelectedGrid,
+  updateTheme,
+  isLight,
+  sidePanelWidth,
+  setSidePanelWidth,
+}) => {
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Search[]>([]);
@@ -55,22 +64,22 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
     <Hotkeys>
       <Hotkey
         global
-        combo="shift + o"
-        label="Open omnibar"
+        combo='shift + o'
+        label='Open omnibar'
         onKeyDown={() => setOmnibarOpen(!omnibarOpen)}
         preventDefault
       />
       <Hotkey
         global
-        combo="shift + a"
-        label="Show album grid"
+        combo='shift + a'
+        label='Show album grid'
         onKeyDown={() => setSelectedGrid('album')}
         preventDefault
       />
       <Hotkey
         global
-        combo="shift + l"
-        label="Show song list"
+        combo='shift + l'
+        label='Show song list'
         onKeyDown={() => setSelectedGrid('song')}
         preventDefault
       />
@@ -127,7 +136,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
     return (
       <div>
         {text}
-        {isSelected ? <Icon style={{ paddingLeft: 5 }} icon="tick" /> : null}
+        {isSelected ? <Icon style={{ paddingLeft: 5 }} icon='tick' /> : null}
       </div>
     );
   };
@@ -144,31 +153,37 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
             autoFocus={false}
             content={
               <Menu>
-                <MenuItem icon="cog" text="Settings" onClick={() => setIsOpen(true)} />
+                <MenuItem icon='cog' text='Settings' onClick={() => setIsOpen(true)} />
                 <MenuItem
-                  icon="help"
-                  text="Hotkeys"
+                  icon='help'
+                  text='Hotkeys'
                   onClick={() =>
                     // Hack to trigger the hotkey menu because sending a keyboard event doesn't set "which" properly
                     globalHotkeysEvents.handleKeyDown({ which: 191, shiftKey: true } as any)
                   }
                 />
-                <MenuItem icon="updated" text="Backup Now" />
-                <MenuItem icon="exchange" text="Switch Theme">
+                <MenuItem icon='updated' text='Backup Now' />
+                <MenuItem icon='exchange' text='Switch Theme'>
                   <MenuItem text={themeEntry('Dark', !isLight)} onClick={() => updateTheme('dark')} />
                   <MenuItem text={themeEntry('Light', isLight)} onClick={() => updateTheme('light')} />
                 </MenuItem>
               </Menu>
             }
           >
-            <Button minimal icon="menu" />
+            <Button minimal icon='menu' />
           </Popover>
 
+          <div style={{ width: 5 }} />
+          <Button
+            minimal
+            icon={sidePanelWidth > 0 ? 'double-chevron-left' : 'double-chevron-right'}
+            onClick={() => setSidePanelWidth(sidePanelWidth > 0 ? 0 : 200)}
+          />
           <div style={{ width: 5 }} />
         </NavbarGroup>
         <MusicSuggest
           fill
-          className="search"
+          className='search'
           inputValueRenderer={val => val.entryValue}
           itemRenderer={searchItemRenderer}
           onItemSelect={(val, event) => {
@@ -177,7 +192,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
           openOnKeyDown
           items={searchResults}
           popoverProps={{ minimal: true }}
-          inputProps={{ leftIcon: 'search', rightElement: <Button minimal icon="small-cross" /> }}
+          inputProps={{ leftIcon: 'search', rightElement: <Button minimal icon='small-cross' /> }}
           onQueryChange={async (input, event) => {
             await debounced(input);
           }}
@@ -208,18 +223,18 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
             <Button
               outlined
               intent={selectedGrid === 'album' ? Intent.PRIMARY : Intent.NONE}
-              icon="list-detail-view"
+              icon='list-detail-view'
               onClick={() => setSelectedGrid('album')}
             />
           </ButtonGroup>
           <div style={{ width: 20 }} />
           <ButtonGroup minimal>
-            <Button intent={Intent.WARNING} className="hover-intent" onClick={() => getWindow()?.minimize()}>
+            <Button intent={Intent.WARNING} className='hover-intent' onClick={() => getWindow()?.minimize()}>
               <FontAwesomeIcon icon={faWindowMinimize} />
             </Button>
             <Button
               intent={Intent.SUCCESS}
-              className="hover-intent"
+              className='hover-intent'
               style={{ transform: 'translate(0, 1px)' }}
               onClick={() => {
                 const window = getWindow();
@@ -233,7 +248,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
             >
               <FontAwesomeIcon icon={faSquare} />
             </Button>
-            <Button intent={Intent.DANGER} className="hover-intent" onClick={() => getWindow()?.close()}>
+            <Button intent={Intent.DANGER} className='hover-intent' onClick={() => getWindow()?.close()}>
               <FontAwesomeIcon icon={faTimes} style={{ transform: 'translate(0, 1px)' }} />
             </Button>
           </ButtonGroup>
