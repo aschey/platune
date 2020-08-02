@@ -54,25 +54,25 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
   const hotkeys = (
     <Hotkeys>
       <Hotkey
-        global={true}
+        global
         combo="shift + o"
         label="Open omnibar"
         onKeyDown={() => setOmnibarOpen(!omnibarOpen)}
-        preventDefault={true}
+        preventDefault
       />
       <Hotkey
-        global={true}
+        global
         combo="shift + a"
         label="Show album grid"
         onKeyDown={() => setSelectedGrid('album')}
-        preventDefault={true}
+        preventDefault
       />
       <Hotkey
-        global={true}
+        global
         combo="shift + l"
         label="Show song list"
         onKeyDown={() => setSelectedGrid('song')}
-        preventDefault={true}
+        preventDefault
       />
     </Hotkeys>
   );
@@ -92,9 +92,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
     if (globalHotkeysEvents) {
       globalHotkeysEvents.setHotkeys(hotkeys.props);
     }
-    if (searchResults === []) {
-      setSearchResults([{ entryType: 'a', entryValue: 'a', artist: 'a' }]);
-    }
 
     return () => {
       document.removeEventListener('keydown', globalHotkeysEvents.handleKeyDown);
@@ -110,6 +107,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
       <MenuItem
         key={props.index}
         active={active}
+        onClick={props.handleClick}
         style={{ paddingBottom: props.index === searchResults.length - 1 ? 0 : 10 }}
         text={
           <>
@@ -176,7 +174,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
           onItemSelect={(val, event) => {
             console.log('test');
           }}
-          openOnKeyDown={true}
+          openOnKeyDown
           items={searchResults}
           popoverProps={{ minimal: true }}
           inputProps={{ leftIcon: 'search', rightElement: <Button minimal icon="small-cross" /> }}
@@ -188,7 +186,9 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
           isOpen={omnibarOpen}
           itemRenderer={searchItemRenderer}
           items={searchResults}
-          onItemSelect={(val, event) => {}}
+          onItemSelect={(val, event) => {
+            setOmnibarOpen(false);
+          }}
           onClose={() => setOmnibarOpen(false)}
           onQueryChange={async (input, event) => {
             await debounced(input);

@@ -173,9 +173,9 @@ export const Settings: React.FC<{
       title="Settings"
       isOpen={isOpen}
       onClose={onClose}
-      autoFocus={true}
-      enforceFocus={true}
-      usePortal={true}
+      autoFocus
+      enforceFocus
+      usePortal
     >
       <div style={{ paddingLeft: 10, height }}>
         <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
