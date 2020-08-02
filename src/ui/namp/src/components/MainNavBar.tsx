@@ -105,15 +105,18 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
   });
 
   const searchItemRenderer = (searchRes: Search, props: IItemRendererProps) => {
+    const active = props.modifiers.active;
     return (
       <MenuItem
         key={props.index}
-        active={props.modifiers.active}
+        active={active}
         style={{ paddingBottom: props.index === searchResults.length - 1 ? 0 : 10 }}
         text={
           <>
             <div>{searchRes.entryValue}</div>
-            <div style={{ fontSize: 12, color: 'rgba(var(--text-secondary), 0.8)' }}>
+            <div
+              style={{ fontSize: 12, color: active ? 'rgba(255, 255, 255, 0.6)' : 'rgba(var(--text-secondary), 0.8)' }}
+            >
               {searchRes.artist === null ? 'Artist' : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
             </div>
           </>
