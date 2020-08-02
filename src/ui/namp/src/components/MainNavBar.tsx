@@ -94,13 +94,17 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                 <NavbarGroup align={Alignment.LEFT} style={{ height: 40, paddingTop: 1 }}>
                     <NavbarHeading style={{ marginRight: 0, marginTop: 4, paddingRight: 7 }}><img src={logo} width={28} height={28} /></NavbarHeading>
                     <NavbarDivider />
-                    <Popover content={
+                    <Popover autoFocus={false} content={
                         <Menu>
                             <MenuItem icon='cog' text='Settings' onClick={() => setIsOpen(true)} />
                             <MenuItem icon='help' text='Hotkeys' onClick={() =>
                                 globalHotkeysEvents.handleKeyDown({ which: 191, shiftKey: true } as any)
                             } />
                             <MenuItem icon='updated' text='Backup Now' />
+                            <MenuItem icon='exchange' text='Switch Theme'>
+                                <MenuItem text='Dark' onClick={() => updateTheme('dark')}/>
+                                <MenuItem text='Light' onClick={() => updateTheme('light')}/>
+                            </MenuItem>
                         </Menu>
                     }>
                         <Button minimal icon='menu' />

@@ -35,7 +35,11 @@
 }
 
 .bp3-navbar {
-    -webkit-app-region: drag
+    -webkit-app-region: drag;
+    transition: var(--transition);
+}
+.bp3-navbar * {
+  transition: var(--transition);
 }
 .bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
     color: rgba(var(--window-controls-color), 1);
