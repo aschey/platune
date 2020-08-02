@@ -24,3 +24,8 @@ export const setCssVar = (name: string, value: string) =>
     document.documentElement.style.setProperty(name, value);
 
 export const formatRgb = (rgb: Rgb) => `${rgb.r},${rgb.g},${rgb.b}`;
+
+export const capitalize = (word: string) => {
+    if (!word) return word;
+    return word[0].toUpperCase() + word.substr(1).toLowerCase();
+}

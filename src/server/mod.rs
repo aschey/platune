@@ -863,6 +863,7 @@ async fn get_db_path() -> Result<Json<Dir>, ()>{
 
 
 #[derive(QueryableByName, Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
 struct SearchRes {
     #[sql_type="Text"]
     entry_value: String,

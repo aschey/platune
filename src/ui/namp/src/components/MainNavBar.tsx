@@ -10,22 +10,26 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faThList, faTimes } from '@fortawesome/free-solid-svg-icons'
 import { faSquare, faWindowMinimize, faWindowClose } from '@fortawesome/free-regular-svg-icons'
 import { BrowserWindow, remote } from 'electron';
-import { Suggest, Omnibar } from '@blueprintjs/select';
+import { Suggest, Omnibar, IItemRendererProps } from '@blueprintjs/select';
 import { Song } from '../models/song';
 import { HotkeysEvents, HotkeyScope } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
 import { showHotkeysDialog } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysDialog';
+import { getJson } from '../fetchUtil';
+import { Search } from '../models/search';
+import _, { capitalize } from 'lodash';
 
 interface MainNavBarProps {
     setSelectedGrid: (grid: string) => void;
     selectedGrid: string;
     updateTheme: (newThemeName: string) => void
 }
-const MusicSuggest = Suggest.ofType<Song>();
-const MusicOmnibar = Omnibar.ofType<Song>();
+const MusicSuggest = Suggest.ofType<Search>();
+const MusicOmnibar = Omnibar.ofType<Search>();
 
 export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme }) => {
     const [omnibarOpen, setOmnibarOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const [searchResults, setSearchResults] = useState<Search[]>([]);
     const getWindow = () => remote.BrowserWindow.getFocusedWindow();
     const hotkeys = <Hotkeys>
         <Hotkey
@@ -51,15 +55,22 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
         />
     </Hotkeys>;
     const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
+    const debounced = _.debounce(async (input: string) => {
+        let res = await getJson<Search[]>(`/search?limit=10&searchString=${input}*`);
+        setSearchResults(res);
+    });
     useEffect(() => {
-
+        console.log('here');
         document.addEventListener("keydown", globalHotkeysEvents.handleKeyDown);
         document.addEventListener("keyup", globalHotkeysEvents.handleKeyUp);
         if (globalHotkeysEvents) {
             globalHotkeysEvents.setHotkeys(hotkeys.props);
         }
-        //let e = new KeyboardEvent('keyDown', {shiftKey: true, key});
-        //globalHotkeysEvents.handleKeyDown({which: 191, shiftKey: true} as any)
+        if (searchResults === []) {
+            setSearchResults([{entryType: 'a', entryValue: 'a', artist: 'a'}]);
+        }
+        
+
         return () => {
             document.removeEventListener("keydown", globalHotkeysEvents.handleKeyDown);
             document.removeEventListener("keyup", globalHotkeysEvents.handleKeyUp);
@@ -67,6 +78,16 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
             globalHotkeysEvents.clear();
         }
     });
+
+    const searchItemRenderer = (searchRes: Search, props: IItemRendererProps) => {
+        return (
+            <div style={{paddingBottom: props.index === searchResults.length - 1 ? 0 : 10}}>
+                <div>{searchRes.entryValue}</div>
+                <div style={{fontSize: 12, color: 'rgba(var(--text-secondary), 0.8)'}}>{searchRes.artist === null ? 'Artist' : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}</div>
+            </div>
+        );
+    }
+    
     return (
         <>
             <Navbar fixedToTop style={{ height: '40px', paddingRight: 5 }}>
@@ -91,21 +112,26 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                 <MusicSuggest
                     fill
                     className='search'
-                    inputValueRenderer={val => val.name}
-                    itemRenderer={(val, props) => <div>{val.name}</div>}
+                    inputValueRenderer={val => val.entryValue}
+                    itemRenderer={searchItemRenderer}
                     onItemSelect={(val, event) => { }}
                     openOnKeyDown={true}
-                    items={[]}
+                    items={searchResults}
                     popoverProps={{ minimal: true }}
                     inputProps={{ leftIcon: 'search', rightElement: <Button minimal icon='small-cross' /> }}
-                    onQueryChange={(input, event) => { console.log(input) }}
+                    onQueryChange={async (input, event) => { 
+                        await debounced(input);
+                    }}
                 />
                 <MusicOmnibar
                     isOpen={omnibarOpen}
-                    itemRenderer={(val, props) => <div>{val.name}</div>}
-                    items={[]}
+                    itemRenderer={searchItemRenderer}
+                    items={searchResults}
                     onItemSelect={(val, event) => { }}
                     onClose={() => setOmnibarOpen(false)}
+                    onQueryChange={async (input, event) => { 
+                        await debounced(input);
+                    }}
                 />
                 <NavbarGroup align={Alignment.RIGHT} style={{ height: 40, paddingTop: 1 }}>
                     <ButtonGroup minimal>
