@@ -21,12 +21,13 @@ import _, { capitalize } from 'lodash';
 interface MainNavBarProps {
     setSelectedGrid: (grid: string) => void;
     selectedGrid: string;
-    updateTheme: (newThemeName: string) => void
+    updateTheme: (newThemeName: string) => void,
+    isLight: boolean
 }
 const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
 
-export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme }) => {
+export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelectedGrid, updateTheme, isLight }) => {
     const [omnibarOpen, setOmnibarOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [searchResults, setSearchResults] = useState<Search[]>([]);
@@ -87,6 +88,14 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
             </div>
         );
     }
+
+    const themeEntry = (text: string, isSelected: boolean) => {
+        return (
+            <div>
+                {text}
+                {isSelected ? <Icon style={{paddingLeft: 5}} icon='tick'/> : null}
+            </div>);
+    }
     
     return (
         <>
@@ -98,12 +107,13 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ selectedGrid, setSelecte
                         <Menu>
                             <MenuItem icon='cog' text='Settings' onClick={() => setIsOpen(true)} />
                             <MenuItem icon='help' text='Hotkeys' onClick={() =>
+                                // Hack to trigger the hotkey menu because sending a keyboard event doesn't set "which" properly
                                 globalHotkeysEvents.handleKeyDown({ which: 191, shiftKey: true } as any)
                             } />
                             <MenuItem icon='updated' text='Backup Now' />
                             <MenuItem icon='exchange' text='Switch Theme'>
-                                <MenuItem text='Dark' onClick={() => updateTheme('dark')}/>
-                                <MenuItem text='Light' onClick={() => updateTheme('light')}/>
+                                <MenuItem text={themeEntry('Dark', !isLight)} onClick={() => updateTheme('dark')}/>
+                                <MenuItem text={themeEntry('Light', isLight)} onClick={() => updateTheme('light')}/>
                             </MenuItem>
                         </Menu>
                     }>
