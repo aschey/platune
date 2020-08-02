@@ -15,6 +15,5 @@ pub struct NewImport {
     pub import_duration: i32,
     pub import_sample_rate: i32,
     pub import_bit_rate: i32,
-    pub import_album_art: Option<Vec<u8>>
-
+    pub import_album_art: Option<Vec<u8>>,
 }

@@ -35,30 +35,30 @@
 }
 
 .bp3-navbar {
-    -webkit-app-region: drag;
-    transition: var(--transition);
+  -webkit-app-region: drag;
+  transition: var(--transition);
 }
 .bp3-navbar * {
   transition: var(--transition);
 }
-.bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
-    color: rgba(var(--window-controls-color), 1);
+.bp3-button[class*='bp3-intent-'].hover-intent:not(:hover) {
+  color: rgba(var(--window-controls-color), 1);
 }
 
 .bp3-navbar-divider {
-    border-left: 1px solid rgba(var(--text-secondary), 0.1);
+  border-left: 1px solid rgba(var(--text-secondary), 0.1);
 }
 
 .bp3-omnibar {
-    background: rgba(var(--omnibar-background), 1);
+  background: rgba(var(--omnibar-background), 1);
 }
 
 .bp3-key {
-    background: rgba(var(--background-secondary), 1);
+  background: rgba(var(--background-secondary), 1);
 }
 
 .bp3-dialog {
-    box-shadow: none;
+  box-shadow: none;
 }
 
 .bp3-icon {

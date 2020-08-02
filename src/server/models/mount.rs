@@ -4,5 +4,5 @@ use super::super::schema::mount;
 #[table_name = "mount"]
 pub struct NewMount {
     pub unix_path: String,
-    pub windows_path: String
+    pub windows_path: String,
 }

@@ -1,6 +1,6 @@
 :root {
-    --transition: color 1s, background 1s, border 1s, box-shadow 1s;
-    --header-translate: translate(-8px, 0px);
+  --transition: color 1s, background 1s, border 1s, box-shadow 1s;
+  --header-translate: translate(-8px, 0px);
 }
 
 $pt-intent-primary: var(--intent-primary);
@@ -9,24 +9,40 @@ $pt-intent-warning: var(--intent-warning);
 $pt-intent-danger: var(--intent-danger);
 
 $pt-intent-text-colors: (
-    "primary": var(--text-primary),
-    "success": var(--text-success),
-    "warning": var(--text-warning),
-    "danger" : var(--text-danger)
+  'primary': var(--text-primary),
+  'success': var(--text-success),
+  'warning': var(--text-warning),
+  'danger': var(--text-danger),
 );
 
 $pt-dark-intent-text-colors: (
-    "primary": var(--text-primary),
-    "success": var(--text-success),
-    "warning": var(--text-warning),
-    "danger" : var(--text-danger)
+  'primary': var(--text-primary),
+  'success': var(--text-success),
+  'warning': var(--text-warning),
+  'danger': var(--text-danger),
 );
 
 $button-intents: (
-    "primary": ($pt-intent-primary, var(--primary-hover), var(--primary-active)),
-    "success": ($pt-intent-success, var(--success-hover), var(--success-active)),
-    "warning": ($pt-intent-warning, var(--warning-hover), var(--warning-active)),
-    "danger": ($pt-intent-danger, var(--danger-hover), var(--danger-active)),
+  'primary': (
+    $pt-intent-primary,
+    var(--primary-hover),
+    var(--primary-active),
+  ),
+  'success': (
+    $pt-intent-success,
+    var(--success-hover),
+    var(--success-active),
+  ),
+  'warning': (
+    $pt-intent-warning,
+    var(--warning-hover),
+    var(--warning-active),
+  ),
+  'danger': (
+    $pt-intent-danger,
+    var(--danger-hover),
+    var(--danger-active),
+  ),
 );
 
 $selectable-header-menu-selected-background: #000;
@@ -44,7 +60,7 @@ $input-background-color: var(--background-secondary);
 $popover-background-color: var(--background-secondary);
 $pt-text-color: var(--text-main);
 $pt-text-color-muted: var(--text-secondary);
-$button-background-color:  var(--button-background);
+$button-background-color: var(--button-background);
 $button-background-color-hover: var(--button-background-hover);
 $button-background-color-active: var(--button-background-active);
 $button-background-color-disabled: rgba(var(--button-background), 0.5);

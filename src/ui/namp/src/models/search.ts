@@ -1,5 +1,5 @@
 export interface Search {
-    entryValue: string,
-    entryType: string,
-    artist: string | null
+  entryValue: string;
+  entryType: string;
+  artist: string | null;
 }

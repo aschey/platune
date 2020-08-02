@@ -1,6 +1,6 @@
-import { Dir } from "./dir";
+import { Dir } from './dir';
 
 export interface SelectedFolder {
-    name: string,
-    children: Dir[]
+  name: string;
+  children: Dir[];
 }

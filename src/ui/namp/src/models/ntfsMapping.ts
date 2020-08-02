@@ -1,4 +1,4 @@
 export interface NtfsMapping {
-    dir: string,
-    drive: string
+  dir: string;
+  drive: string;
 }
