@@ -255,6 +255,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         </NavbarGroup>
         <MusicSuggest
           fill
+          resetOnSelect
           className='search'
           inputValueRenderer={val => val.entryValue}
           itemRenderer={searchItemRenderer}
@@ -283,6 +284,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           }}
         />
         <MusicOmnibar
+          resetOnSelect
           isOpen={omnibarOpen}
           itemRenderer={searchItemRenderer}
           items={searchResults}
