@@ -36,6 +36,7 @@ import { showHotkeysDialog } from '@blueprintjs/core/lib/esm/components/hotkeys/
 import { getJson } from '../fetchUtil';
 import { Search } from '../models/search';
 import _, { capitalize } from 'lodash';
+import { toastMessage } from '../appToaster';
 
 interface MainNavBarProps {
   setSelectedGrid: (grid: string) => void;
@@ -262,7 +263,16 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
           inputProps={{
             leftIcon: 'search',
-            rightElement: <Button minimal icon='small-cross' />,
+            rightElement: (
+              <Button
+                minimal
+                icon='small-cross'
+                onClick={() => {
+                  toastMessage('Resetting...');
+                  getJson<Song[]>('/songs').then(setSongs);
+                }}
+              />
+            ),
           }}
           onQueryChange={async (input, event) => {
             await debounced(input);

@@ -7,3 +7,7 @@ const appToaster = Toaster.create({
 export const toastSuccess = () => {
   appToaster.show({ message: 'Success', intent: Intent.SUCCESS, icon: 'tick-circle', timeout: 1000 });
 };
+
+export const toastMessage = (message: string) => {
+  appToaster.show({ message, intent: Intent.PRIMARY, timeout: 1000 });
+};
