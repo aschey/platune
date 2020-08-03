@@ -124,7 +124,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   };
 
   const searchTextColor = (active: boolean, alpha: number) =>
-    active ? `rgba(255,255,255,${alpha})` : 'rgba(var(--text-main), ${alpha})';
+    active ? `rgba(255,255,255,${alpha})` : `rgba(var(--text-main), ${alpha})`;
 
   const highlightText = (text: string, query: string, active: boolean) => {
     let lastIndex = 0;
@@ -158,7 +158,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     if (rest.length > 0) {
       tokens.push(rest);
     }
-    return <div style={{ color: searchTextColor(active, 0.8) }}>{tokens}</div>;
+    return <div style={{ color: searchTextColor(active, 0.85) }}>{tokens}</div>;
   };
 
   const searchItemRenderer = (searchRes: Search, props: IItemRendererProps) => {
