@@ -92,14 +92,15 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   useEffect(() => {
-    loadSongs().then(s => {
-      s.forEach((song, i) => (song.index = i));
-      setSongs(s);
-      let g = _.groupBy(s, ss => ss.albumArtist + ' ' + ss.album);
-      setGroupedSongs(g);
-      setAlbumKeys(_.keys(g));
-    });
+    loadSongs().then(setSongs);
   }, []);
+
+  useEffect(() => {
+    songs.forEach((song, i) => (song.index = i));
+    let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
+    setGroupedSongs(g);
+    setAlbumKeys(_.keys(g));
+  }, [songs]);
 
   useEffect(() => {
     if (songs.length === 0) {
@@ -293,11 +294,17 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   const genericCellRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time') => {
+    if (rowIndex >= songs.length) {
+      return null;
+    }
     let value = songs[rowIndex][field].toString();
     return cellRenderer(rowIndex, value);
   };
 
   const trackRenderer = (rowIndex: number) => {
+    if (rowIndex >= songs.length) {
+      return null;
+    }
     let value = songs[rowIndex].track.toString();
     if (value === '0') {
       value = '';
@@ -306,12 +313,18 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   const timeRenderer = (rowIndex: number) => {
+    if (rowIndex >= songs.length) {
+      return null;
+    }
     let value = songs[rowIndex]['time'];
     let fmtValue = formatMs(value);
     return cellRenderer(rowIndex, fmtValue);
   };
 
   const pathRenderer = (rowIndex: number) => {
+    if (rowIndex >= songs.length) {
+      return null;
+    }
     let value = songs[rowIndex].path;
     return cellRenderer(rowIndex, value, false);
   };
