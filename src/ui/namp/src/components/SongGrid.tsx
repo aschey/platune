@@ -215,7 +215,11 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   const startQueue = (songIndex: number) => {
-    return audioQueue.start([songs[songIndex].path, songs[songIndex + 1].path], songIndex, onSongFinished);
+    const queue = [songs[songIndex].path];
+    if (songIndex + 1 < songs.length) {
+      queue.push(songs[songIndex + 1].path);
+    }
+    return audioQueue.start(queue, songIndex, onSongFinished);
   };
 
   const updatePlayingRow = (rowIndex: number) => {
@@ -228,8 +232,14 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   const onSongFinished = (playingRow: number) => {
-    updatePlayingRow(playingRow + 1);
-    audioQueue.start([songs[playingRow + 2].path], playingRow + 2, onSongFinished);
+    if (playingRow + 1 < songs.length) {
+      updatePlayingRow(playingRow + 1);
+    } else {
+      onStop();
+    }
+    if (playingRow + 2 < songs.length) {
+      audioQueue.start([songs[playingRow + 2].path], playingRow + 2, onSongFinished);
+    }
   };
 
   const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
