@@ -1,8 +1,10 @@
 ## NAMP (Not Another Music Player)
+
 [![license](https://img.shields.io/github/license/aschey/NAMP)](https://github.com/aschey/NAMP/blob/master/LICENSE)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/NAMP)
 
-Created with 
+Created with
+
 - [Rust](https://www.rust-lang.org/)
 - [Electron](https://www.electronjs.org/)
 - [actix-web](https://github.com/actix/actix-web)
@@ -13,11 +15,13 @@ Created with
 - [Blueprint](https://github.com/palantir/blueprint)
 
 ### How It Works
+
 On launch, NAMP will spin up a REST API written in Rust in addition to the Electron UI. The API will handle the majority of the logic,
 with the Electron app being used for the presentation layer. The API will send TCP health checks to the Electron app and will automatically shut
 itself down if the app is no longer running.
 
 ### Goals/Ideas
+
 - Cross-platform desktop app
 - Android app
 - Support sync between Android and desktop
@@ -27,6 +31,7 @@ itself down if the app is no longer running.
 - Remote control desktop player from Android app
 
 ### Features Completed
+
 - Select folders to import into library
 - Choose database path
 - Map paths between hard drive partitions
@@ -39,8 +44,10 @@ itself down if the app is no longer running.
 - Theming
 - Volume control
 - Audio visualizer
-- Song queue with gapless audio support
+- Playback with gapless audio support
+- Search
 
 ### Features in Progress
-- Search
+
+- Song queueing
 - Tags

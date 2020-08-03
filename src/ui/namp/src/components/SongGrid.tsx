@@ -96,6 +96,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   }, []);
 
   useEffect(() => {
+    onStop();
     songs.forEach((song, i) => (song.index = i));
     let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
     setGroupedSongs(g);
@@ -147,7 +148,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   useEffect(() => {
-    if (playingRow === -1) {
+    if (playingRow === -1 || playingRow >= songs.length) {
       return;
     }
     const updateInterval = 60;
