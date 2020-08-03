@@ -888,7 +888,8 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
     let connection = establish_connection();
     // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
     // Adjust rankings to give slightly more weight to artists and albums
-    let res = diesel::sql_query("
+    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.2 WHEN 'album_artist' THEN 1.2 WHEN 'album' THEN 1.1 ELSE 1 END)";
+    let res = diesel::sql_query(f!("
         WITH CTE AS (
             SELECT DISTINCT entry_value, entry_type, rank, 
             CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
@@ -900,12 +901,13 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
             LEFT OUTER JOIN album al on al.album_id = assoc_id
             LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
             WHERE search_index MATCH ?
+            ORDER BY {order_clause}
             LIMIT ?
         )
         SELECT entry_value, entry_type, artist, correlation_id FROM cte
         WHERE row_num = 1
-        ORDER BY rank * (CASE entry_type WHEN 'artist' THEN 1.5 WHEN 'album_artist' THEN 1.5 WHEN 'album' THEN 1.3 ELSE 1 END)
-        LIMIT ?"
+        ORDER BY {order_clause}
+        LIMIT ?")
         )
         .bind::<diesel::sql_types::Text, _>(f!("entry_value:{request.search_string}"))
         .bind::<diesel::sql_types::Integer, _>(request.limit * 2)
