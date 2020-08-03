@@ -44,6 +44,8 @@ interface MainNavBarProps {
   isLight: boolean;
   sidePanelWidth: number;
   setSidePanelWidth: (width: number) => void;
+  songs: Song[];
+  setSongs: (songs: Song[]) => void;
 }
 const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
@@ -55,11 +57,15 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   isLight,
   sidePanelWidth,
   setSidePanelWidth,
+  songs,
+  setSongs,
 }) => {
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Search[]>([]);
+
   const getWindow = () => remote.BrowserWindow.getFocusedWindow();
+
   const hotkeys = (
     <Hotkeys>
       <Hotkey
@@ -116,6 +122,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
   const searchTextColor = (active: boolean, alpha: number) =>
     active ? `rgba(255,255,255,${alpha})` : 'rgba(var(--text-main), ${alpha})';
+
   const highlightText = (text: string, query: string, active: boolean) => {
     let lastIndex = 0;
     const words = query
@@ -184,6 +191,23 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     );
   };
 
+  const updateSearch = (val: Search) => {
+    switch (val.entryType) {
+      case 'song':
+        getJson<Song[]>(`/songs?artistId=${val.correlationId}&songName=${val.entryValue}`).then(setSongs);
+        break;
+      case 'album':
+        getJson<Song[]>(`/songs?albumId=${val.correlationId}`).then(setSongs);
+        break;
+      case 'artist':
+        getJson<Song[]>(`/songs?artistId=${val.correlationId}`).then(setSongs);
+        break;
+      case 'album_artist':
+        getJson<Song[]>(`/songs?albumArtistId=${val.correlationId}`).then(setSongs);
+        break;
+    }
+  };
+
   return (
     <>
       <Navbar fixedToTop style={{ height: '40px', paddingRight: 5 }}>
@@ -229,13 +253,17 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           className='search'
           inputValueRenderer={val => val.entryValue}
           itemRenderer={searchItemRenderer}
+          initialContent='Type to search'
           onItemSelect={(val, event) => {
-            console.log('test');
+            updateSearch(val);
           }}
-          openOnKeyDown
           items={searchResults}
           popoverProps={{ minimal: true }}
-          inputProps={{ leftIcon: 'search', rightElement: <Button minimal icon='small-cross' /> }}
+          itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
+          inputProps={{
+            leftIcon: 'search',
+            rightElement: <Button minimal icon='small-cross' />,
+          }}
           onQueryChange={async (input, event) => {
             await debounced(input);
           }}
@@ -246,6 +274,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           items={searchResults}
           onItemSelect={(val, event) => {
             setOmnibarOpen(false);
+            updateSearch(val);
           }}
           onClose={() => setOmnibarOpen(false)}
           onQueryChange={async (input, event) => {

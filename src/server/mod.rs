@@ -891,7 +891,7 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
     let res = diesel::sql_query("
         WITH CTE AS (
             SELECT DISTINCT entry_value, entry_type, rank, 
-            CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN aa.album_artist_id ELSE assoc_id END artist_id,
+            CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
             CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END artist,
             ROW_NUMBER() OVER (PARTITION BY entry_value, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 ELSE 3 END ORDER BY entry_type DESC) row_num
             FROM search_index
@@ -902,7 +902,7 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
             WHERE search_index MATCH ?
             LIMIT ?
         )
-        SELECT entry_value, entry_type, artist, artist_id FROM cte
+        SELECT entry_value, entry_type, artist, correlation_id FROM cte
         WHERE row_num = 1
         ORDER BY rank * (CASE entry_type WHEN 'artist' THEN 1.5 WHEN 'album_artist' THEN 1.5 WHEN 'album' THEN 1.3 ELSE 1 END)
         LIMIT ?"
@@ -1147,7 +1147,7 @@ struct SearchRes {
     #[sql_type = "Nullable<Text>"]
     artist: Option<String>,
     #[sql_type = "Integer"]
-    artist_id: i32,
+    correlation_id: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]

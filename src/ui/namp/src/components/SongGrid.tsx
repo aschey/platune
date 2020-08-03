@@ -28,10 +28,11 @@ interface SongGridProps {
   selectedGrid: string;
   isLightTheme: boolean;
   width: number;
+  songs: Song[];
+  setSongs: (songs: Song[]) => void;
 }
 
-export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, width }) => {
-  const [songs, setSongs] = useState<Song[]>([]);
+export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, width, songs, setSongs }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
   const [playingRow, setPlayingRow] = useState(-1);

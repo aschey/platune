@@ -10,6 +10,7 @@ import { lightTheme } from '../themes/light';
 import { darkTheme } from '../themes/dark';
 import { isLight } from '../themes/colorMixer';
 import { wrapGrid } from 'animate-css-grid';
+import { Song } from '../models/song';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -21,6 +22,8 @@ const App: React.FC<{}> = () => {
   const [sidePanelWidth, setSidePanelWidth] = useState(0);
   const [gridCols, setGridCols] = useState(`0px ${window.innerWidth}px`);
   const [gridClasses, setGridClasses] = useState('grid');
+  const [songs, setSongs] = useState<Song[]>([]);
+
   const gridRef = React.createRef<HTMLDivElement>();
 
   const updateTheme = (newThemeName: string) => {
@@ -53,6 +56,8 @@ const App: React.FC<{}> = () => {
         setSelectedGrid={setSelectedGrid}
         updateTheme={updateTheme}
         isLight={themeDetails}
+        songs={songs}
+        setSongs={setSongs}
       />
       <div
         ref={gridRef}
@@ -67,7 +72,13 @@ const App: React.FC<{}> = () => {
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>test</div>
         </div>
-        <SongGrid selectedGrid={selectedGrid} isLightTheme={themeDetails} width={window.innerWidth - sidePanelWidth} />
+        <SongGrid
+          selectedGrid={selectedGrid}
+          isLightTheme={themeDetails}
+          width={window.innerWidth - sidePanelWidth}
+          songs={songs}
+          setSongs={setSongs}
+        />
       </div>
     </>
   );
