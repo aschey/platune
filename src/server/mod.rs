@@ -812,7 +812,8 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 #[api_v2_operation]
 async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
     let connection = establish_connection();
-    let mut songs = song
+    let mut query: diesel::query_builder::BoxedSelectStatement<_, _, diesel::sqlite::Sqlite> = song
+        .into_boxed()
         .inner_join(artist)
         .inner_join(album)
         .inner_join(
@@ -829,10 +830,28 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
             disc_number,
             duration,
             get_song_path(),
-            diesel::dsl::sql::<diesel::sql_types::Bool>(
-                "case when album_art is null then 0 else 1 end",
-            ),
-        ))
+            diesel::dsl::sql::<Bool>("case when album_art is null then 0 else 1 end"),
+        ));
+    //.limit(10);
+    if let Some(limit) = request.limit {
+        query = query.limit(limit);
+    }
+    if let Some(offset) = request.offset {
+        query = query.offset(offset);
+    }
+    if let Some(req_artist_id) = request.artist_id {
+        query = query.filter(crate::schema::artist::artist_id.eq(req_artist_id));
+    }
+    if let Some(req_album_artist_id) = request.album_artist_id {
+        query = query.filter(crate::schema::album_artist::album_artist_id.eq(req_album_artist_id));
+    }
+    if let Some(req_album_id) = request.album_id {
+        query = query.filter(crate::schema::album::album_id.eq(req_album_id));
+    }
+    if let Some(req_song_name) = &request.song_name {
+        query = query.filter(crate::schema::song::song_title.eq(req_song_name));
+    }
+    let mut songs = query
         .load::<(
             i32,
             String,
@@ -1195,8 +1214,12 @@ pub struct Song {
 #[derive(Deserialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct SongRequest {
-    offset: Option<i32>,
-    limit: Option<i32>,
+    offset: Option<i64>,
+    limit: Option<i64>,
+    artist_id: Option<i32>,
+    album_artist_id: Option<i32>,
+    album_id: Option<i32>,
+    song_name: Option<String>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]
