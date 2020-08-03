@@ -95,10 +95,12 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
   const debounced = _.debounce(async (input: string) => {
     let res = await getJson<Search[]>(
-      `/search?limit=10&searchString=${input
-        .split(/\s+/)
-        .map(s => `"${s}"`)
-        .join(' ')}*`
+      `/search?limit=10&searchString=${encodeURIComponent(
+        input
+          .split(/\s+/)
+          .map(s => `"${s}"`)
+          .join(' ')
+      )}*`
     );
     setSearchResults(res);
   });
@@ -118,7 +120,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   });
 
   const escapeRegExpChars = (text: string) => {
-    return text.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, '\\$1');
+    return text.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1');
   };
 
   const searchTextColor = (active: boolean, alpha: number) =>
@@ -127,7 +129,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const highlightText = (text: string, query: string, active: boolean) => {
     let lastIndex = 0;
     const words = query
-      .split(/\s+/)
+      .split(/[^a-zA-Z0-9']+/)
       .filter(word => word.length > 0)
       .map(escapeRegExpChars);
     if (words.length === 0) {
@@ -156,7 +158,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     if (rest.length > 0) {
       tokens.push(rest);
     }
-    return <div style={{ color: searchTextColor(active, 0.9) }}>{tokens}</div>;
+    return <div style={{ color: searchTextColor(active, 0.8) }}>{tokens}</div>;
   };
 
   const searchItemRenderer = (searchRes: Search, props: IItemRendererProps) => {
@@ -195,7 +197,9 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const updateSearch = (val: Search) => {
     switch (val.entryType) {
       case 'song':
-        getJson<Song[]>(`/songs?artistId=${val.correlationId}&songName=${val.entryValue}`).then(setSongs);
+        getJson<Song[]>(`/songs?artistId=${val.correlationId}&songName=${encodeURIComponent(val.entryValue)}`).then(
+          setSongs
+        );
         break;
       case 'album':
         getJson<Song[]>(`/songs?albumId=${val.correlationId}`).then(setSongs);
