@@ -68,31 +68,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
   const getWindow = () => remote.BrowserWindow.getFocusedWindow();
 
-  const hotkeys = (
-    <Hotkeys>
-      <Hotkey
-        global
-        combo='shift + o'
-        label='Open omnibar'
-        onKeyDown={() => setOmnibarOpen(!omnibarOpen)}
-        preventDefault
-      />
-      <Hotkey
-        global
-        combo='shift + a'
-        label='Show album grid'
-        onKeyDown={() => setSelectedGrid('album')}
-        preventDefault
-      />
-      <Hotkey
-        global
-        combo='shift + l'
-        label='Show song list'
-        onKeyDown={() => setSelectedGrid('song')}
-        preventDefault
-      />
-    </Hotkeys>
-  );
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
   const debounced = _.debounce(async (input: string) => {
     let res = await getJson<Search[]>(
@@ -214,6 +189,41 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     }
   };
 
+  const clearSearch = async () => {
+    toastMessage('Resetting...');
+    const allSongs = await getJson<Song[]>('/songs');
+    setSongs(allSongs);
+    setSearchResults([]);
+    setSelectedSearch(null);
+  };
+
+  const hotkeys = (
+    <Hotkeys>
+      <Hotkey
+        global
+        combo='shift + o'
+        label='Open omnibar'
+        onKeyDown={() => setOmnibarOpen(!omnibarOpen)}
+        preventDefault
+      />
+      <Hotkey
+        global
+        combo='shift + a'
+        label='Show album grid'
+        onKeyDown={() => setSelectedGrid('album')}
+        preventDefault
+      />
+      <Hotkey
+        global
+        combo='shift + l'
+        label='Show song list'
+        onKeyDown={() => setSelectedGrid('song')}
+        preventDefault
+      />
+      <Hotkey global combo='shift + x' label='Clear search' onKeyDown={clearSearch} preventDefault />
+    </Hotkeys>
+  );
+
   return (
     <>
       <Navbar fixedToTop style={{ height: '40px', paddingRight: 5 }}>
@@ -271,20 +281,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
           inputProps={{
             leftIcon: 'search',
-            rightElement: (
-              <Button
-                minimal
-                icon='small-cross'
-                onClick={() => {
-                  toastMessage('Resetting...');
-                  getJson<Song[]>('/songs').then(s => {
-                    setSongs(s);
-                    setSearchResults([]);
-                    setSelectedSearch(null);
-                  });
-                }}
-              />
-            ),
+            rightElement: <Button minimal icon='small-cross' onClick={clearSearch} />,
           }}
           onQueryChange={async (input, event) => {
             await debounced(input);
