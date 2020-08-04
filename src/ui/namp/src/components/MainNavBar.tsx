@@ -64,6 +64,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Search[]>([]);
+  const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
 
   const getWindow = () => remote.BrowserWindow.getFocusedWindow();
 
@@ -259,9 +260,11 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           className='search'
           inputValueRenderer={val => val.entryValue}
           itemRenderer={searchItemRenderer}
+          selectedItem={selectedSearch}
           initialContent='Type to search'
           onItemSelect={(val, event) => {
             updateSearch(val);
+            setSelectedSearch(val);
           }}
           items={searchResults}
           popoverProps={{ minimal: true }}
@@ -274,7 +277,11 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
                 icon='small-cross'
                 onClick={() => {
                   toastMessage('Resetting...');
-                  getJson<Song[]>('/songs').then(setSongs);
+                  getJson<Song[]>('/songs').then(s => {
+                    setSongs(s);
+                    setSearchResults([]);
+                    setSelectedSearch(null);
+                  });
                 }}
               />
             ),
@@ -291,6 +298,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           onItemSelect={(val, event) => {
             setOmnibarOpen(false);
             updateSearch(val);
+            setSelectedSearch(val);
           }}
           onClose={() => setOmnibarOpen(false)}
           onQueryChange={async (input, event) => {
