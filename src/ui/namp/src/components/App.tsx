@@ -23,6 +23,7 @@ const App: React.FC<{}> = () => {
   const [gridCols, setGridCols] = useState(`0px ${window.innerWidth}px`);
   const [gridClasses, setGridClasses] = useState('grid');
   const [songs, setSongs] = useState<Song[]>([]);
+  const [gridMargin, setGridMargin] = useState(0);
 
   const gridRef = React.createRef<HTMLDivElement>();
 
@@ -35,7 +36,18 @@ const App: React.FC<{}> = () => {
 
   useEffect(() => {
     if (gridRef.current) {
-      const { unwrapGrid } = wrapGrid(gridRef.current);
+      const { unwrapGrid } = wrapGrid(gridRef.current, {
+        onStart: () => {
+          if (gridMargin > 0) {
+            setGridMargin(0);
+          }
+        },
+        onEnd: () => {
+          if (gridMargin === 0) {
+            setGridMargin(200);
+          }
+        },
+      });
       // Remove animations after resizing because they don't play nicely with the virtualized grid
       setTimeout(unwrapGrid, 1);
     }
@@ -75,7 +87,7 @@ const App: React.FC<{}> = () => {
         <SongGrid
           selectedGrid={selectedGrid}
           isLightTheme={themeDetails}
-          width={window.innerWidth - sidePanelWidth}
+          width={window.innerWidth - gridMargin}
           songs={songs}
           setSongs={setSongs}
         />
