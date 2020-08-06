@@ -15,7 +15,7 @@ const createWindow = () => {
     height: 800,
     frame: false,
     backgroundColor: '#000',
-    icon: isDev ? path.join(__dirname, '../public/res/favicon.ico') : undefined,
+    icon: getIcon(),
     webPreferences: {
       webSecurity: !isDev,
       nodeIntegration: true,
@@ -64,6 +64,16 @@ app.on('activate', () => {
     createWindow();
   }
 });
+
+const getIcon = () => {
+  if (process.platform === 'linux') {
+    return path.join(__dirname, '../public/res/icon.png');
+  } else if (isDev) {
+    return path.join(__dirname, '../public/res/favicon.ico');
+  } else {
+    return undefined;
+  }
+};
 
 const installExtensions = async () => {
   const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
