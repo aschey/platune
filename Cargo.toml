@@ -1,5 +1,5 @@
 [package]
-name = "namp"
+name = "platune"
 version = "0.1.0"
 authors = ["Austin Schey <aschey13@gmail.com>"]
 edition = "2018"

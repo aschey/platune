@@ -188,7 +188,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
 
         let app = builder
             // Paths are matched in order so this needs to be last
-            .service(fs::Files::new("/", "./src/ui/namp/build").index_file("index.html"));
+            .service(fs::Files::new("/", "./src/ui/platune/build").index_file("index.html"));
         return app;
     })
     .bind("0.0.0.0:5000")?
@@ -745,7 +745,7 @@ fn write_env(dir: &String) -> String {
     let mut file = File::create(".env").unwrap();
     let delim_escaped = get_delim_escaped();
     let escaped = dir.replace(get_delim(), get_delim_escaped());
-    let full_url = f!("{escaped}{delim_escaped}namp.db");
+    let full_url = f!("{escaped}{delim_escaped}platune.db");
     let _ = file.write_all(f!("DATABASE_URL={full_url}").as_bytes());
     return full_url;
 }
@@ -1132,7 +1132,7 @@ async fn get_db_path() -> Result<Json<Dir>, ()> {
         .last()
         .unwrap()
         .replace(delim_escaped, delim)
-        .replace(&f!("{delim}namp.db"), "");
+        .replace(&f!("{delim}platune.db"), "");
     return Ok(Json(Dir {
         is_file: true,
         name: res.to_owned(),

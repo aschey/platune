@@ -1,0 +1,104 @@
+{
+  "name": "platune",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/electron.js",
+  "homepage": "./",
+  "author": {
+    "name": "Austin Schey",
+    "url": "https://github.com/aschey"
+  },
+  "build": {
+    "extends": null,
+    "appId": "com.platune",
+    "productName": "Platune",
+    "copyright": "Copyright © 2020 ${author}",
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "icon": "public/res/favicon.ico"
+    },
+    "files": [
+      "build/**/*",
+      "dist/**/*",
+      "public/res/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "public/res"
+    }
+  },
+  "dependencies": {
+    "@blueprintjs/core": "file:../../../../blueprint/packages/core",
+    "@blueprintjs/select": "file:../../../../blueprint/packages/select",
+    "@blueprintjs/table": "file:../../../../blueprint/packages/table",
+    "@fortawesome/fontawesome-svg-core": "^1.2.30",
+    "@fortawesome/free-regular-svg-icons": "^5.14.0",
+    "@fortawesome/free-solid-svg-icons": "^5.14.0",
+    "@fortawesome/react-fontawesome": "^0.1.11",
+    "@testing-library/jest-dom": "^5.11.2",
+    "@testing-library/react": "^10.4.7",
+    "@testing-library/user-event": "^12.1.0",
+    "@types/jest": "^26.0.8",
+    "@types/lodash": "^4.14.158",
+    "@types/node": "^14.0.27",
+    "@types/react": "^16.9.44",
+    "@types/react-dom": "^16.9.8",
+    "@types/react-virtualized": "^9.21.10",
+    "animate-css-grid": "^1.4.3",
+    "asar": "^3.0.3",
+    "electron-context-menu": "^2.2.0",
+    "electron-is-dev": "^1.2.0",
+    "global": "^4.4.0",
+    "lodash": "^4.17.19",
+    "node-sass": "^4.14.1",
+    "react": "^16.13.1",
+    "react-compound-slider": "^2.5.0",
+    "react-dom": "^16.13.1",
+    "react-draggable": "^4.3.3",
+    "react-scripts": "3.4.1",
+    "react-sound": "^1.2.0",
+    "react-virtualized": "^9.21.2",
+    "typescript": "~3.9.7"
+  },
+  "scripts": {
+    "start": "rescripts start",
+    "build": "rescripts build",
+    "test": "rescripts test",
+    "eject": "react-scripts eject",
+    "dev": "tsc --project tsconfig-electron.json && concurrently \"cross-env BROWSER=none yarn start\" \"wait-on http://localhost:3000 && electron .\"",
+    "postinstall": "electron-builder install-app-deps",
+    "before-pack": "rimraf dist && tsc --project tsconfig-electron.json && yarn build",
+    "prelinux-pack": "yarn run before-pack",
+    "prewindows-pack": "yarn run before-pack",
+    "linux-pack": "electron-builder build --linux",
+    "windows-pack": "electron-builder build --windows"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@rescripts/cli": "^0.0.14",
+    "@rescripts/rescript-env": "^0.0.12",
+    "concurrently": "^5.2.0",
+    "cross-env": "^7.0.2",
+    "electron": "^9.1.2",
+    "electron-builder": "^22.8.0",
+    "electron-devtools-installer": "^3.1.1",
+    "electron-react-devtools": "^0.5.3",
+    "wait-on": "^5.1.0"
+  }
+}

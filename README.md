@@ -1,4 +1,4 @@
-## NAMP (Not Another Music Player)
+![Platune](res/platune-title.png)
 
 [![license](https://img.shields.io/github/license/aschey/NAMP)](https://github.com/aschey/NAMP/blob/master/LICENSE)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/NAMP)
@@ -14,11 +14,9 @@ Created with
 - [Typescript](https://www.typescriptlang.org/)
 - [Blueprint](https://github.com/palantir/blueprint)
 
-### How It Works
+### Overview
 
-On launch, NAMP will spin up a REST API written in Rust in addition to the Electron UI. The API will handle the majority of the logic,
-with the Electron app being used for the presentation layer. The API will send TCP health checks to the Electron app and will automatically shut
-itself down if the app is no longer running.
+Platune is a cross-platform music player that supports sharing data between operating systems for users that dual boot. Platune has no builtin concept of playlists, genres, or ratings and instead employs a flexible tag system to allow users to organize their music however they see fit.
 
 ### Goals/Ideas
 
