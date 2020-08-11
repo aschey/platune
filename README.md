@@ -1,7 +1,7 @@
 ![Platune](res/platune-title.png)
 
-[![license](https://img.shields.io/github/license/aschey/NAMP)](https://github.com/aschey/NAMP/blob/master/LICENSE)
-![GitHub repo size](https://img.shields.io/github/repo-size/aschey/NAMP)
+[![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/master/LICENSE)
+![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)
 
 Created with
 

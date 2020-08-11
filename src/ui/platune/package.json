@@ -14,10 +14,16 @@
     "productName": "Platune",
     "copyright": "Copyright © 2020 ${author}",
     "mac": {
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "icon": "public/res/icon.icns"
     },
     "win": {
       "icon": "public/res/favicon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
     },
     "files": [
       "build/**/*",
