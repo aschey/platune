@@ -17,6 +17,13 @@ interface AudioMetadata {
   endGap: number;
 }
 
+interface HtmlAudioMetadata {
+  element: HTMLAudioElement;
+  audioNode: MediaElementAudioSourceNode;
+  gain: GainNode;
+  analyser: AnalyserNode;
+}
+
 class AudioNodeWrapper {
   bufferNode: AudioBufferSourceNode | null;
   htmlNode: HTMLAudioElement | null;
@@ -33,10 +40,10 @@ class AudioNodeWrapper {
 
   public duration = () => (this.htmlNode ? this.htmlNode?.duration : this.bufferNode?.buffer?.duration) ?? 0;
 
-  public start(when: number, duration: number, audioContext: AudioContext) {
+  public async start(when: number, duration: number, audioContext: AudioContext) {
     if (this.htmlNode) {
       this.htmlNode.currentTime = when - audioContext.currentTime;
-      this.htmlNode?.play();
+      await this.htmlNode?.play();
     } else {
       this.bufferNode?.start(when, duration);
     }
@@ -77,9 +84,7 @@ class AudioQueue {
   currentAnalyser: AnalyserNode | null;
   private volume: number;
   private currentGain: GainNode | null;
-  audioElement: HTMLAudioElement | null;
-  mp3Node: MediaElementAudioSourceNode;
-  m4aNode: MediaElementAudioSourceNode;
+  private htmlAudio: HtmlAudioMetadata;
 
   constructor() {
     this.switchTime = 0;
@@ -91,11 +96,16 @@ class AudioQueue {
     this.currentAnalyser = null;
     this.currentGain = null;
     this.volume = 1;
-    this.audioElement = null;
-    const audioMp3 = document.getElementsByTagName('audio')[0];
-    const audioM4a = document.getElementsByTagName('audio')[1];
-    this.mp3Node = this.context.createMediaElementSource(audioMp3);
-    this.m4aNode = this.context.createMediaElementSource(audioM4a);
+    const audioElement = document.getElementsByTagName('audio')[0];
+    this.htmlAudio = {
+      element: audioElement,
+      audioNode: this.context.createMediaElementSource(audioElement),
+      gain: this.context.createGain(),
+      analyser: this.context.createAnalyser(),
+    };
+    this.htmlAudio.audioNode.connect(this.htmlAudio.analyser);
+    this.htmlAudio.audioNode.connect(this.htmlAudio.gain);
+    this.htmlAudio.gain.connect(this.context.destination);
   }
 
   private findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -141,22 +151,15 @@ class AudioQueue {
   };
 
   private loadHtml5 = async (song: string, context: AudioContext) => {
-    let audio = document.getElementsByTagName('audio')[song.endsWith('mp3') ? 0 : 1];
-    let source = song.endsWith('mp3') ? this.mp3Node : this.m4aNode;
-    audio.src = song;
+    const element = this.htmlAudio.element;
+    element.src = song;
     const p = new Promise<AudioMetadata>((resolve, reject) => {
-      audio.onloadedmetadata = () => {
-        const analyser = context.createAnalyser();
-        const gain = context.createGain();
-        this.audioElement = audio;
-        source.connect(analyser);
-        source.connect(gain);
-        gain.connect(context.destination);
-        gain.gain.value = this.volume;
+      element.onloadedmetadata = () => {
+        this.htmlAudio.gain.gain.value = this.volume;
         resolve({
-          audioNode: new AudioNodeWrapper(audio),
-          analyser,
-          gain,
+          audioNode: new AudioNodeWrapper(element),
+          analyser: this.htmlAudio.analyser,
+          gain: this.htmlAudio.gain,
           startGap: 0,
           endGap: 0,
         });
@@ -194,7 +197,6 @@ class AudioQueue {
       ? this.loadHtml5(`file://${song}`, this.context)
       : this.load(`file://${song}`, this.context));
     let startSeconds = songData.startGap;
-
     let currentSwitchTime = this.switchTime;
     if (this.switchTime === 0) {
       currentSwitchTime = this.context.currentTime;
@@ -208,7 +210,7 @@ class AudioQueue {
       nextSwitchTime -= 0.1;
     }
     let start = currentSwitchTime === 0 ? this.context.currentTime : currentSwitchTime;
-    songData.audioNode.start(start, startSeconds, this.context);
+    await songData.audioNode.start(start, startSeconds, this.context);
     console.log('starting at', startSeconds);
     songData.audioNode.stop(nextSwitchTime);
     this.sources.push({
