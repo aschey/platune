@@ -888,7 +888,7 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
     let connection = establish_connection();
     // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
     // Adjust rankings to give slightly more weight to artists and albums
-    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.2 WHEN 'album_artist' THEN 1.2 WHEN 'album' THEN 1.1 ELSE 1 END)";
+    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.3 WHEN 'album_artist' THEN 1.3 WHEN 'album' THEN 1.2 ELSE 1 END)";
     let res = diesel::sql_query(f!("
         WITH CTE AS (
             SELECT DISTINCT entry_value, entry_type, rank, 
