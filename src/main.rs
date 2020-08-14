@@ -70,11 +70,9 @@ fn main() {
     });
 
     if direct {
-        //task::block_on(server::get_all_files());
         let _ = server::run_server(tx);
     } else {
         let t = thread::spawn(move || {
-            //task::block_on(server::get_all_files());
             let _ = server::run_server(tx);
         });
         let srv = rx.recv().unwrap();

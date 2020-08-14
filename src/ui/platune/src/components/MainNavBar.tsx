@@ -30,7 +30,7 @@ import { Suggest, Omnibar, IItemRendererProps } from '@blueprintjs/select';
 import { Song } from '../models/song';
 import { HotkeysEvents, HotkeyScope } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
 import { showHotkeysDialog } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysDialog';
-import { getJson } from '../fetchUtil';
+import { getJson, putJson } from '../fetchUtil';
 import { Search } from '../models/search';
 import _, { capitalize } from 'lodash';
 import { toastMessage } from '../appToaster';
@@ -234,6 +234,14 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
             content={
               <Menu>
                 <MenuItem icon='cog' text='Settings' onClick={() => setIsOpen(true)} />
+                <MenuItem
+                  icon='refresh'
+                  text='Sync'
+                  onClick={async () => {
+                    await putJson<{}>('/sync', {});
+                    toastMessage('Sync started');
+                  }}
+                />
                 <MenuItem
                   icon='help'
                   text='Hotkeys'

@@ -151,6 +151,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
             .service(web::resource("/albumArt").route(web::get().to(get_album_art)))
             .service(web::resource("/albumArtColors").route(web::get().to(get_art_colors)))
             .service(web::resource("/search").route(web::get().to(search)))
+            .service(web::resource("/sync").route(web::put().to(get_all_files)))
             .with_json_spec_at("/spec")
             .build()
             // static files
@@ -390,25 +391,29 @@ async fn get_all_files_parallel(root: String, other: String) {
     ).execute(&connection).unwrap();
 }
 
-pub async fn get_all_files() {
-    let now = std::time::Instant::now();
-    let connection = establish_connection();
-    let dirs: Vec<_>;
-    if IS_WINDOWS {
-        dirs = folder
-            .select((full_path_windows, full_path_unix))
-            .load::<(String, String)>(&connection)
-            .unwrap();
-    } else {
-        dirs = folder
-            .select((full_path_unix, full_path_windows))
-            .load::<(String, String)>(&connection)
-            .unwrap();
-    }
-    for dir in dirs {
-        get_all_files_parallel(dir.0.to_owned(), dir.1.to_owned()).await;
-    }
-    println!("{}", now.elapsed().as_secs());
+#[api_v2_operation]
+pub async fn get_all_files() -> Result<Json<()>, ()> {
+    let t = actix_rt::spawn(async {
+        let now = std::time::Instant::now();
+        let connection = establish_connection();
+        let dirs: Vec<_>;
+        if IS_WINDOWS {
+            dirs = folder
+                .select((full_path_windows, full_path_unix))
+                .load::<(String, String)>(&connection)
+                .unwrap();
+        } else {
+            dirs = folder
+                .select((full_path_unix, full_path_windows))
+                .load::<(String, String)>(&connection)
+                .unwrap();
+        }
+        for dir in dirs {
+            get_all_files_parallel(dir.0.to_owned(), dir.1.to_owned()).await;
+        }
+        println!("{}", now.elapsed().as_secs());
+    });
+    return Ok(Json(()));
 }
 
 fn filter_dirs(res: Result<DirEntry, std::io::Error>, delim: &str) -> Option<Dir> {
