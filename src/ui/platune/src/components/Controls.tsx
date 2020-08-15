@@ -15,10 +15,12 @@ import { theme } from './App';
 interface ControlProps {
   isPlaying: boolean;
   progress: number;
+  setProgress: (progress: number) => void;
   songMillis: number;
   playingSong: Song | null;
   setIsPlaying: (isPlaying: boolean) => void;
   onPause: () => Promise<void>;
+  setPauseTime: (pauseTime: number) => void;
   onPlay: () => void;
   onStop: () => void;
 }
@@ -30,8 +32,10 @@ export const Controls: React.FC<ControlProps> = ({
   onPlay,
   onStop,
   progress,
+  setProgress,
   songMillis,
   playingSong,
+  setPauseTime,
 }) => {
   let [coloradjust, setColorAdjust] = useState('#000000');
   let canvasRef = React.createRef<HTMLCanvasElement>();
@@ -116,7 +120,12 @@ export const Controls: React.FC<ControlProps> = ({
       }}
     >
       <div style={{ gridColumn: '1 / 6' }}>
-        <SongProgress songMillis={songMillis} progress={progress} />
+        <SongProgress
+          songMillis={songMillis}
+          progress={progress}
+          setProgress={setProgress}
+          setPauseTime={setPauseTime}
+        />
       </div>
 
       <FlexRow style={{ marginLeft: 10, alignItems: 'center' }}>

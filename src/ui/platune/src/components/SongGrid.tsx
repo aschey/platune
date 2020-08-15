@@ -155,7 +155,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     setPlayingMillis(songs[playingRow].time);
     const interval = setInterval(() => {
       if (isPlaying) {
-        setProgress(new Date().getTime() - pauseTime - startTime);
+        //setProgress(new Date().getTime() - pauseTime - startTime);
       }
     }, updateInterval);
     return () => clearTimeout(interval);
@@ -602,6 +602,8 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
         onStop={onStop}
         songMillis={playingMillis}
         progress={progress}
+        setProgress={setProgress}
+        setPauseTime={setPauseTime}
         playingSong={playingRow > -1 ? songs[playingRow] : null}
       />
     </>

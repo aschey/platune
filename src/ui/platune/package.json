@@ -101,7 +101,7 @@
     "@rescripts/rescript-env": "^0.0.12",
     "concurrently": "^5.2.0",
     "cross-env": "^7.0.2",
-    "electron": "^9.1.2",
+    "electron": "^9.2.0",
     "electron-builder": "^22.8.0",
     "electron-devtools-installer": "^3.1.1",
     "electron-react-devtools": "^0.5.3",
