@@ -246,11 +246,7 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
                     import_duration: f.duration,
                     import_sample_rate: f.sample_rate,
                     import_bit_rate: f.bitrate,
-                    import_album_art: if f.album_art.len() > 0 {
-                        Some(f.album_art)
-                    } else {
-                        None
-                    },
+                    import_album_art: read_album_art(f.album_art, path.to_owned()),
                 };
                 //let original2 = original.clone();
                 //let other2 = other.clone();
@@ -276,6 +272,25 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
         }
     }
     return all_files;
+}
+
+fn read_album_art(from_tag: Vec<u8>, path: PathBuf) -> Option<Vec<u8>> {
+    if from_tag.len() > 0 {
+        return Some(from_tag);
+    } else {
+        let parent = path.parent().unwrap();
+        let mut parent_files = std::fs::read_dir(parent).unwrap();
+        let cover_opt = parent_files.find(|f| {
+            let temp = f.as_ref().unwrap().path();
+            let path = temp.to_str().unwrap();
+            return path.ends_with("cover.jpg") || path.ends_with("cover.png");
+        });
+        if let Some(cover) = cover_opt {
+            let img = std::fs::read(cover.unwrap().path()).unwrap();
+            return Some(img);
+        }
+        return None;
+    }
 }
 
 async fn get_all_files_parallel(root: String, other: String) {
@@ -389,6 +404,7 @@ async fn get_all_files_parallel(root: String, other: String) {
         where song.song_path_unix is null or song.song_path_windows is null
         "
     ).execute(&connection).unwrap();
+    let _ = diesel::delete(import_temp).execute(&connection);
 }
 
 #[api_v2_operation]
