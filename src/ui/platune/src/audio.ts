@@ -1,8 +1,12 @@
 import { sleep } from './util';
+import { throws } from 'assert';
+import { Subject, interval, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 interface ScheduledSource {
   start: number;
   stop: number;
+  file: string;
   source: AudioNodeWrapper;
   analyser: AnalyserNode;
   gain: GainNode;
@@ -27,8 +31,11 @@ interface HtmlAudioMetadata {
 class AudioNodeWrapper {
   bufferNode: AudioBufferSourceNode | null;
   htmlNode: HTMLAudioElement | null;
+  context: AudioContext;
+  startGap: number;
+  endGap: number;
 
-  constructor(node: AudioBufferSourceNode | HTMLAudioElement) {
+  constructor(node: AudioBufferSourceNode | HTMLAudioElement, startGap: number, endGap: number, context: AudioContext) {
     if (node instanceof HTMLAudioElement) {
       this.htmlNode = node;
       this.bufferNode = null;
@@ -36,16 +43,19 @@ class AudioNodeWrapper {
       this.bufferNode = node;
       this.htmlNode = null;
     }
+    this.context = context;
+    this.startGap = startGap;
+    this.endGap = endGap;
   }
 
   public duration = () => (this.htmlNode ? this.htmlNode?.duration : this.bufferNode?.buffer?.duration) ?? 0;
 
-  public async start(when: number, duration: number, audioContext: AudioContext) {
+  public async start(when: number, offset: number) {
     if (this.htmlNode) {
-      this.htmlNode.currentTime = when - audioContext.currentTime;
+      this.htmlNode.currentTime = offset;
       await this.htmlNode?.play();
     } else {
-      this.bufferNode?.start(when, duration);
+      this.bufferNode?.start(when, offset);
     }
   }
 
@@ -53,6 +63,17 @@ class AudioNodeWrapper {
     if (this.bufferNode) {
       this.bufferNode?.stop(when);
     }
+  }
+
+  public seek(millis: number) {
+    const startSeconds = millis / 1000;
+    const sources = audioQueue.sources;
+    audioQueue.stop(startSeconds);
+    audioQueue.start(
+      sources.map(s => s.file),
+      sources[0].id,
+      startSeconds
+    );
   }
 
   public stopNow() {
@@ -81,8 +102,13 @@ class AudioQueue {
   context: AudioContext;
   sources: ScheduledSource[];
   isPaused: boolean;
+  isPlaying: boolean;
+  durationMillis: Subject<number>;
+  onEnded: Subject<number>;
+  progress: Observable<number>;
   currentAnalyser: AnalyserNode | null;
-  private volume: number;
+  volume: number;
+  startTime: number;
   private currentGain: GainNode | null;
   private htmlAudio: HtmlAudioMetadata;
 
@@ -93,9 +119,15 @@ class AudioQueue {
     this.context = new AudioContext();
     this.sources = [];
     this.isPaused = false;
+    this.isPlaying = false;
     this.currentAnalyser = null;
     this.currentGain = null;
     this.volume = 1;
+    this.durationMillis = new Subject<number>();
+    this.onEnded = new Subject<number>();
+    this.startTime = 0;
+    this.progress = interval(200).pipe(map(this.getCurrentTime));
+
     const audioElement = document.getElementsByTagName('audio')[0];
     this.htmlAudio = {
       element: audioElement,
@@ -107,6 +139,10 @@ class AudioQueue {
     this.htmlAudio.audioNode.connect(this.htmlAudio.gain);
     this.htmlAudio.gain.connect(this.context.destination);
   }
+
+  private getCurrentTime = () => {
+    return this.isPlaying || this.isPaused ? this.context.currentTime * 1000 - this.startTime : 0;
+  };
 
   private findStartGapDuration = (audioBuffer: AudioBuffer) => {
     // Get the raw audio data for the left & right channels.
@@ -150,14 +186,14 @@ class AudioQueue {
     return audioBuffer.duration;
   };
 
-  private loadHtml5 = async (song: string, context: AudioContext) => {
+  private loadHtml5 = async (song: string) => {
     const element = this.htmlAudio.element;
     element.src = song;
-    const p = new Promise<AudioMetadata>((resolve, reject) => {
+    const promise = new Promise<AudioMetadata>((resolve, reject) => {
       element.onloadedmetadata = () => {
         this.htmlAudio.gain.gain.value = this.volume;
         resolve({
-          audioNode: new AudioNodeWrapper(element),
+          audioNode: new AudioNodeWrapper(element, 0, 0, this.context),
           analyser: this.htmlAudio.analyser,
           gain: this.htmlAudio.gain,
           startGap: 0,
@@ -166,61 +202,62 @@ class AudioQueue {
       };
     });
 
-    return p;
+    return promise;
   };
 
-  private load = async (song: string, context: AudioContext): Promise<AudioMetadata> => {
+  private load = async (song: string): Promise<AudioMetadata> => {
     const data = await fetch(song);
     const arrayBuffer = await data.arrayBuffer();
     // Todo: cache audio buffers if they are large enough to warrant caching
-    const audioBuffer = await context.decodeAudioData(arrayBuffer);
-    const source = context.createBufferSource();
-    const analyser = context.createAnalyser();
-    const gain = context.createGain();
+    const audioBuffer = await this.context.decodeAudioData(arrayBuffer);
+    const source = this.context.createBufferSource();
+    const analyser = this.context.createAnalyser();
+    const gain = this.context.createGain();
     source.buffer = audioBuffer;
     source.connect(analyser);
     source.connect(gain);
-    gain.connect(context.destination);
+    gain.connect(this.context.destination);
     gain.gain.value = this.volume;
+    const startGap = this.findStartGapDuration(audioBuffer);
+    const endGap = this.findEndGapDuration(audioBuffer);
     return {
-      audioNode: new AudioNodeWrapper(source),
+      audioNode: new AudioNodeWrapper(source, startGap, endGap, this.context),
       analyser,
       gain,
-      startGap: this.findStartGapDuration(audioBuffer),
-      endGap: this.findEndGapDuration(audioBuffer),
+      startGap,
+      endGap,
     };
   };
 
-  private schedule = async (song: string, onFinished: (playingRow: number) => void, playingRow: number) => {
-    //const startOffset = this.sources.length === 0 ? 0.97 : 0;
-    const songData = await (this.sources.length === 0
-      ? this.loadHtml5(`file://${song}`, this.context)
-      : this.load(`file://${song}`, this.context));
-    let startSeconds = songData.startGap;
+  private schedule = async (song: string, playingRow: number, startOffset: number) => {
+    const songData = await (this.sources.length === 0 ? this.loadHtml5(`file://${song}`) : this.load(`file://${song}`));
+    let startSeconds = startOffset > 0 ? startOffset : songData.startGap;
     let currentSwitchTime = this.switchTime;
     if (this.switchTime === 0) {
       currentSwitchTime = this.context.currentTime;
     }
-    if (this.sources.length === 0) {
-      audioQueue.currentAnalyser = songData.analyser;
-      audioQueue.currentGain = songData.gain;
-    }
+
     let nextSwitchTime = currentSwitchTime + songData.audioNode.duration() - startSeconds;
     if (this.sources.length === 0) {
       nextSwitchTime -= 0.1;
     }
     let start = currentSwitchTime === 0 ? this.context.currentTime : currentSwitchTime;
-    await songData.audioNode.start(start, startSeconds, this.context);
+    await songData.audioNode.start(start, startSeconds);
     console.log('starting at', startSeconds);
     songData.audioNode.stop(nextSwitchTime);
-    this.sources.push({
+    const source = {
       source: songData.audioNode,
       analyser: songData.analyser,
       gain: songData.gain,
       start,
       stop: nextSwitchTime,
       id: playingRow,
-    });
+      file: song,
+    };
+    if (this.sources.length === 0) {
+      this.updateCurrent(source);
+    }
+    this.sources.push(source);
     let self = this;
     songData.audioNode.onEnded((current: AudioNodeWrapper) => {
       // don't fire when stopped because we don't want to play the next track (sources will be empty when stopped)
@@ -231,49 +268,68 @@ class AudioQueue {
       // first source in the queue finished, don't need it anymore
       self.sources.shift();
       if (self.sources.length) {
+        this.updateCurrent(self.sources[0]);
         self.currentAnalyser = self.sources[0].analyser;
         self.currentGain = self.sources[0].gain;
       }
-      onFinished(playingRow);
+      this.onEnded.next(playingRow);
     });
     this.switchTime = nextSwitchTime;
     this.index++;
   };
 
-  private reset = () => {
+  private updateCurrent = (songData: ScheduledSource) => {
+    audioQueue.currentAnalyser = songData.analyser;
+    audioQueue.currentGain = songData.gain;
+    audioQueue.durationMillis.next(songData.source.duration() * 1000);
+  };
+
+  private reset = (seekTime: number) => {
+    if (seekTime > 0) {
+      this.startTime = (this.context.currentTime - seekTime) * 1000;
+    }
     for (let song of this.sources) {
       song.source.stopNow();
     }
     this.switchTime = 0;
+    this.isPaused = false;
+    this.isPlaying = seekTime > 0;
     this.sources = [];
     if (this.currentGain) {
       this.currentGain.gain.value = 0;
     }
+    this.context.resume();
   };
 
-  private scheduleAll = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
+  private scheduleAll = async (songQueue: string[], playingRow: number, initialStartSeconds: number) => {
     if (songQueue.length) {
       for (let song of songQueue) {
         console.log(song);
-        await this.schedule(song, onFinished, playingRow);
+        await this.schedule(song, playingRow, song === songQueue[0] ? initialStartSeconds : 0);
         playingRow++;
       }
     }
   };
 
-  public start = async (songQueue: string[], playingRow: number, onFinished: (playingRow: number) => void) => {
+  public start = async (songQueue: string[], playingRow: number, initialStartSeconds: number = 0) => {
+    const wasPaused = this.isPaused;
     if (this.isPaused) {
       this.isPaused = false;
       this.setVolumeTemporary(this.volume);
       this.context.resume();
       // Starting the song that's currently paused, don't reschedule
       if (this.sources.length && playingRow === this.sources[0].id) {
+        this.isPlaying = true;
         return;
       } else {
-        this.reset();
+        this.reset(0);
       }
     }
-    await this.scheduleAll(songQueue, playingRow, onFinished);
+    await this.scheduleAll(songQueue, playingRow, initialStartSeconds);
+    this.isPlaying = true;
+    if (!wasPaused) {
+      this.startTime = (this.context.currentTime - initialStartSeconds) * 1000;
+    }
   };
 
   private setVolumeTemporary(volume: number) {
@@ -293,11 +349,18 @@ class AudioQueue {
     // Seems like there's a slight delay before the volume change takes so we have to wait for it to complete
     await sleep(100);
     await this.context.suspend();
+    this.isPlaying = false;
     this.isPaused = true;
   }
 
-  public stop() {
-    this.reset();
+  public stop(seekTime: number = 0) {
+    this.reset(seekTime);
+  }
+
+  public seek(millis: number) {
+    if (this.sources.length) {
+      this.sources[0].source.seek(millis);
+    }
   }
 }
 

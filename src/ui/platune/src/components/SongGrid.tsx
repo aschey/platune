@@ -23,6 +23,7 @@ import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { getProcessMemoryInfo } from 'process';
 import { Rgb } from '../models/rgb';
+import { useObservable } from 'rxjs-hooks';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -36,11 +37,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
   const [playingRow, setPlayingRow] = useState(-1);
-  const [playingMillis, setPlayingMillis] = useState(-1);
-  const [progress, setProgress] = useState(-1);
-  const [startTime, setStartTime] = useState(0);
-  const [pauseTime, setPauseTime] = useState(0);
-  const [pauseStart, setPauseStart] = useState(0);
   const [selectedRow, setSelectedRow] = useState(-1);
   const [selectedAlbumRow, setSelectedAlbumRow] = useState(-1);
   const [editingRow, setEditingRow] = useState(-1);
@@ -68,7 +64,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
 
   const mainRef = React.createRef<Table>();
   const otherRef = React.createRef<Table>();
-
+  const songFinishedIndex = useObservable(() => audioQueue.onEnded);
   const numTries = 10;
 
   const loadSongs = async () => {
@@ -94,6 +90,12 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   useEffect(() => {
     loadSongs().then(setSongs);
   }, []);
+
+  useEffect(() => {
+    if (songFinishedIndex !== null) {
+      onSongFinished(songFinishedIndex);
+    }
+  }, [songFinishedIndex]);
 
   useEffect(() => {
     onStop();
@@ -146,20 +148,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
       </>
     );
   };
-
-  useEffect(() => {
-    if (playingRow === -1 || playingRow >= songs.length) {
-      return;
-    }
-    const updateInterval = 60;
-    setPlayingMillis(songs[playingRow].time);
-    const interval = setInterval(() => {
-      if (isPlaying) {
-        setProgress(new Date().getTime() - pauseTime - startTime);
-      }
-    }, updateInterval);
-    return () => clearTimeout(interval);
-  }, [playingRow, isPlaying, pauseTime, songs, startTime]);
 
   const editCellRenderer = (rowIndex: number) => {
     const isEditingRow = editingRow === rowIndex;
@@ -221,16 +209,11 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     if (songIndex + 1 < songs.length) {
       queue.push(songs[songIndex + 1].path);
     }
-    return audioQueue.start(queue, songIndex, onSongFinished);
+    return audioQueue.start(queue, songIndex);
   };
 
   const updatePlayingRow = (rowIndex: number) => {
-    setPauseTime(0);
-    setStartTime(new Date().getTime());
     setPlayingRow(rowIndex);
-    if (rowIndex < 0) {
-      setPlayingMillis(-1);
-    }
   };
 
   const onSongFinished = (playingRow: number) => {
@@ -240,7 +223,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
       onStop();
     }
     if (playingRow + 2 < songs.length) {
-      audioQueue.start([songs[playingRow + 2].path], playingRow + 2, onSongFinished);
+      audioQueue.start([songs[playingRow + 2].path], playingRow + 2);
     }
   };
 
@@ -403,23 +386,16 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   const onPause = async () => {
     await audioQueue.pause();
     setIsPlaying(false);
-    setPauseStart(new Date().getTime());
   };
 
   const onPlay = () => {
     const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
-    if (pauseStart > 0) {
-      setPauseTime(prev => prev + (new Date().getTime() - pauseStart));
-      setPauseStart(0);
-    } else {
-      updatePlayingRow(rowToPlay);
-    }
+    updatePlayingRow(rowToPlay);
     startQueue(rowToPlay);
   };
 
   const onStop = () => {
     audioQueue.stop();
-    setPauseStart(0);
     updatePlayingRow(-1);
   };
 
@@ -600,8 +576,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
         onPause={onPause}
         onPlay={onPlay}
         onStop={onStop}
-        songMillis={playingMillis}
-        progress={progress}
         playingSong={playingRow > -1 ? songs[playingRow] : null}
       />
     </>

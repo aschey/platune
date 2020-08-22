@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Text, Label, ProgressBar, Intent, Button, Icon, AnchorButton } from '@blueprintjs/core';
-import { Slider, Rail, Handles, Tracks, Ticks, SliderItem, GetHandleProps, GetTrackProps } from 'react-compound-slider';
+import { useObservable } from 'rxjs-hooks';
 import { FlexRow } from './FlexRow';
 import { FlexCol } from './FlexCol';
 import { range, formatMs, sleep } from '../util';
@@ -11,11 +11,10 @@ import { Song } from '../models/song';
 import { audioQueue } from '../audio';
 import _ from 'lodash';
 import { theme } from './App';
+import { Subject } from 'rxjs';
 
 interface ControlProps {
   isPlaying: boolean;
-  progress: number;
-  songMillis: number;
   playingSong: Song | null;
   setIsPlaying: (isPlaying: boolean) => void;
   onPause: () => Promise<void>;
@@ -23,17 +22,10 @@ interface ControlProps {
   onStop: () => void;
 }
 
-export const Controls: React.FC<ControlProps> = ({
-  isPlaying,
-  setIsPlaying,
-  onPause,
-  onPlay,
-  onStop,
-  progress,
-  songMillis,
-  playingSong,
-}) => {
+export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPause, onPlay, onStop, playingSong }) => {
   let [coloradjust, setColorAdjust] = useState('#000000');
+  const songMillis = useObservable(() => audioQueue.durationMillis);
+  const progress = useObservable(() => audioQueue.progress);
   let canvasRef = React.createRef<HTMLCanvasElement>();
   const songColorAdjust = isLight(theme.backgroundMain) ? 150 : -40;
 
@@ -42,7 +34,9 @@ export const Controls: React.FC<ControlProps> = ({
   });
 
   useEffect(() => {
-    setColorAdjust(shadeColor(theme.songTimeColor, (progress / songMillis) * songColorAdjust));
+    if (songMillis !== null && progress !== null) {
+      setColorAdjust(shadeColor(theme.songTimeColor, (progress / songMillis) * songColorAdjust));
+    }
   }, [progress, songMillis, songColorAdjust]);
 
   const playPauseClick = async () => {
@@ -96,12 +90,12 @@ export const Controls: React.FC<ControlProps> = ({
             x += sliceWidth;
           }
           canvasCtx.stroke();
-          await sleep(200);
+          await sleep(50);
           visualizer();
         });
       }
     } else {
-      await sleep(200);
+      await sleep(50);
       visualizer();
     }
   };
@@ -116,7 +110,7 @@ export const Controls: React.FC<ControlProps> = ({
       }}
     >
       <div style={{ gridColumn: '1 / 6' }}>
-        <SongProgress songMillis={songMillis} progress={progress} />
+        <SongProgress />
       </div>
 
       <FlexRow style={{ marginLeft: 10, alignItems: 'center' }}>
@@ -129,10 +123,12 @@ export const Controls: React.FC<ControlProps> = ({
           <FlexRow>{playingSong?.artist}</FlexRow>
         </div>
         <FlexCol>
-          {songMillis > 0 ? (
+          {songMillis ?? 0 > 0 ? (
             <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
-              <div style={{ color: coloradjust }}>{formatMs(progress)}</div>
-              <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>/{formatMs(songMillis)}</div>
+              <div style={{ color: coloradjust }}>{formatMs(progress ?? 0)}</div>
+              <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>
+                /{formatMs(songMillis ?? 0)}
+              </div>
             </FlexRow>
           ) : null}
         </FlexCol>

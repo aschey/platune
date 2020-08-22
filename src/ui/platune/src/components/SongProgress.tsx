@@ -1,8 +1,23 @@
-import React from 'react';
-import { Slider, Rail, Handles, Tracks, Ticks, SliderItem, GetHandleProps, GetTrackProps } from 'react-compound-slider';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Slider,
+  Rail,
+  Handles,
+  Tracks,
+  Ticks,
+  SliderItem,
+  GetHandleProps,
+  GetTrackProps,
+  GetRailProps,
+} from 'react-compound-slider';
+import { audioQueue } from '../audio';
+import { useObservable } from 'rxjs-hooks';
 
-export const SongProgress: React.FC<{ songMillis: number; progress: number }> = ({ songMillis, progress }) => {
-  const domain: ReadonlyArray<number> = [0, songMillis];
+export const SongProgress: React.FC<{}> = () => {
+  const songMillis = useObservable(() => audioQueue.durationMillis);
+  const progress = useObservable(() => audioQueue.progress);
+  const [lastProgress, setLastProgress] = useState<ReadonlyArray<number>>([0]);
+  const isSeeking = useRef(false);
   const sliderStyle: React.CSSProperties = {
     position: 'relative',
     marginTop: 5,
@@ -18,19 +33,38 @@ export const SongProgress: React.FC<{ songMillis: number; progress: number }> = 
     backgroundColor: 'rgb(155,155,155)',
   };
 
+  useEffect(() => {
+    if (!isSeeking.current) {
+      setLastProgress([progress ?? 0]);
+    }
+  }, [progress]);
+
+  const onSlideStart = () => {
+    console.log('seeking');
+    isSeeking.current = true;
+  };
+
   return (
     <Slider
       mode={1}
       step={1}
-      domain={domain}
-      rootStyle={sliderStyle}
-      onChange={a => {}}
-      values={[progress] as ReadonlyArray<number>}
+      domain={[0, songMillis ?? 0]}
+      rootStyle={{ position: 'relative', marginTop: 5 }}
+      onSlideStart={onSlideStart}
+      onSlideEnd={vals => {
+        let val = vals[0];
+        if (val === 0) {
+          return;
+        }
+        audioQueue.seek(val);
+        isSeeking.current = false;
+      }}
+      values={lastProgress}
     >
       <Rail>{({ getRailProps }) => <div style={railStyle} {...getRailProps()} />}</Rail>
       <Tracks right={false}>
         {({ tracks, getTrackProps }) => (
-          <div className="slider-tracks">
+          <div className='slider-tracks'>
             {tracks.map(({ id, source, target }) => (
               <Track key={id} source={source} target={target} getTrackProps={getTrackProps} />
             ))}
@@ -50,7 +84,7 @@ interface ITrackProps {
 //let val = `linear-gradient(to right, ${range(100).map(val => `rgba(${Math.round(Math.random() * 100)},${Math.round(Math.random() * 100)},${Math.round(Math.random() * 100)},1) ${val}%`).join(',')}) fixed`;
 export const Track: React.FC<ITrackProps> = ({ source, target, getTrackProps }) => (
   <div
-    className="song-progress-track"
+    className='song-progress-track'
     style={{
       left: `${source.percent}%`,
       width: `${target.percent - source.percent}%`,
