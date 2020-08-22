@@ -31,9 +31,17 @@ interface SongGridProps {
   width: number;
   songs: Song[];
   setSongs: (songs: Song[]) => void;
+  setQueuedSongs: (songs: Song[]) => void;
 }
 
-export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, width, songs, setSongs }) => {
+export const SongGrid: React.FC<SongGridProps> = ({
+  selectedGrid,
+  isLightTheme,
+  width,
+  songs,
+  setSongs,
+  setQueuedSongs,
+}) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
   const [playingRow, setPlayingRow] = useState(-1);
@@ -206,6 +214,8 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
 
   const startQueue = (songIndex: number) => {
     const queue = [songs[songIndex].path];
+    const queue2 = songs.filter(s => s.index >= songIndex);
+    setQueuedSongs(queue2);
     if (songIndex + 1 < songs.length) {
       queue.push(songs[songIndex + 1].path);
     }
@@ -399,7 +409,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     updatePlayingRow(-1);
   };
 
-  const mulitSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
+  const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
     let g = groupedSongs[albumKeys[rowIndex]];
     return <div className='rowParent'>{g.map(gg => cellRenderer(gg.index))}</div>;
   };
@@ -422,7 +432,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='album'
           label='Album'
-          cellRenderer={({ rowIndex, dataKey, parent }) => {
+          cellRenderer={({ rowIndex }) => {
             let gg = groupedSongs[albumKeys[rowIndex]];
             let g = groupedSongs[albumKeys[rowIndex]][0];
             return (
@@ -445,7 +455,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey=''
           label=''
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, editCellRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, editCellRenderer)}
           width={widths2.edit}
           minWidth={widths2.edit}
         />
@@ -453,9 +463,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex, dataKey, parent }) =>
-            mulitSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))
-          }
+          cellRenderer={({ rowIndex, dataKey }) => multiSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
           width={widths2.name}
           minWidth={widths2.name}
         />
@@ -463,7 +471,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='track'
           label='Track'
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, trackRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, trackRenderer)}
           width={widths2.track}
           minWidth={widths2.track}
         />
@@ -471,7 +479,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='time'
           label='Time'
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, timeRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, timeRenderer)}
           width={widths2.time}
           minWidth={widths2.time}
         />
@@ -479,7 +487,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='path'
           label='Path'
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, pathRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, pathRenderer)}
           width={widths2.path}
           minWidth={widths2.path}
         />
@@ -502,7 +510,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
         <Column
           headerRenderer={headerRenderer}
           dataKey=''
-          cellRenderer={({ rowIndex, dataKey }) => editCellRenderer(rowIndex)}
+          cellRenderer={({ rowIndex }) => editCellRenderer(rowIndex)}
           width={widths.edit}
           minWidth={widths.edit}
         />
@@ -510,7 +518,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex, dataKey }) => genericCellRenderer(rowIndex, 'name')}
+          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'name')}
           width={widths.name}
           minWidth={widths.name}
         />
