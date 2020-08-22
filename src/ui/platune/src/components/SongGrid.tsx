@@ -23,6 +23,7 @@ import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { getProcessMemoryInfo } from 'process';
 import { Rgb } from '../models/rgb';
+import { useObservable } from 'rxjs-hooks';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -63,7 +64,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
 
   const mainRef = React.createRef<Table>();
   const otherRef = React.createRef<Table>();
-
+  const songFinishedIndex = useObservable(() => audioQueue.onEnded);
   const numTries = 10;
 
   const loadSongs = async () => {
@@ -89,6 +90,12 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   useEffect(() => {
     loadSongs().then(setSongs);
   }, []);
+
+  useEffect(() => {
+    if (songFinishedIndex !== null) {
+      onSongFinished(songFinishedIndex);
+    }
+  }, [songFinishedIndex]);
 
   useEffect(() => {
     onStop();
@@ -202,7 +209,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     if (songIndex + 1 < songs.length) {
       queue.push(songs[songIndex + 1].path);
     }
-    return audioQueue.start(queue, songIndex, onSongFinished);
+    return audioQueue.start(queue, songIndex);
   };
 
   const updatePlayingRow = (rowIndex: number) => {
@@ -216,7 +223,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
       onStop();
     }
     if (playingRow + 2 < songs.length) {
-      audioQueue.start([songs[playingRow + 2].path], playingRow + 2, onSongFinished);
+      audioQueue.start([songs[playingRow + 2].path], playingRow + 2);
     }
   };
 
