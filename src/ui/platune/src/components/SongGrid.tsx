@@ -36,11 +36,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
   const [playingRow, setPlayingRow] = useState(-1);
-  const [playingMillis, setPlayingMillis] = useState(-1);
-  const [progress, setProgress] = useState(-1);
-  const [startTime, setStartTime] = useState(0);
-  const [pauseTime, setPauseTime] = useState(0);
-  const [pauseStart, setPauseStart] = useState(0);
   const [selectedRow, setSelectedRow] = useState(-1);
   const [selectedAlbumRow, setSelectedAlbumRow] = useState(-1);
   const [editingRow, setEditingRow] = useState(-1);
@@ -147,20 +142,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     );
   };
 
-  useEffect(() => {
-    if (playingRow === -1 || playingRow >= songs.length) {
-      return;
-    }
-    const updateInterval = 60;
-    setPlayingMillis(songs[playingRow].time);
-    const interval = setInterval(() => {
-      if (isPlaying) {
-        //setProgress(new Date().getTime() - pauseTime - startTime);
-      }
-    }, updateInterval);
-    return () => clearTimeout(interval);
-  }, [playingRow, isPlaying, pauseTime, songs, startTime]);
-
   const editCellRenderer = (rowIndex: number) => {
     const isEditingRow = editingRow === rowIndex;
     const isSelectedRow = selectedRow === rowIndex;
@@ -225,12 +206,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   const updatePlayingRow = (rowIndex: number) => {
-    setPauseTime(0);
-    setStartTime(new Date().getTime());
     setPlayingRow(rowIndex);
-    if (rowIndex < 0) {
-      setPlayingMillis(-1);
-    }
   };
 
   const onSongFinished = (playingRow: number) => {
@@ -403,23 +379,16 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   const onPause = async () => {
     await audioQueue.pause();
     setIsPlaying(false);
-    setPauseStart(new Date().getTime());
   };
 
   const onPlay = () => {
     const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
-    if (pauseStart > 0) {
-      setPauseTime(prev => prev + (new Date().getTime() - pauseStart));
-      setPauseStart(0);
-    } else {
-      updatePlayingRow(rowToPlay);
-    }
+    updatePlayingRow(rowToPlay);
     startQueue(rowToPlay);
   };
 
   const onStop = () => {
     audioQueue.stop();
-    setPauseStart(0);
     updatePlayingRow(-1);
   };
 
@@ -600,10 +569,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
         onPause={onPause}
         onPlay={onPlay}
         onStop={onStop}
-        songMillis={playingMillis}
-        progress={progress}
-        setProgress={setProgress}
-        setPauseTime={setPauseTime}
         playingSong={playingRow > -1 ? songs[playingRow] : null}
       />
     </>

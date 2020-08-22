@@ -1,15 +1,23 @@
-import React from 'react';
-import { Slider, Rail, Handles, Tracks, Ticks, SliderItem, GetHandleProps, GetTrackProps } from 'react-compound-slider';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Slider,
+  Rail,
+  Handles,
+  Tracks,
+  Ticks,
+  SliderItem,
+  GetHandleProps,
+  GetTrackProps,
+  GetRailProps,
+} from 'react-compound-slider';
 import { audioQueue } from '../audio';
+import { useObservable } from 'rxjs-hooks';
 
-export const SongProgress: React.FC<{
-  songMillis: number;
-  progress: number;
-  setProgress: (progress: number) => void;
-  setPauseTime: (pauseTime: number) => void;
-}> = ({ songMillis, progress, setProgress, setPauseTime }) => {
-  console.log('millis', songMillis);
-  const domain: ReadonlyArray<number> = [0, songMillis];
+export const SongProgress: React.FC<{}> = () => {
+  const songMillis = useObservable(() => audioQueue.durationMillis);
+  const progress = useObservable(() => audioQueue.progress);
+  const [lastProgress, setLastProgress] = useState<ReadonlyArray<number>>([0]);
+  const isSeeking = useRef(false);
   const sliderStyle: React.CSSProperties = {
     position: 'relative',
     marginTop: 5,
@@ -25,32 +33,33 @@ export const SongProgress: React.FC<{
     backgroundColor: 'rgb(155,155,155)',
   };
 
+  useEffect(() => {
+    if (!isSeeking.current) {
+      setLastProgress([progress ?? 0]);
+    }
+  }, [progress]);
+
+  const onSlideStart = () => {
+    console.log('seeking');
+    isSeeking.current = true;
+  };
+
   return (
     <Slider
       mode={1}
       step={1}
-      domain={domain}
-      rootStyle={sliderStyle}
-      onChange={vals => {
-        // let val = vals[0];
-        // if (val === 0) {
-        //   return;
-        // }
-        // audioQueue.seek(val);
-        // setProgress(val);
-        // setPauseTime(val);
-      }}
+      domain={[0, songMillis ?? 0]}
+      rootStyle={{ position: 'relative', marginTop: 5 }}
+      onSlideStart={onSlideStart}
       onSlideEnd={vals => {
-        console.log(vals);
         let val = vals[0];
         if (val === 0) {
           return;
         }
         audioQueue.seek(val);
-        // setProgress(val);
-        // setPauseTime(val);
+        isSeeking.current = false;
       }}
-      values={[progress] as ReadonlyArray<number>}
+      values={lastProgress}
     >
       <Rail>{({ getRailProps }) => <div style={railStyle} {...getRailProps()} />}</Rail>
       <Tracks right={false}>

@@ -22,7 +22,7 @@ export const Volume: React.FC<{}> = () => {
       mode={1}
       step={0.05}
       domain={[0, 1]}
-      rootStyle={sliderStyle}
+      rootStyle={{ position: 'relative', marginBottom: 10, marginTop: 10 }}
       onChange={values => {
         audioQueue.setVolume(values[0]);
       }}
@@ -31,7 +31,7 @@ export const Volume: React.FC<{}> = () => {
       <Rail>{({ getRailProps }) => <div style={railStyle} {...getRailProps()} />}</Rail>
       <Tracks right={false}>
         {({ tracks, getTrackProps }) => (
-          <div className="slider-tracks">
+          <div className='slider-tracks'>
             {tracks.map(({ id, source, target }) => (
               <Track key={id} source={source} target={target} getTrackProps={getTrackProps} />
             ))}
@@ -49,7 +49,7 @@ interface ITrackProps {
 
 export const Track: React.FC<ITrackProps> = ({ source, target, getTrackProps }) => (
   <div
-    className="volume-slider"
+    className='volume-slider'
     style={{
       left: `${source.percent}%`,
       width: `${target.percent - source.percent}%`,
