@@ -49,7 +49,7 @@ fn get_ip() -> String {
 }
 
 fn main() {
-    let direct = true;
+    let direct = cfg!(debug_assertions);
     let (tx, rx) = mpsc::channel();
 
     let _ = thread::spawn(move || {

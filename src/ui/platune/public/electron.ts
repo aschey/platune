@@ -41,11 +41,11 @@ app.on('ready', async () => {
     await installExtensions();
   }
 
-  const spawnServer = false;
+  const spawnServer = !isDev;
   if (spawnServer) {
     server = net.createServer();
     server.listen(8001);
-    let command = process.platform === 'win32' ? '.\\target\\debug\\platune.exe' : './target/debug/platune';
+    let command = process.platform === 'win32' ? '.\\target\\release\\platune.exe' : './target/release/platune';
     let proc = spawn(command, { cwd: '../../..', detached: true, windowsHide: true, shell: isDev, stdio: 'ignore' });
     proc.unref();
   }
