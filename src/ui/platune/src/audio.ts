@@ -270,6 +270,8 @@ class AudioQueue {
       this.onEnded.next(playingRow);
       if (this.sources.length === 1) {
         await this.start(this.unscheduled, this.sources[0].id + 1, 0);
+      } else {
+        this.stop();
       }
     });
     this.switchTime = nextSwitchTime;
@@ -282,7 +284,7 @@ class AudioQueue {
     this.startTime = (this.context.currentTime - startOffset) * 1000;
   };
 
-  private reset = (seekTime: number) => {
+  public stop = (seekTime: number = 0) => {
     if (seekTime > 0) {
       this.startTime = (this.context.currentTime - seekTime) * 1000;
     }
@@ -305,6 +307,8 @@ class AudioQueue {
       const scheduleNow = songQueue.slice(0, Math.min(2, songQueue.length));
       if (songQueue.length > 2) {
         this.unscheduled = songQueue.filter((_, index) => index > 1);
+      } else {
+        this.unscheduled = [];
       }
       for (let song of scheduleNow) {
         console.log(song);
@@ -324,7 +328,7 @@ class AudioQueue {
         this.isPlaying = true;
         return;
       } else {
-        this.reset(0);
+        this.stop();
       }
     }
     await this.scheduleAll(songQueue, playingRow, initialStartSeconds);
@@ -350,10 +354,6 @@ class AudioQueue {
     await this.context.suspend();
     this.isPlaying = false;
     this.isPaused = true;
-  }
-
-  public stop(seekTime: number = 0) {
-    this.reset(seekTime);
   }
 
   public seek(millis: number) {
