@@ -238,51 +238,28 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
+    let classes = 'bp3-table-cell grid-cell';
+    let child: JSX.Element | string = value;
     if (rowIndex === editingRow) {
-      return (
-        <div
-          key={rowIndex}
-          className='bp3-table-cell selected grid-cell editing'
-          onDoubleClick={() => onDoubleClick(rowIndex)}
-          onClick={() => onRowClick(rowIndex)}
-        >
-          {canEdit ? <EditableText defaultValue={value} className='editing' /> : value}
-        </div>
-      );
-    }
-
-    if (rowIndex === playingRow) {
-      return (
-        <div
-          key={rowIndex}
-          className='bp3-table-cell playing grid-cell'
-          onDoubleClick={() => onDoubleClick(rowIndex)}
-          onClick={() => onRowClick(rowIndex)}
-        >
-          {value}
-        </div>
-      );
-    }
-    if (rowIndex === selectedRow) {
-      return (
-        <div
-          key={rowIndex}
-          className='bp3-table-cell grid-cell selected'
-          onDoubleClick={() => onDoubleClick(rowIndex)}
-          onClick={() => onRowClick(rowIndex)}
-        >
-          {value}
-        </div>
-      );
+      classes += ' editing';
+      child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
+    } else if (rowIndex === playingRow) {
+      classes += ' playing';
+    } else if (rowIndex === selectedRow) {
+      classes += ' selected';
+    } else {
+      classes += ' striped';
     }
     return (
       <div
         key={rowIndex}
-        className='bp3-table-cell striped grid-cell'
+        className={classes}
         onDoubleClick={() => onDoubleClick(rowIndex)}
         onClick={() => onRowClick(rowIndex)}
       >
-        {value}
+        <div className='ellipsize' style={{ display: 'inline-block' }}>
+          {child}
+        </div>
       </div>
     );
   };

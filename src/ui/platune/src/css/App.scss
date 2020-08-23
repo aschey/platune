@@ -276,3 +276,9 @@ svg[data-icon='list-detail-view'] {
   border-radius: 7px;
   cursor: pointer;
 }
+
+.ellipsize {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}

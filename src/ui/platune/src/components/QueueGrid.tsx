@@ -40,9 +40,23 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, queuePlayingR
         dataKey='name'
         cellRenderer={({ rowIndex }) => (
           <FlexCol>
-            <div>{queuedSongs[rowIndex].name}</div>
-            <div style={{ fontSize: 12, color: 'rgba(var(--text-secondary), 0.8)' }}>{queuedSongs[rowIndex].album}</div>
-            <div style={{ fontSize: 12, color: 'rgba(var(--text-secondary), 0.8)' }}>
+            <div className='ellipsize'>{queuedSongs[rowIndex].name}</div>
+            <div
+              className='ellipsize'
+              style={{
+                fontSize: 12,
+                color: 'rgba(var(--text-secondary), 0.8)',
+              }}
+            >
+              {queuedSongs[rowIndex].album}
+            </div>
+            <div
+              className='ellipsize'
+              style={{
+                fontSize: 12,
+                color: 'rgba(var(--text-secondary), 0.8)',
+              }}
+            >
               {queuedSongs[rowIndex].artist}
             </div>
           </FlexCol>
