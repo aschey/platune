@@ -213,13 +213,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const startQueue = (songIndex: number) => {
-    const queue = [songs[songIndex].path];
-    const queue2 = songs.filter(s => s.index >= songIndex);
-    setQueuedSongs(queue2);
-    if (songIndex + 1 < songs.length) {
-      queue.push(songs[songIndex + 1].path);
-    }
-    return audioQueue.start(queue, songIndex);
+    const queue = songs.filter(s => s.index >= songIndex);
+    return audioQueue.start(
+      queue.map(q => q.path),
+      songIndex
+    );
   };
 
   const updatePlayingRow = (rowIndex: number) => {
@@ -229,11 +227,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const onSongFinished = (playingRow: number) => {
     if (playingRow + 1 < songs.length) {
       updatePlayingRow(playingRow + 1);
-    } else {
-      onStop();
-    }
-    if (playingRow + 2 < songs.length) {
-      audioQueue.start([songs[playingRow + 2].path], playingRow + 2);
     }
   };
 
