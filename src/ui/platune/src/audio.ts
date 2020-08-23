@@ -272,8 +272,10 @@ class AudioQueue {
       }
       this.onEnded.next({ path: song, time: new Date().getTime() });
       if (this.sources.length === 1) {
+        // Last scheduled song, schedule the next batch
         await this.start(this.unscheduled, 0);
-      } else {
+      } else if (this.unscheduled.length === 0) {
+        // No more songs, clear all data
         this.stop();
       }
     });
