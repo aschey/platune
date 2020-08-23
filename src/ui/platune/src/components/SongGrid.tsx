@@ -32,6 +32,8 @@ interface SongGridProps {
   songs: Song[];
   setSongs: (songs: Song[]) => void;
   setQueuedSongs: (songs: Song[]) => void;
+  queuePlayingRow: number;
+  setQueuePlayingRow: (playingRow: number) => void;
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
@@ -41,14 +43,16 @@ export const SongGrid: React.FC<SongGridProps> = ({
   songs,
   setSongs,
   setQueuedSongs,
+  queuePlayingRow,
+  setQueuePlayingRow,
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
-  const [playingRow, setPlayingRow] = useState(-1);
   const [selectedRow, setSelectedRow] = useState(-1);
   const [selectedAlbumRow, setSelectedAlbumRow] = useState(-1);
   const [editingRow, setEditingRow] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [playingRow, setPlayingRow] = useState(-1);
   const [widths, setWidths] = useState({
     edit: 30,
     name: 300,
@@ -215,6 +219,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const startQueue = (songIndex: number) => {
     const queue = songs.filter(s => s.index >= songIndex);
     setQueuedSongs(queue);
+    setQueuePlayingRow(0);
     return audioQueue.start(
       queue.map(q => q.path),
       songIndex
@@ -223,6 +228,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const updatePlayingRow = (rowIndex: number) => {
     setPlayingRow(rowIndex);
+    setQueuePlayingRow(queuePlayingRow + 1);
   };
 
   const onSongFinished = (playingRow: number) => {
