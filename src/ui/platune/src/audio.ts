@@ -9,7 +9,6 @@ interface ScheduledSource {
   source: AudioNodeWrapper;
   analyser: AnalyserNode;
   gain: GainNode;
-  id: number;
 }
 
 interface AudioMetadata {
@@ -29,7 +28,7 @@ interface HtmlAudioMetadata {
 
 interface EndedEvent {
   time: number;
-  rowNum: number;
+  path: string;
 }
 
 class AudioNodeWrapper {
@@ -74,7 +73,7 @@ class AudioNodeWrapper {
     const sources = audioQueue.sources;
     const unscheduled = audioQueue.unscheduled;
     audioQueue.stop(startSeconds);
-    audioQueue.start(sources.map(s => s.file).concat(unscheduled), sources[0].id, startSeconds);
+    audioQueue.start(sources.map(s => s.file).concat(unscheduled), startSeconds);
   }
 
   public stopNow() {
@@ -231,7 +230,7 @@ class AudioQueue {
     };
   };
 
-  private schedule = async (song: string, playingRow: number, startOffset: number) => {
+  private schedule = async (song: string, startOffset: number) => {
     const songData = await (this.sources.length === 0 ? this.loadHtml5(`file://${song}`) : this.load(`file://${song}`));
     let startSeconds = startOffset > 0 ? startOffset : songData.startGap;
     let currentSwitchTime = this.switchTime;
@@ -253,7 +252,6 @@ class AudioQueue {
       gain: songData.gain,
       start,
       stop: nextSwitchTime,
-      id: playingRow,
       file: song,
     };
     if (this.sources.length === 0) {
@@ -272,9 +270,9 @@ class AudioQueue {
       if (this.sources.length) {
         this.updateCurrent(this.sources[0], 0);
       }
-      this.onEnded.next({ rowNum: playingRow, time: new Date().getTime() });
+      this.onEnded.next({ path: song, time: new Date().getTime() });
       if (this.sources.length === 1) {
-        await this.start(this.unscheduled, this.sources[0].id + 1, 0);
+        await this.start(this.unscheduled, 0);
       } else {
         this.stop();
       }
@@ -307,7 +305,7 @@ class AudioQueue {
     this.context.resume();
   };
 
-  private scheduleAll = async (songQueue: string[], playingRow: number, initialStartSeconds: number) => {
+  private scheduleAll = async (songQueue: string[], initialStartSeconds: number) => {
     if (songQueue.length) {
       const scheduleNow = songQueue.slice(0, Math.min(2, songQueue.length));
       if (songQueue.length > 2) {
@@ -317,26 +315,25 @@ class AudioQueue {
       }
       for (let song of scheduleNow) {
         console.log(song);
-        await this.schedule(song, playingRow, song === songQueue[0] ? initialStartSeconds : 0);
-        playingRow++;
+        await this.schedule(song, song === songQueue[0] ? initialStartSeconds : 0);
       }
     }
   };
 
-  public start = async (songQueue: string[], playingRow: number, initialStartSeconds: number = 0) => {
+  public start = async (songQueue: string[], initialStartSeconds: number = 0) => {
     if (this.isPaused) {
       this.isPaused = false;
       this.setVolumeTemporary(this.volume);
       this.context.resume();
       // Starting the song that's currently paused, don't reschedule
-      if (this.sources.length && playingRow === this.sources[0].id) {
+      if (this.sources.length && songQueue[0] === this.sources[0].file) {
         this.isPlaying = true;
         return;
       } else {
         this.stop();
       }
     }
-    await this.scheduleAll(songQueue, playingRow, initialStartSeconds);
+    await this.scheduleAll(songQueue, initialStartSeconds);
     this.isPlaying = true;
   };
 

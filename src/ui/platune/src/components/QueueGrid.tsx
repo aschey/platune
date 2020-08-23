@@ -6,10 +6,10 @@ import { Icon } from '@blueprintjs/core';
 
 interface QueueGridProps {
   queuedSongs: Song[];
-  queuePlayingRow: number;
+  queuePlayingFile: string;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, queuePlayingRow }) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, queuePlayingFile }) => {
   const rowRenderer = (props: TableRowProps) => {
     props.style.boxShadow = 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
     return defaultTableRowRenderer(props);
@@ -31,7 +31,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, queuePlayingR
         width={50}
         cellRenderer={({ rowIndex }) => (
           <div style={{ paddingLeft: 5 }}>
-            {rowIndex === queuePlayingRow ? <Icon icon='volume-up' /> : rowIndex + 1}
+            {queuedSongs[rowIndex].path === queuePlayingFile ? <Icon icon='volume-up' /> : rowIndex + 1}
           </div>
         )}
       />

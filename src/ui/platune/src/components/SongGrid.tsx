@@ -31,9 +31,10 @@ interface SongGridProps {
   width: number;
   songs: Song[];
   setSongs: (songs: Song[]) => void;
+  queuedSongs: Song[];
   setQueuedSongs: (songs: Song[]) => void;
-  queuePlayingRow: number;
-  setQueuePlayingRow: (playingRow: number) => void;
+  queuePlayingFile: string;
+  setQueuePlayingFile: (playingFile: string) => void;
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
@@ -42,17 +43,18 @@ export const SongGrid: React.FC<SongGridProps> = ({
   width,
   songs,
   setSongs,
+  queuedSongs,
   setQueuedSongs,
-  queuePlayingRow,
-  setQueuePlayingRow,
+  queuePlayingFile,
+  setQueuePlayingFile,
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
-  const [selectedRow, setSelectedRow] = useState(-1);
-  const [selectedAlbumRow, setSelectedAlbumRow] = useState(-1);
-  const [editingRow, setEditingRow] = useState(-1);
+  const [selectedFile, setSelectedFile] = useState('');
+  const [selectedAlbum, setSelectedAlbum] = useState('');
+  const [editingFile, setEditingFile] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playingRow, setPlayingRow] = useState(-1);
+  const [playingFile, setPlayingFile] = useState('');
   const [widths, setWidths] = useState({
     edit: 30,
     name: 300,
@@ -105,12 +107,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   useEffect(() => {
     if (songFinishedIndex !== null) {
-      onSongFinished(songFinishedIndex.rowNum);
+      onSongFinished(songFinishedIndex.path);
     }
   }, [songFinishedIndex]);
 
   useEffect(() => {
-    onStop();
+    //onStop();
     songs.forEach((song, i) => (song.index = i));
     let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
     setGroupedSongs(g);
@@ -129,8 +131,8 @@ export const SongGrid: React.FC<SongGridProps> = ({
   }, [width, selectedGrid, songs, mainRef, otherRef]);
 
   useEffect(() => {
-    setIsPlaying(playingRow > -1);
-  }, [playingRow]);
+    setIsPlaying(playingFile !== '');
+  }, [playingFile]);
 
   useEffect(() => {
     if (selectedGrid === 'song') {
@@ -162,9 +164,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const editCellRenderer = (rowIndex: number) => {
-    const isEditingRow = editingRow === rowIndex;
-    const isSelectedRow = selectedRow === rowIndex;
-    const isPlayingRow = playingRow === rowIndex;
+    if (rowIndex >= songs.length) {
+      return null;
+    }
+    const path = songs[rowIndex].path;
+    const isEditingRow = editingFile === path;
+    const isSelectedRow = selectedFile === path;
+    const isPlayingRow = playingFile === path;
     const classes = `${isEditingRow ? 'editing' : ''} ${
       isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : 'striped'
     }`;
@@ -190,10 +196,10 @@ export const SongGrid: React.FC<SongGridProps> = ({
               if (isEditingRow) {
                 // save
                 toastSuccess();
-                setEditingRow(-1);
+                setEditingFile('');
               } else {
-                setSelectedRow(rowIndex);
-                setEditingRow(rowIndex);
+                setSelectedFile(path);
+                setEditingFile(path);
               }
             }}
           />
@@ -202,61 +208,63 @@ export const SongGrid: React.FC<SongGridProps> = ({
     );
   };
 
-  const onDoubleClick = (songIndex: number) => {
-    if (songIndex === editingRow) {
+  const onDoubleClick = (path: string) => {
+    if (path === editingFile) {
       return;
     }
-    if (editingRow > -1) {
+    if (editingFile !== '') {
       // save
       toastSuccess();
-      setEditingRow(-1);
+      setEditingFile('');
     }
-    updatePlayingRow(songIndex);
+    updatePlayingPath(path);
     audioQueue.stop();
-    startQueue(songIndex);
+    startQueue(path);
   };
 
-  const startQueue = (songIndex: number) => {
-    const queue = songs.filter(s => s.index >= songIndex);
+  const startQueue = (path: string) => {
+    const index = songs.map(s => s.path).indexOf(path);
+    const queue = songs.filter(s => s.index >= index);
     setQueuedSongs(queue);
-    setQueuePlayingRow(0);
-    return audioQueue.start(
-      queue.map(q => q.path),
-      songIndex
-    );
+    setQueuePlayingFile(queue[0].path);
+    return audioQueue.start(queue.map(q => q.path));
   };
 
-  const updatePlayingRow = (rowIndex: number) => {
-    setPlayingRow(rowIndex);
-    setQueuePlayingRow(queuePlayingRow + 1);
+  const updatePlayingPath = (path: string) => {
+    setPlayingFile(path);
+    setQueuePlayingFile(path);
   };
 
-  const onSongFinished = (playingRow: number) => {
-    if (playingRow + 1 < songs.length) {
-      updatePlayingRow(playingRow + 1);
+  const onSongFinished = (playingPath: string) => {
+    const next = getNext(queuedSongs, playingPath);
+    if (next !== '') {
+      updatePlayingPath(next);
     }
   };
 
-  const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
+  const getNext = (songs: Song[], current: string) => {
+    const currentIndex = songs.map(s => s.path).indexOf(current);
+    if (currentIndex === songs.length - 1) {
+      return '';
+    }
+    return songs[currentIndex + 1].path;
+  };
+
+  const cellRenderer = (path: string, value: string, canEdit: boolean = true) => {
     let classes = 'bp3-table-cell grid-cell';
     let child: JSX.Element | string = value;
-    if (rowIndex === editingRow) {
-      classes += ' editing';
+    if (path === editingFile) {
+      classes += ' editing selected';
       child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
-    } else if (rowIndex === playingRow) {
+    } else if (path === playingFile) {
       classes += ' playing';
-    } else if (rowIndex === selectedRow) {
+    } else if (path === selectedFile) {
       classes += ' selected';
     } else {
       classes += ' striped';
     }
     return (
-      <div
-        key={rowIndex}
-        className={classes}
-        onDoubleClick={() => onDoubleClick(rowIndex)}
-        onClick={() => onRowClick(rowIndex)}
-      >
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
         <div className='ellipsize' style={{ display: 'inline-block' }}>
           {child}
         </div>
@@ -268,36 +276,40 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (rowIndex >= songs.length) {
       return null;
     }
-    let value = songs[rowIndex][field].toString();
-    return cellRenderer(rowIndex, value);
+    const path = songs[rowIndex].path;
+    const value = songs[rowIndex][field].toString();
+    return cellRenderer(path, value);
   };
 
   const trackRenderer = (rowIndex: number) => {
     if (rowIndex >= songs.length) {
       return null;
     }
+    const path = songs[rowIndex].path;
     let value = songs[rowIndex].track.toString();
     if (value === '0') {
       value = '';
     }
-    return cellRenderer(rowIndex, value);
+    return cellRenderer(path, value);
   };
 
   const timeRenderer = (rowIndex: number) => {
     if (rowIndex >= songs.length) {
       return null;
     }
+    const path = songs[rowIndex].path;
     let value = songs[rowIndex]['time'];
     let fmtValue = formatMs(value);
-    return cellRenderer(rowIndex, fmtValue);
+    return cellRenderer(path, fmtValue);
   };
 
   const pathRenderer = (rowIndex: number) => {
     if (rowIndex >= songs.length) {
       return null;
     }
+    const path = songs[rowIndex].path;
     let value = songs[rowIndex].path;
-    return cellRenderer(rowIndex, value, false);
+    return cellRenderer(path, value, false);
   };
 
   const resizeRow = (props: { dataKey: string; deltaX: number }) => {
@@ -311,19 +323,19 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
   };
 
-  const onRowClick = (index: number) => {
-    setSelectedRow(index);
-    const cur = songs[index];
+  const onRowClick = (path: string) => {
+    setSelectedFile(path);
+    const cur = songs.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
     updateSelectedAlbum(cur.id, albumIndex);
 
-    if (index === editingRow) {
+    if (path === editingFile) {
       return;
     }
-    if (editingRow > -1) {
+    if (editingFile !== '') {
       // save
       toastSuccess();
-      setEditingRow(-1);
+      setEditingFile('');
     }
   };
 
@@ -333,7 +345,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (getAlbumSongs(albumIndex)[0].hasArt) {
       updateColors(songIndex, albumIndex);
     }
-    setSelectedAlbumRow(albumIndex);
+    setSelectedAlbum(albumKeys[albumIndex]);
   };
 
   const updateColors = async (songIndex: number, albumIndex: number) => {
@@ -358,7 +370,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const rowRenderer2 = (props: TableRowProps) => {
     props.className += ' card';
     props.style.left = 10;
-    if (props.index === selectedAlbumRow) {
+    if (props.index === albumKeys.indexOf(selectedAlbum)) {
       props.className += ' album-selected-row';
     }
     if (groupedSongs[albumKeys[props.index]][0].hasArt) {
@@ -376,14 +388,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const onPlay = () => {
-    const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
-    updatePlayingRow(rowToPlay);
-    startQueue(rowToPlay);
+    const fileToPlay = playingFile !== '' ? playingFile : selectedFile;
+    updatePlayingPath(fileToPlay);
+    startQueue(fileToPlay);
   };
 
   const onStop = () => {
     audioQueue.stop();
-    updatePlayingRow(-1);
+    updatePlayingPath('');
   };
 
   const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
@@ -561,7 +573,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         onPause={onPause}
         onPlay={onPlay}
         onStop={onStop}
-        playingSong={playingRow > -1 ? songs[playingRow] : null}
+        playingSong={playingFile !== '' ? queuedSongs.filter(s => s.path === playingFile)[0] : null}
       />
     </>
   );

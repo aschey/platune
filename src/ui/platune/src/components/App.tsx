@@ -26,7 +26,7 @@ const App: React.FC<{}> = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
-  const [queuePlayingRow, setQueuePlayingRow] = useState(-1);
+  const [queuePlayingFile, setQueuePlayingFile] = useState('');
 
   const gridRef = React.createRef<HTMLDivElement>();
 
@@ -35,7 +35,6 @@ const App: React.FC<{}> = () => {
     const newTheme = newThemeName === 'light' ? lightTheme : darkTheme;
     setThemeDetails(isLight(newTheme.backgroundMain));
   };
-  // https://www.cssscript.com/pure-css-full-window-page-slider-with-folder-tab-navigation/
 
   useEffect(() => {
     if (gridRef.current) {
@@ -87,7 +86,7 @@ const App: React.FC<{}> = () => {
       >
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid queuedSongs={queuedSongs} queuePlayingRow={queuePlayingRow} />
+            <QueueGrid queuedSongs={queuedSongs} queuePlayingFile={queuePlayingFile} />
           </div>
         </div>
         <SongGrid
@@ -96,9 +95,10 @@ const App: React.FC<{}> = () => {
           width={window.innerWidth - gridMargin}
           songs={songs}
           setSongs={setSongs}
+          queuedSongs={queuedSongs}
           setQueuedSongs={setQueuedSongs}
-          queuePlayingRow={queuePlayingRow}
-          setQueuePlayingRow={setQueuePlayingRow}
+          queuePlayingFile={queuePlayingFile}
+          setQueuePlayingFile={setQueuePlayingFile}
         />
       </div>
     </>
