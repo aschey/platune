@@ -33,8 +33,6 @@ interface SongGridProps {
   setSongs: (songs: Song[]) => void;
   queuedSongs: Song[];
   setQueuedSongs: (songs: Song[]) => void;
-  queuePlayingFile: string;
-  setQueuePlayingFile: (playingFile: string) => void;
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
@@ -45,16 +43,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
   setSongs,
   queuedSongs,
   setQueuedSongs,
-  queuePlayingFile,
-  setQueuePlayingFile,
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState('');
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playingFile, setPlayingFile] = useState('');
   const [widths, setWidths] = useState({
     edit: 30,
     name: 300,
@@ -78,7 +72,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const mainRef = React.createRef<Table>();
   const otherRef = React.createRef<Table>();
-  const songFinishedIndex = useObservable(() => audioQueue.onEnded);
+  const playingFile = useObservable(() => audioQueue.playingSource);
   const numTries = 10;
 
   const loadSongs = async () => {
@@ -106,13 +100,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
   }, []);
 
   useEffect(() => {
-    if (songFinishedIndex !== null) {
-      onSongFinished(songFinishedIndex.path);
-    }
-  }, [songFinishedIndex]);
-
-  useEffect(() => {
-    //onStop();
     songs.forEach((song, i) => (song.index = i));
     let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
     setGroupedSongs(g);
@@ -129,10 +116,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
     ref?.measureAllRows();
     ref?.recomputeRowHeights();
   }, [width, selectedGrid, songs, mainRef, otherRef]);
-
-  useEffect(() => {
-    setIsPlaying(playingFile !== '');
-  }, [playingFile]);
 
   useEffect(() => {
     if (selectedGrid === 'song') {
@@ -217,7 +200,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
       toastSuccess();
       setEditingFile('');
     }
-    updatePlayingPath(path);
     audioQueue.stop();
     startQueue(path);
   };
@@ -226,20 +208,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const index = songs.map(s => s.path).indexOf(path);
     const queue = songs.filter(s => s.index >= index);
     setQueuedSongs(queue);
-    setQueuePlayingFile(queue[0].path);
     return audioQueue.start(queue.map(q => q.path));
-  };
-
-  const updatePlayingPath = (path: string) => {
-    setPlayingFile(path);
-    setQueuePlayingFile(path);
-  };
-
-  const onSongFinished = (playingPath: string) => {
-    const next = getNext(queuedSongs, playingPath);
-    if (next !== '') {
-      updatePlayingPath(next);
-    }
   };
 
   const getNext = (songs: Song[], current: string) => {
@@ -382,20 +351,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return defaultTableRowRenderer(props);
   };
 
-  const onPause = async () => {
-    await audioQueue.pause();
-    setIsPlaying(false);
-  };
-
   const onPlay = () => {
     const fileToPlay = playingFile !== '' ? playingFile : selectedFile;
-    updatePlayingPath(fileToPlay);
-    startQueue(fileToPlay);
-  };
-
-  const onStop = () => {
-    audioQueue.stop();
-    updatePlayingPath('');
+    startQueue(fileToPlay ?? '');
   };
 
   const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
@@ -568,11 +526,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
 
       <Controls
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-        onPause={onPause}
         onPlay={onPlay}
-        onStop={onStop}
         playingSong={playingFile !== '' ? queuedSongs.filter(s => s.path === playingFile)[0] : null}
       />
     </>

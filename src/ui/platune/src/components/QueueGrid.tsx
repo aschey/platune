@@ -3,15 +3,20 @@ import { Table, Column, TableRowProps, defaultTableRowRenderer } from 'react-vir
 import { Song } from '../models/song';
 import { FlexCol } from './FlexCol';
 import { Icon } from '@blueprintjs/core';
+import { audioQueue } from '../audio';
+import { useObservable } from 'rxjs-hooks';
 
 interface QueueGridProps {
   queuedSongs: Song[];
-  queuePlayingFile: string;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, queuePlayingFile }) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
+  const playingSource = useObservable(() => audioQueue.playingSource);
   const rowRenderer = (props: TableRowProps) => {
     props.style.boxShadow = 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
+    props.onRowClick = params => {
+      audioQueue.start(queuedSongs.filter((s, i) => i >= params.index).map(s => s.path));
+    };
     return defaultTableRowRenderer(props);
   };
 
@@ -31,7 +36,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, queuePlayingF
         width={50}
         cellRenderer={({ rowIndex }) => (
           <div style={{ paddingLeft: 5 }}>
-            {queuedSongs[rowIndex].path === queuePlayingFile ? <Icon icon='volume-up' /> : rowIndex + 1}
+            {queuedSongs[rowIndex].path === playingSource ? <Icon icon='volume-up' /> : rowIndex + 1}
           </div>
         )}
       />

@@ -26,7 +26,6 @@ const App: React.FC<{}> = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
-  const [queuePlayingFile, setQueuePlayingFile] = useState('');
 
   const gridRef = React.createRef<HTMLDivElement>();
 
@@ -86,7 +85,7 @@ const App: React.FC<{}> = () => {
       >
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid queuedSongs={queuedSongs} queuePlayingFile={queuePlayingFile} />
+            <QueueGrid queuedSongs={queuedSongs} />
           </div>
         </div>
         <SongGrid
@@ -97,8 +96,6 @@ const App: React.FC<{}> = () => {
           setSongs={setSongs}
           queuedSongs={queuedSongs}
           setQueuedSongs={setQueuedSongs}
-          queuePlayingFile={queuePlayingFile}
-          setQueuePlayingFile={setQueuePlayingFile}
         />
       </div>
     </>

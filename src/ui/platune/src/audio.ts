@@ -103,8 +103,9 @@ class AudioQueue {
   sources: ScheduledSource[];
   isPaused: boolean;
   isPlaying: boolean;
+  isPlayingEvent: Subject<boolean>;
+  playingSource: Subject<string>;
   durationMillis: Subject<number>;
-  onEnded: Subject<EndedEvent>;
   progress: Observable<number>;
   currentAnalyser: AnalyserNode | null;
   volume: number;
@@ -124,10 +125,11 @@ class AudioQueue {
     this.currentGain = null;
     this.volume = 1;
     this.durationMillis = new Subject<number>();
-    this.onEnded = new Subject<EndedEvent>();
+    this.playingSource = new Subject<string>();
     this.startTime = 0;
     this.progress = interval(200).pipe(map(this.getCurrentTime));
     this.unscheduled = [];
+    this.isPlayingEvent = new Subject<boolean>();
 
     const audioElement = document.getElementsByTagName('audio')[0];
     this.htmlAudio = {
@@ -270,10 +272,9 @@ class AudioQueue {
       if (this.sources.length) {
         this.updateCurrent(this.sources[0], 0);
       }
-      this.onEnded.next({ path: song, time: new Date().getTime() });
       if (this.sources.length === 1) {
         // Last scheduled song, schedule the next batch
-        await this.start(this.unscheduled, 0);
+        await this.initialize(this.unscheduled, 0, false);
       } else if (this.unscheduled.length === 0) {
         // No more songs, clear all data
         this.stop();
@@ -287,6 +288,7 @@ class AudioQueue {
     audioQueue.currentGain = songData.gain;
     audioQueue.durationMillis.next(songData.source.duration() * 1000);
     this.startTime = (this.context.currentTime - startOffset) * 1000;
+    this.playingSource.next(songData.file);
   };
 
   public stop = (seekTime: number = 0) => {
@@ -298,14 +300,20 @@ class AudioQueue {
     }
     this.switchTime = 0;
     this.isPaused = false;
-    this.isPlaying = seekTime > 0;
+    this.setIsPlaying(seekTime > 0);
     this.sources = [];
     this.unscheduled = [];
+    this.playingSource.next('');
     if (this.currentGain) {
       this.currentGain.gain.value = 0;
     }
     this.context.resume();
   };
+
+  private setIsPlaying(isPlaying: boolean) {
+    this.isPlaying = isPlaying;
+    this.isPlayingEvent.next(isPlaying);
+  }
 
   private scheduleAll = async (songQueue: string[], initialStartSeconds: number) => {
     if (songQueue.length) {
@@ -322,21 +330,30 @@ class AudioQueue {
     }
   };
 
-  public start = async (songQueue: string[], initialStartSeconds: number = 0) => {
+  public start = async (songQueue: string[], startSeconds: number = 0) => {
+    await this.initialize(songQueue, startSeconds, true);
+  };
+
+  private initialize = async (songQueue: string[], initialStartSeconds: number, stopBeforeStart: boolean) => {
     if (this.isPaused) {
       this.isPaused = false;
       this.setVolumeTemporary(this.volume);
       this.context.resume();
       // Starting the song that's currently paused, don't reschedule
       if (this.sources.length && songQueue[0] === this.sources[0].file) {
-        this.isPlaying = true;
+        this.setIsPlaying(true);
         return;
       } else {
         this.stop();
       }
     }
+    if (this.isPlaying && stopBeforeStart) {
+      this.stop(initialStartSeconds);
+    }
     await this.scheduleAll(songQueue, initialStartSeconds);
-    this.isPlaying = true;
+    if (!this.isPlaying) {
+      this.setIsPlaying(true);
+    }
   };
 
   private setVolumeTemporary(volume: number) {
@@ -356,7 +373,7 @@ class AudioQueue {
     // Seems like there's a slight delay before the volume change takes so we have to wait for it to complete
     await sleep(100);
     await this.context.suspend();
-    this.isPlaying = false;
+    this.setIsPlaying(false);
     this.isPaused = true;
   }
 
