@@ -27,6 +27,11 @@ interface HtmlAudioMetadata {
   analyser: AnalyserNode;
 }
 
+interface EndedEvent {
+  time: number;
+  rowNum: number;
+}
+
 class AudioNodeWrapper {
   bufferNode: AudioBufferSourceNode | null;
   htmlNode: HTMLAudioElement | null;
@@ -100,7 +105,7 @@ class AudioQueue {
   isPaused: boolean;
   isPlaying: boolean;
   durationMillis: Subject<number>;
-  onEnded: Subject<number>;
+  onEnded: Subject<EndedEvent>;
   progress: Observable<number>;
   currentAnalyser: AnalyserNode | null;
   volume: number;
@@ -120,7 +125,7 @@ class AudioQueue {
     this.currentGain = null;
     this.volume = 1;
     this.durationMillis = new Subject<number>();
-    this.onEnded = new Subject<number>();
+    this.onEnded = new Subject<EndedEvent>();
     this.startTime = 0;
     this.progress = interval(200).pipe(map(this.getCurrentTime));
     this.unscheduled = [];
@@ -267,7 +272,7 @@ class AudioQueue {
       if (this.sources.length) {
         this.updateCurrent(this.sources[0], 0);
       }
-      this.onEnded.next(playingRow);
+      this.onEnded.next({ rowNum: playingRow, time: new Date().getTime() });
       if (this.sources.length === 1) {
         await this.start(this.unscheduled, this.sources[0].id + 1, 0);
       } else {

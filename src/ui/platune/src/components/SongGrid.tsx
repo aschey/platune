@@ -105,7 +105,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   useEffect(() => {
     if (songFinishedIndex !== null) {
-      onSongFinished(songFinishedIndex);
+      onSongFinished(songFinishedIndex.rowNum);
     }
   }, [songFinishedIndex]);
 
