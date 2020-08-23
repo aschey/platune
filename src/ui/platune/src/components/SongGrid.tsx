@@ -214,6 +214,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const startQueue = (songIndex: number) => {
     const queue = songs.filter(s => s.index >= songIndex);
+    setQueuedSongs(queue);
     return audioQueue.start(
       queue.map(q => q.path),
       songIndex
