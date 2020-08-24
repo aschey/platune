@@ -254,7 +254,6 @@ class AudioQueue {
       this.updateCurrent(source, startOffset);
     }
     this.sources.push(source);
-    //let self = this;
     songData.audioNode.onEnded(async (current: AudioNodeWrapper) => {
       // don't fire when stopped because we don't want to play the next track (sources will be empty when stopped)
       // Sometimes this event fires twice so check the source to ensure we only call onFinished once
