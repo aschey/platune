@@ -200,7 +200,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
       toastSuccess();
       setEditingFile('');
     }
-    audioQueue.stop();
     startQueue(path);
   };
 

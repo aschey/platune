@@ -26,11 +26,6 @@ interface HtmlAudioMetadata {
   analyser: AnalyserNode;
 }
 
-interface EndedEvent {
-  time: number;
-  path: string;
-}
-
 class AudioNodeWrapper {
   bufferNode: AudioBufferSourceNode | null;
   htmlNode: HTMLAudioElement | null;
@@ -72,7 +67,6 @@ class AudioNodeWrapper {
     const startSeconds = millis / 1000;
     const sources = audioQueue.sources;
     const unscheduled = audioQueue.unscheduled;
-    audioQueue.stop(startSeconds);
     audioQueue.start(sources.map(s => s.file).concat(unscheduled), startSeconds);
   }
 
@@ -292,8 +286,12 @@ class AudioQueue {
   };
 
   public stop = (seekTime: number = 0) => {
+    // If we're seeking, reset the start time since we're rescheduling all sources
+    // Otherwise reset the current source
     if (seekTime > 0) {
       this.startTime = (this.context.currentTime - seekTime) * 1000;
+    } else {
+      this.playingSource.next('');
     }
     for (let song of this.sources) {
       song.source.stopNow();
@@ -303,7 +301,6 @@ class AudioQueue {
     this.setIsPlaying(seekTime > 0);
     this.sources = [];
     this.unscheduled = [];
-    this.playingSource.next('');
     if (this.currentGain) {
       this.currentGain.gain.value = 0;
     }
