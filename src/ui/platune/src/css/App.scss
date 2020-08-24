@@ -5,6 +5,9 @@ body {
   transition: var(--transition);
   overflow-x: hidden;
 }
+body * {
+  user-select: none;
+}
 
 :focus {
   outline: none;

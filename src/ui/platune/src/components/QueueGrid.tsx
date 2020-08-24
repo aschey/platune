@@ -14,7 +14,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const rowRenderer = (props: TableRowProps) => {
     props.style.boxShadow = 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
-    props.onRowClick = params => {
+    props.onRowDoubleClick = params => {
       audioQueue.start(queuedSongs.filter((s, i) => i >= params.index).map(s => s.path));
     };
     return defaultTableRowRenderer(props);
