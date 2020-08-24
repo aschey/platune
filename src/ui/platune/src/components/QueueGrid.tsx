@@ -12,8 +12,13 @@ interface QueueGridProps {
 
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
+
   const rowRenderer = (props: TableRowProps) => {
-    props.style.boxShadow = 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
+    props.style.width -= 11;
+    props.style.boxShadow =
+      queuedSongs[props.index].path === playingSource
+        ? 'inset 0 0 2px 2px rgba(var(--intent-success), 0.3)'
+        : 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
     props.onRowDoubleClick = params => {
       audioQueue.start(queuedSongs.filter((s, i) => i >= params.index).map(s => s.path));
     };
@@ -36,7 +41,11 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
         width={50}
         cellRenderer={({ rowIndex }) => (
           <div style={{ paddingLeft: 5 }}>
-            {queuedSongs[rowIndex].path === playingSource ? <Icon icon='volume-up' /> : rowIndex + 1}
+            {queuedSongs[rowIndex].path === playingSource ? (
+              <Icon icon='volume-up' style={{ color: 'rgba(var(--intent-success), 1)' }} />
+            ) : (
+              rowIndex + 1
+            )}
           </div>
         )}
       />
