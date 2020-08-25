@@ -15,7 +15,7 @@ import { Subject } from 'rxjs';
 
 interface ControlProps {
   playingSong: Song | null;
-  onPlay: () => void;
+  onPlay: () => Promise<void>;
 }
 
 export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
@@ -40,7 +40,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
     if (audioQueue.isPlaying) {
       await audioQueue.pause();
     } else {
-      onPlay();
+      await onPlay();
     }
   };
 

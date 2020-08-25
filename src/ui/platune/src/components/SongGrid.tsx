@@ -191,7 +191,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     );
   };
 
-  const onDoubleClick = (path: string) => {
+  const onDoubleClick = async (path: string) => {
     if (path === editingFile) {
       return;
     }
@@ -200,14 +200,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
       toastSuccess();
       setEditingFile('');
     }
-    startQueue(path);
+    await startQueue(path);
   };
 
-  const startQueue = (path: string) => {
+  const startQueue = async (path: string) => {
     const index = songs.map(s => s.path).indexOf(path);
     const queue = songs.filter(s => s.index >= index);
     setQueuedSongs(queue);
-    return audioQueue.start(queue.map(q => q.path));
+    await audioQueue.start(queue.map(q => q.path));
   };
 
   const cellRenderer = (rowIndex: number, path: string, value: string, canEdit: boolean = true) => {
@@ -340,9 +340,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return defaultTableRowRenderer(props);
   };
 
-  const onPlay = () => {
+  const onPlay = async () => {
     const fileToPlay = playingFile !== '' ? playingFile : selectedFile;
-    startQueue(fileToPlay ?? '');
+    await startQueue(fileToPlay ?? '');
   };
 
   const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {

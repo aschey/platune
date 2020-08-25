@@ -97,11 +97,11 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           dataKey=''
           width={50}
           cellRenderer={({ rowIndex }) => (
-            <div style={{ paddingLeft: 5 }}>
+            <div style={{ paddingLeft: 10, fontSize: 12 }}>
               {queuedSongs[rowIndex].path === playingSource ? (
                 <Icon icon='volume-up' style={{ color: 'rgba(var(--intent-success), 1)' }} />
               ) : (
-                rowIndex + 1
+                <Text ellipsize>{rowIndex + 1}</Text>
               )}
             </div>
           )}
