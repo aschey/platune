@@ -155,7 +155,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const isSelectedRow = selectedFile === path;
     const isPlayingRow = playingFile === path;
     const classes = `${isEditingRow ? 'editing' : ''} ${
-      isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : 'striped'
+      isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : rowIndex % 2 == 0 ? 'striped-even' : 'striped-odd'
     }`;
     return (
       <div
@@ -210,7 +210,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return audioQueue.start(queue.map(q => q.path));
   };
 
-  const cellRenderer = (path: string, value: string, canEdit: boolean = true) => {
+  const cellRenderer = (rowIndex: number, path: string, value: string, canEdit: boolean = true) => {
     let classes = 'bp3-table-cell grid-cell';
     let child: JSX.Element | string = value;
     if (path === editingFile) {
@@ -221,13 +221,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
     } else if (path === selectedFile) {
       classes += ' selected';
     } else {
-      classes += ' striped';
+      classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
-        <div className='ellipsize' style={{ display: 'inline-block' }}>
-          {child}
-        </div>
+        <Text ellipsize>{child}</Text>
       </div>
     );
   };
@@ -238,7 +236,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
     const path = songs[rowIndex].path;
     const value = songs[rowIndex][field].toString();
-    return cellRenderer(path, value);
+    return cellRenderer(rowIndex, path, value);
   };
 
   const trackRenderer = (rowIndex: number) => {
@@ -250,7 +248,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (value === '0') {
       value = '';
     }
-    return cellRenderer(path, value);
+    return cellRenderer(rowIndex, path, value);
   };
 
   const timeRenderer = (rowIndex: number) => {
@@ -260,7 +258,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const path = songs[rowIndex].path;
     let value = songs[rowIndex]['time'];
     let fmtValue = formatMs(value);
-    return cellRenderer(path, fmtValue);
+    return cellRenderer(rowIndex, path, fmtValue);
   };
 
   const pathRenderer = (rowIndex: number) => {
@@ -269,7 +267,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
     const path = songs[rowIndex].path;
     let value = songs[rowIndex].path;
-    return cellRenderer(path, value, false);
+    return cellRenderer(rowIndex, path, value, false);
   };
 
   const resizeRow = (props: { dataKey: string; deltaX: number }) => {
@@ -375,6 +373,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             let g = groupedSongs[albumKeys[rowIndex]][0];
             return (
               <FlexCol
+                center={false}
                 style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 125) }}
                 onClick={() => updateSelectedAlbum(g.id, rowIndex)}
               >

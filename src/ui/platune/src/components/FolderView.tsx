@@ -85,40 +85,40 @@ export const FolderView: React.FC<FolderViewProps> = ({
 
   return (
     <>
-      <FlexRow style={{ alignItems: 'top', alignSelf: 'center', width, height }}>
-        <FlexCol style={{ width: panelWidth }}>
+      <FlexRow center={false} style={{ alignItems: 'top', alignSelf: 'center', width, height }}>
+        <FlexCol center={false} style={{ width: panelWidth }}>
           <div style={{ height: height - buttonPanelHeight }}>
             <SelectedFolders rows={rows} setRows={setRows} width={panelWidth} />
           </div>
-          <FlexRow style={{ alignItems: 'center' }}>
+          <FlexRow>
             <Button
               intent={Intent.SUCCESS}
-              icon="floppy-disk"
-              text="Save"
+              icon='floppy-disk'
+              text='Save'
               style={{ height: buttonHeight }}
               onClick={saveFoldersClick}
             />
             <div style={{ margin: dividerWidth }} />
             <Button
               intent={Intent.WARNING}
-              icon="undo"
-              text="Revert"
+              icon='undo'
+              text='Revert'
               style={{ height: buttonHeight }}
               onClick={revertClick}
             />
           </FlexRow>
         </FlexCol>
         <div style={{ width: dividerWidth }} />
-        <FlexCol style={{ width: panelWidth }}>
+        <FlexCol center={false} style={{ width: panelWidth }}>
           <div style={{ height: height - buttonPanelHeight }}>
             <FolderPicker setSelected={setSelected} />
           </div>
-          <FlexRow style={{ alignItems: 'center' }}>
+          <FlexRow>
             <Button
               intent={Intent.PRIMARY}
               onClick={addFolderClick}
-              icon="add"
-              text="Add"
+              icon='add'
+              text='Add'
               style={{ height: buttonHeight }}
             />
           </FlexRow>

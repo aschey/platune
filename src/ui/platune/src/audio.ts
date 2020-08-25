@@ -284,12 +284,13 @@ class AudioQueue {
     this.playingSource.next(songData.file);
   };
 
-  public stop = (seekTime: number = 0) => {
+  public stop = (seekTime: number = 0, willRestart: boolean = false) => {
     // If we're seeking, reset the start time since we're rescheduling all sources
     // Otherwise reset the current source
     if (seekTime > 0) {
       this.startTime = (this.context.currentTime - seekTime) * 1000;
-    } else {
+    }
+    if (!willRestart) {
       this.playingSource.next('');
     }
     for (let song of this.sources) {
@@ -297,7 +298,7 @@ class AudioQueue {
     }
     this.switchTime = 0;
     this.isPaused = false;
-    this.setIsPlaying(seekTime > 0);
+    this.setIsPlaying(willRestart);
     this.sources = [];
     this.unscheduled = [];
     if (this.currentGain) {
@@ -340,16 +341,16 @@ class AudioQueue {
         this.setIsPlaying(true);
         return;
       } else {
-        this.stop();
+        this.stop(0, true);
       }
     }
     if (this.isPlaying && stopBeforeStart) {
-      this.stop(initialStartSeconds);
+      this.stop(initialStartSeconds, true);
     }
-    await this.scheduleAll(songQueue, initialStartSeconds);
     if (!this.isPlaying) {
       this.setIsPlaying(true);
     }
+    await this.scheduleAll(songQueue, initialStartSeconds);
   };
 
   private setVolumeTemporary(volume: number) {

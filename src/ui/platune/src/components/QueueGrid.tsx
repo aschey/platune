@@ -1,10 +1,13 @@
 import React from 'react';
-import { Table, Column, TableRowProps, defaultTableRowRenderer } from 'react-virtualized';
+import { Table, Column, TableRowProps, defaultTableRowRenderer, TableHeaderRowProps } from 'react-virtualized';
 import { Song } from '../models/song';
 import { FlexCol } from './FlexCol';
-import { Icon } from '@blueprintjs/core';
+import { Icon, Tag, Label, Text, Intent } from '@blueprintjs/core';
 import { audioQueue } from '../audio';
 import { useObservable } from 'rxjs-hooks';
+import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
+import { FlexRow } from './FlexRow';
+import { random } from 'lodash';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -12,6 +15,7 @@ interface QueueGridProps {
 
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
+  const width = 190;
 
   const rowRenderer = (props: TableRowProps) => {
     props.style.width -= 11;
@@ -25,57 +29,99 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
     return defaultTableRowRenderer(props);
   };
 
+  const headerRowRenderer = (props: TableHeaderRowProps) => {
+    props.style.margin = 0;
+    props.style.padding = 0;
+    return defaultHeaderRowRenderer(props);
+  };
+
   return (
-    <Table
-      width={200}
-      height={500}
-      rowHeight={60}
-      headerHeight={25}
-      rowCount={queuedSongs.length}
-      disableHeader={true}
-      rowGetter={({ index }) => queuedSongs[index]}
-      rowRenderer={rowRenderer}
-    >
-      <Column
-        dataKey=''
-        width={50}
-        cellRenderer={({ rowIndex }) => (
-          <div style={{ paddingLeft: 5 }}>
-            {queuedSongs[rowIndex].path === playingSource ? (
-              <Icon icon='volume-up' style={{ color: 'rgba(var(--intent-success), 1)' }} />
-            ) : (
-              rowIndex + 1
-            )}
-          </div>
-        )}
-      />
-      <Column
-        width={150}
-        dataKey='name'
-        cellRenderer={({ rowIndex }) => (
-          <FlexCol>
-            <div className='ellipsize'>{queuedSongs[rowIndex].name}</div>
-            <div
-              className='ellipsize'
-              style={{
-                fontSize: 12,
-                color: 'rgba(var(--text-secondary), 0.8)',
-              }}
-            >
-              {queuedSongs[rowIndex].album}
+    <div style={{ maxWidth: width, paddingLeft: 5, paddingRight: 5 }}>
+      <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width + 5 }} />
+      <FlexCol
+        style={{
+          fontSize: 16,
+          background: 'rgba(var(--background-secondary), 1)',
+          paddingBottom: 5,
+          minWidth: width + 5,
+        }}
+      >
+        Tags
+      </FlexCol>
+      <Table
+        width={width}
+        height={(window.innerHeight - 180) / 2}
+        rowHeight={25}
+        headerHeight={25}
+        disableHeader={true}
+        rowCount={queuedSongs.length}
+        rowGetter={({ index }) => queuedSongs[index]}
+        style={{ background: 'rgba(var(--background-secondary), 1)' }}
+      >
+        <Column
+          dataKey=''
+          width={width}
+          cellRenderer={({ rowIndex }) => (
+            <div style={{ paddingLeft: 5 }}>
+              <Tag intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][Math.round(random(0, 4))]}>
+                {queuedSongs[rowIndex].name}
+              </Tag>
             </div>
-            <div
-              className='ellipsize'
-              style={{
-                fontSize: 12,
-                color: 'rgba(var(--text-secondary), 0.8)',
-              }}
-            >
-              {queuedSongs[rowIndex].artist}
+          )}
+        />
+      </Table>
+      <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width + 5 }} />
+      <FlexCol
+        style={{
+          fontSize: 16,
+          background: 'rgba(var(--background-secondary), 1)',
+          paddingBottom: 5,
+          minWidth: width + 5,
+        }}
+      >
+        Now Playing
+      </FlexCol>
+      <Table
+        width={width}
+        height={(window.innerHeight - 180) / 2}
+        rowHeight={70}
+        disableHeader={true}
+        headerHeight={25}
+        headerRowRenderer={headerRowRenderer}
+        rowCount={queuedSongs.length}
+        rowGetter={({ index }) => queuedSongs[index]}
+        rowRenderer={rowRenderer}
+        style={{ background: 'rgba(var(--background-secondary), 1)' }}
+      >
+        <Column
+          dataKey=''
+          width={50}
+          cellRenderer={({ rowIndex }) => (
+            <div style={{ paddingLeft: 5 }}>
+              {queuedSongs[rowIndex].path === playingSource ? (
+                <Icon icon='volume-up' style={{ color: 'rgba(var(--intent-success), 1)' }} />
+              ) : (
+                rowIndex + 1
+              )}
             </div>
-          </FlexCol>
-        )}
-      />
-    </Table>
+          )}
+        />
+        <Column
+          width={width - 50}
+          dataKey='name'
+          cellRenderer={({ rowIndex }) => (
+            <FlexCol center={false}>
+              <Text ellipsize>{queuedSongs[rowIndex].name}</Text>
+              <Text ellipsize className='secondary-text'>
+                {queuedSongs[rowIndex].album}
+              </Text>
+              <Text ellipsize className='secondary-text'>
+                {queuedSongs[rowIndex].artist}
+              </Text>
+            </FlexCol>
+          )}
+        />
+      </Table>
+    </div>
   );
 };

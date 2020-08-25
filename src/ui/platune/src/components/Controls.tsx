@@ -104,7 +104,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
         <SongProgress />
       </div>
 
-      <FlexRow style={{ marginLeft: 10, alignItems: 'center' }}>
+      <FlexRow style={{ marginLeft: 10 }}>
         {playingSong?.hasArt ? (
           <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} />
         ) : null}
@@ -115,7 +115,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
         </div>
         <FlexCol>
           {songMillis ?? 0 > 0 ? (
-            <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
+            <FlexRow style={{ fontSize: 16 }}>
               <div style={{ color: coloradjust }}>{formatMs(progress ?? 0)}</div>
               <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>
                 /{formatMs(songMillis ?? 0)}
@@ -125,8 +125,8 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
         </FlexCol>
       </FlexRow>
 
-      <FlexCol style={{ alignItems: 'center' }}>
-        <FlexRow style={{ alignItems: 'center' }}>
+      <FlexCol>
+        <FlexRow>
           <Button
             className='nofocus'
             intent={Intent.PRIMARY}
@@ -169,9 +169,10 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
       >
         <canvas ref={canvasRef} />
       </FlexCol>
-      <FlexRow style={{ fontSize: 16, alignItems: 'center' }}>
+      <FlexRow style={{ fontSize: 16 }}>
         <Icon icon='volume-up' />
         <FlexCol
+          center={false}
           style={{ alignSelf: 'center', alignContent: 'center', marginLeft: 10, marginRight: '20%', paddingBottom: 4 }}
         >
           <Volume />

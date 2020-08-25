@@ -131,14 +131,14 @@ canvas {
   background: rgba(var(--grid-selected-background-default), 0.5);
 }
 
-.ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(odd) .striped,
-.ReactVirtualized__Table__row .rowParent .striped:nth-of-type(odd):not(.selected) {
+.ReactVirtualized__Grid__innerScrollContainer .row .striped-odd,
+.ReactVirtualized__Table__row .rowParent .striped-odd:not(.selected) {
   transition: var(--transition);
   background: rgba(var(--grid-stripe1-default), 1);
 }
 
-.ReactVirtualized__Grid__innerScrollContainer .row:nth-of-type(even) .striped,
-.ReactVirtualized__Table__row .rowParent .striped:nth-of-type(even):not(.selected) {
+.ReactVirtualized__Grid__innerScrollContainer .row .striped-even,
+.ReactVirtualized__Table__row .rowParent .striped-even:not(.selected) {
   transition: var(--transition);
   background: rgba(var(--grid-stripe2-default), 1);
 }
@@ -280,8 +280,7 @@ svg[data-icon='list-detail-view'] {
   cursor: pointer;
 }
 
-.ellipsize {
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  overflow: hidden;
+.secondary-text {
+  font-size: 12;
+  color: rgba(var(--text-secondary), 0.8);
 }

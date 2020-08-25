@@ -65,7 +65,7 @@ export const PathPicker: React.FC<PathPickerProps> = ({
   };
 
   return (
-    <FlexRow style={{ alignItems: 'top', alignSelf: 'center', width, height: height }}>
+    <FlexRow center={false} style={{ alignItems: 'top', alignSelf: 'center', width, height: height }}>
       <div style={{ width: panelWidth }} className={'bp3-table-container'}>
         <div style={{ margin: 5 }}>
           <Text ellipsize className={Classes.INPUT}>
@@ -76,7 +76,7 @@ export const PathPicker: React.FC<PathPickerProps> = ({
           </div>
         </div>
         <div style={{ height: 5 }} />
-        <FlexRow style={{ margin: 5, marginLeft: 5 }}>
+        <FlexRow center={false} style={{ margin: 5, marginLeft: 5 }}>
           <Button
             intent={Intent.SUCCESS}
             icon='floppy-disk'

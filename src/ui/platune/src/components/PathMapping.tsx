@@ -76,28 +76,30 @@ const Row: React.FC<RowProps> = ({ path, drivesUsed, mappings, setMappings, widt
       onItemSelect={onItemSelect}
       popoverProps={{ minimal: true, popoverClassName: 'small' }}
     >
-      <Button text={selectedRow} style={{ width: 70 }} rightIcon="caret-down" />
+      <Button text={selectedRow} style={{ width: 70 }} rightIcon='caret-down' />
     </DriveSelect>
   );
 
   const unixRow = (
-    <FlexRow style={{ padding: 5 }}>
-      <FlexCol style={{ minWidth: width - 80, paddingRight: 10 }}>
+    <FlexRow center={false} style={{ padding: 5 }}>
+      <FlexCol center={false} style={{ minWidth: width - 80, paddingRight: 10 }}>
         <Text ellipsize className={Classes.INPUT}>
           {path.dir}
         </Text>
       </FlexCol>
-      <FlexCol>{driveSelect}</FlexCol>
+      <FlexCol center={false}>{driveSelect}</FlexCol>
     </FlexRow>
   );
 
   const windowsRow = (
-    <FlexRow style={{ padding: 5 }}>
-      <FlexCol style={{ maxWidth: 80 }}>{driveSelect}</FlexCol>
-      <FlexCol style={{ paddingRight: 10 }}>
+    <FlexRow center={false} style={{ padding: 5 }}>
+      <FlexCol center={false} style={{ maxWidth: 80 }}>
+        {driveSelect}
+      </FlexCol>
+      <FlexCol center={false} style={{ paddingRight: 10 }}>
         <EditableText className={Classes.INPUT} value={newDir} onChange={setNewDir} onConfirm={onConfirm} />
       </FlexCol>
-      <Button intent={Intent.DANGER} icon="delete" onClick={onDelete} />
+      <Button intent={Intent.DANGER} icon='delete' onClick={onDelete} />
     </FlexRow>
   );
 
@@ -166,7 +168,7 @@ export const PathMapping: React.FC<PathMappingProps> = ({
 
   const addButton = (
     <>
-      <Button intent={Intent.PRIMARY} icon="plus" text="Add" style={{ height: buttonHeight }} onClick={onAddClick} />
+      <Button intent={Intent.PRIMARY} icon='plus' text='Add' style={{ height: buttonHeight }} onClick={onAddClick} />
       <div style={{ margin: 5 }} />
     </>
   );
@@ -194,13 +196,13 @@ export const PathMapping: React.FC<PathMappingProps> = ({
         )}
       </div>
       <div style={{ height: 5 }} />
-      <FlexRow style={{ margin: 5, marginLeft: 5 }}>
+      <FlexRow center={false} style={{ margin: 5, marginLeft: 5 }}>
         {isWindows ? addButton : null}
         <Button
           intent={Intent.SUCCESS}
           disabled={noMappings}
-          icon="floppy-disk"
-          text="Save"
+          icon='floppy-disk'
+          text='Save'
           style={{ height: buttonHeight }}
           onClick={onSaveClick}
         />
@@ -208,8 +210,8 @@ export const PathMapping: React.FC<PathMappingProps> = ({
         <Button
           intent={Intent.WARNING}
           disabled={noMappings}
-          icon="undo"
-          text="Revert"
+          icon='undo'
+          text='Revert'
           style={{ height: buttonHeight }}
           onClick={onRevertClick}
         />
