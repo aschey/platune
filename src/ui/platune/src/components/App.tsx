@@ -11,6 +11,7 @@ import { darkTheme } from '../themes/dark';
 import { isLight } from '../themes/colorMixer';
 import { wrapGrid } from 'animate-css-grid';
 import { Song } from '../models/song';
+import { QueueGrid } from './QueueGrid';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -23,6 +24,7 @@ const App: React.FC<{}> = () => {
   const [gridCols, setGridCols] = useState(`0px ${window.innerWidth}px`);
   const [gridClasses, setGridClasses] = useState('grid');
   const [songs, setSongs] = useState<Song[]>([]);
+  const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
 
   const gridRef = React.createRef<HTMLDivElement>();
@@ -32,7 +34,6 @@ const App: React.FC<{}> = () => {
     const newTheme = newThemeName === 'light' ? lightTheme : darkTheme;
     setThemeDetails(isLight(newTheme.backgroundMain));
   };
-  // https://www.cssscript.com/pure-css-full-window-page-slider-with-folder-tab-navigation/
 
   useEffect(() => {
     if (gridRef.current) {
@@ -83,7 +84,9 @@ const App: React.FC<{}> = () => {
         }}
       >
         <div>
-          <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>test</div>
+          <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
+            <QueueGrid queuedSongs={queuedSongs} />
+          </div>
         </div>
         <SongGrid
           selectedGrid={selectedGrid}
@@ -91,6 +94,8 @@ const App: React.FC<{}> = () => {
           width={window.innerWidth - gridMargin}
           songs={songs}
           setSongs={setSongs}
+          queuedSongs={queuedSongs}
+          setQueuedSongs={setQueuedSongs}
         />
       </div>
     </>

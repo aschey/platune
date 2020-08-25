@@ -14,18 +14,15 @@ import { theme } from './App';
 import { Subject } from 'rxjs';
 
 interface ControlProps {
-  isPlaying: boolean;
   playingSong: Song | null;
-  setIsPlaying: (isPlaying: boolean) => void;
-  onPause: () => Promise<void>;
   onPlay: () => void;
-  onStop: () => void;
 }
 
-export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPause, onPlay, onStop, playingSong }) => {
+export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   let [coloradjust, setColorAdjust] = useState('#000000');
   const songMillis = useObservable(() => audioQueue.durationMillis);
   const progress = useObservable(() => audioQueue.progress);
+  const isPlaying = useObservable(() => audioQueue.isPlayingEvent);
   let canvasRef = React.createRef<HTMLCanvasElement>();
   const songColorAdjust = isLight(theme.backgroundMain) ? 150 : -40;
 
@@ -40,21 +37,15 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
   }, [progress, songMillis, songColorAdjust]);
 
   const playPauseClick = async () => {
-    if (isPlaying) {
-      await onPause();
+    if (audioQueue.isPlaying) {
+      await audioQueue.pause();
     } else {
       onPlay();
     }
-    setIsPlaying(!isPlaying);
-  };
-
-  const stopClick = () => {
-    onStop();
-    setIsPlaying(false);
   };
 
   const visualizer = async () => {
-    if (audioQueue.currentAnalyser && isPlaying) {
+    if (audioQueue.currentAnalyser && audioQueue.isPlaying) {
       audioQueue.currentAnalyser.fftSize = 2048;
       const bufferLength = audioQueue.currentAnalyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
@@ -159,7 +150,7 @@ export const Controls: React.FC<ControlProps> = ({ isPlaying, setIsPlaying, onPa
             minimal
             icon='stop'
             style={{ borderRadius: '50%', width: 40, height: 40 }}
-            onClick={stopClick}
+            onClick={() => audioQueue.stop()}
           />
           <div style={{ width: 5 }} />
           <Button

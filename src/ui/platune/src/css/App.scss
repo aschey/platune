@@ -5,6 +5,9 @@ body {
   transition: var(--transition);
   overflow-x: hidden;
 }
+body * {
+  user-select: none;
+}
 
 :focus {
   outline: none;
@@ -275,4 +278,10 @@ svg[data-icon='list-detail-view'] {
   background: rgba(var(--volume-slider-color), 1);
   border-radius: 7px;
   cursor: pointer;
+}
+
+.ellipsize {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }

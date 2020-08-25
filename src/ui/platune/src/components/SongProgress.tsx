@@ -40,7 +40,6 @@ export const SongProgress: React.FC<{}> = () => {
   }, [progress]);
 
   const onSlideStart = () => {
-    console.log('seeking');
     isSeeking.current = true;
   };
 

@@ -31,16 +31,24 @@ interface SongGridProps {
   width: number;
   songs: Song[];
   setSongs: (songs: Song[]) => void;
+  queuedSongs: Song[];
+  setQueuedSongs: (songs: Song[]) => void;
 }
 
-export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, width, songs, setSongs }) => {
+export const SongGrid: React.FC<SongGridProps> = ({
+  selectedGrid,
+  isLightTheme,
+  width,
+  songs,
+  setSongs,
+  queuedSongs,
+  setQueuedSongs,
+}) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
-  const [playingRow, setPlayingRow] = useState(-1);
-  const [selectedRow, setSelectedRow] = useState(-1);
-  const [selectedAlbumRow, setSelectedAlbumRow] = useState(-1);
-  const [editingRow, setEditingRow] = useState(-1);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedFile, setSelectedFile] = useState('');
+  const [selectedAlbum, setSelectedAlbum] = useState('');
+  const [editingFile, setEditingFile] = useState('');
   const [widths, setWidths] = useState({
     edit: 30,
     name: 300,
@@ -64,7 +72,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
 
   const mainRef = React.createRef<Table>();
   const otherRef = React.createRef<Table>();
-  const songFinishedIndex = useObservable(() => audioQueue.onEnded);
+  const playingFile = useObservable(() => audioQueue.playingSource);
   const numTries = 10;
 
   const loadSongs = async () => {
@@ -92,13 +100,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   }, []);
 
   useEffect(() => {
-    if (songFinishedIndex !== null) {
-      onSongFinished(songFinishedIndex);
-    }
-  }, [songFinishedIndex]);
-
-  useEffect(() => {
-    onStop();
     songs.forEach((song, i) => (song.index = i));
     let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
     setGroupedSongs(g);
@@ -115,10 +116,6 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     ref?.measureAllRows();
     ref?.recomputeRowHeights();
   }, [width, selectedGrid, songs, mainRef, otherRef]);
-
-  useEffect(() => {
-    setIsPlaying(playingRow > -1);
-  }, [playingRow]);
 
   useEffect(() => {
     if (selectedGrid === 'song') {
@@ -150,9 +147,13 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   };
 
   const editCellRenderer = (rowIndex: number) => {
-    const isEditingRow = editingRow === rowIndex;
-    const isSelectedRow = selectedRow === rowIndex;
-    const isPlayingRow = playingRow === rowIndex;
+    if (rowIndex >= songs.length) {
+      return null;
+    }
+    const path = songs[rowIndex].path;
+    const isEditingRow = editingFile === path;
+    const isSelectedRow = selectedFile === path;
+    const isPlayingRow = playingFile === path;
     const classes = `${isEditingRow ? 'editing' : ''} ${
       isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : 'striped'
     }`;
@@ -178,10 +179,10 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
               if (isEditingRow) {
                 // save
                 toastSuccess();
-                setEditingRow(-1);
+                setEditingFile('');
               } else {
-                setSelectedRow(rowIndex);
-                setEditingRow(rowIndex);
+                setSelectedFile(path);
+                setEditingFile(path);
               }
             }}
           />
@@ -190,89 +191,43 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     );
   };
 
-  const onDoubleClick = (songIndex: number) => {
-    if (songIndex === editingRow) {
+  const onDoubleClick = (path: string) => {
+    if (path === editingFile) {
       return;
     }
-    if (editingRow > -1) {
+    if (editingFile !== '') {
       // save
       toastSuccess();
-      setEditingRow(-1);
+      setEditingFile('');
     }
-    updatePlayingRow(songIndex);
-    audioQueue.stop();
-    startQueue(songIndex);
+    startQueue(path);
   };
 
-  const startQueue = (songIndex: number) => {
-    const queue = [songs[songIndex].path];
-    if (songIndex + 1 < songs.length) {
-      queue.push(songs[songIndex + 1].path);
-    }
-    return audioQueue.start(queue, songIndex);
+  const startQueue = (path: string) => {
+    const index = songs.map(s => s.path).indexOf(path);
+    const queue = songs.filter(s => s.index >= index);
+    setQueuedSongs(queue);
+    return audioQueue.start(queue.map(q => q.path));
   };
 
-  const updatePlayingRow = (rowIndex: number) => {
-    setPlayingRow(rowIndex);
-  };
-
-  const onSongFinished = (playingRow: number) => {
-    if (playingRow + 1 < songs.length) {
-      updatePlayingRow(playingRow + 1);
+  const cellRenderer = (path: string, value: string, canEdit: boolean = true) => {
+    let classes = 'bp3-table-cell grid-cell';
+    let child: JSX.Element | string = value;
+    if (path === editingFile) {
+      classes += ' editing selected';
+      child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
+    } else if (path === playingFile) {
+      classes += ' playing';
+    } else if (path === selectedFile) {
+      classes += ' selected';
     } else {
-      onStop();
-    }
-    if (playingRow + 2 < songs.length) {
-      audioQueue.start([songs[playingRow + 2].path], playingRow + 2);
-    }
-  };
-
-  const cellRenderer = (rowIndex: number, value: string, canEdit: boolean = true) => {
-    if (rowIndex === editingRow) {
-      return (
-        <div
-          key={rowIndex}
-          className='bp3-table-cell selected grid-cell editing'
-          onDoubleClick={() => onDoubleClick(rowIndex)}
-          onClick={() => onRowClick(rowIndex)}
-        >
-          {canEdit ? <EditableText defaultValue={value} className='editing' /> : value}
-        </div>
-      );
-    }
-
-    if (rowIndex === playingRow) {
-      return (
-        <div
-          key={rowIndex}
-          className='bp3-table-cell playing grid-cell'
-          onDoubleClick={() => onDoubleClick(rowIndex)}
-          onClick={() => onRowClick(rowIndex)}
-        >
-          {value}
-        </div>
-      );
-    }
-    if (rowIndex === selectedRow) {
-      return (
-        <div
-          key={rowIndex}
-          className='bp3-table-cell grid-cell selected'
-          onDoubleClick={() => onDoubleClick(rowIndex)}
-          onClick={() => onRowClick(rowIndex)}
-        >
-          {value}
-        </div>
-      );
+      classes += ' striped';
     }
     return (
-      <div
-        key={rowIndex}
-        className='bp3-table-cell striped grid-cell'
-        onDoubleClick={() => onDoubleClick(rowIndex)}
-        onClick={() => onRowClick(rowIndex)}
-      >
-        {value}
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+        <div className='ellipsize' style={{ display: 'inline-block' }}>
+          {child}
+        </div>
       </div>
     );
   };
@@ -281,36 +236,40 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     if (rowIndex >= songs.length) {
       return null;
     }
-    let value = songs[rowIndex][field].toString();
-    return cellRenderer(rowIndex, value);
+    const path = songs[rowIndex].path;
+    const value = songs[rowIndex][field].toString();
+    return cellRenderer(path, value);
   };
 
   const trackRenderer = (rowIndex: number) => {
     if (rowIndex >= songs.length) {
       return null;
     }
+    const path = songs[rowIndex].path;
     let value = songs[rowIndex].track.toString();
     if (value === '0') {
       value = '';
     }
-    return cellRenderer(rowIndex, value);
+    return cellRenderer(path, value);
   };
 
   const timeRenderer = (rowIndex: number) => {
     if (rowIndex >= songs.length) {
       return null;
     }
+    const path = songs[rowIndex].path;
     let value = songs[rowIndex]['time'];
     let fmtValue = formatMs(value);
-    return cellRenderer(rowIndex, fmtValue);
+    return cellRenderer(path, fmtValue);
   };
 
   const pathRenderer = (rowIndex: number) => {
     if (rowIndex >= songs.length) {
       return null;
     }
+    const path = songs[rowIndex].path;
     let value = songs[rowIndex].path;
-    return cellRenderer(rowIndex, value, false);
+    return cellRenderer(path, value, false);
   };
 
   const resizeRow = (props: { dataKey: string; deltaX: number }) => {
@@ -324,19 +283,19 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     }
   };
 
-  const onRowClick = (index: number) => {
-    setSelectedRow(index);
-    const cur = songs[index];
+  const onRowClick = (path: string) => {
+    setSelectedFile(path);
+    const cur = songs.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
     updateSelectedAlbum(cur.id, albumIndex);
 
-    if (index === editingRow) {
+    if (path === editingFile) {
       return;
     }
-    if (editingRow > -1) {
+    if (editingFile !== '') {
       // save
       toastSuccess();
-      setEditingRow(-1);
+      setEditingFile('');
     }
   };
 
@@ -346,7 +305,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     if (getAlbumSongs(albumIndex)[0].hasArt) {
       updateColors(songIndex, albumIndex);
     }
-    setSelectedAlbumRow(albumIndex);
+    setSelectedAlbum(albumKeys[albumIndex]);
   };
 
   const updateColors = async (songIndex: number, albumIndex: number) => {
@@ -371,7 +330,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   const rowRenderer2 = (props: TableRowProps) => {
     props.className += ' card';
     props.style.left = 10;
-    if (props.index === selectedAlbumRow) {
+    if (`${props.rowData[0].albumArtist} ${props.rowData[0].album}` === selectedAlbum) {
       props.className += ' album-selected-row';
     }
     if (groupedSongs[albumKeys[props.index]][0].hasArt) {
@@ -383,23 +342,12 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
     return defaultTableRowRenderer(props);
   };
 
-  const onPause = async () => {
-    await audioQueue.pause();
-    setIsPlaying(false);
-  };
-
   const onPlay = () => {
-    const rowToPlay = playingRow > -1 ? playingRow : selectedRow;
-    updatePlayingRow(rowToPlay);
-    startQueue(rowToPlay);
+    const fileToPlay = playingFile !== '' ? playingFile : selectedFile;
+    startQueue(fileToPlay ?? '');
   };
 
-  const onStop = () => {
-    audioQueue.stop();
-    updatePlayingRow(-1);
-  };
-
-  const mulitSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
+  const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
     let g = groupedSongs[albumKeys[rowIndex]];
     return <div className='rowParent'>{g.map(gg => cellRenderer(gg.index))}</div>;
   };
@@ -422,7 +370,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='album'
           label='Album'
-          cellRenderer={({ rowIndex, dataKey, parent }) => {
+          cellRenderer={({ rowIndex }) => {
             let gg = groupedSongs[albumKeys[rowIndex]];
             let g = groupedSongs[albumKeys[rowIndex]][0];
             return (
@@ -445,7 +393,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey=''
           label=''
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, editCellRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, editCellRenderer)}
           width={widths2.edit}
           minWidth={widths2.edit}
         />
@@ -453,9 +401,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex, dataKey, parent }) =>
-            mulitSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))
-          }
+          cellRenderer={({ rowIndex, dataKey }) => multiSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
           width={widths2.name}
           minWidth={widths2.name}
         />
@@ -463,7 +409,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='track'
           label='Track'
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, trackRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, trackRenderer)}
           width={widths2.track}
           minWidth={widths2.track}
         />
@@ -471,7 +417,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='time'
           label='Time'
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, timeRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, timeRenderer)}
           width={widths2.time}
           minWidth={widths2.time}
         />
@@ -479,7 +425,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='path'
           label='Path'
-          cellRenderer={({ rowIndex }) => mulitSongRenderer(rowIndex, pathRenderer)}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, pathRenderer)}
           width={widths2.path}
           minWidth={widths2.path}
         />
@@ -502,7 +448,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
         <Column
           headerRenderer={headerRenderer}
           dataKey=''
-          cellRenderer={({ rowIndex, dataKey }) => editCellRenderer(rowIndex)}
+          cellRenderer={({ rowIndex }) => editCellRenderer(rowIndex)}
           width={widths.edit}
           minWidth={widths.edit}
         />
@@ -510,7 +456,7 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex, dataKey }) => genericCellRenderer(rowIndex, 'name')}
+          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'name')}
           width={widths.name}
           minWidth={widths.name}
         />
@@ -569,14 +515,9 @@ export const SongGrid: React.FC<SongGridProps> = ({ selectedGrid, isLightTheme, 
   return (
     <>
       <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
-
       <Controls
-        isPlaying={isPlaying}
-        setIsPlaying={setIsPlaying}
-        onPause={onPause}
         onPlay={onPlay}
-        onStop={onStop}
-        playingSong={playingRow > -1 ? songs[playingRow] : null}
+        playingSong={playingFile !== '' ? queuedSongs.filter(s => s.path === playingFile)[0] : null}
       />
     </>
   );
