@@ -210,14 +210,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return audioQueue.start(queue.map(q => q.path));
   };
 
-  const getNext = (songs: Song[], current: string) => {
-    const currentIndex = songs.map(s => s.path).indexOf(current);
-    if (currentIndex === songs.length - 1) {
-      return '';
-    }
-    return songs[currentIndex + 1].path;
-  };
-
   const cellRenderer = (path: string, value: string, canEdit: boolean = true) => {
     let classes = 'bp3-table-cell grid-cell';
     let child: JSX.Element | string = value;
@@ -338,7 +330,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const rowRenderer2 = (props: TableRowProps) => {
     props.className += ' card';
     props.style.left = 10;
-    if (props.index === albumKeys.indexOf(selectedAlbum)) {
+    if (`${props.rowData[0].albumArtist} ${props.rowData[0].album}` === selectedAlbum) {
       props.className += ' album-selected-row';
     }
     if (groupedSongs[albumKeys[props.index]][0].hasArt) {
@@ -523,7 +515,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
   return (
     <>
       <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
-
       <Controls
         onPlay={onPlay}
         playingSong={playingFile !== '' ? queuedSongs.filter(s => s.path === playingFile)[0] : null}
