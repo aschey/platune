@@ -50,7 +50,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           <div style={{ flex: 1 }} />
           <Text>Tags</Text>
           <Button minimal small style={{ marginLeft: 5, padding: 0 }}>
-            <Icon iconSize={14} icon='add' style={{ paddingBottom: 1 }} />
+            <Icon iconSize={14} icon='add' style={{ paddingBottom: 1, paddingRight: 1 }} />
           </Button>
         </FlexRow>
       </FlexCol>
@@ -75,10 +75,11 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                     <Text ellipsize className='tag-text'>
                       {queuedSongs[rowIndex].name}
                     </Text>
-
-                    <Button minimal small style={{ minHeight: 20, minWidth: 20 }}>
-                      <Icon iconSize={12} icon='edit' style={{ paddingBottom: 1 }} />
-                    </Button>
+                    <FlexCol>
+                      <Button minimal small style={{ minHeight: 20, minWidth: 20 }}>
+                        <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
+                      </Button>
+                    </FlexCol>
                   </FlexRow>
                 }
               </Tag>
