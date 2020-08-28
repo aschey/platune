@@ -37,7 +37,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   }, [progress, songMillis, songColorAdjust]);
 
   const playPauseClick = async () => {
-    if (audioQueue.isPlaying) {
+    if (isPlaying) {
       await audioQueue.pause();
     } else {
       await onPlay();
@@ -45,7 +45,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   };
 
   const visualizer = async () => {
-    if (audioQueue.currentAnalyser && audioQueue.isPlaying) {
+    if (audioQueue.currentAnalyser && isPlaying) {
       audioQueue.currentAnalyser.fftSize = 2048;
       const bufferLength = audioQueue.currentAnalyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
