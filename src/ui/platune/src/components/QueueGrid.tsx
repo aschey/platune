@@ -24,7 +24,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
         ? 'inset 0 0 2px 2px rgba(var(--intent-success), 0.3)'
         : 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
     props.onRowDoubleClick = params => {
-      audioQueue.start(queuedSongs.filter((s, i) => i >= params.index).map(s => s.path));
+      audioQueue.start(queuedSongs[params.index].path);
     };
     return defaultTableRowRenderer(props);
   };

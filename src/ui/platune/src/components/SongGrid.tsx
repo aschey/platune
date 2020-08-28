@@ -206,8 +206,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const startQueue = async (path: string) => {
     const index = songs.map(s => s.path).indexOf(path);
     const queue = songs.filter(s => s.index >= index);
-    setQueuedSongs(queue);
-    await audioQueue.start(queue.map(q => q.path));
+    if (!audioQueue.isPaused && path !== playingFile) {
+      setQueuedSongs(queue);
+      audioQueue.setQueue(queue.map(q => q.path));
+    }
+
+    await audioQueue.start(queue[0].path);
   };
 
   const cellRenderer = (rowIndex: number, path: string, value: string, canEdit: boolean = true) => {

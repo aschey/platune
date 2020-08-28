@@ -22,7 +22,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   let [coloradjust, setColorAdjust] = useState('#000000');
   const songMillis = useObservable(() => audioQueue.durationMillis);
   const progress = useObservable(() => audioQueue.progress);
-  const isPlaying = useObservable(() => audioQueue.isPlayingEvent);
+  const isPlaying = useObservable(() => audioQueue.isPlaying);
   let canvasRef = React.createRef<HTMLCanvasElement>();
   const songColorAdjust = isLight(theme.backgroundMain) ? 150 : -40;
 
@@ -133,6 +133,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
             minimal
             icon='fast-backward'
             style={{ borderRadius: '50%', width: 40, height: 40 }}
+            onClick={audioQueue.previous}
           />
           <div style={{ width: 5 }} />
           <Button
@@ -159,6 +160,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
             minimal
             icon='fast-forward'
             style={{ borderRadius: '50%', width: 40, height: 40 }}
+            onClick={audioQueue.next}
           />
         </FlexRow>
       </FlexCol>
