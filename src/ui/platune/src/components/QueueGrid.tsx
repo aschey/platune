@@ -2,7 +2,7 @@ import React from 'react';
 import { Table, Column, TableRowProps, defaultTableRowRenderer, TableHeaderRowProps } from 'react-virtualized';
 import { Song } from '../models/song';
 import { FlexCol } from './FlexCol';
-import { Icon, Tag, Label, Text, Intent } from '@blueprintjs/core';
+import { Icon, Tag, Label, Text, Intent, Button } from '@blueprintjs/core';
 import { audioQueue } from '../audio';
 import { useObservable } from 'rxjs-hooks';
 import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
@@ -46,7 +46,13 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           minWidth: width + 5,
         }}
       >
-        Tags
+        <FlexRow>
+          <div style={{ flex: 1 }} />
+          <Text>Tags</Text>
+          <Button minimal small style={{ marginLeft: 5, padding: 0 }}>
+            <Icon iconSize={14} icon='add' style={{ paddingBottom: 1 }} />
+          </Button>
+        </FlexRow>
       </FlexCol>
       <Table
         width={width}
