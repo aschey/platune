@@ -44,8 +44,8 @@ Platune is a cross-platform music player that supports sharing data between oper
 - Audio visualizer
 - Playback with gapless audio support
 - Search
+- Song queueing
 
 ### Features in Progress
 
-- Song queueing
 - Tags
