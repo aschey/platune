@@ -111,6 +111,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
       return;
     }
     const ref = selectedGrid === 'song' ? mainRef.current : otherRef.current;
+    if (ref?.props.rowCount === 0) {
+      return;
+    }
     ref?.forceUpdate();
     ref?.forceUpdateGrid();
     ref?.measureAllRows();
@@ -378,7 +381,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             return (
               <FlexCol
                 center={false}
-                style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 125) }}
+                style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 105) }}
                 onClick={() => updateSelectedAlbum(g.id, rowIndex)}
               >
                 <div>{g.albumArtist}</div>
