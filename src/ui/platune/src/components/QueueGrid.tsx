@@ -57,7 +57,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
       <Table
         width={width}
         height={(window.innerHeight - 180) / 2}
-        rowHeight={25}
+        rowHeight={30}
         headerHeight={25}
         disableHeader={true}
         rowCount={queuedSongs.length}
@@ -70,7 +70,17 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           cellRenderer={({ rowIndex }) => (
             <div style={{ paddingLeft: 5 }}>
               <Tag intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][Math.round(random(0, 4))]}>
-                {queuedSongs[rowIndex].name}
+                {
+                  <FlexRow>
+                    <Text ellipsize className='tag-text'>
+                      {queuedSongs[rowIndex].name}
+                    </Text>
+
+                    <Button minimal small style={{ minHeight: 20, minWidth: 20 }}>
+                      <Icon iconSize={12} icon='edit' style={{ paddingBottom: 1 }} />
+                    </Button>
+                  </FlexRow>
+                }
               </Tag>
             </div>
           )}

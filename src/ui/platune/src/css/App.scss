@@ -284,3 +284,8 @@ svg[data-icon='list-detail-view'] {
   font-size: 12;
   color: rgba(var(--text-secondary), 0.8);
 }
+
+.tag-text {
+  max-width: 135px;
+  padding-right: 5px;
+}
