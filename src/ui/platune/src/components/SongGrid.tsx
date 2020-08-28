@@ -111,13 +111,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
       return;
     }
     const ref = selectedGrid === 'song' ? mainRef.current : otherRef.current;
-    if (ref?.props.rowCount === 0) {
+    if (!ref?.props?.rowCount) {
       return;
     }
-    ref?.forceUpdate();
-    ref?.forceUpdateGrid();
-    ref?.measureAllRows();
-    ref?.recomputeRowHeights();
+    ref.forceUpdate();
+    ref.forceUpdateGrid();
+    ref.measureAllRows();
+    ref.recomputeRowHeights();
   }, [width, selectedGrid, songs, mainRef, otherRef]);
 
   useEffect(() => {
