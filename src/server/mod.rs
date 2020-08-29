@@ -22,6 +22,7 @@ use actix_web::{
     web::Query,
     App, HttpRequest, HttpResponse, HttpServer, Responder, Result,
 };
+use anyhow::Result as AnyResult;
 use async_std::prelude::*;
 use async_std::task;
 use diesel;
@@ -30,23 +31,13 @@ use diesel::sql_types::*;
 use diesel::sqlite::SqliteConnection;
 use dirs::home_dir;
 use dotenv::dotenv;
+use failure::Fail;
 use fstrings::*;
 use futures::future::FutureExt;
 use futures::join;
 use image::{imageops, GenericImageView, ImageBuffer, RgbImage};
 use itertools::Itertools;
 use models::{folder::*, import::*, mount::*};
-use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
-use std::fs::{copy, read_dir, remove_file, DirEntry, File};
-use std::io::prelude::*;
-use std::path::PathBuf;
-use std::time::SystemTime;
-use std::{env, vec::Vec};
-use std::{str, sync::mpsc};
-use sysinfo::{DiskExt, SystemExt};
-
-use failure::Fail;
 use paperclip::actix::{
     api_v2_errors,
     api_v2_operation,
@@ -56,7 +47,19 @@ use paperclip::actix::{
     // extension trait for actix_web::App and proc-macro attributes
     OpenApiExt,
 };
-// https://www.sqlite.org/fts5.html#external_content_and_contentless_tables
+use rust_embed::RustEmbed;
+use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
+use std::convert::TryFrom;
+use std::fs::{copy, read_dir, remove_file, DirEntry, File};
+use std::io::prelude::*;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::time::SystemTime;
+use std::{env, vec::Vec};
+use std::{str, sync::mpsc};
+use sysinfo::{DiskExt, SystemExt};
+
 const IS_WINDOWS: bool = cfg!(windows);
 const DATABASE_URL: &str = "DATABASE_URL";
 fn get_delim() -> &'static str {
@@ -110,14 +113,37 @@ fn get_song_path() -> schema::song::song_path_unix {
     song_path_unix
 }
 
-pub fn establish_connection() -> SqliteConnection {
-    dotenv().ok();
-    let database_url = env::var(DATABASE_URL).expect("DATABASE_URL must be set");
-    SqliteConnection::establish(&database_url).expect("Error connecting to database")
+#[derive(RustEmbed)]
+#[folder = "src/server/swagger"]
+struct Asset;
+
+fn handle_embedded_file(path: &str) -> HttpResponse {
+    match Asset::get(path) {
+        Some(content) => {
+            let body: body::Body = match content {
+                Cow::Borrowed(bytes) => bytes.into(),
+                Cow::Owned(bytes) => bytes.into(),
+            };
+            HttpResponse::Ok()
+                .content_type(mime_guess::from_path(path).first_or_octet_stream().as_ref())
+                .body(body)
+        }
+        None => HttpResponse::NotFound().body("404 Not Found"),
+    }
+}
+
+fn index() -> HttpResponse {
+    handle_embedded_file("index.html")
+}
+
+pub fn establish_connection() -> AnyResult<SqliteConnection> {
+    dotenv::from_path(get_env_path()).ok();
+    let database_url = env::var(DATABASE_URL)?;
+    Ok(SqliteConnection::establish(&database_url)?)
 }
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
-    if !std::path::Path::new("./.env").exists() {
+    if !get_env_path().exists() {
         write_env(
             &std::env::current_dir()
                 .unwrap()
@@ -174,17 +200,20 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
                     }
                 })
             })
-            .service(fs::Files::new("/swagger", "./src/server/swagger").index_file("index.html"));
+            .service(web::resource("/swagger").route(web::get().to(index)));
 
-        let connection = establish_connection();
-        let paths = folder
-            .select(get_path())
-            .load::<String>(&connection)
-            .unwrap();
-        for path in paths {
-            builder = builder.service(
-                fs::Files::new(&to_url_path(path.to_owned()), path.to_owned()).show_files_listing(),
-            );
+        let connection_res = establish_connection();
+        if let Ok(connection) = connection_res {
+            let paths = folder
+                .select(get_path())
+                .load::<String>(&connection)
+                .unwrap();
+            for path in paths {
+                builder = builder.service(
+                    fs::Files::new(&to_url_path(path.to_owned()), path.to_owned())
+                        .show_files_listing(),
+                );
+            }
         }
 
         let app = builder
@@ -334,7 +363,7 @@ async fn get_all_files_parallel(root: String, other: String) {
     let all = futures::future::join_all(handles).await;
     let res = all.iter().flatten().collect::<Vec<_>>();
 
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     let batch_size = 5000;
     let batches = (res.len() as f32 / batch_size as f32).ceil() as usize;
     let _ = diesel::delete(import_temp).execute(&connection);
@@ -411,7 +440,7 @@ async fn get_all_files_parallel(root: String, other: String) {
 pub async fn get_all_files() -> Result<Json<()>, ()> {
     let t = actix_rt::spawn(async {
         let now = std::time::Instant::now();
-        let connection = establish_connection();
+        let connection = establish_connection().unwrap();
         let dirs: Vec<_>;
         if IS_WINDOWS {
             dirs = folder
@@ -548,7 +577,7 @@ async fn get_is_windows() -> Result<Json<bool>, ()> {
 }
 
 fn get_configured_folders_helper() -> Vec<String> {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     let results = folder.load::<Folder>(&connection).expect("error");
     let paths = results
         .iter()
@@ -582,7 +611,7 @@ fn get_ntfs_mounts_helper() -> Vec<String> {
 
 #[api_v2_operation]
 async fn get_ntfs_mounts() -> Result<Json<Vec<NtfsMapping>>, ()> {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     let fs_fuse = get_ntfs_mounts_helper();
     let mapped = mount
         .select((unix_path, windows_path))
@@ -695,7 +724,7 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
         });
     }
 
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     //let sql = diesel::debug_query::<diesel::sqlite::Sqlite, _>(&folder.filter(get_path().ne_all(new_folders_req.folders.iter()).and(get_path().to_owned().ne("")))).to_string();
     //println!("{:?}", sql);
     let pred = folder.filter(
@@ -762,8 +791,28 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     return Ok(Json(()));
 }
 
+#[cfg(unix)]
+fn get_env_path() -> PathBuf {
+    let path: PathBuf;
+    let config_home_res = env::var("XDG_CONFIG_HOME");
+    if let Ok(config_home) = config_home_res {
+        path = PathBuf::from_str(&config_home).unwrap().join("platune");
+    } else {
+        path = dirs::home_dir().unwrap().join(".config/platune");
+    }
+    if !path.exists() {
+        std::fs::create_dir_all(path.to_owned()).unwrap();
+    }
+    let full_path = path.join(".env");
+    if !full_path.to_owned().exists() {
+        std::fs::File::create(full_path.to_owned()).unwrap();
+    }
+
+    full_path
+}
+
 fn write_env(dir: &String) -> String {
-    let mut file = File::create(".env").unwrap();
+    let mut file = File::create(get_env_path()).unwrap();
     let delim_escaped = get_delim_escaped();
     let escaped = dir.replace(get_delim(), get_delim_escaped());
     let full_url = f!("{escaped}{delim_escaped}platune.db");
@@ -774,15 +823,17 @@ fn write_env(dir: &String) -> String {
 #[api_v2_operation]
 async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
     let full_url = write_env(&request.dir);
-    let current_url = env::var(DATABASE_URL).unwrap();
-    let _res = copy(current_url.to_owned(), full_url.to_owned());
-    let _res2 = remove_file(current_url.to_owned());
+    let current_url_res = env::var(DATABASE_URL);
+    if let Ok(current_url) = current_url_res {
+        let _res = copy(current_url.to_owned(), full_url.to_owned());
+        let _res2 = remove_file(current_url.to_owned());
+    }
     env::set_var(DATABASE_URL, full_url);
     return Ok(Json(()));
 }
 
 fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     for r in mapping {
         if !IS_WINDOWS {
             let paths = folder
@@ -832,7 +883,7 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 
 #[api_v2_operation]
 async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     let mut query: diesel::query_builder::BoxedSelectStatement<_, _, diesel::sqlite::Sqlite> = song
         .into_boxed()
         .inner_join(artist)
@@ -853,7 +904,6 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
             get_song_path(),
             diesel::dsl::sql::<Bool>("case when album_art is null then 0 else 1 end"),
         ));
-    //.limit(10);
     if let Some(limit) = request.limit {
         query = query.limit(limit);
     }
@@ -906,7 +956,7 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
 
 #[api_v2_operation]
 async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
     // Adjust rankings to give slightly more weight to artists and albums
     let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.3 WHEN 'album_artist' THEN 1.3 WHEN 'album' THEN 1.2 ELSE 1 END)";
@@ -939,7 +989,7 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
 
 #[api_v2_operation]
 async fn get_album_art(request: Query<ArtRequest>) -> actix_http::Response {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     let req_obj = request.into_inner();
     let art = song
         .filter(song_id.eq(req_obj.song_id))
@@ -1023,7 +1073,7 @@ fn adjust_lighten(mut color: Rgb, luminance: f32, threshold: f32) -> Rgb {
 
 #[api_v2_operation]
 async fn get_art_colors(request: Query<ArtColorsRequest>) -> Result<Json<Vec<Rgb>>, ()> {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     let art = song
         .filter(song_id.eq(request.song_id))
         .select(album_art)
@@ -1101,7 +1151,7 @@ async fn get_art_colors(request: Query<ArtColorsRequest>) -> Result<Json<Vec<Rgb
 
 #[api_v2_operation]
 async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()>, HttpError> {
-    let connection = establish_connection();
+    let connection = establish_connection().unwrap();
     let ins = request
         .iter()
         .map(|r| {
