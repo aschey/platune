@@ -212,7 +212,7 @@ canvas {
   color: rgba(var(--text-secondary), 1) !important;
 }
 
-.has-art.ReactVirtualized__Table__row.album-selected-row .rowParent .striped:nth-of-type(even):not(.selected) {
+.has-art.ReactVirtualized__Table__row.album-selected-row .rowParent .striped-even:not(.selected) {
   transition: var(--transition);
   background: rgba(var(--grid-selected-stripe-even), 1);
 }
