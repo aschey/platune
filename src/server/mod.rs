@@ -791,15 +791,8 @@ async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>,
     return Ok(Json(()));
 }
 
-#[cfg(unix)]
 fn get_env_path() -> PathBuf {
-    let path: PathBuf;
-    let config_home_res = env::var("XDG_CONFIG_HOME");
-    if let Ok(config_home) = config_home_res {
-        path = PathBuf::from_str(&config_home).unwrap().join("platune");
-    } else {
-        path = dirs::home_dir().unwrap().join(".config/platune");
-    }
+    let path = dirs::config_dir().unwrap().join("platune");
     if !path.exists() {
         std::fs::create_dir_all(path.to_owned()).unwrap();
     }

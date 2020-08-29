@@ -45,7 +45,10 @@ app.on('ready', async () => {
   if (spawnServer) {
     server = net.createServer();
     server.listen(8001);
-    let command = process.platform === 'win32' ? '.\\target\\release\\platune.exe' : '/opt/platune/platune-server';
+    let command =
+      process.platform === 'win32'
+        ? `${app.getPath('home')}\\AppData\\Local\\Programs\\platune-server\\platune-server.exe`
+        : '/opt/platune/platune-server';
     let proc = spawn(command, { detached: true, windowsHide: true, shell: false, stdio: 'ignore' });
     proc.unref();
   }

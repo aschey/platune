@@ -2,7 +2,7 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 cd "$DIR/../src/ui/platune"
-#yarn linux-pack
+yarn linux-pack
 sudo mkdir -p /opt/platune
 sudo install -d /opt/platune
 sudo install -m644 public/res/icon.png /usr/share/icons/platune.png
