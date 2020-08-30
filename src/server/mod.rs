@@ -952,13 +952,17 @@ async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
     let connection = establish_connection().unwrap();
     // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
     // Adjust rankings to give slightly more weight to artists and albums
-    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.3 WHEN 'album_artist' THEN 1.3 WHEN 'album' THEN 1.2 ELSE 1 END)";
+
+    // test cases: "red hot chili peppers" for album artist without artist
+    // "fired up" for multiple artists with same album name
+    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'album' THEN 1.25 ELSE 1 END)";
+    let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
     let res = diesel::sql_query(f!("
         WITH CTE AS (
             SELECT DISTINCT entry_value, entry_type, rank, 
             CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
-            CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END artist,
-            ROW_NUMBER() OVER (PARTITION BY entry_value, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 ELSE 3 END ORDER BY entry_type DESC) row_num
+            {artist_select} artist,
+            ROW_NUMBER() OVER (PARTITION BY entry_value, {artist_select}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 ELSE 3 END ORDER BY entry_type DESC) row_num
             FROM search_index
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
