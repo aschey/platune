@@ -198,7 +198,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const index = songs.map(s => s.path).indexOf(path);
     const queue = songs.filter(s => s.index >= index);
     // Don't reset queue if currently paused and we're resuming the same song
-    if (!(audioQueue.isPaused && path === playingFile)) {
+    if (!(audioQueue.isPaused() && path === playingFile)) {
       setQueuedSongs(queue);
       audioQueue.setQueue(queue.map(q => q.path));
     }

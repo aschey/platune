@@ -2,7 +2,7 @@ import { Button, Icon, Intent } from '@blueprintjs/core';
 import _ from 'lodash';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useObservable } from 'rxjs-hooks';
-import { audioQueue } from '../audio';
+import { audioQueue, PlaybackState } from '../audio';
 import { Song } from '../models/song';
 import { hexToRgb, isLight, shadeColor } from '../themes/colorMixer';
 import { formatMs } from '../util';
@@ -21,7 +21,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   const [coloradjust, setColorAdjust] = useState('#000000');
   const songMillis = useObservable(() => audioQueue.durationMillis);
   const progress = useObservable(() => audioQueue.progress);
-  const isPlaying = useObservable(() => audioQueue.isPlaying);
+  const playbackState = useObservable(() => audioQueue.playbackState);
   const canvasRef = React.createRef<HTMLCanvasElement>();
   const visualizerTimeout = useRef<NodeJS.Timeout>();
 
@@ -34,7 +34,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   }, []);
 
   const visualizer = useCallback(async () => {
-    if (audioQueue.currentAnalyser && isPlaying) {
+    if (audioQueue.currentAnalyser && audioQueue.isPlaying()) {
       audioQueue.currentAnalyser.fftSize = 2048;
       const bufferLength = audioQueue.currentAnalyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
@@ -76,16 +76,16 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
     } else {
       visualizerTimeout.current = setTimeout(visualizer, 50);
     }
-  }, [canvasRef, isPlaying]);
+  }, [canvasRef, playbackState]);
 
   useEffect(() => {
-    if (isPlaying) {
+    if (audioQueue.isPlaying()) {
       visualizer();
     } else {
       stopVisualizer();
     }
     return stopVisualizer;
-  }, [isPlaying, visualizer, stopVisualizer]);
+  }, [playbackState, visualizer, stopVisualizer]);
 
   useEffect(() => {
     if (songMillis !== null && progress !== null) {
@@ -94,7 +94,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   }, [progress, songMillis, songColorAdjust]);
 
   const playPauseClick = async () => {
-    if (isPlaying) {
+    if (audioQueue.isPlaying()) {
       await audioQueue.pause();
     } else {
       await onPlay();
@@ -153,9 +153,9 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
           <div style={{ width: 5 }} />
           <Button
             className='nofocus'
-            intent={isPlaying ? Intent.WARNING : Intent.SUCCESS}
+            intent={playbackState === PlaybackState.Playing ? Intent.WARNING : Intent.SUCCESS}
             minimal
-            icon={isPlaying ? 'pause' : 'play'}
+            icon={playbackState === PlaybackState.Playing ? 'pause' : 'play'}
             style={{ borderRadius: '50%', width: 40, height: 40 }}
             onClick={playPauseClick}
           />
