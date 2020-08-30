@@ -1,12 +1,7 @@
 import React from 'react';
-import { Slider, Rail, Tracks, SliderItem, GetTrackProps } from 'react-compound-slider';
+import { GetTrackProps, Rail, Slider, SliderItem, Tracks } from 'react-compound-slider';
 import { audioQueue } from '../audio';
 export const Volume: React.FC<{}> = () => {
-  const sliderStyle: React.CSSProperties = {
-    position: 'relative',
-    marginBottom: 10,
-    marginTop: 10,
-  };
   const railStyle: React.CSSProperties = {
     position: 'absolute',
     width: '100%',

@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { Button, Classes, EditableText, Intent, MenuItem, Text } from '@blueprintjs/core';
+import { Select } from '@blueprintjs/select';
+import _ from 'lodash';
+import React, { useEffect, useState } from 'react';
+import { toastSuccess } from '../appToaster';
 import { getJson, putJson } from '../fetchUtil';
-import { FlexRow } from './FlexRow';
-import { Classes, Text, MenuItem, Position, Button, Intent, EditableText } from '@blueprintjs/core';
-import { Suggest, IItemRendererProps, Select } from '@blueprintjs/select';
 import { NtfsMapping } from '../models/ntfsMapping';
 import { FlexCol } from './FlexCol';
-import _ from 'lodash';
-import { toastSuccess } from '../appToaster';
+import { FlexRow } from './FlexRow';
 
 const DriveSelect = Select.ofType<string>();
 

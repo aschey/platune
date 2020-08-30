@@ -1,25 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Table, Column, Cell } from '@blueprintjs/table';
-import {
-  Button,
-  ITreeNode,
-  Tooltip,
-  Position,
-  Icon,
-  Classes,
-  Intent,
-  Toaster,
-  Toast,
-  ButtonGroup,
-  Divider,
-  Alert,
-} from '@blueprintjs/core';
-import { FolderPicker } from './FolderPicker';
+import { Alert, Button, Intent } from '@blueprintjs/core';
+import React, { useCallback, useEffect, useState } from 'react';
+import { toastSuccess } from '../appToaster';
 import { getJson, putJson } from '../fetchUtil';
-import { SelectedFolders } from './SelectedFolders';
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
-import { toastSuccess } from '../appToaster';
+import { FolderPicker } from './FolderPicker';
+import { SelectedFolders } from './SelectedFolders';
 
 interface FolderViewProps {
   width: number;
@@ -60,10 +46,6 @@ export const FolderView: React.FC<FolderViewProps> = ({
     refreshFolders();
     return () => setRows([]);
   }, [refreshFolders, setRows]);
-
-  const cellRenderer = (rowIndex: number) => {
-    return <Cell>{rows[rowIndex]}</Cell>;
-  };
 
   const addFolderClick = () => {
     setRows([...rows, selected]);

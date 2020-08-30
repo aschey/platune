@@ -1,31 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Menu,
-  MenuItem,
-  Popover,
-  Button,
-  Classes,
-  Intent,
-  Alert,
-  ButtonGroup,
-  Tabs,
-  Tab,
-  TabId,
-  Text,
-  Tooltip,
-  Icon,
-  Divider,
-} from '@blueprintjs/core';
-import { FolderView } from './FolderView';
+import { Tab, TabId, Tabs } from '@blueprintjs/core';
+import React, { useEffect, useState } from 'react';
+import { NtfsMapping } from '../models/ntfsMapping';
 import { Dialog } from './Dialog';
 import { DirtyCheck } from './DirtyCheck';
-import { FlexRow } from './FlexRow';
-import { FlexCol } from './FlexCol';
-import { PathPicker } from './PathPicker';
+import { FolderView } from './FolderView';
 import { MultilineText } from './MultilineText';
 import { PathMapping } from './PathMapping';
-import { NtfsMapping } from '../models/ntfsMapping';
-import { applyTheme } from '../themes/themes';
+import { PathPicker } from './PathPicker';
 
 export const Settings: React.FC<{
   updateTheme: (newThemeName: string) => void;
@@ -169,8 +150,8 @@ export const Settings: React.FC<{
   return (
     <Dialog
       style={{ width, height }}
-      icon="cog"
-      title="Settings"
+      icon='cog'
+      title='Settings'
       isOpen={isOpen}
       onClose={onClose}
       autoFocus
@@ -180,21 +161,21 @@ export const Settings: React.FC<{
       <div style={{ paddingLeft: 10, height }}>
         <Tabs vertical selectedTabId={selectedTab} onChange={onTabChange} renderActiveTabPanelOnly>
           <Tab
-            id="f"
-            title={<MultilineText maxWidth={200} icon="folder-open" text="Import Folders" />}
+            id='f'
+            title={<MultilineText maxWidth={200} icon='folder-open' text='Import Folders' />}
             panel={configureFolders}
           />
           <Tab
-            id="t"
-            title={<MultilineText maxWidth={200} icon="database" text="Choose Database Path" />}
+            id='t'
+            title={<MultilineText maxWidth={200} icon='database' text='Choose Database Path' />}
             panel={chooseDatabase}
           />
           <Tab
-            id="m"
-            title={<MultilineText maxWidth={200} icon="arrows-horizontal" text="Path Mappings" />}
+            id='m'
+            title={<MultilineText maxWidth={200} icon='arrows-horizontal' text='Path Mappings' />}
             panel={pathMappings}
           />
-          <Tab id="b" title={<MultilineText maxWidth={200} icon="updated" text="Backup and Restore" />} />
+          <Tab id='b' title={<MultilineText maxWidth={200} icon='updated' text='Backup and Restore' />} />
         </Tabs>
       </div>
     </Dialog>

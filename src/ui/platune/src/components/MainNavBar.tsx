@@ -1,39 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
 import {
-  Navbar,
-  NavbarGroup,
   Alignment,
-  NavbarHeading,
-  NavbarDivider,
   Button,
-  Classes,
-  Popover,
-  MenuItem,
-  Menu,
-  Position,
-  Icon,
   ButtonGroup,
-  Intent,
-  HotkeysTarget,
-  IHotkeysProps,
-  Hotkeys,
   Hotkey,
+  Hotkeys,
+  Icon,
+  Intent,
+  Menu,
+  MenuItem,
+  Navbar,
+  NavbarDivider,
+  NavbarGroup,
+  NavbarHeading,
+  Popover,
 } from '@blueprintjs/core';
-import { Settings } from './Settings';
-import { FlexRow } from './FlexRow';
-import { FlexCol } from './FlexCol';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { HotkeyScope, HotkeysEvents } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
+import { IItemRendererProps, Omnibar, Suggest } from '@blueprintjs/select';
+import { faSquare, faWindowMinimize } from '@fortawesome/free-regular-svg-icons';
 import { faThList, faTimes } from '@fortawesome/free-solid-svg-icons';
-import { faSquare, faWindowMinimize, faWindowClose } from '@fortawesome/free-regular-svg-icons';
-import { BrowserWindow, remote } from 'electron';
-import { Suggest, Omnibar, IItemRendererProps } from '@blueprintjs/select';
-import { Song } from '../models/song';
-import { HotkeysEvents, HotkeyScope } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
-import { showHotkeysDialog } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysDialog';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { remote } from 'electron';
+import _, { capitalize } from 'lodash';
+import React, { useEffect, useState } from 'react';
+import { toastMessage } from '../appToaster';
 import { getJson, putJson } from '../fetchUtil';
 import { Search } from '../models/search';
-import _, { capitalize } from 'lodash';
-import { toastMessage } from '../appToaster';
+import { Song } from '../models/song';
+import { Settings } from './Settings';
 
 interface MainNavBarProps {
   setSelectedGrid: (grid: string) => void;
@@ -226,7 +219,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
       <Navbar fixedToTop style={{ height: '40px', paddingRight: 5 }}>
         <NavbarGroup align={Alignment.LEFT} style={{ height: 40, paddingTop: 1 }}>
           <NavbarHeading style={{ marginRight: 0, marginTop: 4, paddingRight: 7 }}>
-            <img src={`${process.env.PUBLIC_URL}/res/logo.svg`} width={28} height={28} />
+            <img src={`${process.env.PUBLIC_URL}/res/logo.svg`} alt='platune logo' width={28} height={28} />
           </NavbarHeading>
           <NavbarDivider />
           <Popover

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Column, Cell, TruncatedFormat, TruncatedPopoverMode } from '@blueprintjs/table';
-import { Button, AnchorButton, Intent, Tooltip } from '@blueprintjs/core';
+import { Button, Intent } from '@blueprintjs/core';
+import { Cell, Column, Table, TruncatedFormat, TruncatedPopoverMode } from '@blueprintjs/table';
+import React from 'react';
 
 interface SelectedFoldersProps {
   rows: string[];
@@ -26,7 +26,7 @@ export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows,
 
   const deleteRenderer = (rowIndex: number) => (
     <Cell style={{ padding: '0 3px' }}>
-      <Button intent={Intent.DANGER} icon="delete" onClick={() => deleteClick(rowIndex)} minimal small />
+      <Button intent={Intent.DANGER} icon='delete' onClick={() => deleteClick(rowIndex)} minimal small />
     </Cell>
   );
 
@@ -36,8 +36,8 @@ export const SelectedFolders: React.FC<SelectedFoldersProps> = ({ rows, setRows,
       columnWidths={[width - deleteRowWidth * 2 - 10, deleteRowWidth]}
       rowHeights={rows.map(() => 25)}
     >
-      <Column name="Path" cellRenderer={pathRenderer} />
-      <Column name="" cellRenderer={deleteRenderer} />
+      <Column name='Path' cellRenderer={pathRenderer} />
+      <Column name='' cellRenderer={deleteRenderer} />
     </Table>
   );
 };

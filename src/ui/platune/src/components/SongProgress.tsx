@@ -1,27 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Slider,
-  Rail,
-  Handles,
-  Tracks,
-  Ticks,
-  SliderItem,
-  GetHandleProps,
-  GetTrackProps,
-  GetRailProps,
-} from 'react-compound-slider';
-import { audioQueue } from '../audio';
+import React, { useEffect, useRef, useState } from 'react';
+import { GetTrackProps, Rail, Slider, SliderItem, Tracks } from 'react-compound-slider';
 import { useObservable } from 'rxjs-hooks';
+import { audioQueue } from '../audio';
 
 export const SongProgress: React.FC<{}> = () => {
   const songMillis = useObservable(() => audioQueue.durationMillis);
   const progress = useObservable(() => audioQueue.progress);
   const [lastProgress, setLastProgress] = useState<ReadonlyArray<number>>([0]);
   const isSeeking = useRef(false);
-  const sliderStyle: React.CSSProperties = {
-    position: 'relative',
-    marginTop: 5,
-  };
+
   const railStyle: React.CSSProperties = {
     position: 'absolute',
     width: '100%',

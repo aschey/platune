@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Text, Label, ProgressBar, Intent, Button, Icon, AnchorButton } from '@blueprintjs/core';
+import { Button, Icon, Intent } from '@blueprintjs/core';
+import _ from 'lodash';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useObservable } from 'rxjs-hooks';
-import { FlexRow } from './FlexRow';
+import { audioQueue } from '../audio';
+import { Song } from '../models/song';
+import { hexToRgb, isLight, shadeColor } from '../themes/colorMixer';
+import { formatMs } from '../util';
+import { theme } from './App';
 import { FlexCol } from './FlexCol';
-import { range, formatMs, sleep } from '../util';
+import { FlexRow } from './FlexRow';
 import { SongProgress } from './SongProgress';
 import { Volume } from './Volume';
-import { shadeColor, hexToRgb, isLight } from '../themes/colorMixer';
-import { Song } from '../models/song';
-import { audioQueue } from '../audio';
-import _ from 'lodash';
-import { theme } from './App';
-import { Subject } from 'rxjs';
 
 interface ControlProps {
   playingSong: Song | null;
@@ -28,30 +27,13 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
 
   const songColorAdjust = isLight(theme.backgroundMain) ? 150 : -40;
 
-  useEffect(() => {
-    visualizer();
-    return () => {
-      if (visualizerTimeout.current) {
-        clearTimeout(visualizerTimeout.current);
-      }
-    };
-  });
-
-  useEffect(() => {
-    if (songMillis !== null && progress !== null) {
-      setColorAdjust(shadeColor(theme.songTimeColor, (progress / songMillis) * songColorAdjust));
+  const stopVisualizer = useCallback(() => {
+    if (visualizerTimeout.current) {
+      clearTimeout(visualizerTimeout.current);
     }
-  }, [progress, songMillis, songColorAdjust]);
+  }, []);
 
-  const playPauseClick = async () => {
-    if (isPlaying) {
-      await audioQueue.pause();
-    } else {
-      await onPlay();
-    }
-  };
-
-  const visualizer = async () => {
+  const visualizer = useCallback(async () => {
     if (audioQueue.currentAnalyser && isPlaying) {
       audioQueue.currentAnalyser.fftSize = 2048;
       const bufferLength = audioQueue.currentAnalyser.frequencyBinCount;
@@ -94,6 +76,29 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
     } else {
       visualizerTimeout.current = setTimeout(visualizer, 50);
     }
+  }, [canvasRef, isPlaying]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      visualizer();
+    } else {
+      stopVisualizer();
+    }
+    return stopVisualizer;
+  }, [isPlaying, visualizer, stopVisualizer]);
+
+  useEffect(() => {
+    if (songMillis !== null && progress !== null) {
+      setColorAdjust(shadeColor(theme.songTimeColor, (progress / songMillis) * songColorAdjust));
+    }
+  }, [progress, songMillis, songColorAdjust]);
+
+  const playPauseClick = async () => {
+    if (isPlaying) {
+      await audioQueue.pause();
+    } else {
+      await onPlay();
+    }
   };
 
   return (
@@ -111,7 +116,12 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
 
       <FlexRow style={{ marginLeft: 10 }}>
         {playingSong?.hasArt ? (
-          <img src={`http://localhost:5000/albumArt?songId=${playingSong.id}`} width={50} height={50} />
+          <img
+            src={`http://localhost:5000/albumArt?songId=${playingSong.id}`}
+            alt='current song artwork'
+            width={50}
+            height={50}
+          />
         ) : null}
         <div style={{ paddingLeft: 10, paddingRight: '10%' }}>
           <FlexRow>{playingSong?.name}</FlexRow>
@@ -119,7 +129,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
           <FlexRow>{playingSong?.artist}</FlexRow>
         </div>
         <FlexCol>
-          {songMillis ?? 0 > 0 ? (
+          {(songMillis ?? 0) > 0 ? (
             <FlexRow style={{ fontSize: 16 }}>
               <div style={{ color: coloradjust }}>{formatMs(progress ?? 0)}</div>
               <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>

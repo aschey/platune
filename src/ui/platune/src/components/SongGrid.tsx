@@ -1,29 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Column,
-  Table,
-  TableHeaderRenderer,
-  TableHeaderProps,
-  defaultTableRowRenderer,
-  TableRowProps,
-  RowMouseEventHandlerParams,
-  CellMeasurerCache,
-  CellMeasurer,
-} from 'react-virtualized';
-import Draggable from 'react-draggable';
-import { Song } from '../models/song';
-import { range, sleep, formatMs, formatRgb, setCssVar } from '../util';
-import { getJson } from '../fetchUtil';
+import { Button, EditableText, Text } from '@blueprintjs/core';
 import _, { Dictionary } from 'lodash';
-import { Intent, EditableText, Text, Button, Icon } from '@blueprintjs/core';
+import React, { useCallback, useEffect, useState } from 'react';
+import Draggable from 'react-draggable';
+import { Column, defaultTableRowRenderer, Table, TableHeaderProps, TableRowProps } from 'react-virtualized';
+import { useObservable } from 'rxjs-hooks';
 import { toastSuccess } from '../appToaster';
 import { audioQueue } from '../audio';
+import { getJson } from '../fetchUtil';
+import { Rgb } from '../models/rgb';
+import { Song } from '../models/song';
+import { formatMs, formatRgb, range, setCssVar, sleep } from '../util';
 import { Controls } from './Controls';
 import { FlexCol } from './FlexCol';
-import { FlexRow } from './FlexRow';
-import { getProcessMemoryInfo } from 'process';
-import { Rgb } from '../models/rgb';
-import { useObservable } from 'rxjs-hooks';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -75,7 +63,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const playingFile = useObservable(() => audioQueue.playingSource);
   const numTries = 10;
 
-  const loadSongs = async () => {
+  const loadSongs = useCallback(async () => {
     for (let i of range(numTries)) {
       try {
         const songs = await getJson<Song[]>('/songs?offset=0&limit=15000');
@@ -88,7 +76,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       }
     }
     return [];
-  };
+  }, []);
 
   const loadColors = async (songId: number) => {
     const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}&isLight=${isLightTheme}`);
@@ -97,7 +85,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   useEffect(() => {
     loadSongs().then(setSongs);
-  }, []);
+  }, [loadSongs, setSongs]);
 
   useEffect(() => {
     songs.forEach((song, i) => (song.index = i));
@@ -128,7 +116,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       otherRef.current?.recomputeRowHeights();
       setCssVar('--header-padding', '16px');
     }
-  }, [selectedGrid]);
+  }, [selectedGrid, mainRef, otherRef]);
 
   const headerRenderer = (props: TableHeaderProps) => {
     return (
@@ -158,7 +146,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const isSelectedRow = selectedFile === path;
     const isPlayingRow = playingFile === path;
     const classes = `${isEditingRow ? 'editing' : ''} ${
-      isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : rowIndex % 2 == 0 ? 'striped-even' : 'striped-odd'
+      isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : rowIndex % 2 === 0 ? 'striped-even' : 'striped-odd'
     }`;
     return (
       <div
@@ -209,7 +197,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const startQueue = async (path: string) => {
     const index = songs.map(s => s.path).indexOf(path);
     const queue = songs.filter(s => s.index >= index);
-    if (!audioQueue.isPaused && path !== playingFile) {
+    if (!(audioQueue.isPaused && path === playingFile)) {
       setQueuedSongs(queue);
       audioQueue.setQueue(queue.map(q => q.path));
     }
@@ -390,7 +378,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
                 </div>
 
                 {g.hasArt ? (
-                  <img loading='lazy' src={`http://localhost:5000/albumArt?songId=${g.id}`} width={75} height={75} />
+                  <img
+                    loading='lazy'
+                    alt={`${g.album} cover`}
+                    src={`http://localhost:5000/albumArt?songId=${g.id}`}
+                    width={75}
+                    height={75}
+                  />
                 ) : null}
               </FlexCol>
             );

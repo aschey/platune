@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import { Classes, Icon, Intent, ITreeNode, Position, Tooltip, Tree, Button } from '@blueprintjs/core';
-import { FolderPicker } from './FolderPicker';
-import { MainNavBar } from './MainNavBar';
-import { ipcRenderer } from 'electron';
-import { SongGrid } from './SongGrid';
-import { applyTheme } from '../themes/themes';
-import { lightTheme } from '../themes/light';
-import { darkTheme } from '../themes/dark';
-import { isLight } from '../themes/colorMixer';
 import { wrapGrid } from 'animate-css-grid';
+import React, { useEffect, useState } from 'react';
 import { Song } from '../models/song';
+import { isLight } from '../themes/colorMixer';
+import { darkTheme } from '../themes/dark';
+import { lightTheme } from '../themes/light';
+import { applyTheme } from '../themes/themes';
+import { MainNavBar } from './MainNavBar';
 import { QueueGrid } from './QueueGrid';
+import { SongGrid } from './SongGrid';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -59,7 +55,7 @@ const App: React.FC<{}> = () => {
     } else {
       setGridClasses('collapsed');
     }
-  }, [sidePanelWidth]);
+  }, [sidePanelWidth, gridMargin, gridRef]);
 
   return (
     <>

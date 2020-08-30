@@ -1,13 +1,13 @@
+import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
+import { random } from 'lodash';
 import React from 'react';
-import { Table, Column, TableRowProps, defaultTableRowRenderer, TableHeaderRowProps } from 'react-virtualized';
+import { Column, defaultTableRowRenderer, Table, TableHeaderRowProps, TableRowProps } from 'react-virtualized';
+import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
+import { useObservable } from 'rxjs-hooks';
+import { audioQueue } from '../audio';
 import { Song } from '../models/song';
 import { FlexCol } from './FlexCol';
-import { Icon, Tag, Label, Text, Intent, Button } from '@blueprintjs/core';
-import { audioQueue } from '../audio';
-import { useObservable } from 'rxjs-hooks';
-import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
 import { FlexRow } from './FlexRow';
-import { random } from 'lodash';
 
 interface QueueGridProps {
   queuedSongs: Song[];

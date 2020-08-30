@@ -1,11 +1,10 @@
-import React, { useState, useEffect, Children, useCallback } from 'react';
-import { Alert, Intent, IDialogProps } from '@blueprintjs/core';
+import { Alert, Intent } from '@blueprintjs/core';
 import _ from 'lodash';
+import React, { useEffect } from 'react';
 
 interface DirtyCheckProps<T> {
   children: React.ReactElement;
   alertOpen: boolean;
-  //checkEqual: (left: T, right: T) => boolean,
   originalVal: T;
   newVal: T;
   canClose: boolean;
@@ -40,8 +39,8 @@ export const DirtyCheck: <T>(props: DirtyCheckProps<T>) => React.ReactElement<Di
         intent={Intent.DANGER}
         isOpen={alertOpen}
         onConfirm={onAlertConfirm}
-        confirmButtonText="Discard"
-        cancelButtonText="Cancel"
+        confirmButtonText='Discard'
+        cancelButtonText='Cancel'
         onCancel={onAlertCancel}
       >
         You have unsaved changes

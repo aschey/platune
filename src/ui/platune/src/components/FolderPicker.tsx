@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import logo from './logo.svg';
-import { Icon, Intent, ITreeNode, Position, Tooltip, Tree, Classes, IconName } from '@blueprintjs/core';
+import { IconName, ITreeNode, Tree } from '@blueprintjs/core';
+import React, { useCallback, useEffect, useState } from 'react';
 import { getJson } from '../fetchUtil';
 import { Dir } from '../models/dir';
-import { SelectedFolder } from '../models/selectedFolder';
 
 interface FolderPickerProps {
   setSelected(folder: string): void;

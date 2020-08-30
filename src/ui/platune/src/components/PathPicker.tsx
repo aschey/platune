@@ -1,11 +1,10 @@
-import React, { useState, useEffect, Children } from 'react';
-import { Alert, Intent, IDialogProps, TextArea, Button, Text, Classes, Tooltip, Colors } from '@blueprintjs/core';
-import { FolderPicker } from './FolderPicker';
-import { FlexRow } from './FlexRow';
-import { FlexCol } from './FlexCol';
+import { Button, Classes, Colors, Intent, Text } from '@blueprintjs/core';
+import React, { useEffect, useState } from 'react';
+import { toastSuccess } from '../appToaster';
 import { getJson, putJson } from '../fetchUtil';
 import { Dir } from '../models/dir';
-import { toastSuccess } from '../appToaster';
+import { FlexRow } from './FlexRow';
+import { FolderPicker } from './FolderPicker';
 
 interface PathPickerProps {
   width: number;

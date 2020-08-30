@@ -1,6 +1,6 @@
-import { sleep } from './util';
-import { Subject, interval, Observable, BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, interval, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { sleep } from './util';
 
 interface ScheduledSource {
   start: number;

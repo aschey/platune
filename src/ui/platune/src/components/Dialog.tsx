@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
 import { Dialog as BlueprintDialog, IDialogProps as BlueprintDialogProps } from '@blueprintjs/core';
+import React from 'react';
 
 interface DialogProps extends BlueprintDialogProps {
   children: React.ReactNode;
