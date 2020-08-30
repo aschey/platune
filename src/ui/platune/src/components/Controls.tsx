@@ -19,15 +19,22 @@ interface ControlProps {
 }
 
 export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
-  let [coloradjust, setColorAdjust] = useState('#000000');
+  const [coloradjust, setColorAdjust] = useState('#000000');
   const songMillis = useObservable(() => audioQueue.durationMillis);
   const progress = useObservable(() => audioQueue.progress);
   const isPlaying = useObservable(() => audioQueue.isPlaying);
-  let canvasRef = React.createRef<HTMLCanvasElement>();
+  const canvasRef = React.createRef<HTMLCanvasElement>();
+  const visualizerTimeout = useRef<NodeJS.Timeout>();
+
   const songColorAdjust = isLight(theme.backgroundMain) ? 150 : -40;
 
   useEffect(() => {
     visualizer();
+    return () => {
+      if (visualizerTimeout.current) {
+        clearTimeout(visualizerTimeout.current);
+      }
+    };
   });
 
   useEffect(() => {
@@ -81,13 +88,11 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
             x += sliceWidth;
           }
           canvasCtx.stroke();
-          await sleep(50);
-          visualizer();
+          visualizerTimeout.current = setTimeout(visualizer, 50);
         });
       }
     } else {
-      await sleep(50);
-      visualizer();
+      visualizerTimeout.current = setTimeout(visualizer, 50);
     }
   };
 
