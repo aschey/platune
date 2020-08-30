@@ -133,7 +133,7 @@ class AudioQueue {
   }
 
   private getCurrentTime = () => {
-    return this.isPlaying || this.isPaused ? this.context.currentTime * 1000 - this.startTime : 0;
+    return this.isPlaying.value || this.isPaused ? this.context.currentTime * 1000 - this.startTime : 0;
   };
 
   private findStartGapDuration = (audioBuffer: AudioBuffer) => {
@@ -295,17 +295,13 @@ class AudioQueue {
     }
     this.switchTime = 0;
     this.isPaused = false;
-    this.setIsPlaying(willRestart);
+    this.isPlaying.next(willRestart);
     this.sources = [];
     if (this.currentGain) {
       this.currentGain.gain.value = 0;
     }
     this.context.resume();
   };
-
-  private setIsPlaying(isPlaying: boolean) {
-    this.isPlaying.next(isPlaying);
-  }
 
   private scheduleAll = async (song: string, initialStartSeconds: number) => {
     const songIndex = this.queuedSongs.value.indexOf(song);
@@ -326,17 +322,17 @@ class AudioQueue {
       this.context.resume();
       // Starting the song that's currently paused, don't reschedule
       if (this.sources.length && song === this.sources[0].file) {
-        this.setIsPlaying(true);
+        this.isPlaying.next(true);
         return;
       } else {
         this.stop(0, true);
       }
     }
-    if (this.isPlaying && stopBeforeStart) {
+    if (this.isPlaying.value && stopBeforeStart) {
       this.stop(initialStartSeconds, true);
     }
-    if (!this.isPlaying) {
-      this.setIsPlaying(true);
+    if (!this.isPlaying.value) {
+      this.isPlaying.next(true);
     }
     await this.scheduleAll(song, initialStartSeconds);
   };
@@ -362,7 +358,7 @@ class AudioQueue {
     // Seems like there's a slight delay before the volume change takes so we have to wait for it to complete
     await sleep(100);
     await this.context.suspend();
-    this.setIsPlaying(false);
+    this.isPlaying.next(false);
     this.isPaused = true;
   };
 
