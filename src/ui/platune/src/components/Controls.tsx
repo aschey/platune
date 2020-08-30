@@ -34,7 +34,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
   }, []);
 
   const visualizer = useCallback(async () => {
-    if (audioQueue.currentAnalyser && audioQueue.isPlaying()) {
+    if (audioQueue.currentAnalyser && playbackState === PlaybackState.Playing) {
       audioQueue.currentAnalyser.fftSize = 2048;
       const bufferLength = audioQueue.currentAnalyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
