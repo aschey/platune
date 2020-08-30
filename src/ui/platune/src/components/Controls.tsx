@@ -15,9 +15,10 @@ import { Volume } from './Volume';
 interface ControlProps {
   playingSong: Song | null;
   onPlay: () => Promise<void>;
+  onPrevious: () => Promise<void>;
 }
 
-export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
+export const Controls: React.FC<ControlProps> = ({ onPlay, onPrevious, playingSong }) => {
   const [coloradjust, setColorAdjust] = useState('#000000');
   const songMillis = useObservable(() => audioQueue.durationMillis);
   const progress = useObservable(() => audioQueue.progress);
@@ -148,7 +149,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, playingSong }) => {
             minimal
             icon='fast-backward'
             style={{ borderRadius: '50%', width: 40, height: 40 }}
-            onClick={audioQueue.previous}
+            onClick={onPrevious}
           />
           <div style={{ width: 5 }} />
           <Button
