@@ -1,5 +1,4 @@
 import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
-import { random } from 'lodash';
 import React from 'react';
 import { Column, defaultTableRowRenderer, Table, TableHeaderRowProps, TableRowProps } from 'react-virtualized';
 import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
@@ -69,7 +68,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           width={width}
           cellRenderer={({ rowIndex }) => (
             <div style={{ paddingLeft: 5 }}>
-              <Tag intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][Math.round(random(0, 4))]}>
+              <Tag intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][rowIndex % 4]}>
                 {
                   <FlexRow>
                     <Text ellipsize className='tag-text'>
