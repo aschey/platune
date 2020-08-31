@@ -382,7 +382,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           label='Album'
           cellRenderer={({ rowIndex }) => {
             let gg = groupedSongs[albumKeys[rowIndex]];
-            let g = groupedSongs[albumKeys[rowIndex]][0];
+            let g = gg[0];
             return (
               <FlexCol
                 center={false}
@@ -403,6 +403,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
                     height={75}
                   />
                 ) : null}
+                <div style={{ paddingTop: 5, fontSize: 12 }}>
+                  {formatMs(gg.map(g => g.time).reduce((prev, current) => prev + current))}
+                </div>
               </FlexCol>
             );
           }}
