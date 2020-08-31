@@ -373,7 +373,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         rowRenderer={rowRenderer2}
         overscanRowCount={0}
         estimatedRowSize={groupedSongs?.keys?.length > 0 ? (songs.length / groupedSongs.keys.length) * 25 : 250}
-        rowHeight={index => Math.max(groupedSongs[albumKeys[index.index]].length * 25 + 40, 165)}
+        rowHeight={index => Math.max(groupedSongs[albumKeys[index.index]].length * 25 + 40, 180)}
         rowGetter={({ index }) => groupedSongs[albumKeys[index]]}
       >
         <Column
@@ -386,7 +386,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             return (
               <FlexCol
                 center={false}
-                style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 125) }}
+                style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 140) }}
                 onClick={() => updateSelectedAlbum(g.id, rowIndex)}
               >
                 <Text ellipsize>{g.albumArtist}</Text>
