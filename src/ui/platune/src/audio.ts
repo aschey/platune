@@ -33,13 +33,10 @@ export enum PlaybackState {
 }
 
 class AudioNodeWrapper {
-  bufferNode: AudioBufferSourceNode | null;
-  htmlNode: HTMLAudioElement | null;
-  context: AudioContext;
-  startGap: number;
-  endGap: number;
+  private bufferNode: AudioBufferSourceNode | null;
+  private htmlNode: HTMLAudioElement | null;
 
-  constructor(node: AudioBufferSourceNode | HTMLAudioElement, startGap: number, endGap: number, context: AudioContext) {
+  constructor(node: AudioBufferSourceNode | HTMLAudioElement) {
     if (node instanceof HTMLAudioElement) {
       this.htmlNode = node;
       this.bufferNode = null;
@@ -47,9 +44,6 @@ class AudioNodeWrapper {
       this.bufferNode = node;
       this.htmlNode = null;
     }
-    this.context = context;
-    this.startGap = startGap;
-    this.endGap = endGap;
   }
 
   public duration = () => (this.htmlNode ? this.htmlNode?.duration : this.bufferNode?.buffer?.duration) ?? 0;
@@ -96,10 +90,10 @@ class AudioNodeWrapper {
     if (this.bufferNode) {
       this.bufferNode.disconnect();
       this.bufferNode = null;
-    } else {
-      this.htmlNode = null;
     }
   };
+
+  public isHtml = () => this.htmlNode !== null;
 }
 
 class AudioQueue {
@@ -197,13 +191,12 @@ class AudioQueue {
 
   private loadHtml5 = async (song: string) => {
     const element = this.htmlAudio.element;
-    this.htmlAudio.gain = new GainNode(this.context);
     element.src = song;
     const promise = new Promise<AudioMetadata>((resolve, reject) => {
       element.onloadedmetadata = () => {
         this.htmlAudio.gain.gain.value = this.volume;
         resolve({
-          audioNode: new AudioNodeWrapper(element, 0, 0, this.context),
+          audioNode: new AudioNodeWrapper(element),
           analyser: this.htmlAudio.analyser,
           gain: this.htmlAudio.gain,
           startGap: 0,
@@ -232,7 +225,7 @@ class AudioQueue {
     const startGap = this.findStartGapDuration(audioBuffer);
     const endGap = this.findEndGapDuration(audioBuffer);
     return {
-      audioNode: new AudioNodeWrapper(source, startGap, endGap, this.context),
+      audioNode: new AudioNodeWrapper(source),
       analyser,
       gain,
       startGap,
@@ -312,7 +305,6 @@ class AudioQueue {
   private updateCurrent = (songData: ScheduledSource, startOffset: number) => {
     audioQueue.currentAnalyser = songData.analyser;
     audioQueue.currentGain = songData.gain;
-    audioQueue.currentGain.gain.value = this.volume;
     audioQueue.durationMillis.next(songData.source.duration() * 1000);
     this.startTime = (this.context.currentTime - startOffset) * 1000;
     this.playingSource.next(songData.file);
@@ -326,9 +318,14 @@ class AudioQueue {
         continue;
       }
       song.source.stopNow();
-      song.source.disconnect();
-      song.gain.disconnect();
-      song.analyser.disconnect();
+      // Clear out song data to prevent memory leak
+      // Html nodes have a shared source so we don't need to clear it
+      if (!song.source.isHtml()) {
+        song.source.disconnect();
+        song.gain.disconnect();
+        song.analyser.disconnect();
+      }
+
       song = undefined;
     }
   };
