@@ -3,7 +3,6 @@ import {
   Button,
   ButtonGroup,
   Hotkey,
-  Hotkeys,
   Icon,
   Intent,
   Menu,
@@ -21,12 +20,13 @@ import { faThList, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { remote } from 'electron';
 import _, { capitalize } from 'lodash';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { toastMessage } from '../appToaster';
 import { getJson, putJson } from '../fetchUtil';
 import { Search } from '../models/search';
 import { Song } from '../models/song';
 import { Settings } from './Settings';
+import { globalHotkeys } from '../globalHotkeys';
 
 interface MainNavBarProps {
   setSelectedGrid: (grid: string) => void;
@@ -69,20 +69,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
       )}*`
     );
     setSearchResults(res);
-  });
-  useEffect(() => {
-    document.addEventListener('keydown', globalHotkeysEvents.handleKeyDown);
-    document.addEventListener('keyup', globalHotkeysEvents.handleKeyUp);
-    if (globalHotkeysEvents) {
-      globalHotkeysEvents.setHotkeys(hotkeys.props);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', globalHotkeysEvents.handleKeyDown);
-      document.removeEventListener('keyup', globalHotkeysEvents.handleKeyUp);
-
-      globalHotkeysEvents.clear();
-    };
   });
 
   const escapeRegExpChars = (text: string) => {
@@ -187,32 +173,45 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     setSelectedSearch(null);
   };
 
-  const hotkeys = (
-    <Hotkeys>
-      <Hotkey
-        global
-        combo='shift + o'
-        label='Open omnibar'
-        onKeyDown={() => setOmnibarOpen(!omnibarOpen)}
-        preventDefault
-      />
-      <Hotkey
-        global
-        combo='shift + a'
-        label='Show album grid'
-        onKeyDown={() => setSelectedGrid('album')}
-        preventDefault
-      />
-      <Hotkey
-        global
-        combo='shift + l'
-        label='Show song list'
-        onKeyDown={() => setSelectedGrid('song')}
-        preventDefault
-      />
-      <Hotkey global combo='shift + x' label='Clear search' onKeyDown={clearSearch} preventDefault />
-    </Hotkeys>
-  );
+  const toggleSideBar = () => setSidePanelWidth(sidePanelWidth > 0 ? 0 : 200);
+
+  globalHotkeys.register([
+    new Hotkey({
+      global: true,
+      combo: 'shift + o',
+      label: 'Open omnibar',
+      onKeyDown: () => setOmnibarOpen(!omnibarOpen),
+      preventDefault: true,
+    }),
+    new Hotkey({
+      global: true,
+      combo: 'shift + a',
+      label: 'Show album grid',
+      onKeyDown: () => setSelectedGrid('album'),
+      preventDefault: true,
+    }),
+    new Hotkey({
+      global: true,
+      combo: 'shift + l',
+      label: 'Show song list',
+      onKeyDown: () => setSelectedGrid('song'),
+      preventDefault: true,
+    }),
+    new Hotkey({
+      global: true,
+      combo: 'shift + x',
+      label: 'Clear search',
+      onKeyDown: clearSearch,
+      preventDefault: true,
+    }),
+    new Hotkey({
+      global: true,
+      combo: 'shift + s',
+      label: 'Toggle sidebar',
+      onKeyDown: toggleSideBar,
+      preventDefault: true,
+    }),
+  ]);
 
   return (
     <>
@@ -258,7 +257,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           <Button
             minimal
             icon={sidePanelWidth > 0 ? 'double-chevron-left' : 'double-chevron-right'}
-            onClick={() => setSidePanelWidth(sidePanelWidth > 0 ? 0 : 200)}
+            onClick={toggleSideBar}
           />
           <div style={{ width: 5 }} />
         </NavbarGroup>
