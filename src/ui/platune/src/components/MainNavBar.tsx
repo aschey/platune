@@ -20,7 +20,7 @@ import { faThList, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { remote } from 'electron';
 import _, { capitalize } from 'lodash';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { toastMessage } from '../appToaster';
 import { getJson, putJson } from '../fetchUtil';
 import { Search } from '../models/search';
@@ -165,53 +165,58 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     }
   };
 
-  const clearSearch = async () => {
+  const clearSearch = useCallback(async () => {
     toastMessage('Resetting...');
     const allSongs = await getJson<Song[]>('/songs');
     setSongs(allSongs);
     setSearchResults([]);
     setSelectedSearch(null);
-  };
+  }, [setSongs]);
 
-  const toggleSideBar = () => setSidePanelWidth(sidePanelWidth > 0 ? 0 : 200);
-
-  globalHotkeys.register([
-    new Hotkey({
-      global: true,
-      combo: 'shift + o',
-      label: 'Open omnibar',
-      onKeyDown: () => setOmnibarOpen(!omnibarOpen),
-      preventDefault: true,
-    }),
-    new Hotkey({
-      global: true,
-      combo: 'shift + a',
-      label: 'Show album grid',
-      onKeyDown: () => setSelectedGrid('album'),
-      preventDefault: true,
-    }),
-    new Hotkey({
-      global: true,
-      combo: 'shift + l',
-      label: 'Show song list',
-      onKeyDown: () => setSelectedGrid('song'),
-      preventDefault: true,
-    }),
-    new Hotkey({
-      global: true,
-      combo: 'shift + x',
-      label: 'Clear search',
-      onKeyDown: clearSearch,
-      preventDefault: true,
-    }),
-    new Hotkey({
-      global: true,
-      combo: 'shift + s',
-      label: 'Toggle sidebar',
-      onKeyDown: toggleSideBar,
-      preventDefault: true,
-    }),
+  const toggleSideBar = useCallback(() => setSidePanelWidth(sidePanelWidth > 0 ? 0 : 200), [
+    setSidePanelWidth,
+    sidePanelWidth,
   ]);
+
+  useEffect(() => {
+    globalHotkeys.register([
+      new Hotkey({
+        global: true,
+        combo: 'shift + o',
+        label: 'Open omnibar',
+        onKeyDown: () => setOmnibarOpen(!omnibarOpen),
+        preventDefault: true,
+      }),
+      new Hotkey({
+        global: true,
+        combo: 'shift + a',
+        label: 'Show album grid',
+        onKeyDown: () => setSelectedGrid('album'),
+        preventDefault: true,
+      }),
+      new Hotkey({
+        global: true,
+        combo: 'shift + l',
+        label: 'Show song list',
+        onKeyDown: () => setSelectedGrid('song'),
+        preventDefault: true,
+      }),
+      new Hotkey({
+        global: true,
+        combo: 'shift + x',
+        label: 'Clear search',
+        onKeyDown: clearSearch,
+        preventDefault: true,
+      }),
+      new Hotkey({
+        global: true,
+        combo: 'shift + s',
+        label: 'Toggle sidebar',
+        onKeyDown: toggleSideBar,
+        preventDefault: true,
+      }),
+    ]);
+  }, [clearSearch, omnibarOpen, setSelectedGrid, toggleSideBar]);
 
   return (
     <>
