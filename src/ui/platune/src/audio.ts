@@ -63,11 +63,6 @@ class AudioNodeWrapper {
     }
   };
 
-  public seek = (millis: number) => {
-    const startSeconds = millis / 1000;
-    audioQueue.start(audioQueue.sources[0].file, startSeconds);
-  };
-
   public stopNow = () => {
     if (this.htmlNode) {
       this.htmlNode.pause();
@@ -234,7 +229,7 @@ class AudioQueue {
   };
 
   private shouldSchedule = (start: number) => {
-    const priorReqs = this.requestsToIgnore.filter(d => d >= start).sort();
+    const priorReqs = this.requestsToIgnore.filter(d => d > start).sort();
     if (priorReqs.length) {
       this.requestsToIgnore.splice(this.requestsToIgnore.indexOf(priorReqs[0]), 1);
       return false;
@@ -432,7 +427,8 @@ class AudioQueue {
 
   public seek = (millis: number) => {
     if (this.sources.length) {
-      this.sources[0].source.seek(millis);
+      const startSeconds = millis / 1000;
+      audioQueue.start(audioQueue.sources[0].file, startSeconds);
     }
   };
 
