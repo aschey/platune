@@ -18,7 +18,7 @@ import { IItemRendererProps, Omnibar, Suggest } from '@blueprintjs/select';
 import { faSquare, faWindowMinimize } from '@fortawesome/free-regular-svg-icons';
 import { faThList, faTimes } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { remote } from 'electron';
+import { ipcRenderer } from 'electron';
 import _, { capitalize } from 'lodash';
 import React, { useState, useEffect, useCallback } from 'react';
 import { toastMessage } from '../appToaster';
@@ -55,8 +55,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Search[]>([]);
   const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
-
-  const getWindow = () => remote.BrowserWindow.getFocusedWindow();
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
   const debounced = _.debounce(async (input: string) => {
@@ -324,26 +322,18 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           </ButtonGroup>
           <div style={{ width: 20 }} />
           <ButtonGroup minimal>
-            <Button intent={Intent.WARNING} className='hover-intent' onClick={() => getWindow()?.minimize()}>
+            <Button intent={Intent.WARNING} className='hover-intent' onClick={() => ipcRenderer.invoke('minimize')}>
               <FontAwesomeIcon icon={faWindowMinimize} />
             </Button>
             <Button
               intent={Intent.SUCCESS}
               className='hover-intent'
               style={{ transform: 'translate(0, 1px)' }}
-              onClick={() => {
-                const window = getWindow();
-                if (window?.isMaximized()) {
-                  window?.restore();
-                } else {
-                  window?.maximize();
-                }
-                window?.reload();
-              }}
+              onClick={() => ipcRenderer.invoke('restoreMax')}
             >
               <FontAwesomeIcon icon={faSquare} />
             </Button>
-            <Button intent={Intent.DANGER} className='hover-intent' onClick={() => getWindow()?.close()}>
+            <Button intent={Intent.DANGER} className='hover-intent' onClick={() => ipcRenderer.invoke('close')}>
               <FontAwesomeIcon icon={faTimes} style={{ transform: 'translate(0, 1px)' }} />
             </Button>
           </ButtonGroup>

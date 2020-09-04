@@ -30,6 +30,19 @@ const createWindow = () => {
     server?.close();
     server = null;
   });
+
+  ipcMain.handle('close', async () => mainWindow?.close());
+
+  ipcMain.handle('restoreMax', async () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow?.restore();
+    } else {
+      mainWindow?.maximize();
+    }
+    mainWindow?.reload();
+  });
+
+  ipcMain.handle('minimize', async () => mainWindow?.minimize());
 };
 
 app.on('ready', async () => {
