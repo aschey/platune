@@ -1,5 +1,5 @@
 import { wrapGrid } from 'animate-css-grid';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Song } from '../models/song';
 import { isLight } from '../themes/colorMixer';
 import { darkTheme } from '../themes/dark';
@@ -8,6 +8,7 @@ import { applyTheme } from '../themes/themes';
 import { MainNavBar } from './MainNavBar';
 import { QueueGrid } from './QueueGrid';
 import { SongGrid } from './SongGrid';
+import _ from 'lodash';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -23,6 +24,12 @@ const App: React.FC<{}> = () => {
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
 
+  const getWidth = useCallback(() => window.innerWidth - gridMargin, [gridMargin]);
+  const getHeight = () => window.innerHeight - 110;
+
+  const [width, setWidth] = useState(getWidth());
+  const [height, setHeight] = useState(getHeight());
+
   const gridRef = React.createRef<HTMLDivElement>();
 
   const updateTheme = (newThemeName: string) => {
@@ -31,8 +38,24 @@ const App: React.FC<{}> = () => {
     setThemeDetails(isLight(newTheme.backgroundMain));
   };
 
+  const debounced = _.debounce(async () => {
+    setWidth(getWidth());
+    setHeight(getHeight());
+  }, 5);
+
   useEffect(() => {
-    if (gridRef.current) {
+    window.addEventListener('resize', debounced);
+    return () => window.removeEventListener('resize', debounced);
+  });
+
+  useEffect(() => {
+    setGridCols(`${sidePanelWidth}px ${window.innerWidth - sidePanelWidth}px`);
+  }, [sidePanelWidth, width]);
+
+  useEffect(() => {
+    // this can trigger excessively because of the gridRef dependency
+    // Make sure the side panel actually changed before running
+    if (gridRef.current && sidePanelWidth !== gridMargin) {
       const { unwrapGrid } = wrapGrid(gridRef.current, {
         duration: 150,
         onStart: () => {
@@ -49,13 +72,13 @@ const App: React.FC<{}> = () => {
       // Remove animations after resizing because they don't play nicely with the virtualized grid
       setTimeout(unwrapGrid, 1);
     }
-    setGridCols(`${sidePanelWidth}px ${window.innerWidth - sidePanelWidth}px`);
+    setWidth(getWidth());
     if (sidePanelWidth > 0) {
       setGridClasses('expanded');
     } else {
       setGridClasses('collapsed');
     }
-  }, [sidePanelWidth, gridMargin, gridRef]);
+  }, [sidePanelWidth, gridMargin, getWidth, gridRef]);
 
   return (
     <>
@@ -75,7 +98,7 @@ const App: React.FC<{}> = () => {
         style={{
           paddingTop: 40,
           display: 'grid',
-          gridTemplateRows: `${window.innerHeight - 110}px 70px`,
+          gridTemplateRows: `${height}px 70px`,
           gridTemplateColumns: gridCols,
         }}
       >
@@ -87,7 +110,8 @@ const App: React.FC<{}> = () => {
         <SongGrid
           selectedGrid={selectedGrid}
           isLightTheme={themeDetails}
-          width={window.innerWidth - gridMargin}
+          width={width}
+          height={height}
           songs={songs}
           setSongs={setSongs}
           queuedSongs={queuedSongs}

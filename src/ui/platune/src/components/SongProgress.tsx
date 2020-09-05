@@ -35,7 +35,7 @@ export const SongProgress: React.FC<{}> = () => {
       mode={1}
       step={1}
       domain={[0, songMillis ?? 0]}
-      rootStyle={{ position: 'relative', marginTop: 5 }}
+      rootStyle={{ position: 'relative', marginTop: 7 }}
       onSlideStart={onSlideStart}
       onSlideEnd={vals => {
         let val = vals[0];

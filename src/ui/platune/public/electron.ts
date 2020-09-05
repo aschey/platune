@@ -39,7 +39,6 @@ const createWindow = () => {
     } else {
       mainWindow?.maximize();
     }
-    mainWindow?.reload();
   });
 
   ipcMain.handle('minimize', async () => mainWindow?.minimize());

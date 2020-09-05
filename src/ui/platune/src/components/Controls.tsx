@@ -103,99 +103,107 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, onPrevious, playingSo
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridColumn: '1 / 3',
-        gridTemplateRows: '10px 60px',
-        gridTemplateColumns: window.innerWidth > 1600 ? `5fr 175px 4fr 1fr` : `5fr 175px 3fr 2fr`,
-      }}
-    >
-      <div style={{ gridColumn: '1 / 6' }}>
-        <SongProgress />
-      </div>
+    <div style={{ gridColumn: '1 / 3' }}>
+      <div
+        style={{
+          display: 'grid',
 
-      <FlexRow style={{ marginLeft: 10 }}>
-        {playingSong?.hasArt ? (
-          <img
-            src={`http://localhost:5000/albumArt?songId=${playingSong.id}`}
-            alt='current song artwork'
-            width={50}
-            height={50}
-          />
-        ) : null}
-        <div style={{ paddingLeft: 10, paddingRight: '10%' }}>
-          <FlexRow>{playingSong?.name}</FlexRow>
-          <FlexRow>{playingSong?.album}</FlexRow>
-          <FlexRow>{playingSong?.artist}</FlexRow>
-        </div>
-        <FlexCol>
-          {(songMillis ?? 0) > 0 ? (
-            <FlexRow style={{ fontSize: 16 }}>
-              <div style={{ color: coloradjust }}>{formatMs(progress ?? 0)}</div>
-              <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>
-                /{formatMs(songMillis ?? 0)}
-              </div>
-            </FlexRow>
-          ) : null}
-        </FlexCol>
-      </FlexRow>
-
-      <FlexCol>
-        <FlexRow>
-          <Button
-            className='nofocus'
-            intent={Intent.PRIMARY}
-            minimal
-            icon='fast-backward'
-            style={{ borderRadius: '50%', width: 40, height: 40 }}
-            onClick={onPrevious}
-          />
-          <div style={{ width: 5 }} />
-          <Button
-            className='nofocus'
-            intent={playbackState === PlaybackState.Playing ? Intent.WARNING : Intent.SUCCESS}
-            minimal
-            icon={playbackState === PlaybackState.Playing ? 'pause' : 'play'}
-            style={{ borderRadius: '50%', width: 40, height: 40 }}
-            onClick={playPauseClick}
-          />
-          <div style={{ width: 5 }} />
-          <Button
-            className='nofocus'
-            intent={Intent.DANGER}
-            minimal
-            icon='stop'
-            style={{ borderRadius: '50%', width: 40, height: 40 }}
-            onClick={() => audioQueue.stop()}
-          />
-          <div style={{ width: 5 }} />
-          <Button
-            className='nofocus'
-            intent={Intent.PRIMARY}
-            minimal
-            icon='fast-forward'
-            style={{ borderRadius: '50%', width: 40, height: 40 }}
-            onClick={audioQueue.next}
-          />
-        </FlexRow>
-      </FlexCol>
-
-      <FlexCol
-        className='card visualizer'
-        style={{ marginTop: 7, marginBottom: 7, marginLeft: '10%', marginRight: '10%', borderRadius: 10 }}
+          gridTemplateRows: '12px 58px',
+          gridTemplateColumns: window.innerWidth > 1600 ? `5fr 175px 4fr 1fr` : `5fr 175px 3fr 2fr`,
+        }}
       >
-        <canvas ref={canvasRef} />
-      </FlexCol>
-      <FlexRow style={{ fontSize: 16 }}>
-        <Icon icon='volume-up' />
-        <FlexCol
-          center={false}
-          style={{ alignSelf: 'center', alignContent: 'center', marginLeft: 10, marginRight: '20%', paddingBottom: 4 }}
-        >
-          <Volume />
+        <div style={{ gridColumn: '1 / 6' }}>
+          <SongProgress />
+        </div>
+
+        <FlexRow style={{ marginLeft: 10 }}>
+          {playingSong?.hasArt ? (
+            <img
+              src={`http://localhost:5000/albumArt?songId=${playingSong.id}`}
+              alt='current song artwork'
+              width={50}
+              height={50}
+            />
+          ) : null}
+          <div style={{ paddingLeft: 10, paddingRight: '10%' }}>
+            <FlexRow>{playingSong?.name}</FlexRow>
+            <FlexRow>{playingSong?.album}</FlexRow>
+            <FlexRow>{playingSong?.artist}</FlexRow>
+          </div>
+          <FlexCol>
+            {(songMillis ?? 0) > 0 ? (
+              <FlexRow style={{ fontSize: 16 }}>
+                <div style={{ color: coloradjust }}>{formatMs(progress ?? 0)}</div>
+                <div style={{ color: shadeColor(theme.songTimeColor, songColorAdjust) }}>
+                  /{formatMs(songMillis ?? 0)}
+                </div>
+              </FlexRow>
+            ) : null}
+          </FlexCol>
+        </FlexRow>
+
+        <FlexCol>
+          <FlexRow>
+            <Button
+              className='nofocus'
+              intent={Intent.PRIMARY}
+              minimal
+              icon='fast-backward'
+              style={{ borderRadius: '50%', width: 40, height: 40 }}
+              onClick={onPrevious}
+            />
+            <div style={{ width: 5 }} />
+            <Button
+              className='nofocus'
+              intent={playbackState === PlaybackState.Playing ? Intent.WARNING : Intent.SUCCESS}
+              minimal
+              icon={playbackState === PlaybackState.Playing ? 'pause' : 'play'}
+              style={{ borderRadius: '50%', width: 40, height: 40 }}
+              onClick={playPauseClick}
+            />
+            <div style={{ width: 5 }} />
+            <Button
+              className='nofocus'
+              intent={Intent.DANGER}
+              minimal
+              icon='stop'
+              style={{ borderRadius: '50%', width: 40, height: 40 }}
+              onClick={() => audioQueue.stop()}
+            />
+            <div style={{ width: 5 }} />
+            <Button
+              className='nofocus'
+              intent={Intent.PRIMARY}
+              minimal
+              icon='fast-forward'
+              style={{ borderRadius: '50%', width: 40, height: 40 }}
+              onClick={audioQueue.next}
+            />
+          </FlexRow>
         </FlexCol>
-      </FlexRow>
+
+        <FlexCol
+          className='card visualizer'
+          style={{ marginTop: 7, marginBottom: 7, marginLeft: '10%', marginRight: '10%', borderRadius: 10 }}
+        >
+          <canvas ref={canvasRef} />
+        </FlexCol>
+        <FlexRow style={{ fontSize: 16 }}>
+          <Icon icon='volume-up' />
+          <FlexCol
+            center={false}
+            style={{
+              alignSelf: 'center',
+              alignContent: 'center',
+              marginLeft: 10,
+              marginRight: '20%',
+              paddingBottom: 4,
+            }}
+          >
+            <Volume />
+          </FlexCol>
+        </FlexRow>
+      </div>
     </div>
   );
 };

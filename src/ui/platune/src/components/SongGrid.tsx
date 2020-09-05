@@ -17,6 +17,7 @@ interface SongGridProps {
   selectedGrid: string;
   isLightTheme: boolean;
   width: number;
+  height: number;
   songs: Song[];
   setSongs: (songs: Song[]) => void;
   queuedSongs: Song[];
@@ -27,6 +28,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   selectedGrid,
   isLightTheme,
   width,
+  height,
   songs,
   setSongs,
   queuedSongs,
@@ -363,11 +365,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const otherGrid = (
-    <div style={{ height: window.innerHeight - 110 }}>
+    <div style={{ height }}>
       <Table
         ref={otherRef}
         width={width - 5}
-        height={window.innerHeight - 110}
+        height={height}
         headerHeight={25}
         rowCount={albumKeys.length}
         rowRenderer={rowRenderer2}
@@ -457,11 +459,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
   );
 
   const mainGrid = (
-    <div style={{ height: window.innerHeight - 110 }}>
+    <div style={{ height }}>
       <Table
         ref={mainRef}
         width={width - 5}
-        height={window.innerHeight - 110}
+        height={height}
         headerHeight={25}
         rowHeight={25}
         rowCount={songs.length}
