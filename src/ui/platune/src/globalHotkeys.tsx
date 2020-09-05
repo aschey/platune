@@ -29,8 +29,8 @@ class GlobalHotkeys {
     this.hotkeys.push(hotkey);
     const hotkeysEl = (
       <Hotkeys>
-        {this.hotkeys.map(h => {
-          return <Hotkey {...h.props} />;
+        {this.hotkeys.map((h, i) => {
+          return <Hotkey key={i} {...h.props} />;
         })}
       </Hotkeys>
     );

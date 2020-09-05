@@ -224,6 +224,13 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
             <img src={`${process.env.PUBLIC_URL}/res/logo.svg`} alt='platune logo' width={28} height={28} />
           </NavbarHeading>
           <NavbarDivider />
+          <Button
+            minimal
+            icon={sidePanelWidth > 0 ? 'double-chevron-left' : 'double-chevron-right'}
+            onClick={toggleSideBar}
+          />
+
+          <div style={{ width: 5 }} />
           <Popover
             autoFocus={false}
             content={
@@ -256,12 +263,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
             <Button minimal icon='menu' />
           </Popover>
 
-          <div style={{ width: 5 }} />
-          <Button
-            minimal
-            icon={sidePanelWidth > 0 ? 'double-chevron-left' : 'double-chevron-right'}
-            onClick={toggleSideBar}
-          />
           <div style={{ width: 5 }} />
         </NavbarGroup>
         <MusicSuggest

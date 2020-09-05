@@ -54,6 +54,7 @@
     "@types/react-virtualized": "^9.21.10",
     "animate-css-grid": "^1.4.3",
     "asar": "^3.0.3",
+    "color-blend": "^3.0.0",
     "electron-context-menu": "^2.3.0",
     "electron-is-dev": "^1.2.0",
     "global": "^4.4.0",
