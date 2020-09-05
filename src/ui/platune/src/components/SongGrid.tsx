@@ -39,25 +39,30 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const [selectedFile, setSelectedFile] = useState('');
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
+
+  const editWidth = 30;
+  const trackWidth = 70;
+  const timeWidth = 60;
+  const remainingWidth = width - editWidth - trackWidth - timeWidth;
   const [widths, setWidths] = useState({
-    edit: 30,
-    name: 300,
-    albumArtist: 250,
-    artist: 250,
-    album: 250,
-    track: 70,
-    time: 60,
-    path: 300,
+    edit: editWidth,
+    name: remainingWidth * 0.2,
+    albumArtist: remainingWidth * 0.2,
+    artist: remainingWidth * 0.2,
+    album: remainingWidth * 0.2,
+    track: trackWidth,
+    time: timeWidth,
+    path: remainingWidth * 0.2,
   });
   const [widths2, setWidths2] = useState({
-    edit: 30,
-    name: 300,
-    albumArtist: 250,
-    artist: 250,
-    album: 250,
-    track: 70,
-    time: 60,
-    path: 400,
+    edit: editWidth,
+    name: remainingWidth * 0.4,
+    albumArtist: remainingWidth * 0,
+    artist: remainingWidth * 0,
+    album: remainingWidth * 0.2,
+    track: trackWidth,
+    time: timeWidth,
+    path: remainingWidth * 0.4,
   });
 
   const mainRef = React.createRef<Table>();
@@ -119,6 +124,30 @@ export const SongGrid: React.FC<SongGridProps> = ({
       setCssVar('--header-padding', '16px');
     }
   }, [selectedGrid, mainRef, otherRef]);
+
+  useEffect(() => {
+    setWidths({
+      edit: editWidth,
+      name: remainingWidth * 0.2,
+      albumArtist: remainingWidth * 0.2,
+      artist: remainingWidth * 0.2,
+      album: remainingWidth * 0.2,
+      track: trackWidth,
+      time: timeWidth,
+      path: remainingWidth * 0.2,
+    });
+
+    setWidths2({
+      edit: editWidth,
+      name: remainingWidth * 0.4,
+      albumArtist: remainingWidth * 0,
+      artist: remainingWidth * 0,
+      album: remainingWidth * 0.2,
+      track: trackWidth,
+      time: timeWidth,
+      path: remainingWidth * 0.4,
+    });
+  }, [width]);
 
   const headerRenderer = (props: TableHeaderProps) => {
     return (
