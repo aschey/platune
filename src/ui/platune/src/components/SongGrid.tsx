@@ -340,7 +340,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
         <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
           Metal
         </Tag>
-        <Text>+5</Text>
+        <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
+          +5
+        </Button>
       </div>
     );
   };
@@ -368,42 +370,53 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (songs[rowIndex].hasArt) {
       return (
         <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
-          <div>
-            <Tag
-              style={{
-                height: 20,
-                marginTop: 2,
-                marginRight: 5,
-                background: 'rgba(var(--tag-bg-1))',
-                color: 'rgba(var(--grid-selected-stripe-even))',
-              }}
-            >
-              Main
-            </Tag>
-            <Tag
-              style={{
-                height: 20,
-                marginTop: 2,
-                marginRight: 5,
-                background: 'rgba(var(--tag-bg-2))',
-                color: 'rgba(var(--grid-selected-stripe-even))',
-              }}
-            >
-              90s
-            </Tag>
-            <Tag
-              style={{
-                height: 20,
-                marginTop: 2,
-                marginRight: 5,
-                background: 'rgba(var(--tag-bg-3))',
-                color: 'rgba(var(--grid-selected-stripe-even))',
-              }}
-            >
-              Metal
-            </Tag>
-            <Text>+5</Text>
-          </div>
+          <Tag
+            style={{
+              height: 20,
+              marginTop: 2,
+              marginRight: 5,
+              background: 'rgba(var(--tag-bg-1), 1)',
+              color: 'rgba(var(--grid-selected-stripe-even), 1)',
+            }}
+          >
+            Main
+          </Tag>
+          <Tag
+            style={{
+              height: 20,
+              marginTop: 2,
+              marginRight: 5,
+              background: 'rgba(var(--tag-bg-2))',
+              color: 'rgba(var(--grid-selected-stripe-even), 1)',
+            }}
+          >
+            90s
+          </Tag>
+          <Tag
+            style={{
+              height: 20,
+              marginTop: 2,
+              marginRight: 5,
+              background: 'rgba(var(--tag-bg-3), 1)',
+              color: 'rgba(var(--grid-selected-stripe-even), 1)',
+            }}
+          >
+            Metal
+          </Tag>
+          <Button
+            style={{
+              minHeight: 20,
+              maxHeight: 20,
+              marginTop: 2,
+              borderColor: 'rgba(var(--grid-selected-text-color), 1)',
+              color: 'rgba(var(--grid-selected-text-color), 1)',
+            }}
+            small
+            minimal
+            outlined
+          >
+            +5
+          </Button>
         </div>
       );
     }
@@ -418,7 +431,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
         <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
           Metal
         </Tag>
-        <Text>+5</Text>
+        <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
+          +5
+        </Button>
       </div>
     );
   };
@@ -515,11 +530,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => JSX.Element | null) => {
     let g = groupedSongs[albumKeys[rowIndex]];
     return <div className='rowParent'>{g.map(gg => cellRenderer(gg.index))}</div>;
-  };
-
-  const multiSongRendererAsync = (rowIndex: number, cellRenderer: (index: number) => Promise<JSX.Element | null>) => {
-    let g = groupedSongs[albumKeys[rowIndex]];
-    return <div className='rowParent'>{g.map(async gg => await cellRenderer(gg.index))}</div>;
   };
 
   const otherGrid = (
