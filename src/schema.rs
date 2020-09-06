@@ -104,6 +104,7 @@ table! {
         tag_name -> Text,
         tag_color -> Text,
         tag_datatype_id -> Integer,
+        tag_priority -> Integer,
     }
 }
 

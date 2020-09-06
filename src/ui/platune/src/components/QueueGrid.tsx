@@ -71,14 +71,15 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
               <Tag intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][rowIndex % 4]}>
                 {
                   <FlexRow>
-                    <Text ellipsize className='tag-text'>
-                      {queuedSongs[rowIndex].name}
-                    </Text>
                     <FlexCol>
-                      <Button minimal small style={{ minHeight: 20, minWidth: 20 }}>
+                      <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
                         <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
                       </Button>
                     </FlexCol>
+                    <Text ellipsize className='tag-text'>
+                      {queuedSongs[rowIndex].name}
+                    </Text>
+                    <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
                   </FlexRow>
                 }
               </Tag>
