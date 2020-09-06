@@ -290,3 +290,16 @@ svg[data-icon='list-detail-view'] {
   max-width: 120px;
   padding-right: 5px;
 }
+
+.sketch-picker {
+  background: rgba(var(--background-secondary), 1) !important;
+}
+
+.sketch-picker input {
+  background: rgba(var(--background-secondary), 1);
+  color: rgba(var(--text-main), 1);
+}
+
+.sketch-picker span {
+  color: rgba(var(--text-main), 1) !important;
+}
