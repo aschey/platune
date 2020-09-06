@@ -60,6 +60,8 @@ use std::{env, vec::Vec};
 use std::{str, sync::mpsc};
 use sysinfo::{DiskExt, SystemExt};
 
+embed_migrations!();
+
 const IS_WINDOWS: bool = cfg!(windows);
 const DATABASE_URL: &str = "DATABASE_URL";
 fn get_delim() -> &'static str {
@@ -204,6 +206,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
 
         let connection_res = establish_connection();
         if let Ok(connection) = connection_res {
+            embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
             let paths = folder
                 .select(get_path())
                 .load::<String>(&connection)

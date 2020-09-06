@@ -25,6 +25,7 @@ fstrings = "0.2.2"
 futures = "0.3.5"
 dirs = "2.0.2"
 diesel = { version = "1.4.4", features = ["sqlite"] }
+diesel_migrations = "1.4.0"
 paperclip = { git = "https://github.com/wafflespeanut/paperclip", rev = "a81ed8f", features = ["actix"] }
 dotenv = "0.15.0"
 sysinfo = "0.13.1"
