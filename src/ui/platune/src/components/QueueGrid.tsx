@@ -45,9 +45,9 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           minWidth: width + 5,
         }}
       >
-        <FlexRow>
+        <FlexRow style={{ fontWeight: 700 }}>
           <div style={{ flex: 1 }} />
-          <Text>Tags</Text>
+          Tags
           <Button minimal small style={{ marginLeft: 5, padding: 0 }}>
             <Icon iconSize={14} icon='add' style={{ paddingBottom: 1, paddingRight: 1 }} />
           </Button>
@@ -91,6 +91,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
       <FlexCol
         style={{
           fontSize: 16,
+          fontWeight: 700,
           background: 'rgba(var(--background-secondary), 1)',
           paddingBottom: 5,
           minWidth: width + 5,
