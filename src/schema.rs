@@ -91,6 +91,30 @@ table! {
 }
 
 table! {
+    song_tag (song_tag_id) {
+        song_tag_id -> Integer,
+        song_id -> Integer,
+        tag_id -> Nullable<Integer>,
+    }
+}
+
+table! {
+    tag (tag_id) {
+        tag_id -> Integer,
+        tag_name -> Text,
+        tag_color -> Text,
+        tag_datatype_id -> Integer,
+    }
+}
+
+table! {
+    tag_datatype (tag_datatype_id) {
+        tag_datatype_id -> Integer,
+        tag_datatype_name -> Text,
+    }
+}
+
+table! {
     user_setting (setting_id) {
         setting_id -> Integer,
         setting_name -> Text,
@@ -113,6 +137,9 @@ joinable!(album -> album_artist (album_artist_id));
 joinable!(file_size -> song (song_id));
 joinable!(song -> album (album_id));
 joinable!(song -> artist (artist_id));
+joinable!(song_tag -> song (song_id));
+joinable!(song_tag -> tag (tag_id));
+joinable!(tag -> tag_datatype (tag_datatype_id));
 
 allow_tables_to_appear_in_same_query!(
     album,
@@ -123,5 +150,8 @@ allow_tables_to_appear_in_same_query!(
     import_temp,
     mount,
     song,
+    song_tag,
+    tag,
+    tag_datatype,
     user_setting,
 );
