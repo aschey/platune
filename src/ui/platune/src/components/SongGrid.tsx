@@ -535,6 +535,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const otherGrid = (
     <div style={{ height }}>
       <Table
+        className='main-grid'
         ref={otherRef}
         width={width - 5}
         height={height}
@@ -630,6 +631,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const mainGrid = (
     <div style={{ height }}>
       <Table
+        className='main-grid'
         ref={mainRef}
         width={width - 5}
         height={height}

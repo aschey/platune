@@ -2,7 +2,6 @@ html,
 body {
   background: rgba(var(--background-main), 1);
   color: rgba(var(--text-main), 1);
-  transition: var(--transition);
   overflow-x: hidden;
 }
 body * {
@@ -302,4 +301,11 @@ svg[data-icon='list-detail-view'] {
 
 .sketch-picker span {
   color: rgba(var(--text-main), 1) !important;
+}
+
+.main-grid {
+  transition: var(--table-transition) !important;
+}
+.main-grid * {
+  transition: var(--table-transition) !important;
 }

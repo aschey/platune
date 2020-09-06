@@ -9,6 +9,7 @@ import { MainNavBar } from './MainNavBar';
 import { QueueGrid } from './QueueGrid';
 import { SongGrid } from './SongGrid';
 import _ from 'lodash';
+import { setCssVar } from '../util';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -58,21 +59,30 @@ const App: React.FC<{}> = () => {
     if (gridRef.current && sidePanelWidth !== gridMargin) {
       const { unwrapGrid } = wrapGrid(gridRef.current, {
         duration: 150,
+        easing: 'linear',
         onStart: () => {
+          setCssVar(
+            '--table-transition',
+            'color 1s, background 1s, border 1s, box-shadow 1s, width 150ms, min-width 150ms, max-width 150ms'
+          );
           if (gridMargin > 0) {
+            setWidth(window.innerWidth);
             setGridMargin(0);
+          } else {
+            setWidth(window.innerWidth - 200);
           }
         },
         onEnd: () => {
           if (gridMargin === 0) {
             setGridMargin(200);
           }
+          setCssVar('--table-transition', 'color 1s, background 1s, border 1s, box-shadow 1s');
         },
       });
       // Remove animations after resizing because they don't play nicely with the virtualized grid
       setTimeout(unwrapGrid, 1);
     }
-    setWidth(getWidth());
+
     if (sidePanelWidth > 0) {
       setGridClasses('expanded');
     } else {

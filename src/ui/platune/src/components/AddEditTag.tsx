@@ -60,6 +60,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen }) => 
             />
             <SketchPicker
               color={color}
+              disableAlpha={true}
               onChange={newColor => setColor(newColor.rgb)}
               presetColors={[{ color: '#FF0000', title: 'red' }]}
             />
