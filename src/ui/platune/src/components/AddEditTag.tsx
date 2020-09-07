@@ -106,10 +106,10 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen }) => 
       </ControlGroup>
       <FlexCol>
         <FlexRow>
-          <Button intent={Intent.SUCCESS} style={{ marginRight: 5 }}>
+          <Button icon='saved' intent={Intent.SUCCESS} style={{ marginRight: 5, width: 80 }}>
             Save
           </Button>
-          <Button intent={Intent.WARNING} style={{ marginLeft: 5 }}>
+          <Button icon='undo' intent={Intent.WARNING} style={{ marginLeft: 5, width: 80 }}>
             Cancel
           </Button>
         </FlexRow>
