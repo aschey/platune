@@ -1730,11 +1730,12 @@ checksum = "0b631f7e854af39a1739f401cf34a8a013dfe09eac4fa4dba91e9768bd28168d"
 
 [[package]]
 name = "paperclip"
-version = "0.4.1"
-source = "git+https://github.com/wafflespeanut/paperclip?rev=a81ed8f#a81ed8ff272dc7946e18ae013fefdd7833ed53ed"
+version = "0.5.0"
+source = "git+https://github.com/wafflespeanut/paperclip?rev=c23ba69#c23ba691f6ba5c0d542f8c596102f6c81ab22e9b"
 dependencies = [
  "anyhow",
  "itertools",
+ "once_cell",
  "paperclip-actix",
  "paperclip-core",
  "paperclip-macros",
@@ -1750,13 +1751,13 @@ dependencies = [
 
 [[package]]
 name = "paperclip-actix"
-version = "0.2.1"
-source = "git+https://github.com/wafflespeanut/paperclip?rev=a81ed8f#a81ed8ff272dc7946e18ae013fefdd7833ed53ed"
+version = "0.3.0"
+source = "git+https://github.com/wafflespeanut/paperclip?rev=c23ba69#c23ba691f6ba5c0d542f8c596102f6c81ab22e9b"
 dependencies = [
  "actix-service",
  "actix-web",
  "futures",
- "lazy_static",
+ "once_cell",
  "paperclip-core",
  "paperclip-macros",
  "parking_lot",
@@ -1765,15 +1766,16 @@ dependencies = [
 
 [[package]]
 name = "paperclip-core"
-version = "0.2.1"
-source = "git+https://github.com/wafflespeanut/paperclip?rev=a81ed8f#a81ed8ff272dc7946e18ae013fefdd7833ed53ed"
+version = "0.3.0"
+source = "git+https://github.com/wafflespeanut/paperclip?rev=c23ba69#c23ba691f6ba5c0d542f8c596102f6c81ab22e9b"
 dependencies = [
  "actix-http",
  "actix-web",
- "lazy_static",
  "mime",
+ "once_cell",
  "paperclip-macros",
  "parking_lot",
+ "pin-project",
  "regex",
  "serde",
  "serde_json",
@@ -1783,8 +1785,8 @@ dependencies = [
 
 [[package]]
 name = "paperclip-macros"
-version = "0.3.1"
-source = "git+https://github.com/wafflespeanut/paperclip?rev=a81ed8f#a81ed8ff272dc7946e18ae013fefdd7833ed53ed"
+version = "0.4.0"
+source = "git+https://github.com/wafflespeanut/paperclip?rev=c23ba69#c23ba691f6ba5c0d542f8c596102f6c81ab22e9b"
 dependencies = [
  "heck",
  "http",
@@ -2397,9 +2399,9 @@ checksum = "57bd81eb48f4c437cadc685403cad539345bf703d78e63707418431cecd4522b"
 
 [[package]]
 name = "strum_macros"
-version = "0.18.0"
+version = "0.19.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87c85aa3f8ea653bfd3ddf25f7ee357ee4d204731f6aa9ad04002306f6e2774c"
+checksum = "2d2ab682ecdcae7f5f45ae85cd7c1e6c8e68ea42c8a612d47fedf831c037146a"
 dependencies = [
  "heck",
  "proc-macro2",

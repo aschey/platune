@@ -6,8 +6,8 @@ use crate::schema::artist::dsl::*;
 use crate::schema::folder::dsl::*;
 use crate::schema::import_temp::dsl::*;
 use crate::schema::mount::dsl::*;
-use crate::schema::search_index::dsl::*;
 use crate::schema::song::dsl::*;
+use crate::schema::tag::dsl::*;
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_http::http::header::{HeaderName, HeaderValue};
@@ -42,7 +42,7 @@ use paperclip::actix::{
     api_v2_errors,
     api_v2_operation,
     // use this instead of actix_web::web
-    web::{self, Json},
+    web::{self, Json, Path},
     Apiv2Schema,
     // extension trait for actix_web::App and proc-macro attributes
     OpenApiExt,
@@ -162,24 +162,24 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
             .wrap(Cors::new().finish())
             .wrap_api()
             // REST endpoints
-            .service(web::resource("/dirsInit").route(web::get().to(get_dirs_init)))
-            .service(web::resource("/dirs").route(web::get().to(get_dirs)))
-            .service(
-                web::resource("/configuredFolders").route(web::get().to(get_configured_folders)),
-            )
-            .service(web::resource("/isWindows").route(web::get().to(get_is_windows)))
-            .service(web::resource("/updateFolders").route(web::put().to(update_folders)))
-            .service(web::resource("/getDbPath").route(web::get().to(get_db_path)))
-            .service(web::resource("/updateDbPath").route(web::put().to(update_db_path)))
-            .service(web::resource("/getNtfsMounts").route(web::get().to(get_ntfs_mounts)))
-            .service(
-                web::resource("/updatePathMappings").route(web::put().to(update_path_mappings)),
-            )
-            .service(web::resource("/songs").route(web::get().to(get_songs)))
-            .service(web::resource("/albumArt").route(web::get().to(get_album_art)))
-            .service(web::resource("/albumArtColors").route(web::get().to(get_art_colors)))
-            .service(web::resource("/search").route(web::get().to(search)))
-            .service(web::resource("/sync").route(web::put().to(get_all_files)))
+            .route("/dirsInit", web::get().to(get_dirs_init))
+            .route("/dirs", web::get().to(get_dirs))
+            .route("/configuredFolders", web::get().to(get_configured_folders))
+            .route("/isWindows", web::get().to(get_is_windows))
+            .route("/updateFolders", web::put().to(update_folders))
+            .route("/getDbPath", web::get().to(get_db_path))
+            .route("/updateDbPath", web::put().to(update_db_path))
+            .route("/getNtfsMounts", web::get().to(get_ntfs_mounts))
+            .route("/updatePathMappings", web::put().to(update_path_mappings))
+            .route("/songs", web::get().to(get_songs))
+            .route("/albumArt", web::get().to(get_album_art))
+            .route("/albumArtColors", web::get().to(get_art_colors))
+            .route("/search", web::get().to(search))
+            .route("/sync", web::put().to(get_all_files))
+            .route("/addTag", web::post().to(add_tag))
+            .route("/updateTag/{tag_id}", web::put().to(update_tag))
+            .route("/tags", web::get().to(get_tags))
+            .route("/deleteTag/{tag_id}", web::delete().to(delete_tag))
             .with_json_spec_at("/spec")
             .build()
             // static files
@@ -563,7 +563,8 @@ async fn get_dirs_init() -> Result<Json<DirResponse>, ()> {
 }
 
 #[api_v2_operation]
-async fn get_dirs(dir_request: Query<DirRequest>) -> Result<Json<DirResponse>, ()> {
+async fn get_dirs(dir_request_query: Query<DirRequest>) -> Result<Json<DirResponse>, ()> {
+    let dir_request = dir_request_query.into_inner();
     let mut entries = read_dir(dir_request.dir.as_str())
         .unwrap()
         .filter_map(|res| filter_dirs(res, get_delim()))
@@ -703,7 +704,8 @@ fn new_folder(path: String) -> NewFolder {
 }
 
 #[api_v2_operation]
-async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>, HttpError> {
+async fn update_folders(new_folders_json: Json<FolderUpdate>) -> Result<Json<()>, HttpError> {
+    let new_folders_req = new_folders_json.into_inner();
     let mut new_folders = new_folders_req.folders.to_vec();
     new_folders.sort_case_insensitive();
     let new_folders3 = new_folders.to_vec();
@@ -817,7 +819,8 @@ fn write_env(dir: &String) -> String {
 }
 
 #[api_v2_operation]
-async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
+async fn update_db_path(request_json: Json<DirRequest>) -> Result<Json<()>, ()> {
+    let request = request_json.into_inner();
     let full_url = write_env(&request.dir);
     let current_url_res = env::var(DATABASE_URL);
     if let Ok(current_url) = current_url_res {
@@ -878,7 +881,8 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 }
 
 #[api_v2_operation]
-async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
+async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
+    let request = request_query.into_inner();
     let connection = establish_connection().unwrap();
     let mut query: diesel::query_builder::BoxedSelectStatement<_, _, diesel::sqlite::Sqlite> = song
         .into_boxed()
@@ -951,7 +955,8 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
 }
 
 #[api_v2_operation]
-async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
+async fn search(request_query: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
+    let request = request_query.into_inner();
     let connection = establish_connection().unwrap();
     // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
     // Adjust rankings to give slightly more weight to artists and albums
@@ -1072,7 +1077,8 @@ fn adjust_lighten(mut color: Rgb, luminance: f32, threshold: f32) -> Rgb {
 }
 
 #[api_v2_operation]
-async fn get_art_colors(request: Query<ArtColorsRequest>) -> Result<Json<Vec<Rgb>>, ()> {
+async fn get_art_colors(request_query: Query<ArtColorsRequest>) -> Result<Json<Vec<Rgb>>, ()> {
+    let request = request_query.into_inner();
     let connection = establish_connection().unwrap();
     let art = song
         .filter(song_id.eq(request.song_id))
@@ -1211,6 +1217,68 @@ async fn get_db_path() -> Result<Json<Dir>, ()> {
     }));
 }
 
+#[api_v2_operation]
+async fn add_tag(request_json: Json<TagRequest>) -> Result<Json<()>, ()> {
+    let request = request_json.into_inner();
+    let connection = establish_connection().unwrap();
+    diesel::insert_into(tag)
+        .values((
+            tag_name.eq(request.name.to_owned()),
+            tag_color.eq(request.color.to_owned()),
+            tag_priority.eq(request.priority),
+        ))
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn update_tag(
+    request_path: Path<(i32,)>,
+    request_json: Json<TagRequest>,
+) -> Result<Json<()>, ()> {
+    let request = request_json.into_inner();
+    let id_path = request_path.into_inner();
+    let connection = establish_connection().unwrap();
+    diesel::update(tag.filter(tag_id.eq(id_path.0)))
+        .set((
+            tag_name.eq(request.name.to_owned()),
+            tag_color.eq(request.color.to_owned()),
+            tag_priority.eq(request.priority),
+        ))
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn get_tags() -> Result<Json<Vec<TagResponse>>, ()> {
+    let connection = establish_connection().unwrap();
+    let tags = tag
+        .select((tag_id, tag_name, tag_color, tag_priority))
+        .load::<(i32, String, String, i32)>(&connection)
+        .unwrap()
+        .iter()
+        .map(|t| TagResponse {
+            id: t.0,
+            name: t.1.to_owned(),
+            color: t.2.to_owned(),
+            priority: t.3,
+        })
+        .collect::<Vec<_>>();
+    return Ok(Json(tags));
+}
+
+#[api_v2_operation]
+async fn delete_tag(request_path: Path<(i32,)>) -> Result<Json<()>, ()> {
+    let tag_id_req = request_path.into_inner();
+    let connection = establish_connection().unwrap();
+    diesel::delete(tag.filter(tag_id.eq(tag_id_req.0)))
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
 #[derive(QueryableByName, Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct SearchRes {
@@ -1229,6 +1297,23 @@ struct SearchRes {
 struct Dir {
     is_file: bool,
     name: String,
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct TagRequest {
+    name: String,
+    color: String,
+    priority: i32,
+}
+
+#[derive(Serialize, Apiv2Schema, Queryable)]
+#[serde(rename_all = "camelCase")]
+struct TagResponse {
+    id: i32,
+    name: String,
+    color: String,
+    priority: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]
