@@ -309,3 +309,9 @@ svg[data-icon='list-detail-view'] {
 .main-grid * {
   transition: var(--table-transition) !important;
 }
+
+label {
+  display: inline-block;
+  width: 100px;
+  text-align: right;
+}

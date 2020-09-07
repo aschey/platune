@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { Dialog } from './Dialog';
 import { SketchPicker, ChromePicker, ColorResult, RGBColor } from 'react-color';
 import reactCSS from 'reactcss';
+import { InputGroup, FormGroup, ControlGroup, Button, Intent } from '@blueprintjs/core';
+import { FlexCol } from './FlexCol';
+import { FlexRow } from './FlexRow';
 
 interface AddEditTagProps {
   isOpen: boolean;
@@ -13,60 +16,72 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen }) => 
 
   return (
     <Dialog
-      style={{ width: 500, height: 500 }}
+      style={{ width: 300, height: 200 }}
       icon='add'
       title='New Tag'
       isOpen={isOpen}
+      onOpening={() => setShowPicker(false)}
       onClose={() => setIsOpen(false)}
       autoFocus
       enforceFocus
       usePortal
     >
-      <div>
-        <div
-          style={{
-            borderRadius: '1px',
-            boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
-            display: 'inline-block',
-            cursor: 'pointer',
-          }}
-          onClick={() => setShowPicker(!showPicker)}
-        >
+      <ControlGroup vertical onClick={() => setShowPicker(false)}>
+        <FormGroup label='Tag Name' labelFor='tagName' inline>
+          <InputGroup id='tagName' placeholder='Enter tag name' />
+        </FormGroup>
+
+        <FormGroup label='Color' labelFor='tagColor' inline style={{ alignItems: 'center' }}>
           <div
+            id='tagColor'
             style={{
-              width: '36px',
-              height: '14px',
-              borderRadius: '2px',
-              background: `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`,
+              borderRadius: '1px',
+              boxShadow: '0 0 0 1px rgba(0,0,0,.1)',
+              display: 'inline-block',
+              cursor: 'pointer',
             }}
-          />
-        </div>
-        {showPicker ? (
-          <div
-            style={{
-              position: 'absolute',
-              zIndex: 2,
+            onClick={e => {
+              e.stopPropagation();
+              setShowPicker(!showPicker);
             }}
           >
             <div
               style={{
-                position: 'fixed',
-                top: '0px',
-                right: '0px',
-                bottom: '0px',
-                left: '0px',
+                width: 36,
+                height: 14,
+                marginTop: 4,
+                borderRadius: 2,
+                background: `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`,
               }}
-              onClick={() => setShowPicker(false)}
-            />
-            <SketchPicker
-              color={color}
-              disableAlpha={true}
-              onChange={newColor => setColor(newColor.rgb)}
-              presetColors={[{ color: '#FF0000', title: 'red' }]}
             />
           </div>
-        ) : null}
-      </div>
+          {showPicker ? (
+            <div
+              style={{
+                position: 'absolute',
+                zIndex: 2,
+              }}
+            >
+              <SketchPicker
+                color={color}
+                disableAlpha={true}
+                onChange={newColor => setColor(newColor.rgb)}
+                presetColors={[{ color: '#FF0000', title: 'red' }]}
+              />
+            </div>
+          ) : null}
+        </FormGroup>
+      </ControlGroup>
+      <FlexCol>
+        <FlexRow>
+          <Button intent={Intent.SUCCESS} style={{ marginRight: 5 }}>
+            Save
+          </Button>
+          <Button intent={Intent.WARNING} style={{ marginLeft: 5 }}>
+            Cancel
+          </Button>
+        </FlexRow>
+      </FlexCol>
     </Dialog>
   );
 };

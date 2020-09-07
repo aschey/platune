@@ -1193,7 +1193,8 @@ async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()
 
 #[api_v2_operation]
 async fn get_db_path() -> Result<Json<Dir>, ()> {
-    let mut file = File::open(".env").unwrap();
+    let env_path = get_env_path();
+    let mut file = File::open(env_path).unwrap();
     let mut contents = String::new();
     let _ = file.read_to_string(&mut contents);
     let delim_escaped = get_delim_escaped();
