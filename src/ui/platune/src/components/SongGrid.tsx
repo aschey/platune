@@ -331,13 +331,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
-        <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
+        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
           Main
         </Tag>
-        <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.SUCCESS}>
+        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.SUCCESS}>
           90s
         </Tag>
-        <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
+        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
           Metal
         </Tag>
         <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
@@ -375,8 +375,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
               height: 20,
               marginTop: 2,
               marginRight: 5,
-              background: 'rgba(var(--tag-bg-1), 1)',
-              color: 'rgba(var(--grid-selected-stripe-even), 1)',
+              border: '1px solid rgba(var(--tag-bg-1), 0.5)',
+              background: 'rgba(var(--tag-bg-1), 0.3)',
+              color: 'rgba(var(--tag-fg-1), 1)',
             }}
           >
             Main
@@ -386,8 +387,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
               height: 20,
               marginTop: 2,
               marginRight: 5,
-              background: 'rgba(var(--tag-bg-2))',
-              color: 'rgba(var(--grid-selected-stripe-even), 1)',
+              border: '1px solid rgba(var(--tag-bg-1), 0.5)',
+              background: 'rgba(var(--tag-bg-2), 0.3)',
+              color: 'rgba(var(--tag-fg-2), 1)',
             }}
           >
             90s
@@ -397,8 +399,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
               height: 20,
               marginTop: 2,
               marginRight: 5,
-              background: 'rgba(var(--tag-bg-3), 1)',
-              color: 'rgba(var(--grid-selected-stripe-even), 1)',
+              border: '1px solid rgba(var(--tag-bg-1), 0.5)',
+              background: 'rgba(var(--tag-bg-3), 0.3)',
+              color: 'rgba(var(--tag-fg-3), 1)',
             }}
           >
             Metal
@@ -422,13 +425,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
-        <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
+        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
           Main
         </Tag>
-        <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.SUCCESS}>
+        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.SUCCESS}>
           90s
         </Tag>
-        <Tag style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
+        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
           Metal
         </Tag>
         <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
@@ -493,13 +496,21 @@ export const SongGrid: React.FC<SongGridProps> = ({
     setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
     setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
 
-    const blended1 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.2 });
-    const blended2 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.2 });
-    const blended3 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.2 });
+    const blended1 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.15 });
+    const blended2 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.15 });
+    const blended3 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.15 });
+
+    const blended4 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.25 });
+    const blended5 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.25 });
+    const blended6 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.25 });
 
     setCssVar('--tag-bg-1', formatRgb(blended1));
     setCssVar('--tag-bg-2', formatRgb(blended2));
     setCssVar('--tag-bg-3', formatRgb(blended3));
+
+    setCssVar('--tag-fg-1', formatRgb(blended4));
+    setCssVar('--tag-fg-2', formatRgb(blended5));
+    setCssVar('--tag-fg-3', formatRgb(blended6));
   };
 
   const rowRenderer = (props: TableRowProps) => {

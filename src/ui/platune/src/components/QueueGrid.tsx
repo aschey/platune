@@ -71,7 +71,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
             width={width}
             cellRenderer={({ rowIndex }) => (
               <div style={{ paddingLeft: 5 }}>
-                <Tag intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][rowIndex % 4]}>
+                <Tag minimal intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][rowIndex % 4]}>
                   {
                     <FlexRow>
                       <FlexCol>
