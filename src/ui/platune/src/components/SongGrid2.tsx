@@ -12,6 +12,7 @@ import { Rgb } from '../models/rgb';
 import { normal } from 'color-blend';
 import { toastSuccess } from '../appToaster';
 import { FlexCol } from './FlexCol';
+import { Draggable, DraggableProvided, Droppable } from 'react-beautiful-dnd';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -49,7 +50,7 @@ export const SongGrid2: React.FC<SongGridProps> = ({
     for (let i of range(numTries)) {
       try {
         const songs = await getJson<Song[]>('/songs');
-        console.log(songs);
+
         return songs;
       } catch (e) {
         if (i === numTries - 1) {
@@ -58,13 +59,57 @@ export const SongGrid2: React.FC<SongGridProps> = ({
         await sleep(1000);
       }
     }
-    console.log('empty');
+
     return [];
   }, []);
 
   useEffect(() => {
     loadSongs().then(setSongs);
   }, [loadSongs, setSongs]);
+
+  const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
+
+  const onRowClick = (e: React.MouseEvent, path: string) => {
+    onFileSelect(e, path);
+    const cur = songs.filter(s => s.path === path)[0];
+    let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
+    const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
+    const song = hasArt.length > 0 ? hasArt[0] : cur;
+    updateSelectedAlbum(song.id, song.hasArt, albumIndex);
+
+    if (path === editingFile) {
+      return;
+    }
+    if (editingFile !== '') {
+      // save
+      toastSuccess();
+      setEditingFile('');
+    }
+  };
+
+  const startQueue = async (path: string) => {
+    const index = songs.map(s => s.path).indexOf(path);
+    const queue = songs.filter(s => s.index >= index);
+    // Don't reset queue if currently paused and we're resuming the same song
+    if (!(audioQueue.isPaused() && path === playingFile)) {
+      setQueuedSongs(queue);
+      audioQueue.setQueue(queue.map(q => q.path));
+    }
+
+    await audioQueue.start(queue[0].path);
+  };
+
+  const onDoubleClick = async (path: string) => {
+    if (path === editingFile) {
+      return;
+    }
+    if (editingFile !== '') {
+      // save
+      toastSuccess();
+      setEditingFile('');
+    }
+    await startQueue(path);
+  };
 
   const cellRenderer = ({ path }: Song, value: string, rowIndex: number, canEdit: boolean = true) => {
     let classes = 'bp3-table-cell grid-cell';
@@ -80,64 +125,24 @@ export const SongGrid2: React.FC<SongGridProps> = ({
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
-    const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
-
-    const onRowClick = (e: React.MouseEvent, path: string) => {
-      onFileSelect(e, path);
-      const cur = songs.filter(s => s.path === path)[0];
-      let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
-      const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
-      const song = hasArt.length > 0 ? hasArt[0] : cur;
-      updateSelectedAlbum(song.id, song.hasArt, albumIndex);
-
-      if (path === editingFile) {
-        return;
-      }
-      if (editingFile !== '') {
-        // save
-        toastSuccess();
-        setEditingFile('');
-      }
-    };
-
-    const startQueue = async (path: string) => {
-      const index = songs.map(s => s.path).indexOf(path);
-      const queue = songs.filter(s => s.index >= index);
-      // Don't reset queue if currently paused and we're resuming the same song
-      if (!(audioQueue.isPaused() && path === playingFile)) {
-        setQueuedSongs(queue);
-        audioQueue.setQueue(queue.map(q => q.path));
-      }
-
-      await audioQueue.start(queue[0].path);
-    };
-
-    const onDoubleClick = async (path: string) => {
-      if (path === editingFile) {
-        return;
-      }
-      if (editingFile !== '') {
-        // save
-        toastSuccess();
-        setEditingFile('');
-      }
-      await startQueue(path);
-    };
-
     return (
-      <div
-        key={path}
-        //ref={drag}
-        className={classes}
-        onDoubleClick={() => onDoubleClick(path)}
-        onClick={e => onRowClick(e, path)}
-      >
-        <Text ellipsize>{child}</Text>
-      </div>
+      <Draggable draggableId={rowIndex.toString()} index={rowIndex} key={rowIndex}>
+        {(provided: DraggableProvided) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            key={path}
+            className={classes}
+            onDoubleClick={() => onDoubleClick(path)}
+            onClick={e => onRowClick(e, path)}
+          >
+            <Text ellipsize>{child}</Text>
+          </div>
+        )}
+      </Draggable>
     );
   };
-
-  const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
 
   const onFileSelect = (e: React.MouseEvent, path: string) => {
     if (e.ctrlKey) {
@@ -250,58 +255,65 @@ export const SongGrid2: React.FC<SongGridProps> = ({
     cellRenderer(rowData as Song, cellData, rowIndex);
 
   return (
-    <AutoResizer>
-      {({ width, height }) => (
-        <BaseTable data={songs} width={width} height={height}>
-          <Column
-            key='edit'
-            title=''
-            dataKey='path'
-            width={50}
-            cellRenderer={({ rowIndex, cellData }) => editCellRenderer(cellData, rowIndex)}
-          />
-          <Column
-            key='name'
-            title='Name'
-            dataKey='name'
-            width={0}
-            flexGrow={1}
-            resizable
-            sortable
-            cellRenderer={genericCellRenderer}
-          />
-          <Column
-            key='albumArtist'
-            title='Album Artist'
-            dataKey='albumArtist'
-            width={0}
-            flexGrow={1}
-            resizable
-            sortable
-            cellRenderer={genericCellRenderer}
-          />
-          <Column
-            key='artist'
-            title='Artist'
-            dataKey='artist'
-            width={0}
-            flexGrow={1}
-            resizable
-            sortable
-            cellRenderer={genericCellRenderer}
-          />
-          <Column
-            key='album'
-            title='Album'
-            dataKey='album'
-            width={0}
-            flexGrow={1}
-            resizable
-            sortable
-            cellRenderer={genericCellRenderer}
-          />
-        </BaseTable>
+    <Droppable droppableId='droppable'>
+      {(droppableProvided, droppableSnapshot) => (
+        <div ref={droppableProvided.innerRef}>
+          <AutoResizer>
+            {({ width, height }) => (
+              <BaseTable data={songs} width={width} height={height}>
+                <Column
+                  key='edit'
+                  title=''
+                  dataKey='path'
+                  width={50}
+                  cellRenderer={({ rowIndex, cellData }) => editCellRenderer(cellData, rowIndex)}
+                />
+                <Column
+                  key='name'
+                  title='Name'
+                  dataKey='name'
+                  width={0}
+                  flexGrow={1}
+                  resizable
+                  sortable
+                  cellRenderer={genericCellRenderer}
+                />
+                <Column
+                  key='albumArtist'
+                  title='Album Artist'
+                  dataKey='albumArtist'
+                  width={0}
+                  flexGrow={1}
+                  resizable
+                  sortable
+                  cellRenderer={genericCellRenderer}
+                />
+                <Column
+                  key='artist'
+                  title='Artist'
+                  dataKey='artist'
+                  width={0}
+                  flexGrow={1}
+                  resizable
+                  sortable
+                  cellRenderer={genericCellRenderer}
+                />
+                <Column
+                  key='album'
+                  title='Album'
+                  dataKey='album'
+                  width={0}
+                  flexGrow={1}
+                  resizable
+                  sortable
+                  cellRenderer={genericCellRenderer}
+                />
+              </BaseTable>
+            )}
+          </AutoResizer>
+          {droppableProvided.placeholder}
+        </div>
       )}
-    </AutoResizer>
+    </Droppable>
   );
 };

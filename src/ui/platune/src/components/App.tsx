@@ -13,6 +13,7 @@ import { setCssVar } from '../util';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { SongGrid2 } from './SongGrid2';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -94,7 +95,7 @@ const App: React.FC<{}> = () => {
   }, [sidePanelWidth, gridMargin, getWidth, gridRef]);
 
   return (
-    <DndProvider backend={HTML5Backend}>
+    <DragDropContext onDragEnd={() => {}}>
       <MainNavBar
         sidePanelWidth={sidePanelWidth}
         setSidePanelWidth={setSidePanelWidth}
@@ -131,7 +132,7 @@ const App: React.FC<{}> = () => {
           setQueuedSongs={setQueuedSongs}
         />
       </div>
-    </DndProvider>
+    </DragDropContext>
   );
 };
 
