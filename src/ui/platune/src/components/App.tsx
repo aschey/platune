@@ -12,6 +12,7 @@ import _ from 'lodash';
 import { setCssVar } from '../util';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { SongGrid2 } from './SongGrid2';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -119,7 +120,7 @@ const App: React.FC<{}> = () => {
             <QueueGrid queuedSongs={queuedSongs} />
           </div>
         </div>
-        <SongGrid
+        <SongGrid2
           selectedGrid={selectedGrid}
           isLightTheme={themeDetails}
           width={width}
