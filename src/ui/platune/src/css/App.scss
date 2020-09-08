@@ -315,3 +315,19 @@ label {
   width: 100px;
   text-align: right;
 }
+
+.BaseTable__table,
+.BaseTable__table-main .BaseTable__header,
+.BaseTable__row,
+.BaseTable__row:hover {
+  background: rgba(var(--background-main), 1);
+}
+
+.BaseTable__header-row,
+.BaseTable__header-cell--sortable:hover {
+  background: rgba(var(--background-secondary), 1);
+}
+.BaseTable__header-row,
+.BaseTable__row {
+  border-bottom: none;
+}

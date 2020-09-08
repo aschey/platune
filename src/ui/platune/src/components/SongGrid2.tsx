@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import BaseTable, { Column } from 'react-base-table';
+import BaseTable, { Column, AutoResizer } from 'react-base-table';
 import { Song } from '../models/song';
 import { range, sleep, formatRgb, setCssVar } from '../util';
 import { getJson } from '../fetchUtil';
@@ -250,50 +250,58 @@ export const SongGrid2: React.FC<SongGridProps> = ({
     cellRenderer(rowData as Song, cellData, rowIndex);
 
   return (
-    <BaseTable data={songs} width={800} height={400}>
-      <Column
-        key='edit'
-        title=''
-        dataKey='path'
-        width={50}
-        cellRenderer={({ rowIndex, cellData }) => editCellRenderer(cellData, rowIndex)}
-      />
-      <Column
-        key='name'
-        title='Name'
-        dataKey='name'
-        width={150}
-        resizable
-        sortable
-        cellRenderer={genericCellRenderer}
-      />
-      <Column
-        key='albumArtist'
-        title='Album Artist'
-        dataKey='albumArtist'
-        width={150}
-        resizable
-        sortable
-        cellRenderer={genericCellRenderer}
-      />
-      <Column
-        key='artist'
-        title='Artist'
-        dataKey='artist'
-        width={150}
-        resizable
-        sortable
-        cellRenderer={genericCellRenderer}
-      />
-      <Column
-        key='album'
-        title='Album'
-        dataKey='album'
-        width={150}
-        resizable
-        sortable
-        cellRenderer={genericCellRenderer}
-      />
-    </BaseTable>
+    <AutoResizer>
+      {({ width, height }) => (
+        <BaseTable data={songs} width={width} height={height}>
+          <Column
+            key='edit'
+            title=''
+            dataKey='path'
+            width={50}
+            cellRenderer={({ rowIndex, cellData }) => editCellRenderer(cellData, rowIndex)}
+          />
+          <Column
+            key='name'
+            title='Name'
+            dataKey='name'
+            width={0}
+            flexGrow={1}
+            resizable
+            sortable
+            cellRenderer={genericCellRenderer}
+          />
+          <Column
+            key='albumArtist'
+            title='Album Artist'
+            dataKey='albumArtist'
+            width={0}
+            flexGrow={1}
+            resizable
+            sortable
+            cellRenderer={genericCellRenderer}
+          />
+          <Column
+            key='artist'
+            title='Artist'
+            dataKey='artist'
+            width={0}
+            flexGrow={1}
+            resizable
+            sortable
+            cellRenderer={genericCellRenderer}
+          />
+          <Column
+            key='album'
+            title='Album'
+            dataKey='album'
+            width={0}
+            flexGrow={1}
+            resizable
+            sortable
+            cellRenderer={genericCellRenderer}
+          />
+        </BaseTable>
+      )}
+    </AutoResizer>
   );
 };
