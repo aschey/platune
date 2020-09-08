@@ -255,7 +255,7 @@ export const SongGrid2: React.FC<SongGridProps> = ({
     cellRenderer(rowData as Song, cellData, rowIndex);
 
   return (
-    <Droppable droppableId='droppable'>
+    <Droppable droppableId='droppable' mode='virtual'>
       {(droppableProvided, droppableSnapshot) => (
         <div ref={droppableProvided.innerRef}>
           <AutoResizer>
