@@ -6,11 +6,12 @@ import { getJson } from '../fetchUtil';
 import { Dictionary } from 'lodash';
 import { useObservable } from 'rxjs-hooks';
 import { audioQueue } from '../audio';
-import { Text, EditableText, Colors } from '@blueprintjs/core';
+import { Text, EditableText, Colors, Button } from '@blueprintjs/core';
 import { hexToRgb } from '../themes/colorMixer';
 import { Rgb } from '../models/rgb';
 import { normal } from 'color-blend';
 import { toastSuccess } from '../appToaster';
+import { FlexCol } from './FlexCol';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -79,71 +80,7 @@ export const SongGrid2: React.FC<SongGridProps> = ({
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
-    const onFileSelect = (e: React.MouseEvent, path: string) => {
-      if (e.ctrlKey) {
-        setSelectedFiles(selectedFiles.concat([path]));
-      } else if (e.shiftKey) {
-        const paths = songs.map(s => s.path);
-        const index = paths.indexOf(path);
-
-        for (let i = index - 1; i >= 0; i--) {
-          if (selectedFiles.indexOf(paths[i]) > -1) {
-            setSelectedFiles(selectedFiles.concat(paths.slice(i, index + 1)));
-            break;
-          }
-        }
-      } else {
-        setSelectedFiles([path]);
-      }
-    };
-
     const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
-
-    const loadColors = async (songId: number) => {
-      const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}&isLight=${isLightTheme}`);
-      return colors;
-    };
-
-    const updateColors = async (songIndex: number, albumIndex: number) => {
-      const colors = await loadColors(songIndex);
-      const bg = colors[0];
-      const fg = colors[1];
-      const secondary = colors[2];
-      const blue = hexToRgb(Colors.BLUE3);
-      const green = hexToRgb(Colors.GREEN3);
-      const red = hexToRgb(Colors.RED3);
-
-      setCssVar('--grid-selected-text-color', formatRgb(fg));
-      setCssVar('--grid-selected-shadow-1', formatRgb(bg));
-      setCssVar('--grid-selected-shadow-2', formatRgb(bg));
-      setCssVar('--grid-selected-stripe-even', formatRgb(bg));
-      setCssVar('--grid-selected-background', formatRgb(secondary));
-      setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
-      setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
-
-      const blended1 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.15 });
-      const blended2 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.15 });
-      const blended3 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.15 });
-
-      const blended4 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.25 });
-      const blended5 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.25 });
-      const blended6 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.25 });
-
-      setCssVar('--tag-bg-1', formatRgb(blended1));
-      setCssVar('--tag-bg-2', formatRgb(blended2));
-      setCssVar('--tag-bg-3', formatRgb(blended3));
-
-      setCssVar('--tag-fg-1', formatRgb(blended4));
-      setCssVar('--tag-fg-2', formatRgb(blended5));
-      setCssVar('--tag-fg-3', formatRgb(blended6));
-    };
-
-    const updateSelectedAlbum = async (songIndex: number, hasArt: boolean, albumIndex: number) => {
-      if (hasArt) {
-        await updateColors(songIndex, albumIndex);
-      }
-      setSelectedAlbum(albumKeys[albumIndex]);
-    };
 
     const onRowClick = (e: React.MouseEvent, path: string) => {
       onFileSelect(e, path);
@@ -200,11 +137,127 @@ export const SongGrid2: React.FC<SongGridProps> = ({
     );
   };
 
+  const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
+
+  const onFileSelect = (e: React.MouseEvent, path: string) => {
+    if (e.ctrlKey) {
+      setSelectedFiles(selectedFiles.concat([path]));
+    } else if (e.shiftKey) {
+      const paths = songs.map(s => s.path);
+      const index = paths.indexOf(path);
+
+      for (let i = index - 1; i >= 0; i--) {
+        if (selectedFiles.indexOf(paths[i]) > -1) {
+          setSelectedFiles(selectedFiles.concat(paths.slice(i, index + 1)));
+          break;
+        }
+      }
+    } else {
+      setSelectedFiles([path]);
+    }
+  };
+
+  const loadColors = async (songId: number) => {
+    const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}&isLight=${isLightTheme}`);
+    return colors;
+  };
+
+  const updateColors = async (songIndex: number) => {
+    const colors = await loadColors(songIndex);
+    const bg = colors[0];
+    const fg = colors[1];
+    const secondary = colors[2];
+    const blue = hexToRgb(Colors.BLUE3);
+    const green = hexToRgb(Colors.GREEN3);
+    const red = hexToRgb(Colors.RED3);
+
+    setCssVar('--grid-selected-text-color', formatRgb(fg));
+    setCssVar('--grid-selected-shadow-1', formatRgb(bg));
+    setCssVar('--grid-selected-shadow-2', formatRgb(bg));
+    setCssVar('--grid-selected-stripe-even', formatRgb(bg));
+    setCssVar('--grid-selected-background', formatRgb(secondary));
+    setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
+    setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
+
+    const blended1 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.15 });
+    const blended2 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.15 });
+    const blended3 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.15 });
+
+    const blended4 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.25 });
+    const blended5 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.25 });
+    const blended6 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.25 });
+
+    setCssVar('--tag-bg-1', formatRgb(blended1));
+    setCssVar('--tag-bg-2', formatRgb(blended2));
+    setCssVar('--tag-bg-3', formatRgb(blended3));
+
+    setCssVar('--tag-fg-1', formatRgb(blended4));
+    setCssVar('--tag-fg-2', formatRgb(blended5));
+    setCssVar('--tag-fg-3', formatRgb(blended6));
+  };
+
+  const updateSelectedAlbum = async (songIndex: number, hasArt: boolean, albumIndex: number) => {
+    if (hasArt) {
+      await updateColors(songIndex);
+    }
+    setSelectedAlbum(albumKeys[albumIndex]);
+  };
+
+  const editCellRenderer = (path: string, rowIndex: number) => {
+    const isEditingRow = editingFile === path;
+    const isSelectedRow = selectedFiles.indexOf(path) > -1;
+    const isPlayingRow = playingFile === path;
+    const classes = `${isEditingRow ? 'editing' : ''} ${
+      isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : rowIndex % 2 === 0 ? 'striped-even' : 'striped-odd'
+    }`;
+    return (
+      <div
+        className={`bp3-table-cell grid-cell ${classes}`}
+        style={{ padding: 0, borderLeft: 'rgba(16, 22, 26, 0.4) 1px solid' }}
+        key={rowIndex}
+      >
+        <FlexCol>
+          <Button
+            small
+            minimal
+            className={isPlayingRow ? 'playing' : ''}
+            icon={isEditingRow ? 'saved' : isPlayingRow ? 'volume-up' : 'edit'}
+            onClick={(e: React.MouseEvent) => {
+              const cur = songs[rowIndex];
+              let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
+              if (selectedGrid === 'album') {
+                const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
+                const song = hasArt.length > 0 ? hasArt[0] : cur;
+                updateSelectedAlbum(song.id, song.hasArt, albumIndex);
+              }
+
+              if (isEditingRow) {
+                // save
+                toastSuccess();
+                setEditingFile('');
+              } else {
+                onFileSelect(e, path);
+                setEditingFile(path);
+              }
+            }}
+          />
+        </FlexCol>
+      </div>
+    );
+  };
+
   const genericCellRenderer = ({ rowData, cellData, rowIndex }: { rowData: any; cellData: any; rowIndex: number }) =>
     cellRenderer(rowData as Song, cellData, rowIndex);
 
   return (
     <BaseTable data={songs} width={800} height={400}>
+      <Column
+        key='edit'
+        title=''
+        dataKey='path'
+        width={50}
+        cellRenderer={({ rowIndex, cellData }) => editCellRenderer(cellData, rowIndex)}
+      />
       <Column
         key='name'
         title='Name'
