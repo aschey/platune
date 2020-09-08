@@ -1,4 +1,4 @@
-import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
+import { Button, Icon, Intent, Text, Colors } from '@blueprintjs/core';
 import React, { useState } from 'react';
 import { Column, defaultTableRowRenderer, Table, TableHeaderRowProps, TableRowProps } from 'react-virtualized';
 import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
@@ -8,6 +8,8 @@ import { Song } from '../models/song';
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { AddEditTag } from './AddEditTag';
+import { useDrop } from 'react-dnd';
+import { SidebarTag } from './SidebarTag';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -16,6 +18,7 @@ interface QueueGridProps {
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+
   const width = 190;
 
   const rowRenderer = (props: TableRowProps) => {
@@ -71,21 +74,13 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
             width={width}
             cellRenderer={({ rowIndex }) => (
               <div style={{ paddingLeft: 5 }}>
-                <Tag minimal intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][rowIndex % 4]}>
-                  {
-                    <FlexRow>
-                      <FlexCol>
-                        <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
-                          <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
-                        </Button>
-                      </FlexCol>
-                      <Text ellipsize className='tag-text'>
-                        {queuedSongs[rowIndex].name}
-                      </Text>
-                      <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
-                    </FlexRow>
-                  }
-                </Tag>
+                <SidebarTag
+                  tag={{
+                    name: 'test',
+                    color: [Colors.BLUE4, Colors.RED5, Colors.GREEN4, Colors.GOLD3][rowIndex % 4],
+                    order: 0,
+                  }}
+                />
               </div>
             )}
           />

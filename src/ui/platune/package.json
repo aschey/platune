@@ -62,6 +62,8 @@
     "lodash": "^4.17.20",
     "node-sass": "^4.14.1",
     "react": "^16.13.1",
+    "react-base-table": "^1.11.3",
+    "react-beautiful-dnd": "^13.0.0",
     "react-color": "^2.18.1",
     "react-compound-slider": "file:../../../../react-compound-slider",
     "react-dnd": "^11.1.3",

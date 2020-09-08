@@ -10,6 +10,8 @@ import { QueueGrid } from './QueueGrid';
 import { SongGrid } from './SongGrid';
 import _ from 'lodash';
 import { setCssVar } from '../util';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -91,7 +93,7 @@ const App: React.FC<{}> = () => {
   }, [sidePanelWidth, gridMargin, getWidth, gridRef]);
 
   return (
-    <>
+    <DndProvider backend={HTML5Backend}>
       <MainNavBar
         sidePanelWidth={sidePanelWidth}
         setSidePanelWidth={setSidePanelWidth}
@@ -128,7 +130,7 @@ const App: React.FC<{}> = () => {
           setQueuedSongs={setQueuedSongs}
         />
       </div>
-    </>
+    </DndProvider>
   );
 };
 

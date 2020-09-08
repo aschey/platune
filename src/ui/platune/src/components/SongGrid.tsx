@@ -1,6 +1,6 @@
 import { Button, EditableText, Text, Tag, Intent, Colors } from '@blueprintjs/core';
 import _, { Dictionary } from 'lodash';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import Draggable from 'react-draggable';
 import { Column, defaultTableRowRenderer, Table, TableHeaderProps, TableRowProps } from 'react-virtualized';
 import { useObservable } from 'rxjs-hooks';
@@ -15,6 +15,10 @@ import { FlexCol } from './FlexCol';
 import { normal } from 'color-blend';
 import { hexToRgb } from '../themes/colorMixer';
 import { lightTheme } from '../themes/light';
+import { DragPreviewImage, useDrag, useDragLayer, XYCoord, DragLayer, DragLayerMonitor } from 'react-dnd';
+import { faAddressBook } from '@fortawesome/free-regular-svg-icons';
+import { boxImage, boxImage2 } from '../boxImage';
+import { getEmptyImage } from 'react-dnd-html5-backend';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -39,7 +43,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
 
@@ -128,6 +132,73 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
   }, [selectedGrid, mainRef, otherRef]);
 
+  // const useWait = () => {
+  //   const [done, setDone] = useState(true);
+  //   const timeout = useRef<NodeJS.Timeout>();
+  //   const wait = useCallback(millis => {
+  //     if (timeout.current) {
+  //       clearTimeout(timeout.current);
+  //     }
+
+  //     setDone(false);
+  //     timeout.current = setTimeout(() => setDone(true), millis);
+  //   }, []);
+  //   return [wait, done];
+  // };
+
+  // const [wait, done] = useWait();
+  // const doneRef = useRef(done);
+  // useEffect(() => {
+  //   doneRef.current = done;
+  // });
+  // const collectedPropsRef = useRef();
+
+  const [{}, drag, preview] = useDrag({
+    item: { type: 'song', songs: selectedFiles },
+    end: () => console.log('end'),
+  });
+
+  // collectedPropsRef.current = useDragLayer(monitor => {
+  //   // Debounce if 'done' is false.
+  //   // Since 'useDragLayer' doesn't honor it's dependencies
+  //   // you need to use a ref to 'done' for it to catch a change in the value.
+  //   if (!doneRef.current) {
+  //     return collectedPropsRef.current;
+  //   }
+
+  //   // This will keep 'doneRef.current' false and debounce
+  //   // 'expensiveCollectFunction(monitor)' for 100 ms
+  //   wait(100);
+
+  //   return {
+  //     item: monitor.getItem(),
+  //     itemType: monitor.getItemType(),
+  //     initialOffset: monitor.getInitialSourceClientOffset(),
+  //     currentOffset: monitor.getSourceClientOffset(),
+  //   };
+  // });
+
+  const debounced = useCallback(
+    _.debounce(
+      (monitor: DragLayerMonitor) => ({
+        item: monitor.getItem(),
+        itemType: monitor.getItemType(),
+        initialOffset: monitor.getInitialSourceClientOffset(),
+        currentOffset: monitor.getSourceClientOffset(),
+        isDragging: monitor.isDragging(),
+      }),
+      0
+    ),
+    []
+  );
+  const props = useDragLayer(monitor => ({
+    item: monitor.getItem(),
+    itemType: monitor.getItemType(),
+    initialOffset: monitor.getInitialSourceClientOffset(),
+    currentOffset: monitor.getSourceClientOffset(),
+    isDragging: monitor.isDragging(),
+  }));
+
   useEffect(() => {
     setWidths({
       edit: editWidth,
@@ -177,7 +248,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
     const path = songs[rowIndex].path;
     const isEditingRow = editingFile === path;
-    const isSelectedRow = selectedFile === path;
+    const isSelectedRow = selectedFiles.indexOf(path) > -1;
     const isPlayingRow = playingFile === path;
     const classes = `${isEditingRow ? 'editing' : ''} ${
       isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : rowIndex % 2 === 0 ? 'striped-even' : 'striped-odd'
@@ -194,7 +265,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             minimal
             className={isPlayingRow ? 'playing' : ''}
             icon={isEditingRow ? 'saved' : isPlayingRow ? 'volume-up' : 'edit'}
-            onClick={() => {
+            onClick={(e: React.MouseEvent) => {
               const cur = songs[rowIndex];
               let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
               if (selectedGrid === 'album') {
@@ -208,7 +279,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
                 toastSuccess();
                 setEditingFile('');
               } else {
-                setSelectedFile(path);
+                onFileSelect(e, path);
                 setEditingFile(path);
               }
             }}
@@ -216,6 +287,24 @@ export const SongGrid: React.FC<SongGridProps> = ({
         </FlexCol>
       </div>
     );
+  };
+
+  const onFileSelect = (e: React.MouseEvent, path: string) => {
+    if (e.ctrlKey) {
+      setSelectedFiles(selectedFiles.concat([path]));
+    } else if (e.shiftKey) {
+      const paths = songs.map(s => s.path);
+      const index = paths.indexOf(path);
+
+      for (let i = index - 1; i >= 0; i--) {
+        if (selectedFiles.indexOf(paths[i]) > -1) {
+          setSelectedFiles(selectedFiles.concat(paths.slice(i, index + 1)));
+          break;
+        }
+      }
+    } else {
+      setSelectedFiles([path]);
+    }
   };
 
   const onDoubleClick = async (path: string) => {
@@ -259,6 +348,21 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const cellRenderer = (rowIndex: number, path: string, value: string, canEdit: boolean = true) => {
+    // const [{ isDragging }, drag, preview] = useDrag({
+    //   item: { type: 'song', song: songs[rowIndex] },
+    //   collect: monitor => ({
+    //     isDragging: !!monitor.isDragging(),
+    //   }),
+    // });
+
+    // const { itemType, initialOffset, currentOffset } = useDragLayer(monitor => ({
+    //   item: monitor.getItem(),
+    //   itemType: monitor.getItemType(),
+    //   initialOffset: monitor.getInitialSourceClientOffset(),
+    //   currentOffset: monitor.getSourceClientOffset(),
+    //   isDragging: monitor.isDragging(),
+    // }));
+
     let classes = 'bp3-table-cell grid-cell';
     let child: JSX.Element | string = value;
     if (path === editingFile) {
@@ -266,15 +370,44 @@ export const SongGrid: React.FC<SongGridProps> = ({
       child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
+    // useEffect(() => {
+    //   preview(getEmptyImage(), { captureDraggingState: true });
+    // }, []);
+
+    // const getItemStyles = (initialOffset: XYCoord | null, currentOffset: XYCoord | null) => {
+    //   if (!initialOffset || !currentOffset) {
+    //     return {
+    //       display: 'none',
+    //     };
+    //   }
+    //   let { x, y } = currentOffset;
+    //   const transform = `translate(${x}px, ${y}px)`;
+    //   return {
+    //     transform,
+    //     WebkitTransform: transform,
+    //   };
+    // };
+
     return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
-        <Text ellipsize>{child}</Text>
-      </div>
+      <>
+        {/* {isDragging ? (
+          <div style={{ ...getItemStyles(initialOffset, currentOffset), position: 'fixed' }}>test</div>
+        ) : null} */}
+        <div
+          key={path}
+          //ref={drag}
+          className={classes}
+          onDoubleClick={() => onDoubleClick(path)}
+          onClick={e => onRowClick(e, path)}
+        >
+          <Text ellipsize>{child}</Text>
+        </div>
+      </>
     );
   };
 
@@ -323,14 +456,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
       //child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
     return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
           Main
         </Tag>
@@ -361,7 +494,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       //child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
@@ -369,7 +502,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
     if (songs[rowIndex].hasArt) {
       return (
-        <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+        <div
+          key={path}
+          className={classes}
+          onDoubleClick={() => onDoubleClick(path)}
+          onClick={e => onRowClick(e, path)}
+        >
           <Tag
             style={{
               height: 20,
@@ -424,7 +562,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       );
     }
     return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
           Main
         </Tag>
@@ -452,8 +590,8 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
   };
 
-  const onRowClick = (path: string) => {
-    setSelectedFile(path);
+  const onRowClick = (e: React.MouseEvent, path: string) => {
+    onFileSelect(e, path);
     const cur = songs.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
     const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
@@ -518,6 +656,71 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return defaultTableRowRenderer(props);
   };
 
+  // const DefaultRowRenderer = ({
+  //   className,
+  //   columns,
+  //   index,
+  //   key,
+  //   onRowClick,
+  //   onRowDoubleClick,
+  //   onRowMouseOut,
+  //   onRowMouseOver,
+  //   onRowRightClick,
+  //   rowData,
+  //   style,
+  // }: any) => {
+  //   const [{ isDragging }, drag, preview] = useDrag({
+  //     item: { type: 'song', song: songs[index] },
+  //     collect: monitor => ({
+  //       isDragging: !!monitor.isDragging(),
+  //     }),
+  //   });
+
+  //   const a11yProps: any = { 'aria-rowindex': index + 1 };
+
+  //   if (onRowClick || onRowDoubleClick || onRowMouseOut || onRowMouseOver || onRowRightClick) {
+  //     a11yProps['aria-label'] = 'row';
+  //     a11yProps.tabIndex = 0;
+
+  //     if (onRowClick) {
+  //       a11yProps.onClick = (event: any) => onRowClick({ event, index, rowData });
+  //     }
+  //     if (onRowDoubleClick) {
+  //       a11yProps.onDoubleClick = (event: any) => onRowDoubleClick({ event, index, rowData });
+  //     }
+  //     if (onRowMouseOut) {
+  //       a11yProps.onMouseOut = (event: any) => onRowMouseOut({ event, index, rowData });
+  //     }
+  //     if (onRowMouseOver) {
+  //       a11yProps.onMouseOver = (event: any) => onRowMouseOver({ event, index, rowData });
+  //     }
+  //     if (onRowRightClick) {
+  //       a11yProps.onContextMenu = (event: any) => onRowRightClick({ event, index, rowData });
+  //     }
+  //   }
+
+  //   return (
+  //     <div ref={drag} {...a11yProps} className={className + ' row'} key={key} role='row' style={style}>
+  //       {columns}
+  //     </div>
+  //   );
+  // };
+
+  // const RowRenderer: React.FC<TableRowProps> = (props: TableRowProps) => {
+  //   const [{ isDragging }, drag, preview] = useDrag({
+  //     item: { type: 'song', song: songs[props.index] },
+  //     collect: monitor => ({
+  //       isDragging: !!monitor.isDragging(),
+  //     }),
+  //   });
+  //   //props.className += ' row';
+  //   var renderer = defaultTableRowRenderer(props) as any;
+  //   // console.log(renderer);
+  //   //renderer.props.className += ' row';
+  //   renderer.props.ref = drag;
+  //   return <>{renderer}</>;
+  // };
+
   const rowRenderer2 = (props: TableRowProps) => {
     props.className += ' card';
     props.style.left = 10;
@@ -534,7 +737,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const onPlay = async () => {
-    const fileToPlay = playingFile !== '' ? playingFile : selectedFile;
+    const fileToPlay = playingFile !== '' ? playingFile : selectedFiles[0];
     await startQueue(fileToPlay ?? '');
   };
 
@@ -639,8 +842,52 @@ export const SongGrid: React.FC<SongGridProps> = ({
     </div>
   );
 
+  // const RowGetter: React.FC<{ rowIndex: number }> = ({ rowIndex }) => {
+  //   const [{ isDragging }, drag, preview] = useDrag({
+  //     item: { type: 'song', song: songs[rowIndex] },
+  //     collect: monitor => ({
+  //       isDragging: !!monitor.isDragging(),
+  //     }),
+  //   });
+
+  //   return <div ref={drag}>songs[index]</div>;
+  // };
+
+  const getItemStyles = (initialOffset: XYCoord | null, currentOffset: XYCoord | null) => {
+    if (!initialOffset || !currentOffset) {
+      return {
+        display: 'none',
+      };
+    }
+
+    let { x, y } = currentOffset;
+
+    const transform = `translate(${x}px, ${y}px)`;
+    return {
+      transform,
+      WebkitTransform: transform,
+    };
+  };
+
   const mainGrid = (
     <div style={{ height }}>
+      {props?.isDragging ? (
+        <div
+          style={{
+            position: 'fixed',
+            pointerEvents: 'none',
+            zIndex: 100,
+            left: 0,
+            top: 0,
+            width: '100%',
+            height: '100%',
+          }}
+        >
+          <div style={{ ...getItemStyles(props?.initialOffset, props?.currentOffset) }}>
+            {'dragging ' + (props?.isDragging ?? false)}
+          </div>
+        </div>
+      ) : null}
       <Table
         className='main-grid'
         ref={mainRef}
@@ -721,7 +968,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   return (
     <>
-      <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
+      <div ref={drag}>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
       <Controls
         onPlay={onPlay}
         onPrevious={onPrevious}
