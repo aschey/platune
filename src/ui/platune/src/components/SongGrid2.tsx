@@ -13,6 +13,8 @@ import { normal } from 'color-blend';
 import { toastSuccess } from '../appToaster';
 import { FlexCol } from './FlexCol';
 import { Draggable, DraggableProvided, Droppable } from 'react-beautiful-dnd';
+import { Controls } from './Controls';
+import _ from 'lodash';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -66,6 +68,13 @@ export const SongGrid2: React.FC<SongGridProps> = ({
   useEffect(() => {
     loadSongs().then(setSongs);
   }, [loadSongs, setSongs]);
+
+  useEffect(() => {
+    songs.forEach((song, i) => (song.index = i));
+    let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
+    setGroupedSongs(g);
+    setAlbumKeys(_.keys(g));
+  }, [songs]);
 
   const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
 
@@ -254,66 +263,100 @@ export const SongGrid2: React.FC<SongGridProps> = ({
   const genericCellRenderer = ({ rowData, cellData, rowIndex }: { rowData: any; cellData: any; rowIndex: number }) =>
     cellRenderer(rowData as Song, cellData, rowIndex);
 
+  const onPlay = async () => {
+    const fileToPlay = playingFile !== '' ? playingFile : selectedFiles[0];
+    await startQueue(fileToPlay ?? '');
+  };
+
+  const onPrevious = async () => {
+    if (!playingFile) {
+      return;
+    }
+    const playingIndex = audioQueue.queuedSongs.value.indexOf(playingFile);
+    if (playingIndex > 0) {
+      audioQueue.previous();
+    } else {
+      const songPaths = songs.map(s => s.path);
+      const songIndex = songPaths.indexOf(playingFile);
+      if (songIndex > 0) {
+        await startQueue(songPaths[songIndex - 1]);
+      }
+    }
+  };
+
   return (
-    <Droppable droppableId='droppable' mode='virtual'>
-      {(droppableProvided, droppableSnapshot) => (
-        <div ref={droppableProvided.innerRef}>
-          <AutoResizer>
-            {({ width, height }) => (
-              <BaseTable data={songs} width={width} height={height}>
-                <Column
-                  key='edit'
-                  title=''
-                  dataKey='path'
-                  width={50}
-                  cellRenderer={({ rowIndex, cellData }) => editCellRenderer(cellData, rowIndex)}
-                />
-                <Column
-                  key='name'
-                  title='Name'
-                  dataKey='name'
-                  width={0}
-                  flexGrow={1}
-                  resizable
-                  sortable
-                  cellRenderer={genericCellRenderer}
-                />
-                <Column
-                  key='albumArtist'
-                  title='Album Artist'
-                  dataKey='albumArtist'
-                  width={0}
-                  flexGrow={1}
-                  resizable
-                  sortable
-                  cellRenderer={genericCellRenderer}
-                />
-                <Column
-                  key='artist'
-                  title='Artist'
-                  dataKey='artist'
-                  width={0}
-                  flexGrow={1}
-                  resizable
-                  sortable
-                  cellRenderer={genericCellRenderer}
-                />
-                <Column
-                  key='album'
-                  title='Album'
-                  dataKey='album'
-                  width={0}
-                  flexGrow={1}
-                  resizable
-                  sortable
-                  cellRenderer={genericCellRenderer}
-                />
-              </BaseTable>
-            )}
-          </AutoResizer>
-          {droppableProvided.placeholder}
-        </div>
-      )}
-    </Droppable>
+    <>
+      <Droppable droppableId='droppable' mode='virtual'>
+        {(droppableProvided, droppableSnapshot) => (
+          <div ref={droppableProvided.innerRef}>
+            <AutoResizer>
+              {({ width, height }) => (
+                <BaseTable
+                  data={songs}
+                  width={width}
+                  height={height}
+                  rowHeight={25}
+                  ignoreFunctionInColumnCompare={false}
+                >
+                  <Column
+                    key='edit'
+                    title=''
+                    dataKey='path'
+                    width={50}
+                    cellRenderer={({ rowIndex, cellData }) => editCellRenderer(cellData, rowIndex)}
+                  />
+                  <Column
+                    key='name'
+                    title='Name'
+                    dataKey='name'
+                    width={0}
+                    flexGrow={1}
+                    resizable
+                    sortable
+                    cellRenderer={genericCellRenderer}
+                  />
+                  <Column
+                    key='albumArtist'
+                    title='Album Artist'
+                    dataKey='albumArtist'
+                    width={0}
+                    flexGrow={1}
+                    resizable
+                    sortable
+                    cellRenderer={genericCellRenderer}
+                  />
+                  <Column
+                    key='artist'
+                    title='Artist'
+                    dataKey='artist'
+                    width={0}
+                    flexGrow={1}
+                    resizable
+                    sortable
+                    cellRenderer={genericCellRenderer}
+                  />
+                  <Column
+                    key='album'
+                    title='Album'
+                    dataKey='album'
+                    width={0}
+                    flexGrow={1}
+                    resizable
+                    sortable
+                    cellRenderer={genericCellRenderer}
+                  />
+                </BaseTable>
+              )}
+            </AutoResizer>
+            {droppableProvided.placeholder}
+          </div>
+        )}
+      </Droppable>
+      <Controls
+        onPlay={onPlay}
+        onPrevious={onPrevious}
+        playingSong={playingFile !== '' ? queuedSongs.filter(s => s.path === playingFile)[0] : null}
+      />
+    </>
   );
 };

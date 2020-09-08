@@ -143,6 +143,18 @@ canvas {
   background: rgba(var(--grid-stripe2-default), 1);
 }
 
+.BaseTable__row .striped-odd,
+.BaseTable__row .rowParent .striped-odd:not(.selected) {
+  transition: var(--transition);
+  background: rgba(var(--grid-stripe1-default), 1);
+}
+
+.BaseTable__row .row .striped-even,
+.BaseTable__row .rowParent .striped-even:not(.selected) {
+  transition: var(--transition);
+  background: rgba(var(--grid-stripe2-default), 1);
+}
+
 .DragHandle {
   flex: 0 0 16px;
   z-index: 2;
@@ -330,4 +342,18 @@ label {
 .BaseTable__header-row,
 .BaseTable__row {
   border-bottom: none;
+}
+
+.BaseTable__header-cell,
+.BaseTable__row-cell {
+  padding: 0;
+}
+
+.BaseTable__table-main {
+  outline: none;
+}
+
+.BaseTable__table,
+.BaseTable__empty-layer {
+  background: rgba(var(--background-main), 1);
 }
