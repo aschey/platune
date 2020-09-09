@@ -1,7 +1,16 @@
 import { Button, EditableText, Text, Tag, Intent, Colors } from '@blueprintjs/core';
 import _, { Dictionary } from 'lodash';
-import React, { useCallback, useEffect, useState } from 'react';
-import Draggable from 'react-draggable';
+import React, { useCallback, useEffect, useState, useReducer, useRef } from 'react';
+import { default as DraggableCol } from 'react-draggable';
+import {
+  Draggable,
+  DraggableProvided,
+  DraggableStateSnapshot,
+  Droppable,
+  DraggableRubric,
+  DroppableProvided,
+  DroppableStateSnapshot,
+} from 'react-beautiful-dnd';
 import { Column, defaultTableRowRenderer, Table, TableHeaderProps, TableRowProps } from 'react-virtualized';
 import { useObservable } from 'rxjs-hooks';
 import { toastSuccess } from '../appToaster';
@@ -15,6 +24,7 @@ import { FlexCol } from './FlexCol';
 import { normal } from 'color-blend';
 import { hexToRgb } from '../themes/colorMixer';
 import { lightTheme } from '../themes/light';
+import ReactDOM from 'react-dom';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -68,8 +78,8 @@ export const SongGrid: React.FC<SongGridProps> = ({
     tags: remainingWidth * 0.4,
   });
 
-  const mainRef = React.createRef<Table>();
-  const otherRef = React.createRef<Table>();
+  const mainRef = useRef<Table>();
+  const otherRef = useRef<Table>();
   const playingFile = useObservable(() => audioQueue.playingSource);
   const numTries = 10;
 
@@ -156,7 +166,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return (
       <>
         <div className='ReactVirtualized__Table__headerTruncatedText'>{props.label}</div>
-        <Draggable
+        <DraggableCol
           axis='none'
           defaultClassName='DragHandle'
           defaultClassNameDragging='DragHandleActive'
@@ -166,7 +176,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           }}
         >
           <span className='DragHandleIcon'>⋮</span>
-        </Draggable>
+        </DraggableCol>
       </>
     );
   };
@@ -513,9 +523,71 @@ export const SongGrid: React.FC<SongGridProps> = ({
     setCssVar('--tag-fg-3', formatRgb(blended6));
   };
 
+  const defaultRowRenderer = (
+    provided: DraggableProvided,
+    {
+      className,
+      columns,
+      index,
+      key,
+      onRowClick,
+      onRowDoubleClick,
+      onRowMouseOut,
+      onRowMouseOver,
+      onRowRightClick,
+      rowData,
+      style,
+    }: any
+  ) => {
+    const a11yProps: any = { 'aria-rowindex': index + 1 };
+
+    if (onRowClick || onRowDoubleClick || onRowMouseOut || onRowMouseOver || onRowRightClick) {
+      a11yProps['aria-label'] = 'row';
+      a11yProps.tabIndex = 0;
+
+      if (onRowClick) {
+        a11yProps.onClick = (event: any) => onRowClick({ event, index, rowData });
+      }
+      if (onRowDoubleClick) {
+        a11yProps.onDoubleClick = (event: any) => onRowDoubleClick({ event, index, rowData });
+      }
+      if (onRowMouseOut) {
+        a11yProps.onMouseOut = (event: any) => onRowMouseOut({ event, index, rowData });
+      }
+      if (onRowMouseOver) {
+        a11yProps.onMouseOver = (event: any) => onRowMouseOver({ event, index, rowData });
+      }
+      if (onRowRightClick) {
+        a11yProps.onContextMenu = (event: any) => onRowRightClick({ event, index, rowData });
+      }
+    }
+
+    return (
+      <div
+        ref={provided.innerRef}
+        {...a11yProps}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+        className={className + ' row'}
+        key={key}
+        role='row'
+        style={style}
+      >
+        {columns}
+      </div>
+    );
+  };
+
   const rowRenderer = (props: TableRowProps) => {
     props.className += ' row';
-    return defaultTableRowRenderer(props);
+    return (
+      <Draggable draggableId={props.index.toString()} index={props.index} key={props.index}>
+        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
+          props.style = { ...props.style, ...provided.draggableProps.style };
+          return <>{defaultRowRenderer(provided, props)}</>;
+        }}
+      </Draggable>
+    );
   };
 
   const rowRenderer2 = (props: TableRowProps) => {
@@ -530,7 +602,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
     props.style.height -= 15;
     props.style.width -= 30;
-    return defaultTableRowRenderer(props);
+    return (
+      <Draggable draggableId={props.index.toString()} index={props.index} key={props.index}>
+        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
+          props.style = { ...props.style, ...provided.draggableProps.style };
+          return <>{defaultRowRenderer(provided, props)}</>;
+        }}
+      </Draggable>
+    );
   };
 
   const onPlay = async () => {
@@ -547,7 +626,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
     <div style={{ height }}>
       <Table
         className='main-grid'
-        ref={otherRef}
+        ref={ref => {
+          if (ref) {
+            otherRef.current = ref;
+          }
+        }}
         width={width - 5}
         height={height}
         headerHeight={25}
@@ -607,7 +690,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex, dataKey }) => multiSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
+          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
           width={widths2.name}
           minWidth={widths2.name}
         />
@@ -643,7 +726,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
     <div style={{ height }}>
       <Table
         className='main-grid'
-        ref={mainRef}
+        ref={ref => {
+          if (ref) {
+            mainRef.current = ref;
+          }
+        }}
         width={width - 5}
         height={height}
         headerHeight={25}
@@ -721,7 +808,22 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   return (
     <>
-      <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
+      <Droppable
+        droppableId='mainGrid'
+        mode='virtual'
+        renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => (
+          <div ref={provided.innerRef}>test</div>
+        )}
+      >
+        {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
+          const node = ReactDOM.findDOMNode(selectedGrid === 'song' ? mainRef.current : otherRef.current);
+          if (node instanceof HTMLElement) {
+            droppableProvided.innerRef(node);
+          }
+
+          return <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>;
+        }}
+      </Droppable>
       <Controls
         onPlay={onPlay}
         onPrevious={onPrevious}

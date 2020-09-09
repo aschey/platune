@@ -10,6 +10,7 @@ import { QueueGrid } from './QueueGrid';
 import { SongGrid } from './SongGrid';
 import _ from 'lodash';
 import { setCssVar } from '../util';
+import { DragDropContext } from 'react-beautiful-dnd';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -91,7 +92,7 @@ const App: React.FC<{}> = () => {
   }, [sidePanelWidth, gridMargin, getWidth, gridRef]);
 
   return (
-    <>
+    <DragDropContext onDragEnd={() => {}}>
       <MainNavBar
         sidePanelWidth={sidePanelWidth}
         setSidePanelWidth={setSidePanelWidth}
@@ -128,7 +129,7 @@ const App: React.FC<{}> = () => {
           setQueuedSongs={setQueuedSongs}
         />
       </div>
-    </>
+    </DragDropContext>
   );
 };
 
