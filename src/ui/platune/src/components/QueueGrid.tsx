@@ -1,5 +1,5 @@
 import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Column, defaultTableRowRenderer, Table, TableHeaderRowProps, TableRowProps } from 'react-virtualized';
 import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
 import { useObservable } from 'rxjs-hooks';
@@ -8,6 +8,16 @@ import { Song } from '../models/song';
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { AddEditTag } from './AddEditTag';
+import {
+  DraggableProvided,
+  DraggableStateSnapshot,
+  DraggableRubric,
+  Droppable,
+  DroppableProvided,
+  DroppableStateSnapshot,
+} from 'react-beautiful-dnd';
+import ReactDOM from 'react-dom';
+import { uniqueId } from 'lodash';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -16,6 +26,7 @@ interface QueueGridProps {
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const tagRef = useRef<Table>();
   const width = 190;
 
   const rowRenderer = (props: TableRowProps) => {
@@ -56,40 +67,51 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
             </Button>
           </FlexRow>
         </FlexCol>
-        <Table
-          width={width}
-          height={(window.innerHeight - 180) / 2}
-          rowHeight={30}
-          headerHeight={25}
-          disableHeader={true}
-          rowCount={queuedSongs.length}
-          rowGetter={({ index }) => queuedSongs[index]}
-          style={{ background: 'rgba(var(--background-secondary), 1)' }}
-        >
-          <Column
-            dataKey=''
-            width={width}
-            cellRenderer={({ rowIndex }) => (
-              <div style={{ paddingLeft: 5 }}>
-                <Tag minimal intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][rowIndex % 4]}>
-                  {
-                    <FlexRow>
-                      <FlexCol>
-                        <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
-                          <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
-                        </Button>
-                      </FlexCol>
-                      <Text ellipsize className='tag-text'>
-                        {queuedSongs[rowIndex].name}
-                      </Text>
-                      <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
-                    </FlexRow>
-                  }
-                </Tag>
-              </div>
-            )}
-          />
-        </Table>
+        <div style={{ height: (window.innerHeight - 180) / 2, overflowY: 'scroll' }}>
+          {queuedSongs.length < 100
+            ? null
+            : queuedSongs.slice(0, 100).map((s, i) => {
+                return (
+                  <Droppable droppableId={`tag${i}`} key={i}>
+                    {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
+                      if (snapshot.isDraggingOver) {
+                        console.log('dragging', queuedSongs[i].name);
+                      }
+
+                      return (
+                        <>
+                          <div
+                            {...droppableProvided.droppableProps}
+                            style={{ paddingLeft: 5 }}
+                            ref={droppableProvided.innerRef}
+                          >
+                            <Tag
+                              minimal
+                              intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][i % 4]}
+                            >
+                              {
+                                <FlexRow>
+                                  <FlexCol>
+                                    <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
+                                      <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
+                                    </Button>
+                                  </FlexCol>
+                                  <Text ellipsize className='tag-text'>
+                                    {queuedSongs[i].name}
+                                  </Text>
+                                  <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
+                                </FlexRow>
+                              }
+                            </Tag>
+                          </div>
+                        </>
+                      );
+                    }}
+                  </Droppable>
+                );
+              })}
+        </div>
+
         <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width + 5 }} />
         <FlexCol
           style={{
