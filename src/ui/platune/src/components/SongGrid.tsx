@@ -586,61 +586,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
     setCssVar('--tag-fg-3', formatRgb(blended6));
   };
 
-  const defaultRowRenderer = (
-    provided: DraggableProvided,
-    {
-      className,
-      columns,
-      index,
-      key,
-      onRowClick,
-      onRowDoubleClick,
-      onRowMouseOut,
-      onRowMouseOver,
-      onRowRightClick,
-      rowData,
-      style,
-    }: any
-  ) => {
-    const a11yProps: any = { 'aria-rowindex': index + 1 };
-
-    if (onRowClick || onRowDoubleClick || onRowMouseOut || onRowMouseOver || onRowRightClick) {
-      a11yProps['aria-label'] = 'row';
-      a11yProps.tabIndex = 0;
-
-      if (onRowClick) {
-        a11yProps.onClick = (event: any) => onRowClick({ event, index, rowData });
-      }
-      if (onRowDoubleClick) {
-        a11yProps.onDoubleClick = (event: any) => onRowDoubleClick({ event, index, rowData });
-      }
-      if (onRowMouseOut) {
-        a11yProps.onMouseOut = (event: any) => onRowMouseOut({ event, index, rowData });
-      }
-      if (onRowMouseOver) {
-        a11yProps.onMouseOver = (event: any) => onRowMouseOver({ event, index, rowData });
-      }
-      if (onRowRightClick) {
-        a11yProps.onContextMenu = (event: any) => onRowRightClick({ event, index, rowData });
-      }
-    }
-
-    return (
-      <div
-        ref={provided.innerRef}
-        {...a11yProps}
-        {...provided.draggableProps}
-        {...provided.dragHandleProps}
-        className={className + ' row'}
-        key={key}
-        role='row'
-        style={style}
-      >
-        {columns}
-      </div>
-    );
-  };
-
   const rowRenderer = (props: TableRowProps) => {
     props.className += ' row';
     return defaultTableRowRenderer(props);
@@ -658,14 +603,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
     props.style.height -= 15;
     props.style.width -= 30;
-    return (
-      <Draggable draggableId={props.index.toString()} index={props.index} key={props.index}>
-        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
-          props.style = { ...props.style, ...provided.draggableProps.style };
-          return <>{defaultRowRenderer(provided, props)}</>;
-        }}
-      </Draggable>
-    );
+    return defaultTableRowRenderer(props);
   };
 
   const onPlay = async () => {

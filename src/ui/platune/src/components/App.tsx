@@ -47,7 +47,7 @@ const App: React.FC<{}> = () => {
 
   useEffect(() => {
     let w = window as any;
-    w['__react-beautiful-dnd-disable-dev-warnings'] = true;
+    //w['__react-beautiful-dnd-disable-dev-warnings'] = true;
 
     window.addEventListener('resize', debounced);
     return () => window.removeEventListener('resize', debounced);

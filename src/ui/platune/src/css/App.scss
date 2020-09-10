@@ -2,7 +2,7 @@ html,
 body {
   background: rgba(var(--background-main), 1);
   color: rgba(var(--text-main), 1);
-  overflow-x: hidden;
+  overflow: hidden;
 }
 body * {
   user-select: none;

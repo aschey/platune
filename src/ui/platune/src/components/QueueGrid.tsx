@@ -1,6 +1,14 @@
 import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
 import React, { useState, useRef } from 'react';
-import { Column, defaultTableRowRenderer, Table, TableHeaderRowProps, TableRowProps } from 'react-virtualized';
+import {
+  Column,
+  defaultTableRowRenderer,
+  Table,
+  TableHeaderRowProps,
+  TableRowProps,
+  List,
+  ListRowProps,
+} from 'react-virtualized';
 import { defaultHeaderRowRenderer } from 'react-virtualized/dist/es/Table';
 import { useObservable } from 'rxjs-hooks';
 import { audioQueue } from '../audio';
@@ -15,6 +23,7 @@ import {
   Droppable,
   DroppableProvided,
   DroppableStateSnapshot,
+  Draggable,
 } from 'react-beautiful-dnd';
 import ReactDOM from 'react-dom';
 import { uniqueId } from 'lodash';
@@ -26,25 +35,88 @@ interface QueueGridProps {
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const tagRef = useRef<Table>();
   const width = 190;
 
-  const rowRenderer = (props: TableRowProps) => {
-    props.style.width -= 11;
+  const rowRenderer = (props: ListRowProps) => {
+    if (props.style.width) {
+      props.style.width = (props.style.width as number) - 11;
+    }
     props.style.boxShadow =
       queuedSongs[props.index].path === playingSource
         ? 'inset 0 0 2px 2px rgba(var(--intent-success), 0.3)'
         : 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
-    props.onRowDoubleClick = params => {
-      audioQueue.start(queuedSongs[params.index].path);
-    };
-    return defaultTableRowRenderer(props);
+    // props.onRowDoubleClick = params => {
+    //   audioQueue.start(queuedSongs[params.index].path);
+    // };
+    return (
+      <Draggable draggableId={props.index.toString()} index={props.index} key={props.index}>
+        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
+          props.style = { ...props.style, ...provided.draggableProps.style };
+          return <>{defaultRowRenderer(provided, props)}</>;
+        }}
+      </Draggable>
+    );
   };
 
   const headerRowRenderer = (props: TableHeaderRowProps) => {
     props.style.margin = 0;
     props.style.padding = 0;
     return defaultHeaderRowRenderer(props);
+  };
+
+  const defaultRowRenderer = (
+    provided: DraggableProvided,
+    {
+      className,
+      columns,
+      index,
+      key,
+      onRowClick,
+      onRowDoubleClick,
+      onRowMouseOut,
+      onRowMouseOver,
+      onRowRightClick,
+      rowData,
+      style,
+    }: any
+  ) => {
+    const a11yProps: any = { 'aria-rowindex': index + 1 };
+
+    if (onRowClick || onRowDoubleClick || onRowMouseOut || onRowMouseOver || onRowRightClick) {
+      a11yProps['aria-label'] = 'row';
+      a11yProps.tabIndex = 0;
+
+      if (onRowClick) {
+        a11yProps.onClick = (event: any) => onRowClick({ event, index, rowData });
+      }
+      if (onRowDoubleClick) {
+        a11yProps.onDoubleClick = (event: any) => onRowDoubleClick({ event, index, rowData });
+      }
+      if (onRowMouseOut) {
+        a11yProps.onMouseOut = (event: any) => onRowMouseOut({ event, index, rowData });
+      }
+      if (onRowMouseOver) {
+        a11yProps.onMouseOver = (event: any) => onRowMouseOver({ event, index, rowData });
+      }
+      if (onRowRightClick) {
+        a11yProps.onContextMenu = (event: any) => onRowRightClick({ event, index, rowData });
+      }
+    }
+
+    return (
+      <div
+        ref={provided.innerRef}
+        {...a11yProps}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+        className={className + ' row'}
+        key={key}
+        role='row'
+        style={style}
+      >
+        {'test'}
+      </div>
+    );
   };
 
   return (
@@ -124,47 +196,66 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
         >
           Now Playing
         </FlexCol>
-        <Table
-          width={width}
-          height={(window.innerHeight - 180) / 2}
-          rowHeight={70}
-          disableHeader={true}
-          headerHeight={25}
-          headerRowRenderer={headerRowRenderer}
-          rowCount={queuedSongs.length}
-          rowGetter={({ index }) => queuedSongs[index]}
-          rowRenderer={rowRenderer}
-          style={{ background: 'rgba(var(--background-secondary), 1)' }}
+        <Droppable
+          droppableId='queueGrid'
+          mode='virtual'
+          renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => {
+            return <div />;
+          }}
         >
-          <Column
-            dataKey=''
-            width={50}
-            cellRenderer={({ rowIndex }) => (
-              <div style={{ paddingLeft: 10, fontSize: 12 }}>
-                {queuedSongs[rowIndex].path === playingSource ? (
-                  <Icon icon='volume-up' style={{ color: 'rgba(var(--intent-success), 1)' }} />
-                ) : (
-                  <Text ellipsize>{rowIndex + 1}</Text>
-                )}
-              </div>
-            )}
-          />
-          <Column
-            width={width - 50}
-            dataKey='name'
-            cellRenderer={({ rowIndex }) => (
-              <FlexCol center={false}>
-                <Text ellipsize>{queuedSongs[rowIndex].name}</Text>
-                <Text ellipsize className='secondary-text'>
-                  {queuedSongs[rowIndex].album}
-                </Text>
-                <Text ellipsize className='secondary-text'>
-                  {queuedSongs[rowIndex].artist}
-                </Text>
-              </FlexCol>
-            )}
-          />
-        </Table>
+          {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
+            return (
+              <List
+                ref={ref => {
+                  const domRef = ReactDOM.findDOMNode(ref);
+                  if (domRef instanceof HTMLElement) {
+                    droppableProvided.innerRef(domRef as HTMLElement);
+                  }
+                }}
+                width={width}
+                height={(window.innerHeight - 180) / 2 - 40}
+                rowHeight={70}
+                disableHeader={true}
+                headerHeight={25}
+                headerRowRenderer={headerRowRenderer}
+                rowCount={queuedSongs.length}
+                //rowGetter={(props) => queuedSongs[index]}
+                rowRenderer={rowRenderer}
+                style={{ background: 'rgba(var(--background-secondary), 1)' }}
+                {...droppableProvided.droppableProps}
+              >
+                <Column
+                  dataKey=''
+                  width={50}
+                  cellRenderer={({ rowIndex }) => (
+                    <div style={{ paddingLeft: 10, fontSize: 12 }}>
+                      {queuedSongs[rowIndex].path === playingSource ? (
+                        <Icon icon='volume-up' style={{ color: 'rgba(var(--intent-success), 1)' }} />
+                      ) : (
+                        <Text ellipsize>{rowIndex + 1}</Text>
+                      )}
+                    </div>
+                  )}
+                />
+                <Column
+                  width={width - 50}
+                  dataKey='name'
+                  cellRenderer={({ rowIndex }) => (
+                    <FlexCol center={false}>
+                      <Text ellipsize>{queuedSongs[rowIndex].name}</Text>
+                      <Text ellipsize className='secondary-text'>
+                        {queuedSongs[rowIndex].album}
+                      </Text>
+                      <Text ellipsize className='secondary-text'>
+                        {queuedSongs[rowIndex].artist}
+                      </Text>
+                    </FlexCol>
+                  )}
+                />
+              </List>
+            );
+          }}
+        </Droppable>
       </div>
       <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} />
     </>
