@@ -80,6 +80,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const mainRef = useRef<Table>();
   const otherRef = useRef<Table>();
+  const draggingFile = useRef<string>('');
   const playingFile = useObservable(() => audioQueue.playingSource);
   const numTries = 10;
 
@@ -281,10 +282,59 @@ export const SongGrid: React.FC<SongGridProps> = ({
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
+
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
         <Text ellipsize>{child}</Text>
       </div>
+    );
+  };
+
+  const cellRenderer2 = (
+    rowIndex: number,
+    path: string,
+    value: string,
+    draggingSong: string,
+    canEdit: boolean = true
+  ) => {
+    let classes = 'bp3-table-cell grid-cell';
+    let child: JSX.Element | string = value;
+    if (path === editingFile) {
+      classes += ' editing selected';
+      child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
+    } else if (path === playingFile) {
+      classes += ' playing';
+    } else if (path === selectedFile) {
+      classes += ' selected';
+    } else {
+      classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
+    }
+
+    return path === draggingSong ? (
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+        <Text ellipsize>{child}</Text>
+      </div>
+    ) : (
+      <Draggable draggableId={path} index={rowIndex} key={path}>
+        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
+          const node = (
+            <div
+              ref={provided.innerRef}
+              {...provided.dragHandleProps}
+              {...provided.draggableProps}
+              style={{ ...provided.draggableProps.style, ...provided.draggableProps.style, transform: 'none' }}
+              key={path}
+              className={classes}
+              onDoubleClick={() => onDoubleClick(path)}
+              onClick={() => onRowClick(path)}
+            >
+              <Text ellipsize>{child}</Text>
+            </div>
+          );
+
+          return node;
+        }}
+      </Draggable>
     );
   };
 
@@ -295,6 +345,19 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const path = songs[rowIndex].path;
     const value = songs[rowIndex][field].toString();
     return cellRenderer(rowIndex, path, value);
+  };
+
+  const genericCellRenderer2 = (
+    rowIndex: number,
+    field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time',
+    draggingSong: string
+  ) => {
+    if (rowIndex >= songs.length) {
+      return null;
+    }
+    const path = songs[rowIndex].path;
+    const value = songs[rowIndex][field].toString();
+    return cellRenderer2(rowIndex, path, value, draggingSong);
   };
 
   const trackRenderer = (rowIndex: number) => {
@@ -580,14 +643,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const rowRenderer = (props: TableRowProps) => {
     props.className += ' row';
-    return (
-      <Draggable draggableId={props.index.toString()} index={props.index} key={props.index}>
-        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
-          props.style = { ...props.style, ...provided.draggableProps.style };
-          return <>{defaultRowRenderer(provided, props)}</>;
-        }}
-      </Draggable>
-    );
+    return defaultTableRowRenderer(props);
   };
 
   const rowRenderer2 = (props: TableRowProps) => {
@@ -722,7 +778,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     </div>
   );
 
-  const mainGrid = (
+  const mainGrid = (draggingSong: string) => (
     <div style={{ height }}>
       <Table
         className='main-grid'
@@ -750,7 +806,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'name')}
+          cellRenderer={({ rowIndex }) => genericCellRenderer2(rowIndex, 'name', draggingSong)}
           width={widths.name}
           minWidth={widths.name}
         />
@@ -809,11 +865,21 @@ export const SongGrid: React.FC<SongGridProps> = ({
   return (
     <>
       <Droppable
+        isDropDisabled
         droppableId='mainGrid'
         mode='virtual'
-        renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => (
-          <div ref={provided.innerRef}>test</div>
-        )}
+        renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => {
+          return (
+            <div
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              ref={provided.innerRef}
+              style={provided.draggableProps.style}
+            >
+              {songs[rubric.source.index].name}
+            </div>
+          );
+        }}
       >
         {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
           const node = ReactDOM.findDOMNode(selectedGrid === 'song' ? mainRef.current : otherRef.current);
@@ -821,7 +887,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             droppableProvided.innerRef(node);
           }
 
-          return <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>;
+          return <div>{selectedGrid === 'song' ? mainGrid(snapshot.draggingFromThisWith ?? '') : otherGrid}</div>;
         }}
       </Droppable>
       <Controls
