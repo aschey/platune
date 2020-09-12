@@ -176,10 +176,10 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
             .route("/albumArtColors", web::get().to(get_art_colors))
             .route("/search", web::get().to(search))
             .route("/sync", web::put().to(get_all_files))
-            .route("/addTag", web::post().to(add_tag))
-            .route("/updateTag/{tag_id}", web::put().to(update_tag))
+            .route("/tags", web::post().to(add_tag))
+            .route("/tags/{tag_id}", web::put().to(update_tag))
             .route("/tags", web::get().to(get_tags))
-            .route("/deleteTag/{tag_id}", web::delete().to(delete_tag))
+            .route("/tags/{tag_id}", web::delete().to(delete_tag))
             .with_json_spec_at("/spec")
             .build()
             // static files
