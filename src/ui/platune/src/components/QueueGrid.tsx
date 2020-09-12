@@ -129,12 +129,17 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                         <>
                           <div
                             {...droppableProvided.droppableProps}
-                            style={{ paddingLeft: 5 }}
+                            style={{ paddingLeft: 5, paddingBottom: 5 }}
                             ref={droppableProvided.innerRef}
                           >
                             <Tag
                               minimal
                               intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][i % 4]}
+                              style={{
+                                boxShadow: snapshot.isDraggingOver
+                                  ? 'inset 0 0 8px 8px rgba(var(--intent-primary), 0.6)'
+                                  : undefined,
+                              }}
                             >
                               {
                                 <FlexRow>
