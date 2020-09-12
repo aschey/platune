@@ -57,7 +57,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
 
@@ -196,7 +196,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
     const path = songs[rowIndex].path;
     const isEditingRow = editingFile === path;
-    const isSelectedRow = selectedFile === path;
+    const isSelectedRow = selectedFiles.indexOf(path) > -1;
     const isPlayingRow = playingFile === path;
     const classes = `${isEditingRow ? 'editing' : ''} ${
       isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : rowIndex % 2 === 0 ? 'striped-even' : 'striped-odd'
@@ -213,7 +213,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             minimal
             className={isPlayingRow ? 'playing' : ''}
             icon={isEditingRow ? 'saved' : isPlayingRow ? 'volume-up' : 'edit'}
-            onClick={() => {
+            onClick={(e: React.MouseEvent) => {
               const cur = songs[rowIndex];
               let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
               if (selectedGrid === 'album') {
@@ -227,7 +227,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
                 toastSuccess();
                 setEditingFile('');
               } else {
-                setSelectedFile(path);
+                onFileSelect(e, path);
                 setEditingFile(path);
               }
             }}
@@ -235,6 +235,24 @@ export const SongGrid: React.FC<SongGridProps> = ({
         </FlexCol>
       </div>
     );
+  };
+
+  const onFileSelect = (e: React.MouseEvent, path: string) => {
+    if (e.ctrlKey) {
+      setSelectedFiles(selectedFiles.concat([path]));
+    } else if (e.shiftKey) {
+      const paths = songs.map(s => s.path);
+      const index = paths.indexOf(path);
+
+      for (let i = index - 1; i >= 0; i--) {
+        if (selectedFiles.indexOf(paths[i]) > -1) {
+          setSelectedFiles(selectedFiles.concat(paths.slice(i, index + 1)));
+          break;
+        }
+      }
+    } else {
+      setSelectedFiles([path]);
+    }
   };
 
   const onDoubleClick = async (path: string) => {
@@ -285,14 +303,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
       child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
     return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         <Text ellipsize>{child}</Text>
       </div>
     );
@@ -312,14 +330,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
       child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
     return path === draggingSong ? (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         <Text ellipsize>{child}</Text>
       </div>
     ) : (
@@ -334,7 +352,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
               key={path}
               className={classes}
               onDoubleClick={() => onDoubleClick(path)}
-              onClick={() => onRowClick(path)}
+              onClick={e => onRowClick(e, path)}
             >
               <Text ellipsize>{child}</Text>
             </div>
@@ -404,14 +422,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
       //child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
     return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
           Main
         </Tag>
@@ -442,7 +460,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       //child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
@@ -450,7 +468,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
     if (songs[rowIndex].hasArt) {
       return (
-        <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+        <div
+          key={path}
+          className={classes}
+          onDoubleClick={() => onDoubleClick(path)}
+          onClick={e => onRowClick(e, path)}
+        >
           <Tag
             style={{
               height: 20,
@@ -505,7 +528,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       );
     }
     return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
           Main
         </Tag>
@@ -533,8 +556,8 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
   };
 
-  const onRowClick = (path: string) => {
-    setSelectedFile(path);
+  const onRowClick = (e: React.MouseEvent, path: string) => {
+    onFileSelect(e, path);
     const cur = songs.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
     const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
@@ -615,7 +638,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const onPlay = async () => {
-    const fileToPlay = playingFile !== '' ? playingFile : selectedFile;
+    const fileToPlay = playingFile !== '' ? playingFile : selectedFiles[0];
     await startQueue(fileToPlay ?? '');
   };
 
