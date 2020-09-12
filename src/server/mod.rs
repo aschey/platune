@@ -315,7 +315,8 @@ fn read_album_art(from_tag: Vec<u8>, path: PathBuf) -> Option<Vec<u8>> {
         let cover_opt = parent_files.find(|f| {
             let temp = f.as_ref().unwrap().path();
             let path = temp.to_str().unwrap();
-            return path.ends_with("cover.jpg") || path.ends_with("cover.png");
+            return path.to_lowercase().ends_with("cover.jpg")
+                || path.to_lowercase().ends_with("cover.png");
         });
         if let Some(cover) = cover_opt {
             let img = std::fs::read(cover.unwrap().path()).unwrap();
