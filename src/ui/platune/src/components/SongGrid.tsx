@@ -11,7 +11,15 @@ import {
   DroppableProvided,
   DroppableStateSnapshot,
 } from 'react-beautiful-dnd';
-import { Column, defaultTableRowRenderer, Table, TableHeaderProps, TableRowProps } from 'react-virtualized';
+import {
+  Column,
+  defaultTableRowRenderer,
+  GridCellProps,
+  Table,
+  TableCellProps,
+  TableHeaderProps,
+  TableRowProps,
+} from 'react-virtualized';
 import { useObservable } from 'rxjs-hooks';
 import { toastSuccess } from '../appToaster';
 import { audioQueue } from '../audio';
@@ -182,7 +190,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     );
   };
 
-  const editCellRenderer = (rowIndex: number) => {
+  const editCellRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
@@ -338,12 +346,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
     );
   };
 
-  const genericCellRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time') => {
+  const genericCellRenderer = ({ rowIndex, dataKey }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
-    const value = songs[rowIndex][field].toString();
+    const value = (songs as any)[rowIndex][dataKey].toString();
     return cellRenderer(rowIndex, path, value);
   };
 
@@ -360,7 +368,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return cellRenderer2(rowIndex, path, value, draggingSong);
   };
 
-  const trackRenderer = (rowIndex: number) => {
+  const trackRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
@@ -372,7 +380,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return cellRenderer(rowIndex, path, value);
   };
 
-  const timeRenderer = (rowIndex: number) => {
+  const timeRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
@@ -382,7 +390,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return cellRenderer(rowIndex, path, fmtValue);
   };
 
-  const pathRenderer = (rowIndex: number) => {
+  const pathRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
@@ -420,7 +428,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     );
   };
 
-  const pathRenderer2 = (rowIndex: number) => {
+  const pathRenderer2 = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
@@ -611,9 +619,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
     await startQueue(fileToPlay ?? '');
   };
 
-  const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => JSX.Element | null) => {
-    let g = groupedSongs[albumKeys[rowIndex]];
-    return <div className='rowParent'>{g.map(gg => cellRenderer(gg.index))}</div>;
+  const multiSongRenderer = (props: TableCellProps, cellRenderer: (props: TableCellProps) => JSX.Element | null) => {
+    let g = groupedSongs[albumKeys[props.rowIndex]];
+    return <div className='rowParent'>{g.map(gg => cellRenderer({ ...props, rowIndex: gg.index }))}</div>;
   };
 
   const otherGrid = (
@@ -676,7 +684,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey=''
           label=''
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, editCellRenderer)}
+          cellRenderer={props => multiSongRenderer(props, editCellRenderer)}
           width={widths2.edit}
           minWidth={widths2.edit}
         />
@@ -684,7 +692,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
+          cellRenderer={props => multiSongRenderer(props, genericCellRenderer)}
           width={widths2.name}
           minWidth={widths2.name}
         />
@@ -692,7 +700,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='track'
           label='Track'
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, trackRenderer)}
+          cellRenderer={props => multiSongRenderer(props, trackRenderer)}
           width={widths2.track}
           minWidth={widths2.track}
         />
@@ -700,7 +708,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='time'
           label='Time'
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, timeRenderer)}
+          cellRenderer={props => multiSongRenderer(props, timeRenderer)}
           width={widths2.time}
           minWidth={widths2.time}
         />
@@ -708,7 +716,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey=''
           label='Tags'
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, pathRenderer2)}
+          cellRenderer={props => multiSongRenderer(props, pathRenderer2)}
           width={widths2.tags}
           minWidth={widths2.tags}
         />
@@ -736,7 +744,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         <Column
           headerRenderer={headerRenderer}
           dataKey=''
-          cellRenderer={({ rowIndex }) => editCellRenderer(rowIndex)}
+          cellRenderer={editCellRenderer}
           width={widths.edit}
           minWidth={widths.edit}
         />
@@ -752,7 +760,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='albumArtist'
           label='Album Artist'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'albumArtist')}
+          cellRenderer={genericCellRenderer}
           width={widths.albumArtist}
           minWidth={widths.albumArtist}
         />
@@ -760,7 +768,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='artist'
           label='Artist'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'artist')}
+          cellRenderer={genericCellRenderer}
           width={widths.artist}
           minWidth={widths.artist}
         />
@@ -768,7 +776,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='album'
           label='Album'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'album')}
+          cellRenderer={genericCellRenderer}
           width={widths.album}
           minWidth={widths.album}
         />
@@ -776,7 +784,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='track'
           label='Track'
-          cellRenderer={({ rowIndex }) => trackRenderer(rowIndex)}
+          cellRenderer={trackRenderer}
           width={widths.track}
           minWidth={widths.track}
         />
@@ -784,7 +792,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='time'
           label='Time'
-          cellRenderer={({ rowIndex }) => timeRenderer(rowIndex)}
+          cellRenderer={timeRenderer}
           width={widths.time}
           minWidth={widths.time}
         />
@@ -792,7 +800,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='path'
           label='Tags'
-          cellRenderer={({ rowIndex }) => pathRenderer(rowIndex)}
+          cellRenderer={pathRenderer}
           width={widths.tags}
           minWidth={widths.tags}
         />
