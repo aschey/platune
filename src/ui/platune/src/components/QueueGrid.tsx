@@ -35,7 +35,7 @@ interface QueueGridProps {
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const width = 190;
+  const width = 200;
 
   const rowRenderer = (props: ListRowProps) => {
     if (props.style.width) {
@@ -45,14 +45,38 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
       queuedSongs[props.index].path === playingSource
         ? 'inset 0 0 2px 2px rgba(var(--intent-success), 0.3)'
         : 'inset 0 -1px 0 rgba(16, 22, 26, 0.3), inset -1px 0 0 rgba(16, 22, 26, 0.3)';
-    // props.onRowDoubleClick = params => {
-    //   audioQueue.start(queuedSongs[params.index].path);
-    // };
+
     return (
-      <Draggable draggableId={props.index.toString()} index={props.index} key={props.index}>
+      <Draggable draggableId={`queue${props.index.toString()}`} index={props.index} key={props.index}>
         {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
           props.style = { ...props.style, ...provided.draggableProps.style };
-          return <>{defaultRowRenderer(provided, props)}</>;
+          return (
+            <FlexRow
+              ref={provided.innerRef}
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              key={props.key}
+              onDoubleClick={() => audioQueue.start(queuedSongs[props.index].path)}
+              style={{ ...provided.draggableProps.style, ...props.style, width: 180 }}
+            >
+              <div style={{ paddingLeft: 10, fontSize: 12, width: 45 }}>
+                {queuedSongs[props.index].path === playingSource ? (
+                  <Icon icon='volume-up' style={{ color: 'rgba(var(--intent-success), 1)' }} />
+                ) : (
+                  <Text ellipsize>{props.index + 1}</Text>
+                )}
+              </div>
+              <FlexCol center={false} style={{ width: 135 }}>
+                <Text ellipsize>{queuedSongs[props.index].name}</Text>
+                <Text ellipsize className='secondary-text'>
+                  {queuedSongs[props.index].album}
+                </Text>
+                <Text ellipsize className='secondary-text'>
+                  {queuedSongs[props.index].artist}
+                </Text>
+              </FlexCol>
+            </FlexRow>
+          );
         }}
       </Draggable>
     );
@@ -64,64 +88,9 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
     return defaultHeaderRowRenderer(props);
   };
 
-  const defaultRowRenderer = (
-    provided: DraggableProvided,
-    {
-      className,
-      columns,
-      index,
-      key,
-      onRowClick,
-      onRowDoubleClick,
-      onRowMouseOut,
-      onRowMouseOver,
-      onRowRightClick,
-      rowData,
-      style,
-    }: any
-  ) => {
-    const a11yProps: any = { 'aria-rowindex': index + 1 };
-
-    if (onRowClick || onRowDoubleClick || onRowMouseOut || onRowMouseOver || onRowRightClick) {
-      a11yProps['aria-label'] = 'row';
-      a11yProps.tabIndex = 0;
-
-      if (onRowClick) {
-        a11yProps.onClick = (event: any) => onRowClick({ event, index, rowData });
-      }
-      if (onRowDoubleClick) {
-        a11yProps.onDoubleClick = (event: any) => onRowDoubleClick({ event, index, rowData });
-      }
-      if (onRowMouseOut) {
-        a11yProps.onMouseOut = (event: any) => onRowMouseOut({ event, index, rowData });
-      }
-      if (onRowMouseOver) {
-        a11yProps.onMouseOver = (event: any) => onRowMouseOver({ event, index, rowData });
-      }
-      if (onRowRightClick) {
-        a11yProps.onContextMenu = (event: any) => onRowRightClick({ event, index, rowData });
-      }
-    }
-
-    return (
-      <div
-        ref={provided.innerRef}
-        {...a11yProps}
-        {...provided.draggableProps}
-        {...provided.dragHandleProps}
-        className={className + ' row'}
-        key={key}
-        role='row'
-        style={style}
-      >
-        {'test'}
-      </div>
-    );
-  };
-
   return (
     <>
-      <div style={{ maxWidth: width, paddingLeft: 5, paddingRight: 5 }}>
+      <div style={{ maxWidth: width, paddingLeft: 5 }}>
         <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width + 5 }} />
         <FlexCol
           style={{
@@ -139,7 +108,13 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
             </Button>
           </FlexRow>
         </FlexCol>
-        <div style={{ height: (window.innerHeight - 180) / 2, overflowY: 'scroll' }}>
+        <div
+          style={{
+            height: (window.innerHeight - 180) / 2,
+            overflowY: 'auto',
+            background: 'rgba(var(--background-secondary), 1)',
+          }}
+        >
           {queuedSongs.length < 100
             ? null
             : queuedSongs.slice(0, 100).map((s, i) => {
@@ -184,14 +159,14 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
               })}
         </div>
 
-        <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width + 5 }} />
+        <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width }} />
         <FlexCol
           style={{
             fontSize: 16,
             fontWeight: 700,
             background: 'rgba(var(--background-secondary), 1)',
             paddingBottom: 5,
-            minWidth: width + 5,
+            minWidth: width,
           }}
         >
           Now Playing
@@ -212,8 +187,8 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                     droppableProvided.innerRef(domRef as HTMLElement);
                   }
                 }}
-                width={width}
-                height={(window.innerHeight - 180) / 2 - 40}
+                width={width - 5}
+                height={(window.innerHeight - 180) / 2}
                 rowHeight={70}
                 disableHeader={true}
                 headerHeight={25}

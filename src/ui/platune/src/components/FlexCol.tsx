@@ -4,7 +4,7 @@ interface FlexColProps extends React.DetailedHTMLProps<React.HTMLAttributes<HTML
   center?: boolean;
 }
 
-export const FlexCol: React.FC<FlexColProps> = props => {
+export const FlexCol = React.forwardRef<HTMLDivElement, FlexColProps>((props, ref) => {
   const style: React.CSSProperties = { ...props.style, display: 'flex', flex: 1, flexDirection: 'column' };
   if (props.center !== false && !props.style?.alignItems) {
     style.alignItems = 'center';
@@ -13,8 +13,8 @@ export const FlexCol: React.FC<FlexColProps> = props => {
     style.alignContent = 'center';
   }
   return (
-    <div {...props} style={style}>
+    <div {...props} style={style} ref={ref}>
       {props.children}
     </div>
   );
-};
+});
