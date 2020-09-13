@@ -259,19 +259,18 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
         let full_path = path.to_str().unwrap();
         if path.is_file() {
             if full_path.ends_with(".mp3") || full_path.ends_with(".m4a") {
-                //let file = filebuffer::FileBuffer::open(&path).unwrap();
                 let f = katatsuki::Track::from_path(std::path::Path::new(full_path), None).unwrap();
                 let mut n = NewImport {
-                    import_artist: f.artist.to_owned(),
-                    import_album: f.album,
+                    import_artist: f.artist.trim().to_owned(),
+                    import_album: f.album.trim().to_owned(),
                     import_album_artist: if f.album_artists.len() > 0 && f.album_artists[0] != "" {
-                        f.album_artists[0].to_owned()
+                        f.album_artists[0].trim().to_owned()
                     } else {
-                        f.artist
+                        f.artist.trim().to_owned()
                     },
                     import_song_path_windows: "".to_string(),
                     import_song_path_unix: "".to_string(),
-                    import_title: f.title,
+                    import_title: f.title.trim().to_owned(),
                     import_track_number: f.track_number,
                     import_disc_number: if f.disc_number > 0 { f.disc_number } else { 1 },
                     import_year: f.year,
@@ -280,8 +279,6 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
                     import_bit_rate: f.bitrate,
                     import_album_art: read_album_art(f.album_art, path.to_owned()),
                 };
-                //let original2 = original.clone();
-                //let other2 = other.clone();
                 if IS_WINDOWS {
                     n.import_song_path_windows = full_path.to_owned();
                     if other2 != "" {
