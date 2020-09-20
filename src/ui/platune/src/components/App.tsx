@@ -8,9 +8,9 @@ import { applyTheme } from '../themes/themes';
 import { MainNavBar } from './MainNavBar';
 import { QueueGrid } from './QueueGrid';
 import { SongGrid } from './SongGrid';
-import _ from 'lodash';
+import _, { initial } from 'lodash';
 import { setCssVar } from '../util';
-import { DragDropContext, DropResult } from 'react-beautiful-dnd';
+import { DragDropContext, DragStart, DropResult, ResponderProvided } from 'react-beautiful-dnd';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -25,6 +25,7 @@ const App: React.FC<{}> = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
   const getWidth = useCallback(() => window.innerWidth - gridMargin, [gridMargin]);
   const getHeight = () => window.innerHeight - 110;
@@ -98,8 +99,16 @@ const App: React.FC<{}> = () => {
     console.log(result);
   };
 
+  const onBeforeDragStart = (initial: DragStart) => {
+    if (initial.source.droppableId === 'mainGrid') {
+      if (selectedFiles.length && selectedFiles.indexOf(initial.draggableId) == -1) {
+        setSelectedFiles([]);
+      }
+    }
+  };
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
       <MainNavBar
         sidePanelWidth={sidePanelWidth}
         setSidePanelWidth={setSidePanelWidth}
@@ -134,6 +143,8 @@ const App: React.FC<{}> = () => {
           setSongs={setSongs}
           queuedSongs={queuedSongs}
           setQueuedSongs={setQueuedSongs}
+          selectedFiles={selectedFiles}
+          setSelectedFiles={setSelectedFiles}
         />
       </div>
     </DragDropContext>

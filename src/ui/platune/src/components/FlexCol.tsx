@@ -12,8 +12,9 @@ export const FlexCol = React.forwardRef<HTMLDivElement, FlexColProps>((props, re
   if (props.center !== false && !props.style?.alignContent) {
     style.alignContent = 'center';
   }
+  const { center, ...styleProps } = props;
   return (
-    <div {...props} style={style} ref={ref}>
+    <div {...styleProps} style={style} ref={ref}>
       {props.children}
     </div>
   );

@@ -44,6 +44,8 @@ interface SongGridProps {
   setSongs: (songs: Song[]) => void;
   queuedSongs: Song[];
   setQueuedSongs: (songs: Song[]) => void;
+  selectedFiles: string[];
+  setSelectedFiles: (selectedFiles: string[]) => void;
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
@@ -55,10 +57,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
   setSongs,
   queuedSongs,
   setQueuedSongs,
+  selectedFiles,
+  setSelectedFiles,
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
 
@@ -839,10 +843,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
         droppableId='mainGrid'
         mode='virtual'
         renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => {
-          const song = songs[rubric.source.index];
-          if (selectedFiles.length && selectedFiles.indexOf(song.path) == -1) {
-            setSelectedFiles([]);
-          }
           return (
             <div
               {...provided.draggableProps}
