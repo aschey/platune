@@ -839,6 +839,10 @@ export const SongGrid: React.FC<SongGridProps> = ({
         droppableId='mainGrid'
         mode='virtual'
         renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => {
+          const song = songs[rubric.source.index];
+          if (selectedFiles.length && selectedFiles.indexOf(song.path) == -1) {
+            setSelectedFiles([]);
+          }
           return (
             <div
               {...provided.draggableProps}
