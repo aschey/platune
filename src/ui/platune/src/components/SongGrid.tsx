@@ -33,6 +33,7 @@ import { normal } from 'color-blend';
 import { hexToRgb } from '../themes/colorMixer';
 import { lightTheme } from '../themes/light';
 import ReactDOM from 'react-dom';
+import { FlexRow } from './FlexRow';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -246,7 +247,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
       for (let i = index - 1; i >= 0; i--) {
         if (selectedFiles.indexOf(paths[i]) > -1) {
-          setSelectedFiles(selectedFiles.concat(paths.slice(i, index + 1)));
+          setSelectedFiles(selectedFiles.concat(paths.slice(i + 1, index + 1)));
           break;
         }
       }
@@ -843,9 +844,27 @@ export const SongGrid: React.FC<SongGridProps> = ({
               {...provided.draggableProps}
               {...provided.dragHandleProps}
               ref={provided.innerRef}
-              style={provided.draggableProps.style}
+              style={{ ...provided.draggableProps.style, background: 'rgba(var(--background-main), 0.7)' }}
             >
-              {songs[rubric.source.index].name}
+              <FlexRow style={{ paddingLeft: 5 }}>
+                <Text ellipsize>{songs[rubric.source.index].name}</Text>
+                {selectedFiles.length > 1 ? (
+                  <FlexCol
+                    style={{
+                      borderRadius: '50%',
+                      background: 'rgba(var(--intent-primary), 0.4)',
+                      width: 20,
+                      height: 20,
+                      alignSelf: 'right',
+                      position: 'absolute',
+                      right: -10,
+                      top: -10,
+                    }}
+                  >
+                    {selectedFiles.length}
+                  </FlexCol>
+                ) : null}
+              </FlexRow>
             </div>
           );
         }}
