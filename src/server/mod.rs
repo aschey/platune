@@ -142,7 +142,10 @@ fn index() -> HttpResponse {
 pub fn establish_connection() -> AnyResult<SqliteConnection> {
     dotenv::from_path(get_env_path()).ok();
     let database_url = env::var(DATABASE_URL)?;
-    Ok(SqliteConnection::establish(&database_url)?)
+    let connection = SqliteConnection::establish(&database_url)?;
+    connection.execute("PRAGMA foreign_keys = ON").unwrap();
+
+    Ok(connection)
 }
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
@@ -1300,6 +1303,10 @@ async fn get_tags() -> Result<Json<Vec<TagResponse>>, ()> {
 async fn delete_tag(request_path: Path<(i32,)>) -> Result<Json<()>, ()> {
     let tag_id_req = request_path.into_inner();
     let connection = establish_connection().unwrap();
+
+    diesel::delete(song_tag::table.filter(song_tag::tag_id.eq(tag_id_req.0)))
+        .execute(&connection)
+        .unwrap();
     diesel::delete(tag.filter(tag_id.eq(tag_id_req.0)))
         .execute(&connection)
         .unwrap();
