@@ -9,6 +9,7 @@ import { DirtyCheck } from './DirtyCheck';
 import { getJson, postJson, putJson } from '../fetchUtil';
 import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
+import { theme } from './App';
 
 interface AddEditTagProps {
   isOpen: boolean;
@@ -129,7 +130,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
                 color={color}
                 disableAlpha={true}
                 onChange={newColor => setColor(newColor.hex)}
-                presetColors={[{ color: '#FF0000', title: 'red' }]}
+                presetColors={theme.suggestedTagColors.map(c => ({ color: c, title: '' }))}
               />
             </div>
           ) : null}

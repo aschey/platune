@@ -27,5 +27,6 @@ export interface Theme {
   songProgressColor1: string;
   songProgressColor2: string;
   omnibarBackground: string;
-  [key: string]: string;
+  suggestedTagColors: string[];
+  [key: string]: string | string[];
 }

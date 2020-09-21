@@ -17,14 +17,14 @@ const camelCaseToCssVar = (str: string) => `--${camelCaseToKebabCase(str)}`;
 
 export const applyTheme = (theme: string) => {
   let themeObj = themes[theme];
-  const cssColorBlend = (prop: string, amount: number) => hexToRgbStr(shadeColor(themeObj[prop], amount));
+  const cssColorBlend = (prop: string, amount: number) => hexToRgbStr(shadeColor(themeObj[prop] as string, amount));
 
   for (let prop of Object.getOwnPropertyNames(themeObj)) {
-    setCssVar(camelCaseToCssVar(prop), hexToRgbStr(themeObj[prop]));
+    setCssVar(camelCaseToCssVar(prop), hexToRgbStr(themeObj[prop] as string));
   }
 
   for (let defaultVar of addDefaults) {
-    setCssVar(`${camelCaseToCssVar(defaultVar)}-default`, hexToRgbStr(themeObj[defaultVar]));
+    setCssVar(`${camelCaseToCssVar(defaultVar)}-default`, hexToRgbStr(themeObj[defaultVar] as string));
   }
 
   for (let intent of intents) {
