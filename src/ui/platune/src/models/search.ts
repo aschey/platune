@@ -3,4 +3,5 @@ export interface Search {
   entryType: string;
   artist: string | null;
   correlationId: number;
+  tagColor: string | null;
 }

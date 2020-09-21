@@ -985,24 +985,25 @@ async fn search(request_query: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()
 
     // test cases: "red hot chili peppers" for album artist without artist
     // "fired up" for multiple artists with same album name
-    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'album' THEN 1.25 ELSE 1 END)";
+    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
     let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
     let res = diesel::sql_query(f!("
         WITH CTE AS (
-            SELECT DISTINCT entry_value, entry_type, rank, 
+            SELECT DISTINCT entry_value, entry_type, rank, tag_color,
             CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
             {artist_select} artist,
-            ROW_NUMBER() OVER (PARTITION BY entry_value, {artist_select}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 ELSE 3 END ORDER BY entry_type DESC) row_num
+            ROW_NUMBER() OVER (PARTITION BY entry_value, {artist_select}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
             FROM search_index
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
             LEFT OUTER JOIN album al on al.album_id = assoc_id
             LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+            LEFT OUTER JOIN tag t on t.tag_id = assoc_id
             WHERE search_index MATCH ?
             ORDER BY {order_clause}
             LIMIT ?
         )
-        SELECT entry_value, entry_type, artist, correlation_id FROM cte
+        SELECT entry_value, entry_type, artist, correlation_id, tag_color FROM cte
         WHERE row_num = 1
         ORDER BY {order_clause}
         LIMIT ?")
@@ -1356,6 +1357,8 @@ struct SearchRes {
     artist: Option<String>,
     #[sql_type = "Integer"]
     correlation_id: i32,
+    #[sql_type = "Nullable<Text>"]
+    tag_color: Option<String>,
 }
 
 #[derive(QueryableByName, Serialize, Apiv2Schema)]

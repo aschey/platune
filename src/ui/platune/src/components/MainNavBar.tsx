@@ -12,6 +12,7 @@ import {
   NavbarGroup,
   NavbarHeading,
   Popover,
+  Tag,
 } from '@blueprintjs/core';
 import { HotkeyScope, HotkeysEvents } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
 import { IItemRendererProps, Omnibar, Suggest } from '@blueprintjs/select';
@@ -27,6 +28,8 @@ import { Search } from '../models/search';
 import { Song } from '../models/song';
 import { Settings } from './Settings';
 import { globalHotkeys } from '../globalHotkeys';
+import { SideTag } from './SideTag';
+import { shadeColorRgb } from '../themes/colorMixer';
 
 interface MainNavBarProps {
   setSelectedGrid: (grid: string) => void;
@@ -118,18 +121,38 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         key={props.index}
         active={active}
         onClick={props.handleClick}
-        style={{ paddingBottom: props.index === searchResults.length - 1 ? 0 : 10 }}
+        style={{
+          paddingBottom: props.index === searchResults.length - 1 ? 0 : 10,
+          backgroundColor: active ? 'rgba(var(--intent-primary), 0.3)' : undefined,
+        }}
         text={
-          <>
-            <div>{highlightText(searchRes.entryValue, props.query, active)}</div>
-            <div
-              style={{ fontSize: 12, color: active ? 'rgba(255, 255, 255, 0.6)' : 'rgba(var(--text-secondary), 0.8)' }}
+          searchRes.entryType.toLowerCase() === 'tag' ? (
+            <Tag
+              minimal
+              style={{
+                border: `1px solid rgba(${searchRes.tagColor}, 0.25)`,
+                backgroundColor: `rgba(${searchRes.tagColor}, 0.15)`,
+                color: `rgba(${shadeColorRgb(searchRes.tagColor as string, isLight ? -50 : 100)}, 1)`,
+              }}
             >
-              {searchRes.artist === null
-                ? searchRes.entryType.split('_').map(capitalize).join(' ')
-                : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
-            </div>
-          </>
+              {searchRes.entryValue}
+            </Tag>
+          ) : (
+            <>
+              <div>{highlightText(searchRes.entryValue, props.query, active)}</div>
+
+              <div
+                style={{
+                  fontSize: 12,
+                  color: active ? 'rgba(255, 255, 255, 0.6)' : 'rgba(var(--text-secondary), 0.8)',
+                }}
+              >
+                {searchRes.artist === null
+                  ? searchRes.entryType.split('_').map(capitalize).join(' ')
+                  : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
+              </div>
+            </>
+          )
         }
       />
     );
