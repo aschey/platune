@@ -126,6 +126,14 @@ canvas {
   .selected.grid-cell {
     background: rgba(var(--grid-selected-background), 0.5);
   }
+
+  @for $i from 1 through 20 {
+    .grid-tag:nth-of-type(#{$i}) {
+      border: 1px solid rgba(var(--tag-bg-#{$i}), 0.5) !important;
+      background: rgba(var(--tag-bg-#{$i}), 0.3) !important;
+      color: rgba(var(--tag-fg-#{$i}), 1) !important;
+    }
+  }
 }
 
 .selected.bp3-table-cell {

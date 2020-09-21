@@ -15,6 +15,7 @@ export const GridTag: React.FC<GridTagProps> = ({ name, color, isLightTheme }) =
   return (
     <Tag
       minimal
+      className='grid-tag'
       style={{
         height: 20,
         marginTop: 2,

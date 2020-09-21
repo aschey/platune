@@ -415,12 +415,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return cellRenderer(rowIndex, path, fmtValue);
   };
 
-  const pathRenderer = ({ rowIndex }: TableCellProps) => {
+  const tagRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
-    let value = songs[rowIndex].path;
 
     let classes = 'bp3-table-cell grid-cell';
     //let child: JSX.Element | string = value;
@@ -438,8 +437,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const estWidth = songs[rowIndex].tags.reduce((prev, current) => prev + current.name.length * 6 + 20, 0);
     let shownTags = [];
     let extra = 0;
-    if (estWidth >= widths.tags) {
-      const availWidth = widths.tags - 45;
+    const width = selectedGrid === 'song' ? widths.tags : widths2.tags;
+    if (estWidth >= width) {
+      const availWidth = width - 45;
       let total = 0;
       for (let tag of songs[rowIndex].tags) {
         total += tag.name.length * 6 + 20;
@@ -457,112 +457,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
         {shownTags
           .sort(t => t.order)
           .map(t => (
-            <GridTag name={t.name} color={t.color} isLightTheme={isLightTheme} />
+            <GridTag name={t.name} color={t.color} isLightTheme={isLightTheme} key={path + t.name} />
           ))}
         {extra > 0 ? (
           <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
             +{extra}
           </Button>
         ) : null}
-      </div>
-    );
-  };
-
-  const pathRenderer2 = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
-      return null;
-    }
-    const path = songs[rowIndex].path;
-    let value = songs[rowIndex].path;
-
-    let classes = 'bp3-table-cell grid-cell';
-    //let child: JSX.Element | string = value;
-    if (path === editingFile) {
-      classes += ' editing selected';
-      //child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
-    } else if (path === playingFile) {
-      classes += ' playing';
-    } else if (selectedFiles.indexOf(path) > -1) {
-      classes += ' selected';
-    } else {
-      classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
-    }
-
-    if (songs[rowIndex].hasArt) {
-      return (
-        <div
-          key={path}
-          className={classes}
-          onDoubleClick={() => onDoubleClick(path)}
-          onClick={e => onRowClick(e, path)}
-        >
-          <Tag
-            style={{
-              height: 20,
-              marginTop: 2,
-              marginRight: 5,
-              border: '1px solid rgba(var(--tag-bg-1), 0.5)',
-              background: 'rgba(var(--tag-bg-1), 0.3)',
-              color: 'rgba(var(--tag-fg-1), 1)',
-            }}
-          >
-            Main
-          </Tag>
-          <Tag
-            style={{
-              height: 20,
-              marginTop: 2,
-              marginRight: 5,
-              border: '1px solid rgba(var(--tag-bg-1), 0.5)',
-              background: 'rgba(var(--tag-bg-2), 0.3)',
-              color: 'rgba(var(--tag-fg-2), 1)',
-            }}
-          >
-            90s
-          </Tag>
-          <Tag
-            style={{
-              height: 20,
-              marginTop: 2,
-              marginRight: 5,
-              border: '1px solid rgba(var(--tag-bg-1), 0.5)',
-              background: 'rgba(var(--tag-bg-3), 0.3)',
-              color: 'rgba(var(--tag-fg-3), 1)',
-            }}
-          >
-            Metal
-          </Tag>
-          <Button
-            style={{
-              minHeight: 20,
-              maxHeight: 20,
-              marginTop: 2,
-              borderColor: 'rgba(var(--grid-selected-text-color), 1)',
-              color: 'rgba(var(--grid-selected-text-color), 1)',
-            }}
-            small
-            minimal
-            outlined
-          >
-            +5
-          </Button>
-        </div>
-      );
-    }
-    return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
-        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
-          Main
-        </Tag>
-        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.SUCCESS}>
-          90s
-        </Tag>
-        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
-          Metal
-        </Tag>
-        <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
-          +5
-        </Button>
       </div>
     );
   };
@@ -598,21 +499,19 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
 
-  const updateSelectedAlbum = async (songIndex: number, hasArt: boolean, albumIndex: number) => {
+  const updateSelectedAlbum = async (songId: number, hasArt: boolean, albumIndex: number) => {
     if (hasArt) {
-      await updateColors(songIndex, albumIndex);
+      debugger;
+      await updateColors(songId, albumIndex);
     }
     setSelectedAlbum(albumKeys[albumIndex]);
   };
 
-  const updateColors = async (songIndex: number, albumIndex: number) => {
-    const colors = await loadColors(songIndex);
+  const updateColors = async (songId: number, albumIndex: number) => {
+    const colors = await loadColors(songId);
     const bg = colors[0];
     const fg = colors[1];
     const secondary = colors[2];
-    const blue = hexToRgb(Colors.BLUE3);
-    const green = hexToRgb(Colors.GREEN3);
-    const red = hexToRgb(Colors.RED3);
 
     setCssVar('--grid-selected-text-color', formatRgb(fg));
     setCssVar('--grid-selected-shadow-1', formatRgb(bg));
@@ -621,22 +520,17 @@ export const SongGrid: React.FC<SongGridProps> = ({
     setCssVar('--grid-selected-background', formatRgb(secondary));
     setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
     setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
-
-    const blended1 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.15 });
-    const blended2 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.15 });
-    const blended3 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.15 });
-
-    const blended4 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: blue[0], g: blue[1], b: blue[2], a: 0.25 });
-    const blended5 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: green[0], g: green[1], b: green[2], a: 0.25 });
-    const blended6 = normal({ r: fg.r, g: fg.g, b: fg.g, a: 1 }, { r: red[0], g: red[1], b: red[2], a: 0.25 });
-
-    setCssVar('--tag-bg-1', formatRgb(blended1));
-    setCssVar('--tag-bg-2', formatRgb(blended2));
-    setCssVar('--tag-bg-3', formatRgb(blended3));
-
-    setCssVar('--tag-fg-1', formatRgb(blended4));
-    setCssVar('--tag-fg-2', formatRgb(blended5));
-    setCssVar('--tag-fg-3', formatRgb(blended6));
+    songs
+      .find(s => s.id === songId)
+      ?.tags?.forEach(({ color }, i) => {
+        const [r, g, b] = color.split(',').map(parseFloat);
+        const first = { ...fg, a: 1 };
+        const blended1 = normal(first, { r, g, b, a: 0.15 });
+        const blended2 = normal(first, { r, g, b, a: 0.25 });
+        setCssVar(`--tag-bg-${i + 1}`, formatRgb(blended1));
+        setCssVar(`--tag-fg-${i + 1}`, formatRgb(blended2));
+        console.log('here');
+      });
   };
 
   const rowRenderer = (props: TableRowProps) => {
@@ -761,7 +655,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey=''
           label='Tags'
-          cellRenderer={props => multiSongRenderer(props, pathRenderer2)}
+          cellRenderer={props => multiSongRenderer(props, tagRenderer)}
           width={widths2.tags}
           minWidth={widths2.tags}
         />
@@ -845,7 +739,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='path'
           label='Tags'
-          cellRenderer={pathRenderer}
+          cellRenderer={tagRenderer}
           width={widths.tags}
           minWidth={widths.tags}
         />
