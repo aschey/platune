@@ -6,14 +6,16 @@ import { InputGroup, FormGroup, ControlGroup, Button, Intent, NumericInput } fro
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { DirtyCheck } from './DirtyCheck';
-import { postJson } from '../fetchUtil';
+import { getJson, postJson } from '../fetchUtil';
 import { toastSuccess } from '../appToaster';
+import { SongTag } from '../models/songTag';
 
 interface AddEditTagProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
+  setSongTags: (songTags: SongTag[]) => void;
 }
-export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen }) => {
+export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSongTags }) => {
   const [color, setColor] = useState('#000000');
   const [showPicker, setShowPicker] = useState(false);
   const [name, setName] = useState('');
@@ -21,6 +23,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen }) => 
 
   const onSave = async () => {
     await postJson('/tags', { color, name, priority: order });
+    getJson<SongTag[]>('/tags').then(setSongTags);
     toastSuccess();
     setIsOpen(false);
   };

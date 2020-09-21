@@ -28,6 +28,7 @@ import {
 import ReactDOM from 'react-dom';
 import { getJson } from '../fetchUtil';
 import { SongTag } from '../models/songTag';
+import { hexToRgb } from '../themes/colorMixer';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -126,9 +127,9 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
               <Droppable droppableId={`tag${i}`} key={i}>
                 {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
                   if (snapshot.isDraggingOver) {
-                    console.log('dragging', queuedSongs[i].name);
+                    console.log('dragging', s.name);
                   }
-
+                  const color = hexToRgb(s.color);
                   return (
                     <>
                       <div
@@ -138,8 +139,10 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                       >
                         <Tag
                           minimal
-                          intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][i % 4]}
                           style={{
+                            border: `1px solid rgba(${color}, 0.25)`,
+                            backgroundColor: `rgba(${color}, 0.15)`,
+                            color: `rgba(${color}, 1)`,
                             boxShadow: snapshot.isDraggingOver
                               ? 'inset 0 0 8px 8px rgba(var(--intent-primary), 0.6)'
                               : undefined,
@@ -241,7 +244,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           }}
         </Droppable>
       </div>
-      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} />
+      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} setSongTags={setSongTags} />
     </>
   );
 };
