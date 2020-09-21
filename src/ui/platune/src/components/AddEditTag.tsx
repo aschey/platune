@@ -121,10 +121,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
                   bottom: -55,
                   left: 0,
                 }}
-                onClick={e => {
-                  console.log(e.type, e.target);
-                  setShowPicker(false);
-                }}
+                onClick={() => setShowPicker(false)}
               />
               <SketchPicker
                 color={color}

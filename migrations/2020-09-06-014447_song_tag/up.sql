@@ -4,4 +4,5 @@ CREATE TABLE IF NOT EXISTS song_tag (
     tag_id INTEGER NULL,
     FOREIGN KEY(song_id) REFERENCES song(song_id),
     FOREIGN KEY(tag_id) REFERENCES tag(tag_id)
+    UNIQUE(song_id, tag_id)
 )

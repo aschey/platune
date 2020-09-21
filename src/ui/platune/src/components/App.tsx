@@ -95,8 +95,14 @@ const App: React.FC<{}> = () => {
     }
   }, [sidePanelWidth, gridMargin, getWidth, gridRef]);
 
-  const onDragEnd = (result: DropResult) => {
-    console.log(result);
+  const onDragEnd = ({ source, destination, draggableId }: DropResult) => {
+    if (source.droppableId === 'mainGrid' && destination?.droppableId?.startsWith('tag-')) {
+      if (selectedFiles.indexOf(draggableId) > -1) {
+        console.log(selectedFiles);
+      } else {
+        console.log(draggableId);
+      }
+    }
   };
 
   const onBeforeDragStart = (initial: DragStart) => {

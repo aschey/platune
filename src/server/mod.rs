@@ -7,6 +7,7 @@ use crate::schema::folder::dsl::*;
 use crate::schema::import_temp::dsl::*;
 use crate::schema::mount::dsl::*;
 use crate::schema::song::dsl::*;
+use crate::schema::song_tag;
 use crate::schema::tag::dsl::*;
 use actix_cors::Cors;
 use actix_files as fs;
@@ -177,16 +178,21 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
             .route("/search", web::get().to(search))
             .route("/sync", web::put().to(get_all_files))
             .route("/tags", web::post().to(add_tag))
-            .route("/tags/{tag_id}", web::put().to(update_tag))
+            .route("/tags/{tagId}", web::put().to(update_tag))
             .route("/tags", web::get().to(get_tags))
-            .route("/tags/{tag_id}", web::delete().to(delete_tag))
+            .route("/tags/{tagId}", web::delete().to(delete_tag))
+            .route("/tags/{tagId}/addSongs", web::put().to(add_songs_to_tag))
+            .route(
+                "/tags/{tagId}/removeSongs",
+                web::put().to(remove_songs_from_tag),
+            )
             .with_json_spec_at("/spec")
             .build()
             // static files
             .wrap_fn(|req, srv| {
                 let path = req.path().to_owned();
                 srv.call(req).map(move |res| {
-                    if path == "/index.html" || path == "/" {
+                    if path == "/index.html" || path == "/" || path == "/swagger" {
                         match res {
                             Ok(mut r) => {
                                 r.headers_mut().insert(
@@ -1274,6 +1280,46 @@ async fn delete_tag(request_path: Path<(i32,)>) -> Result<Json<()>, ()> {
     diesel::delete(tag.filter(tag_id.eq(tag_id_req.0)))
         .execute(&connection)
         .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn add_songs_to_tag(
+    request_path: Path<(i32,)>,
+    request_json: Json<Vec<i32>>,
+) -> Result<Json<()>, ()> {
+    let req_tag_id = request_path.into_inner();
+    let song_ids = request_json.into_inner();
+    let connection = establish_connection().unwrap();
+    let inserts = song_ids
+        .iter()
+        .map(|s| (song_tag::song_id.eq(s), song_tag::tag_id.eq(req_tag_id.0)))
+        .collect::<Vec<_>>();
+    diesel::replace_into(song_tag::table)
+        .values(inserts)
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn remove_songs_from_tag(
+    request_path: Path<(i32,)>,
+    request_json: Json<Vec<i32>>,
+) -> Result<Json<()>, ()> {
+    let req_tag_id = request_path.into_inner();
+    let song_ids = request_json.into_inner();
+    let connection = establish_connection().unwrap();
+
+    diesel::delete(
+        song_tag::table.filter(
+            song_tag::tag_id
+                .eq(req_tag_id.0)
+                .and(song_tag::song_id.eq_any(song_ids)),
+        ),
+    )
+    .execute(&connection)
+    .unwrap();
     return Ok(Json(()));
 }
 

@@ -140,7 +140,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
         >
           {songTags.map((s, i) => {
             return (
-              <Droppable droppableId={`tag${i}`} key={i}>
+              <Droppable droppableId={`tag-${s.id}`} key={i}>
                 {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
                   if (snapshot.isDraggingOver) {
                     console.log('dragging', s.name);
