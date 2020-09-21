@@ -2,6 +2,7 @@ import { Button, Icon, Menu, MenuItem, Popover, Tag, Text } from '@blueprintjs/c
 import React from 'react';
 import { toastSuccess } from '../appToaster';
 import { deleteJson, getJson } from '../fetchUtil';
+import { EditSongTag } from '../models/editSongTag';
 import { SongTag } from '../models/songTag';
 import { hexToRgb, isLight, shadeColorRgb } from '../themes/colorMixer';
 import { theme } from './App';
@@ -10,7 +11,7 @@ import { FlexRow } from './FlexRow';
 
 interface SideTagProps {
   tag: SongTag;
-  setTag: (tag: SongTag) => void;
+  setTag: (tag: EditSongTag) => void;
   setIsPopupOpen: (isPopupOpen: boolean) => void;
   setSongTags: (songTags: SongTag[]) => void;
   isDraggingOver: boolean;
@@ -43,7 +44,7 @@ export const SideTag: React.FC<SideTagProps> = ({
       style={{
         border: `1px solid rgba(${color}, 0.25)`,
         backgroundColor: `rgba(${color}, 0.15)`,
-        color: `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 200)}, 1)`,
+        color: `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 100)}, 1)`,
         boxShadow: isDraggingOver ? `inset 0 0 8px 8px rgba(${color}, 0.6)` : undefined,
       }}
     >
@@ -66,7 +67,7 @@ export const SideTag: React.FC<SideTagProps> = ({
           <Text ellipsize className='tag-text'>
             {tag.name}
           </Text>
-          <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
+          <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>{tag.songCount}</div>
         </FlexRow>
       }
     </Tag>

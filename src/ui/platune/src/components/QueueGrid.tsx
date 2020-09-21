@@ -32,6 +32,7 @@ import { hexToRgb } from '../themes/colorMixer';
 import { theme } from './App';
 import { toastSuccess } from '../appToaster';
 import { SideTag } from './SideTag';
+import { EditSongTag } from '../models/editSongTag';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -42,7 +43,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme 
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [songTags, setSongTags] = useState<SongTag[]>([]);
-  const [tag, setTag] = useState<SongTag>({ name: '', order: 1, color: '0,0,0', id: null });
+  const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0', id: null });
 
   const width = 200;
 

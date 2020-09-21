@@ -21,7 +21,7 @@ export const GridTag: React.FC<GridTagProps> = ({ name, color, isLightTheme }) =
         marginRight: 5,
         border: `1px solid rgba(${color}, 0.25)`,
         backgroundColor: `rgba(${color}, 0.15)`,
-        color: `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 200)}, 1)`,
+        color: `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 100)}, 1)`,
       }}
       onMouseEnter={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}

@@ -1,6 +1,7 @@
 export interface SongTag {
-  id: number | null;
+  id: number;
   name: string;
   color: string;
   order: number;
+  songCount: number;
 }

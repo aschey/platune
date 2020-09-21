@@ -1258,18 +1258,22 @@ async fn update_tag(
 #[api_v2_operation]
 async fn get_tags() -> Result<Json<Vec<TagResponse>>, ()> {
     let connection = establish_connection().unwrap();
-    let tags = tag
-        .select((tag_id, tag_name, tag_color, tag_order))
-        .load::<(i32, String, String, i32)>(&connection)
-        .unwrap()
-        .iter()
-        .map(|t| TagResponse {
-            id: t.0,
-            name: t.1.to_owned(),
-            color: t.2.to_owned(),
-            order: t.3,
-        })
-        .collect::<Vec<_>>();
+    let tags = diesel::sql_query(f!("
+        SELECT t.tag_id, tag_name, tag_color, tag_order, COUNT(st.song_id) as song_count FROM tag t
+        LEFT OUTER JOIN song_tag st ON st.tag_id = t.tag_id
+        GROUP BY t.tag_id
+    "))
+    .load::<TagRes>(&connection)
+    .unwrap()
+    .iter()
+    .map(|t| TagResponse {
+        id: t.tag_id,
+        name: t.tag_name.to_owned(),
+        color: t.tag_color.to_owned(),
+        order: t.tag_order,
+        song_count: t.song_count,
+    })
+    .collect::<Vec<_>>();
     return Ok(Json(tags));
 }
 
@@ -1336,6 +1340,21 @@ struct SearchRes {
     correlation_id: i32,
 }
 
+#[derive(QueryableByName, Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct TagRes {
+    #[sql_type = "Integer"]
+    tag_id: i32,
+    #[sql_type = "Text"]
+    tag_name: String,
+    #[sql_type = "Text"]
+    tag_color: String,
+    #[sql_type = "Integer"]
+    tag_order: i32,
+    #[sql_type = "Integer"]
+    song_count: i32,
+}
+
 #[derive(Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct Dir {
@@ -1358,6 +1377,7 @@ struct TagResponse {
     name: String,
     color: String,
     order: i32,
+    song_count: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]

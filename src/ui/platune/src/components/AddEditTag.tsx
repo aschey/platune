@@ -11,13 +11,14 @@ import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
 import { theme } from './App';
 import { formatRgb } from '../util';
+import { EditSongTag } from '../models/editSongTag';
 
 interface AddEditTagProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   setSongTags: (songTags: SongTag[]) => void;
-  tag: SongTag;
-  setTag: (tag: SongTag) => void;
+  tag: EditSongTag;
+  setTag: (tag: EditSongTag) => void;
 }
 export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSongTags, tag, setTag }) => {
   const [showPicker, setShowPicker] = useState(false);
