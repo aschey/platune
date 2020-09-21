@@ -29,6 +29,7 @@ import ReactDOM from 'react-dom';
 import { getJson } from '../fetchUtil';
 import { SongTag } from '../models/songTag';
 import { hexToRgb } from '../themes/colorMixer';
+import { theme } from './App';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -38,6 +39,11 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [songTags, setSongTags] = useState<SongTag[]>([]);
+  const [color, setColor] = useState('#000000');
+  const [name, setName] = useState('');
+  const [order, setOrder] = useState(1);
+  const [tagId, setTagId] = useState<number | null>(null);
+
   const width = 200;
 
   useEffect(() => {
@@ -95,6 +101,15 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
     return defaultHeaderRowRenderer(props);
   };
 
+  const addTag = () => {
+    setName('');
+    setOrder(1);
+    setColor('#000000');
+    setOrder(1);
+    setTagId(null);
+    setIsPopupOpen(true);
+  };
+
   return (
     <>
       <div style={{ maxWidth: width, paddingLeft: 5 }}>
@@ -110,7 +125,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           <FlexRow style={{ fontWeight: 700 }}>
             <div style={{ flex: 1 }} />
             Tags
-            <Button minimal small style={{ marginLeft: 5, padding: 0 }} onClick={() => setIsPopupOpen(true)}>
+            <Button minimal small style={{ marginLeft: 5, padding: 0 }} onClick={addTag}>
               <Icon iconSize={14} icon='add' style={{ paddingBottom: 1, paddingRight: 1 }} />
             </Button>
           </FlexRow>
@@ -129,7 +144,14 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                   if (snapshot.isDraggingOver) {
                     console.log('dragging', s.name);
                   }
-                  const color = hexToRgb(s.color);
+                  const color = snapshot.isDraggingOver ? hexToRgb(theme.intentPrimary) : hexToRgb(s.color);
+                  const editTag = () => {
+                    setName(s.name);
+                    setOrder(s.order);
+                    setColor(s.color);
+                    setTagId(s.id);
+                    setIsPopupOpen(true);
+                  };
                   return (
                     <>
                       <div
@@ -152,7 +174,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                             <FlexRow>
                               <FlexCol>
                                 <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
-                                  <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
+                                  <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} onClick={editTag} />
                                 </Button>
                               </FlexCol>
                               <Text ellipsize className='tag-text'>
@@ -244,7 +266,18 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           }}
         </Droppable>
       </div>
-      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} setSongTags={setSongTags} />
+      <AddEditTag
+        isOpen={isPopupOpen}
+        setIsOpen={setIsPopupOpen}
+        setSongTags={setSongTags}
+        color={color}
+        setColor={setColor}
+        name={name}
+        setName={setName}
+        order={order}
+        setOrder={setOrder}
+        tagId={tagId}
+      />
     </>
   );
 };

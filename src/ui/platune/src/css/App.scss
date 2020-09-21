@@ -119,6 +119,7 @@ canvas {
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
   position: relative;
   z-index: 1;
+  background: rgba(var(--background-secondary), 1);
 }
 
 .album-selected-row.has-art {

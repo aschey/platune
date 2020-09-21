@@ -1223,7 +1223,7 @@ async fn add_tag(request_json: Json<TagRequest>) -> Result<Json<()>, ()> {
         .values((
             tag_name.eq(request.name.to_owned()),
             tag_color.eq(request.color.to_owned()),
-            tag_priority.eq(request.priority),
+            tag_order.eq(request.order),
         ))
         .execute(&connection)
         .unwrap();
@@ -1242,7 +1242,7 @@ async fn update_tag(
         .set((
             tag_name.eq(request.name.to_owned()),
             tag_color.eq(request.color.to_owned()),
-            tag_priority.eq(request.priority),
+            tag_order.eq(request.order),
         ))
         .execute(&connection)
         .unwrap();
@@ -1253,7 +1253,7 @@ async fn update_tag(
 async fn get_tags() -> Result<Json<Vec<TagResponse>>, ()> {
     let connection = establish_connection().unwrap();
     let tags = tag
-        .select((tag_id, tag_name, tag_color, tag_priority))
+        .select((tag_id, tag_name, tag_color, tag_order))
         .load::<(i32, String, String, i32)>(&connection)
         .unwrap()
         .iter()
@@ -1261,7 +1261,7 @@ async fn get_tags() -> Result<Json<Vec<TagResponse>>, ()> {
             id: t.0,
             name: t.1.to_owned(),
             color: t.2.to_owned(),
-            priority: t.3,
+            order: t.3,
         })
         .collect::<Vec<_>>();
     return Ok(Json(tags));
@@ -1302,7 +1302,7 @@ struct Dir {
 struct TagRequest {
     name: String,
     color: String,
-    priority: i32,
+    order: i32,
 }
 
 #[derive(Serialize, Apiv2Schema, Queryable)]
@@ -1311,7 +1311,7 @@ struct TagResponse {
     id: i32,
     name: String,
     color: String,
-    priority: i32,
+    order: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]

@@ -3,6 +3,6 @@ CREATE TABLE IF NOT EXISTS tag (
     tag_name TEXT NOT NULL UNIQUE,
     tag_color TEXT NOT NULL,
     tag_datatype_id INTEGER,
-    tag_priority INTEGER NOT NULL,
+    tag_order INTEGER NOT NULL,
     FOREIGN KEY(tag_datatype_id) REFERENCES tag_datatype(tag_datatype_id)
 )

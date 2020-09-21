@@ -6,7 +6,7 @@ import { InputGroup, FormGroup, ControlGroup, Button, Intent, NumericInput } fro
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { DirtyCheck } from './DirtyCheck';
-import { getJson, postJson } from '../fetchUtil';
+import { getJson, postJson, putJson } from '../fetchUtil';
 import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
 
@@ -14,15 +14,34 @@ interface AddEditTagProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   setSongTags: (songTags: SongTag[]) => void;
+  color: string;
+  setColor: (color: string) => void;
+  order: number;
+  setOrder: (order: number) => void;
+  name: string;
+  setName: (name: string) => void;
+  tagId: number | null;
 }
-export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSongTags }) => {
-  const [color, setColor] = useState('#000000');
+export const AddEditTag: React.FC<AddEditTagProps> = ({
+  isOpen,
+  setIsOpen,
+  setSongTags,
+  color,
+  setColor,
+  order,
+  setOrder,
+  name,
+  setName,
+  tagId,
+}) => {
   const [showPicker, setShowPicker] = useState(false);
-  const [name, setName] = useState('');
-  const [order, setOrder] = useState(1);
 
   const onSave = async () => {
-    await postJson('/tags', { color, name, priority: order });
+    if (tagId === null) {
+      await postJson('/tags', { color, name, order });
+    } else {
+      await putJson(`/tags/${tagId}`, { color, name, order });
+    }
     getJson<SongTag[]>('/tags').then(setSongTags);
     toastSuccess();
     setIsOpen(false);
@@ -120,7 +139,12 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSo
           <Button icon='saved' intent={Intent.SUCCESS} style={{ marginRight: 5, width: 80 }} onClick={onSave}>
             Save
           </Button>
-          <Button icon='undo' intent={Intent.WARNING} style={{ marginLeft: 5, width: 80 }}>
+          <Button
+            icon='undo'
+            intent={Intent.WARNING}
+            style={{ marginLeft: 5, width: 80 }}
+            onClick={() => setIsOpen(false)}
+          >
             Cancel
           </Button>
         </FlexRow>
