@@ -11,6 +11,9 @@ import { SongGrid } from './SongGrid';
 import _, { initial } from 'lodash';
 import { setCssVar } from '../util';
 import { DragDropContext, DragStart, DropResult, ResponderProvided } from 'react-beautiful-dnd';
+import { getJson, putJson } from '../fetchUtil';
+import { toastSuccess } from '../appToaster';
+import { SongTag } from '../models/songTag';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -26,6 +29,7 @@ const App: React.FC<{}> = () => {
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [songTags, setSongTags] = useState<SongTag[]>([]);
 
   const getWidth = useCallback(() => window.innerWidth - gridMargin, [gridMargin]);
   const getHeight = () => window.innerHeight - 110;
@@ -95,13 +99,20 @@ const App: React.FC<{}> = () => {
     }
   }, [sidePanelWidth, gridMargin, getWidth, gridRef]);
 
-  const onDragEnd = ({ source, destination, draggableId }: DropResult) => {
+  const onDragEnd = async ({ source, destination, draggableId }: DropResult) => {
     if (source.droppableId === 'mainGrid' && destination?.droppableId?.startsWith('tag-')) {
-      if (selectedFiles.indexOf(draggableId) > -1) {
-        console.log(selectedFiles);
+      const tagId = destination.droppableId.split('-')[1];
+      if (selectedFiles.includes(draggableId)) {
+        //console.log(selectedFiles);
+        const songIds = songs.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
+        await putJson(`/tags/${tagId}/addSongs`, songIds);
       } else {
-        console.log(draggableId);
+        //console.log(draggableId);
+        const songIds = songs.filter(s => draggableId == s.path).map(s => s.id);
+        await putJson(`/tags/${tagId}/addSongs`, songIds);
       }
+      toastSuccess();
+      getJson<SongTag[]>('/tags').then(setSongTags);
     }
   };
 
@@ -137,7 +148,12 @@ const App: React.FC<{}> = () => {
       >
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid queuedSongs={queuedSongs} isLightTheme={themeDetails} />
+            <QueueGrid
+              queuedSongs={queuedSongs}
+              isLightTheme={themeDetails}
+              songTags={songTags}
+              setSongTags={setSongTags}
+            />
           </div>
         </div>
         <SongGrid

@@ -37,12 +37,13 @@ import { EditSongTag } from '../models/editSongTag';
 interface QueueGridProps {
   queuedSongs: Song[];
   isLightTheme: boolean;
+  songTags: SongTag[];
+  setSongTags: (songTags: SongTag[]) => void;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme }) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme, songTags, setSongTags }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [songTags, setSongTags] = useState<SongTag[]>([]);
   const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0', id: null });
 
   const width = 200;
