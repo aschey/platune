@@ -926,7 +926,15 @@ async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>,
     if let Some(req_song_name) = &request.song_name {
         query = query.filter(crate::schema::song::song_title.eq(req_song_name));
     }
-    let mut songs = query
+
+    let song_tags = song_tag::table
+        .inner_join(tag)
+        .select((song_tag::song_id, tag_id, tag_name, tag_order, tag_color))
+        .load::<(i32, i32, String, i32, String)>(&connection)
+        .unwrap();
+    let mut song_res = Vec::<self::Song>::new();
+
+    let songs = query
         .load::<(
             i32,
             String,
@@ -939,9 +947,9 @@ async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>,
             String,
             bool,
         )>(&connection)
-        .unwrap()
-        .iter()
-        .map(|s| Song {
+        .unwrap();
+    for s in songs {
+        song_res.push(Song {
             id: s.0,
             name: s.1.to_owned(),
             artist: s.2.to_owned(),
@@ -952,10 +960,20 @@ async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>,
             time: s.7,
             path: s.8.to_owned(),
             has_art: s.9,
+            tags: song_tags
+                .iter()
+                .filter(|t| t.0 == s.0)
+                .map(|t| SongTag {
+                    id: t.1,
+                    name: t.2.to_owned(),
+                    order: t.3,
+                    color: t.4.to_owned(),
+                })
+                .collect(),
         })
-        .collect::<Vec<_>>();
-    &songs.sort_case_insensitive("album artist".to_owned());
-    return Ok(Json(songs));
+    }
+    &song_res.sort_case_insensitive("album artist".to_owned());
+    return Ok(Json(song_res));
 }
 
 #[api_v2_operation]
@@ -1370,7 +1388,7 @@ struct TagRequest {
     order: i32,
 }
 
-#[derive(Serialize, Apiv2Schema, Queryable)]
+#[derive(Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct TagResponse {
     id: i32,
@@ -1378,6 +1396,15 @@ struct TagResponse {
     color: String,
     order: i32,
     song_count: i32,
+}
+
+#[derive(Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct SongTag {
+    id: i32,
+    name: String,
+    color: String,
+    order: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]
@@ -1421,17 +1448,18 @@ struct FolderUpdate {
 
 #[derive(Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
-pub struct Song {
-    pub id: i32,
-    pub path: String,
-    pub artist: String,
-    pub album_artist: String,
-    pub name: String,
-    pub album: String,
-    pub track: i32,
-    pub disc: i32,
-    pub time: i32,
-    pub has_art: bool,
+struct Song {
+    id: i32,
+    path: String,
+    artist: String,
+    album_artist: String,
+    name: String,
+    album: String,
+    track: i32,
+    disc: i32,
+    time: i32,
+    has_art: bool,
+    tags: Vec<SongTag>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]
