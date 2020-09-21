@@ -18,8 +18,14 @@ const success = async <T>(response: Response): Promise<T> => {
 };
 
 const baseUrl = 'http://localhost:5000';
+
 export const getJson = async <T>(url: string) => {
   const response = await fetch(baseUrl + url, { method: 'GET', ...options });
+  return await success<T>(response);
+};
+
+export const deleteJson = async <T>(url: string) => {
+  const response = await fetch(baseUrl + url, { method: 'DELETE', ...options });
   return await success<T>(response);
 };
 

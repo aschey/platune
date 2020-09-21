@@ -51,7 +51,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
     <Dialog
       style={{ width: 300, height: 250 }}
       icon='add'
-      title='New Tag'
+      title={tagId === null ? 'New Tag' : 'Edit Tag'}
       isOpen={isOpen}
       onOpening={() => setShowPicker(false)}
       onClose={() => setIsOpen(false)}
@@ -64,6 +64,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
             id='tagName'
             placeholder='Enter a tag name'
             value={name}
+            style={{ maxWidth: 175 }}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
           />
         </FormGroup>

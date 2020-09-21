@@ -1,4 +1,4 @@
-import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, Popover, Tag, Text } from '@blueprintjs/core';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Column,
@@ -26,10 +26,11 @@ import {
   Draggable,
 } from 'react-beautiful-dnd';
 import ReactDOM from 'react-dom';
-import { getJson } from '../fetchUtil';
+import { deleteJson, getJson } from '../fetchUtil';
 import { SongTag } from '../models/songTag';
 import { hexToRgb } from '../themes/colorMixer';
 import { theme } from './App';
+import { toastSuccess } from '../appToaster';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -145,6 +146,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                     console.log('dragging', s.name);
                   }
                   const color = snapshot.isDraggingOver ? hexToRgb(theme.intentPrimary) : hexToRgb(s.color);
+
                   const editTag = () => {
                     setName(s.name);
                     setOrder(s.order);
@@ -152,6 +154,13 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                     setTagId(s.id);
                     setIsPopupOpen(true);
                   };
+
+                  const deleteTag = async () => {
+                    await deleteJson(`/tags/${s.id}`);
+                    getJson<SongTag[]>('/tags').then(setSongTags);
+                    toastSuccess();
+                  };
+
                   return (
                     <>
                       <div
@@ -173,9 +182,18 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                           {
                             <FlexRow>
                               <FlexCol>
-                                <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
-                                  <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} onClick={editTag} />
-                                </Button>
+                                <Popover
+                                  content={
+                                    <Menu style={{ minWidth: 100 }}>
+                                      <MenuItem icon='edit' text='Edit' onClick={editTag} />
+                                      <MenuItem icon='delete' text='Delete' onClick={deleteTag} />
+                                    </Menu>
+                                  }
+                                >
+                                  <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
+                                    <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
+                                  </Button>
+                                </Popover>
                               </FlexCol>
                               <Text ellipsize className='tag-text'>
                                 {s.name}
