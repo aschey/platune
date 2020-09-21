@@ -34,6 +34,8 @@ import { hexToRgb } from '../themes/colorMixer';
 import { lightTheme } from '../themes/light';
 import ReactDOM from 'react-dom';
 import { FlexRow } from './FlexRow';
+import { GridTag } from './GridTag';
+import { theme } from './App';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -435,15 +437,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
-        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.PRIMARY}>
-          Main
-        </Tag>
-        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.SUCCESS}>
-          90s
-        </Tag>
-        <Tag minimal style={{ height: 20, marginTop: 2, marginRight: 5 }} intent={Intent.DANGER}>
-          Metal
-        </Tag>
+        <GridTag name='Main' color={hexToRgb(theme.intentPrimary).join(',')} isLightTheme={isLightTheme} />
+        <GridTag name='Metal' color={hexToRgb(theme.intentSuccess).join(',')} isLightTheme={isLightTheme} />
+        <GridTag name='Alternative' color={hexToRgb(theme.intentDanger).join(',')} isLightTheme={isLightTheme} />
         <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
           +5
         </Button>

@@ -19,6 +19,20 @@ export const shadeColor = (color: string, percent: number) => {
   return '#' + RR + GG + BB;
 };
 
+export const shadeColorRgb = (color: string, percent: number) => {
+  let [R, G, B] = color.split(',').map(parseFloat);
+
+  R = round((R * (100 + percent)) / 100);
+  G = round((G * (100 + percent)) / 100);
+  B = round((B * (100 + percent)) / 100);
+
+  R = R < 255 ? R : 255;
+  G = G < 255 ? G : 255;
+  B = B < 255 ? B : 255;
+
+  return [R, G, B].join(',');
+};
+
 export const hexToRgb = (hex: string) => {
   let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (result === null) {

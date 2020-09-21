@@ -137,7 +137,7 @@ const App: React.FC<{}> = () => {
       >
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid queuedSongs={queuedSongs} />
+            <QueueGrid queuedSongs={queuedSongs} isLightTheme={themeDetails} />
           </div>
         </div>
         <SongGrid

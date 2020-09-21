@@ -31,19 +31,18 @@ import { SongTag } from '../models/songTag';
 import { hexToRgb } from '../themes/colorMixer';
 import { theme } from './App';
 import { toastSuccess } from '../appToaster';
+import { SideTag } from './SideTag';
 
 interface QueueGridProps {
   queuedSongs: Song[];
+  isLightTheme: boolean;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [songTags, setSongTags] = useState<SongTag[]>([]);
-  const [color, setColor] = useState('#000000');
-  const [name, setName] = useState('');
-  const [order, setOrder] = useState(1);
-  const [tagId, setTagId] = useState<number | null>(null);
+  const [tag, setTag] = useState<SongTag>({ name: '', order: 1, color: '0,0,0', id: null });
 
   const width = 200;
 
@@ -103,11 +102,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   };
 
   const addTag = () => {
-    setName('');
-    setOrder(1);
-    setColor('#000000');
-    setOrder(1);
-    setTagId(null);
+    setTag({ id: null, name: '', order: 1, color: '0,0,0' });
     setIsPopupOpen(true);
   };
 
@@ -145,21 +140,6 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                   if (snapshot.isDraggingOver) {
                     console.log('dragging', s.name);
                   }
-                  const color = snapshot.isDraggingOver ? hexToRgb(theme.intentPrimary) : hexToRgb(s.color);
-
-                  const editTag = () => {
-                    setName(s.name);
-                    setOrder(s.order);
-                    setColor(s.color);
-                    setTagId(s.id);
-                    setIsPopupOpen(true);
-                  };
-
-                  const deleteTag = async () => {
-                    await deleteJson(`/tags/${s.id}`);
-                    getJson<SongTag[]>('/tags').then(setSongTags);
-                    toastSuccess();
-                  };
 
                   return (
                     <>
@@ -168,40 +148,14 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
                         style={{ paddingLeft: 5, paddingBottom: 5 }}
                         ref={droppableProvided.innerRef}
                       >
-                        <Tag
-                          minimal
-                          style={{
-                            border: `1px solid rgba(${color}, 0.25)`,
-                            backgroundColor: `rgba(${color}, 0.15)`,
-                            color: `rgba(${color}, 1)`,
-                            boxShadow: snapshot.isDraggingOver
-                              ? 'inset 0 0 8px 8px rgba(var(--intent-primary), 0.6)'
-                              : undefined,
-                          }}
-                        >
-                          {
-                            <FlexRow>
-                              <FlexCol>
-                                <Popover
-                                  content={
-                                    <Menu style={{ minWidth: 100 }}>
-                                      <MenuItem icon='edit' text='Edit' onClick={editTag} />
-                                      <MenuItem icon='delete' text='Delete' onClick={deleteTag} />
-                                    </Menu>
-                                  }
-                                >
-                                  <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
-                                    <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
-                                  </Button>
-                                </Popover>
-                              </FlexCol>
-                              <Text ellipsize className='tag-text'>
-                                {s.name}
-                              </Text>
-                              <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
-                            </FlexRow>
-                          }
-                        </Tag>
+                        <SideTag
+                          isDraggingOver={snapshot.isDraggingOver}
+                          tag={s}
+                          setTag={setTag}
+                          setIsPopupOpen={setIsPopupOpen}
+                          setSongTags={setSongTags}
+                          isLightTheme={isLightTheme}
+                        />
                       </div>
                     </>
                   );
@@ -284,18 +238,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
           }}
         </Droppable>
       </div>
-      <AddEditTag
-        isOpen={isPopupOpen}
-        setIsOpen={setIsPopupOpen}
-        setSongTags={setSongTags}
-        color={color}
-        setColor={setColor}
-        name={name}
-        setName={setName}
-        order={order}
-        setOrder={setOrder}
-        tagId={tagId}
-      />
+      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} setSongTags={setSongTags} tag={tag} setTag={setTag} />
     </>
   );
 };

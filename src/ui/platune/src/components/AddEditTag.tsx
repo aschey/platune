@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog } from './Dialog';
 import { SketchPicker, ChromePicker, ColorResult, RGBColor } from 'react-color';
 import reactCSS from 'reactcss';
@@ -10,38 +10,23 @@ import { getJson, postJson, putJson } from '../fetchUtil';
 import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
 import { theme } from './App';
+import { formatRgb } from '../util';
 
 interface AddEditTagProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   setSongTags: (songTags: SongTag[]) => void;
-  color: string;
-  setColor: (color: string) => void;
-  order: number;
-  setOrder: (order: number) => void;
-  name: string;
-  setName: (name: string) => void;
-  tagId: number | null;
+  tag: SongTag;
+  setTag: (tag: SongTag) => void;
 }
-export const AddEditTag: React.FC<AddEditTagProps> = ({
-  isOpen,
-  setIsOpen,
-  setSongTags,
-  color,
-  setColor,
-  order,
-  setOrder,
-  name,
-  setName,
-  tagId,
-}) => {
+export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSongTags, tag, setTag }) => {
   const [showPicker, setShowPicker] = useState(false);
 
   const onSave = async () => {
-    if (tagId === null) {
-      await postJson('/tags', { color, name, order });
+    if (tag.id === null) {
+      await postJson('/tags', tag);
     } else {
-      await putJson(`/tags/${tagId}`, { color, name, order });
+      await putJson(`/tags/${tag.id}`, tag);
     }
     getJson<SongTag[]>('/tags').then(setSongTags);
     toastSuccess();
@@ -52,7 +37,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
     <Dialog
       style={{ width: 300, height: 250 }}
       icon='add'
-      title={tagId === null ? 'New Tag' : 'Edit Tag'}
+      title={tag.id === null ? 'New Tag' : 'Edit Tag'}
       isOpen={isOpen}
       onOpening={() => setShowPicker(false)}
       onClose={() => setIsOpen(false)}
@@ -64,9 +49,9 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
           <InputGroup
             id='tagName'
             placeholder='Enter a tag name'
-            value={name}
+            value={tag.name}
             style={{ maxWidth: 175 }}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTag({ ...tag, name: e.target.value })}
           />
         </FormGroup>
         <FormGroup label='Order' labelFor='order' inline>
@@ -75,10 +60,10 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
             placeholder='Order'
             style={{ maxWidth: 60 }}
             defaultValue={1}
-            value={order}
+            value={tag.order}
             onValueChange={(_, strValue) => {
               const numericValue = parseInt(strValue);
-              setOrder(isNaN(numericValue) ? 1 : numericValue);
+              setTag({ ...tag, order: isNaN(numericValue) ? 1 : numericValue });
             }}
           />
         </FormGroup>
@@ -101,7 +86,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
                 height: 14,
                 marginTop: 4,
                 borderRadius: 2,
-                background: color,
+                background: `rgb(${tag.color})`,
               }}
             />
           </div>
@@ -124,10 +109,14 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({
                 onClick={() => setShowPicker(false)}
               />
               <SketchPicker
-                color={color}
+                color={{
+                  r: parseInt(tag.color.split(',')[0]),
+                  g: parseInt(tag.color.split(',')[1]),
+                  b: parseInt(tag.color.split(',')[2]),
+                }}
                 disableAlpha={true}
-                onChange={newColor => setColor(newColor.hex)}
-                presetColors={theme.suggestedTagColors.map(c => ({ color: c, title: '' }))}
+                onChange={newColor => setTag({ ...tag, color: formatRgb(newColor.rgb) })}
+                presetColors={theme.suggestedTagColors}
               />
             </div>
           ) : null}
