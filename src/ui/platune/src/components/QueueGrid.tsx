@@ -1,5 +1,5 @@
 import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Column,
   defaultTableRowRenderer,
@@ -26,7 +26,8 @@ import {
   Draggable,
 } from 'react-beautiful-dnd';
 import ReactDOM from 'react-dom';
-import { uniqueId } from 'lodash';
+import { getJson } from '../fetchUtil';
+import { SongTag } from '../models/songTag';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -35,7 +36,12 @@ interface QueueGridProps {
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [songTags, setSongTags] = useState<SongTag[]>([]);
   const width = 200;
+
+  useEffect(() => {
+    getJson<SongTag[]>('/tags').then(setSongTags);
+  }, []);
 
   const rowRenderer = (props: ListRowProps) => {
     if (props.style.width) {
@@ -115,53 +121,51 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
             background: 'rgba(var(--background-secondary), 1)',
           }}
         >
-          {queuedSongs.length < 100
-            ? null
-            : queuedSongs.slice(0, 100).map((s, i) => {
-                return (
-                  <Droppable droppableId={`tag${i}`} key={i}>
-                    {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
-                      if (snapshot.isDraggingOver) {
-                        console.log('dragging', queuedSongs[i].name);
-                      }
+          {songTags.map((s, i) => {
+            return (
+              <Droppable droppableId={`tag${i}`} key={i}>
+                {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
+                  if (snapshot.isDraggingOver) {
+                    console.log('dragging', queuedSongs[i].name);
+                  }
 
-                      return (
-                        <>
-                          <div
-                            {...droppableProvided.droppableProps}
-                            style={{ paddingLeft: 5, paddingBottom: 5 }}
-                            ref={droppableProvided.innerRef}
-                          >
-                            <Tag
-                              minimal
-                              intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][i % 4]}
-                              style={{
-                                boxShadow: snapshot.isDraggingOver
-                                  ? 'inset 0 0 8px 8px rgba(var(--intent-primary), 0.6)'
-                                  : undefined,
-                              }}
-                            >
-                              {
-                                <FlexRow>
-                                  <FlexCol>
-                                    <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
-                                      <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
-                                    </Button>
-                                  </FlexCol>
-                                  <Text ellipsize className='tag-text'>
-                                    {queuedSongs[i].name}
-                                  </Text>
-                                  <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
-                                </FlexRow>
-                              }
-                            </Tag>
-                          </div>
-                        </>
-                      );
-                    }}
-                  </Droppable>
-                );
-              })}
+                  return (
+                    <>
+                      <div
+                        {...droppableProvided.droppableProps}
+                        style={{ paddingLeft: 5, paddingBottom: 5 }}
+                        ref={droppableProvided.innerRef}
+                      >
+                        <Tag
+                          minimal
+                          intent={[Intent.PRIMARY, Intent.DANGER, Intent.SUCCESS, Intent.WARNING][i % 4]}
+                          style={{
+                            boxShadow: snapshot.isDraggingOver
+                              ? 'inset 0 0 8px 8px rgba(var(--intent-primary), 0.6)'
+                              : undefined,
+                          }}
+                        >
+                          {
+                            <FlexRow>
+                              <FlexCol>
+                                <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
+                                  <Icon iconSize={12} icon='edit' style={{ paddingBottom: 2 }} />
+                                </Button>
+                              </FlexCol>
+                              <Text ellipsize className='tag-text'>
+                                {s.name}
+                              </Text>
+                              <div style={{ color: 'rgba(var(--text-secondary), 0.9)' }}>23</div>
+                            </FlexRow>
+                          }
+                        </Tag>
+                      </div>
+                    </>
+                  );
+                }}
+              </Droppable>
+            );
+          })}
         </div>
 
         <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width }} />

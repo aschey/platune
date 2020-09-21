@@ -6,6 +6,8 @@ import { InputGroup, FormGroup, ControlGroup, Button, Intent, NumericInput } fro
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { DirtyCheck } from './DirtyCheck';
+import { postJson } from '../fetchUtil';
+import { toastSuccess } from '../appToaster';
 
 interface AddEditTagProps {
   isOpen: boolean;
@@ -16,6 +18,12 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen }) => 
   const [showPicker, setShowPicker] = useState(false);
   const [name, setName] = useState('');
   const [order, setOrder] = useState(1);
+
+  const onSave = async () => {
+    await postJson('/tags', { color, name, priority: order });
+    toastSuccess();
+    setIsOpen(false);
+  };
 
   return (
     <Dialog
@@ -106,7 +114,7 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen }) => 
       </ControlGroup>
       <FlexCol>
         <FlexRow>
-          <Button icon='saved' intent={Intent.SUCCESS} style={{ marginRight: 5, width: 80 }}>
+          <Button icon='saved' intent={Intent.SUCCESS} style={{ marginRight: 5, width: 80 }} onClick={onSave}>
             Save
           </Button>
           <Button icon='undo' intent={Intent.WARNING} style={{ marginLeft: 5, width: 80 }}>
