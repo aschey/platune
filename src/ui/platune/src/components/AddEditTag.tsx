@@ -12,6 +12,7 @@ import { SongTag } from '../models/songTag';
 import { theme } from './App';
 import { formatRgb } from '../util';
 import { EditSongTag } from '../models/editSongTag';
+import { Song } from '../models/song';
 
 interface AddEditTagProps {
   isOpen: boolean;
@@ -19,8 +20,9 @@ interface AddEditTagProps {
   setSongTags: (songTags: SongTag[]) => void;
   tag: EditSongTag;
   setTag: (tag: EditSongTag) => void;
+  setSongs: (songs: Song[]) => void;
 }
-export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSongTags, tag, setTag }) => {
+export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSongTags, tag, setTag, setSongs }) => {
   const [showPicker, setShowPicker] = useState(false);
 
   const onSave = async () => {
@@ -29,7 +31,10 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSo
     } else {
       await putJson(`/tags/${tag.id}`, tag);
     }
-    getJson<SongTag[]>('/tags').then(setSongTags);
+    const tags = await getJson<SongTag[]>('/tags');
+    setSongTags(tags);
+    const songs = await getJson<Song[]>('/songs');
+    setSongs(songs);
     toastSuccess();
     setIsOpen(false);
   };

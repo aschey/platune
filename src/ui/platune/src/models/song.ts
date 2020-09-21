@@ -1,3 +1,5 @@
+import { GridTagRes } from './gridTagRes';
+
 export interface Song {
   id: number;
   index: number;
@@ -9,4 +11,5 @@ export interface Song {
   track: number;
   time: number;
   hasArt: boolean;
+  tags: GridTagRes[];
 }

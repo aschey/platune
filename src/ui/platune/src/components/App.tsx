@@ -112,7 +112,10 @@ const App: React.FC<{}> = () => {
         await putJson(`/tags/${tagId}/addSongs`, songIds);
       }
       toastSuccess();
-      getJson<SongTag[]>('/tags').then(setSongTags);
+      const tags = await getJson<SongTag[]>('/tags');
+      setSongTags(tags);
+      const refreshedSongs = await getJson<Song[]>('/songs');
+      setSongs(refreshedSongs);
     }
   };
 
@@ -153,6 +156,7 @@ const App: React.FC<{}> = () => {
               isLightTheme={themeDetails}
               songTags={songTags}
               setSongTags={setSongTags}
+              setSongs={setSongs}
             />
           </div>
         </div>

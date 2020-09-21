@@ -39,9 +39,10 @@ interface QueueGridProps {
   isLightTheme: boolean;
   songTags: SongTag[];
   setSongTags: (songTags: SongTag[]) => void;
+  setSongs: (songs: Song[]) => void;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme, songTags, setSongTags }) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme, songTags, setSongTags, setSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0', id: null });
@@ -240,7 +241,14 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme,
           }}
         </Droppable>
       </div>
-      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} setSongTags={setSongTags} tag={tag} setTag={setTag} />
+      <AddEditTag
+        isOpen={isPopupOpen}
+        setIsOpen={setIsPopupOpen}
+        setSongTags={setSongTags}
+        tag={tag}
+        setTag={setTag}
+        setSongs={setSongs}
+      />
     </>
   );
 };

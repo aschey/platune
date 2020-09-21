@@ -435,14 +435,35 @@ export const SongGrid: React.FC<SongGridProps> = ({
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
+    const estWidth = songs[rowIndex].tags.reduce((prev, current) => prev + current.name.length * 6 + 20, 0);
+    let shownTags = [];
+    let extra = 0;
+    if (estWidth >= widths.tags) {
+      const availWidth = widths.tags - 45;
+      let total = 0;
+      for (let tag of songs[rowIndex].tags) {
+        total += tag.name.length * 6 + 20;
+        if (total < availWidth) {
+          shownTags.push(tag);
+        } else {
+          extra++;
+        }
+      }
+    } else {
+      shownTags = songs[rowIndex].tags;
+    }
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
-        <GridTag name='Main' color={hexToRgb(theme.intentPrimary).join(',')} isLightTheme={isLightTheme} />
-        <GridTag name='Metal' color={hexToRgb(theme.intentSuccess).join(',')} isLightTheme={isLightTheme} />
-        <GridTag name='Alternative' color={hexToRgb(theme.intentDanger).join(',')} isLightTheme={isLightTheme} />
-        <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
-          +5
-        </Button>
+        {shownTags
+          .sort(t => t.order)
+          .map(t => (
+            <GridTag name={t.name} color={t.color} isLightTheme={isLightTheme} />
+          ))}
+        {extra > 0 ? (
+          <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
+            +{extra}
+          </Button>
+        ) : null}
       </div>
     );
   };
