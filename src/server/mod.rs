@@ -143,7 +143,9 @@ pub fn establish_connection() -> AnyResult<SqliteConnection> {
     dotenv::from_path(get_env_path()).ok();
     let database_url = env::var(DATABASE_URL)?;
     let connection = SqliteConnection::establish(&database_url)?;
-    connection.execute("PRAGMA foreign_keys = ON").unwrap();
+    connection
+        .execute("PRAGMA foreign_keys = ON;PRAGMA journal_mode=WAL;")
+        .unwrap();
 
     Ok(connection)
 }

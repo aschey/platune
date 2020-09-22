@@ -29,9 +29,9 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, tag, 
 
   const onSave = async () => {
     setIsOpen(false);
-    dispatch(addEditTag(tag));
-    dispatch(fetchSongs());
+    await dispatch(addEditTag(tag));
     toastSuccess();
+    await dispatch(fetchSongs());
   };
 
   return (
