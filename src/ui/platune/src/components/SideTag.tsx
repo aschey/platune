@@ -5,6 +5,8 @@ import { deleteJson, getJson } from '../fetchUtil';
 import { EditSongTag } from '../models/editSongTag';
 import { Search } from '../models/search';
 import { SongTag } from '../models/songTag';
+import { useAppDispatch } from '../state/store';
+import { deleteTag } from '../state/tags';
 import { hexToRgb, isLight, shadeColorRgb } from '../themes/colorMixer';
 import { theme } from './App';
 import { FlexCol } from './FlexCol';
@@ -14,7 +16,6 @@ interface SideTagProps {
   tag: SongTag;
   setTag: (tag: EditSongTag) => void;
   setIsPopupOpen: (isPopupOpen: boolean) => void;
-  setSongTags: (songTags: SongTag[]) => void;
   isDraggingOver: boolean;
   isLightTheme: boolean;
   setSelectedSearch: (selectedSearch: Search) => void;
@@ -23,19 +24,19 @@ export const SideTag: React.FC<SideTagProps> = ({
   tag,
   setTag,
   setIsPopupOpen,
-  setSongTags,
   isDraggingOver,
   isLightTheme,
   setSelectedSearch,
 }) => {
+  const dispatch = useAppDispatch();
+
   const editTag = () => {
     setTag(tag);
     setIsPopupOpen(true);
   };
 
-  const deleteTag = async () => {
-    await deleteJson(`/tags/${tag.id}`);
-    getJson<SongTag[]>('/tags').then(setSongTags);
+  const onDeleteTag = async () => {
+    dispatch(deleteTag(tag.id));
     toastSuccess();
   };
 
@@ -67,7 +68,7 @@ export const SideTag: React.FC<SideTagProps> = ({
               content={
                 <Menu style={{ minWidth: 100 }}>
                   <MenuItem icon='edit' text='Edit' onClick={editTag} />
-                  <MenuItem icon='delete' text='Delete' onClick={deleteTag} />
+                  <MenuItem icon='delete' text='Delete' onClick={onDeleteTag} />
                 </Menu>
               }
             >

@@ -1,12 +1,11 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import { buildQueries } from '@testing-library/react';
 import { getJson } from '../fetchUtil';
 import { Song } from '../models/song';
 import { AppDispatch } from './store';
 
-type SongState = { state: 'idle' | 'pending' | 'finished'; data: Song[]; filters: string };
+type SongState = { loadingState: 'idle' | 'pending' | 'finished'; data: Song[]; filters: string };
 
-const initialState: SongState = { state: 'idle', data: [], filters: '' };
+const initialState: SongState = { loadingState: 'idle', data: [], filters: '' };
 
 interface State {
   songs: SongState;
@@ -33,10 +32,10 @@ const songsSlice = createSlice({
   },
   extraReducers: builder => {
     builder.addCase(fetchSongs.pending, state => {
-      state.state = 'pending';
+      state.loadingState = 'pending';
     });
     builder.addCase(fetchSongs.fulfilled, (state, { payload }) => {
-      state.state = 'finished';
+      state.loadingState = 'finished';
       payload.forEach((song, i) => (song.index = i));
       state.data = payload;
     });
@@ -45,6 +44,6 @@ const songsSlice = createSlice({
 
 export const { setFilters } = songsSlice.actions;
 
-export const selectSongs = (state: { songs: SongState }) => state.songs.data;
+export const selectSongs = (state: State) => state.songs.data;
 
 export default songsSlice.reducer;

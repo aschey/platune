@@ -15,29 +15,23 @@ import { EditSongTag } from '../models/editSongTag';
 import { Song } from '../models/song';
 import { useAppDispatch } from '../state/store';
 import { fetchSongs } from '../state/songs';
+import { addEditTag, fetchTags } from '../state/tags';
 
 interface AddEditTagProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  setSongTags: (songTags: SongTag[]) => void;
   tag: EditSongTag;
   setTag: (tag: EditSongTag) => void;
 }
-export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, setSongTags, tag, setTag }) => {
+export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, tag, setTag }) => {
   const [showPicker, setShowPicker] = useState(false);
   const dispatch = useAppDispatch();
 
   const onSave = async () => {
-    if (tag.id === null) {
-      await postJson('/tags', tag);
-    } else {
-      await putJson(`/tags/${tag.id}`, tag);
-    }
-    const tags = await getJson<SongTag[]>('/tags');
-    setSongTags(tags);
+    setIsOpen(false);
+    dispatch(addEditTag(tag));
     dispatch(fetchSongs());
     toastSuccess();
-    setIsOpen(false);
   };
 
   return (

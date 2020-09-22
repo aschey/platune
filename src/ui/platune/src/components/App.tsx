@@ -18,6 +18,7 @@ import { Search } from '../models/search';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchSongs, selectSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
+import { fetchTags } from '../state/tags';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -32,7 +33,6 @@ const App: React.FC<{}> = () => {
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [songTags, setSongTags] = useState<SongTag[]>([]);
   const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
 
   const dispatch = useAppDispatch();
@@ -121,8 +121,7 @@ const App: React.FC<{}> = () => {
         await putJson(`/tags/${tagId}/addSongs`, songIds);
       }
       toastSuccess();
-      const tags = await getJson<SongTag[]>('/tags');
-      setSongTags(tags);
+      dispatch(fetchTags());
 
       dispatch(fetchSongs());
     }
@@ -160,13 +159,7 @@ const App: React.FC<{}> = () => {
       >
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid
-              queuedSongs={queuedSongs}
-              isLightTheme={themeDetails}
-              songTags={songTags}
-              setSongTags={setSongTags}
-              setSelectedSearch={setSelectedSearch}
-            />
+            <QueueGrid queuedSongs={queuedSongs} isLightTheme={themeDetails} setSelectedSearch={setSelectedSearch} />
           </div>
         </div>
         <SongGrid

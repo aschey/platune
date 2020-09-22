@@ -34,30 +34,28 @@ import { toastSuccess } from '../appToaster';
 import { SideTag } from './SideTag';
 import { EditSongTag } from '../models/editSongTag';
 import { Search } from '../models/search';
+import { useAppDispatch } from '../state/store';
+import { fetchTags, selectTags } from '../state/tags';
+import { useSelector } from 'react-redux';
 
 interface QueueGridProps {
   queuedSongs: Song[];
   isLightTheme: boolean;
-  songTags: SongTag[];
-  setSongTags: (songTags: SongTag[]) => void;
   setSelectedSearch: (selectedSearch: Search | null) => void;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({
-  queuedSongs,
-  isLightTheme,
-  songTags,
-  setSongTags,
-  setSelectedSearch,
-}) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme, setSelectedSearch }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0', id: null });
 
+  const dispatch = useAppDispatch();
+  const songTags = useSelector(selectTags);
+
   const width = 200;
 
   useEffect(() => {
-    getJson<SongTag[]>('/tags').then(setSongTags);
+    dispatch(fetchTags());
   }, []);
 
   const rowRenderer = (props: ListRowProps) => {
@@ -164,7 +162,6 @@ export const QueueGrid: React.FC<QueueGridProps> = ({
                           tag={s}
                           setTag={setTag}
                           setIsPopupOpen={setIsPopupOpen}
-                          setSongTags={setSongTags}
                           isLightTheme={isLightTheme}
                           setSelectedSearch={setSelectedSearch}
                         />
@@ -266,7 +263,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({
           </div>
         )}
       </div>
-      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} setSongTags={setSongTags} tag={tag} setTag={setTag} />
+      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} tag={tag} setTag={setTag} />
     </div>
   );
 };
