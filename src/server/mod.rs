@@ -6,8 +6,9 @@ use crate::schema::artist::dsl::*;
 use crate::schema::folder::dsl::*;
 use crate::schema::import_temp::dsl::*;
 use crate::schema::mount::dsl::*;
-use crate::schema::search_index::dsl::*;
 use crate::schema::song::dsl::*;
+use crate::schema::song_tag;
+use crate::schema::tag::dsl::*;
 use actix_cors::Cors;
 use actix_files as fs;
 use actix_http::http::header::{HeaderName, HeaderValue};
@@ -42,7 +43,7 @@ use paperclip::actix::{
     api_v2_errors,
     api_v2_operation,
     // use this instead of actix_web::web
-    web::{self, Json},
+    web::{self, Json, Path},
     Apiv2Schema,
     // extension trait for actix_web::App and proc-macro attributes
     OpenApiExt,
@@ -59,6 +60,8 @@ use std::time::SystemTime;
 use std::{env, vec::Vec};
 use std::{str, sync::mpsc};
 use sysinfo::{DiskExt, SystemExt};
+
+embed_migrations!();
 
 const IS_WINDOWS: bool = cfg!(windows);
 const DATABASE_URL: &str = "DATABASE_URL";
@@ -139,7 +142,10 @@ fn index() -> HttpResponse {
 pub fn establish_connection() -> AnyResult<SqliteConnection> {
     dotenv::from_path(get_env_path()).ok();
     let database_url = env::var(DATABASE_URL)?;
-    Ok(SqliteConnection::establish(&database_url)?)
+    let connection = SqliteConnection::establish(&database_url)?;
+    connection.execute("PRAGMA foreign_keys = ON").unwrap();
+
+    Ok(connection)
 }
 
 pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
@@ -160,31 +166,36 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
             .wrap(Cors::new().finish())
             .wrap_api()
             // REST endpoints
-            .service(web::resource("/dirsInit").route(web::get().to(get_dirs_init)))
-            .service(web::resource("/dirs").route(web::get().to(get_dirs)))
-            .service(
-                web::resource("/configuredFolders").route(web::get().to(get_configured_folders)),
+            .route("/dirsInit", web::get().to(get_dirs_init))
+            .route("/dirs", web::get().to(get_dirs))
+            .route("/configuredFolders", web::get().to(get_configured_folders))
+            .route("/isWindows", web::get().to(get_is_windows))
+            .route("/updateFolders", web::put().to(update_folders))
+            .route("/getDbPath", web::get().to(get_db_path))
+            .route("/updateDbPath", web::put().to(update_db_path))
+            .route("/getNtfsMounts", web::get().to(get_ntfs_mounts))
+            .route("/updatePathMappings", web::put().to(update_path_mappings))
+            .route("/songs", web::get().to(get_songs))
+            .route("/albumArt", web::get().to(get_album_art))
+            .route("/albumArtColors", web::get().to(get_art_colors))
+            .route("/search", web::get().to(search))
+            .route("/sync", web::put().to(get_all_files))
+            .route("/tags", web::post().to(add_tag))
+            .route("/tags/{tagId}", web::put().to(update_tag))
+            .route("/tags", web::get().to(get_tags))
+            .route("/tags/{tagId}", web::delete().to(delete_tag))
+            .route("/tags/{tagId}/addSongs", web::put().to(add_songs_to_tag))
+            .route(
+                "/tags/{tagId}/removeSongs",
+                web::put().to(remove_songs_from_tag),
             )
-            .service(web::resource("/isWindows").route(web::get().to(get_is_windows)))
-            .service(web::resource("/updateFolders").route(web::put().to(update_folders)))
-            .service(web::resource("/getDbPath").route(web::get().to(get_db_path)))
-            .service(web::resource("/updateDbPath").route(web::put().to(update_db_path)))
-            .service(web::resource("/getNtfsMounts").route(web::get().to(get_ntfs_mounts)))
-            .service(
-                web::resource("/updatePathMappings").route(web::put().to(update_path_mappings)),
-            )
-            .service(web::resource("/songs").route(web::get().to(get_songs)))
-            .service(web::resource("/albumArt").route(web::get().to(get_album_art)))
-            .service(web::resource("/albumArtColors").route(web::get().to(get_art_colors)))
-            .service(web::resource("/search").route(web::get().to(search)))
-            .service(web::resource("/sync").route(web::put().to(get_all_files)))
             .with_json_spec_at("/spec")
             .build()
             // static files
             .wrap_fn(|req, srv| {
                 let path = req.path().to_owned();
                 srv.call(req).map(move |res| {
-                    if path == "/index.html" || path == "/" {
+                    if path == "/index.html" || path == "/" || path == "/swagger" {
                         match res {
                             Ok(mut r) => {
                                 r.headers_mut().insert(
@@ -204,6 +215,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
 
         let connection_res = establish_connection();
         if let Ok(connection) = connection_res {
+            embedded_migrations::run_with_output(&connection, &mut std::io::stdout()).unwrap();
             let paths = folder
                 .select(get_path())
                 .load::<String>(&connection)
@@ -256,19 +268,18 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
         let full_path = path.to_str().unwrap();
         if path.is_file() {
             if full_path.ends_with(".mp3") || full_path.ends_with(".m4a") {
-                //let file = filebuffer::FileBuffer::open(&path).unwrap();
                 let f = katatsuki::Track::from_path(std::path::Path::new(full_path), None).unwrap();
                 let mut n = NewImport {
-                    import_artist: f.artist.to_owned(),
-                    import_album: f.album,
+                    import_artist: f.artist.trim().to_owned(),
+                    import_album: f.album.trim().to_owned(),
                     import_album_artist: if f.album_artists.len() > 0 && f.album_artists[0] != "" {
-                        f.album_artists[0].to_owned()
+                        f.album_artists[0].trim().to_owned()
                     } else {
-                        f.artist
+                        f.artist.trim().to_owned()
                     },
                     import_song_path_windows: "".to_string(),
                     import_song_path_unix: "".to_string(),
-                    import_title: f.title,
+                    import_title: f.title.trim().to_owned(),
                     import_track_number: f.track_number,
                     import_disc_number: if f.disc_number > 0 { f.disc_number } else { 1 },
                     import_year: f.year,
@@ -277,8 +288,6 @@ fn get_all_files_rec(start_path: String, original: String, other: String) -> Vec
                     import_bit_rate: f.bitrate,
                     import_album_art: read_album_art(f.album_art, path.to_owned()),
                 };
-                //let original2 = original.clone();
-                //let other2 = other.clone();
                 if IS_WINDOWS {
                     n.import_song_path_windows = full_path.to_owned();
                     if other2 != "" {
@@ -312,7 +321,8 @@ fn read_album_art(from_tag: Vec<u8>, path: PathBuf) -> Option<Vec<u8>> {
         let cover_opt = parent_files.find(|f| {
             let temp = f.as_ref().unwrap().path();
             let path = temp.to_str().unwrap();
-            return path.ends_with("cover.jpg") || path.ends_with("cover.png");
+            return path.to_lowercase().ends_with("cover.jpg")
+                || path.to_lowercase().ends_with("cover.png");
         });
         if let Some(cover) = cover_opt {
             let img = std::fs::read(cover.unwrap().path()).unwrap();
@@ -560,7 +570,8 @@ async fn get_dirs_init() -> Result<Json<DirResponse>, ()> {
 }
 
 #[api_v2_operation]
-async fn get_dirs(dir_request: Query<DirRequest>) -> Result<Json<DirResponse>, ()> {
+async fn get_dirs(dir_request_query: Query<DirRequest>) -> Result<Json<DirResponse>, ()> {
+    let dir_request = dir_request_query.into_inner();
     let mut entries = read_dir(dir_request.dir.as_str())
         .unwrap()
         .filter_map(|res| filter_dirs(res, get_delim()))
@@ -700,7 +711,8 @@ fn new_folder(path: String) -> NewFolder {
 }
 
 #[api_v2_operation]
-async fn update_folders(new_folders_req: Json<FolderUpdate>) -> Result<Json<()>, HttpError> {
+async fn update_folders(new_folders_json: Json<FolderUpdate>) -> Result<Json<()>, HttpError> {
+    let new_folders_req = new_folders_json.into_inner();
     let mut new_folders = new_folders_req.folders.to_vec();
     new_folders.sort_case_insensitive();
     let new_folders3 = new_folders.to_vec();
@@ -814,7 +826,8 @@ fn write_env(dir: &String) -> String {
 }
 
 #[api_v2_operation]
-async fn update_db_path(request: Json<DirRequest>) -> Result<Json<()>, ()> {
+async fn update_db_path(request_json: Json<DirRequest>) -> Result<Json<()>, ()> {
+    let request = request_json.into_inner();
     let full_url = write_env(&request.dir);
     let current_url_res = env::var(DATABASE_URL);
     if let Ok(current_url) = current_url_res {
@@ -875,7 +888,8 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 }
 
 #[api_v2_operation]
-async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
+async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
+    let request = request_query.into_inner();
     let connection = establish_connection().unwrap();
     let mut query: diesel::query_builder::BoxedSelectStatement<_, _, diesel::sqlite::Sqlite> = song
         .into_boxed()
@@ -915,7 +929,15 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
     if let Some(req_song_name) = &request.song_name {
         query = query.filter(crate::schema::song::song_title.eq(req_song_name));
     }
-    let mut songs = query
+
+    let song_tags = song_tag::table
+        .inner_join(tag)
+        .select((song_tag::song_id, tag_id, tag_name, tag_order, tag_color))
+        .load::<(i32, i32, String, i32, String)>(&connection)
+        .unwrap();
+    let mut song_res = Vec::<self::Song>::new();
+
+    let songs = query
         .load::<(
             i32,
             String,
@@ -928,9 +950,9 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
             String,
             bool,
         )>(&connection)
-        .unwrap()
-        .iter()
-        .map(|s| Song {
+        .unwrap();
+    for s in songs {
+        song_res.push(Song {
             id: s.0,
             name: s.1.to_owned(),
             artist: s.2.to_owned(),
@@ -941,38 +963,56 @@ async fn get_songs(request: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
             time: s.7,
             path: s.8.to_owned(),
             has_art: s.9,
+            tags: song_tags
+                .iter()
+                .filter(|t| t.0 == s.0)
+                .map(|t| SongTag {
+                    id: t.1,
+                    name: t.2.to_owned(),
+                    order: t.3,
+                    color: t.4.to_owned(),
+                })
+                .collect(),
         })
-        .collect::<Vec<_>>();
-    &songs.sort_case_insensitive("album artist".to_owned());
-    return Ok(Json(songs));
+    }
+    if let Some(req_tag_id) = request.tag_id {
+        song_res = song_res
+            .into_iter()
+            .filter(|s| s.tags.iter().map(|t| t.id).any(|t| t == req_tag_id))
+            .collect::<Vec<_>>();
+    }
+    &song_res.sort_case_insensitive("album artist".to_owned());
+    return Ok(Json(song_res));
 }
 
 #[api_v2_operation]
-async fn search(request: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
+async fn search(request_query: Query<Search>) -> Result<Json<Vec<SearchRes>>, ()> {
+    let request = request_query.into_inner();
     let connection = establish_connection().unwrap();
     // If both album_artist and artist are returned by search, use ROW_NUMBER() to only return the artist
     // Adjust rankings to give slightly more weight to artists and albums
 
     // test cases: "red hot chili peppers" for album artist without artist
     // "fired up" for multiple artists with same album name
-    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'album' THEN 1.25 ELSE 1 END)";
+    let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
     let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
     let res = diesel::sql_query(f!("
         WITH CTE AS (
-            SELECT DISTINCT entry_value, entry_type, rank, 
+            SELECT DISTINCT entry_value, entry_type, rank, tag_color,
             CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
             {artist_select} artist,
-            ROW_NUMBER() OVER (PARTITION BY entry_value, {artist_select}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 ELSE 3 END ORDER BY entry_type DESC) row_num
+            ROW_NUMBER() OVER (PARTITION BY entry_value, {artist_select}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
             FROM search_index
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
             LEFT OUTER JOIN album al on al.album_id = assoc_id
             LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+            LEFT OUTER JOIN tag t on t.tag_id = assoc_id
             WHERE search_index MATCH ?
             ORDER BY {order_clause}
             LIMIT ?
         )
-        SELECT entry_value, entry_type, artist, correlation_id FROM cte
+        SELECT entry_value, entry_type, artist, correlation_id, tag_color FROM cte
         WHERE row_num = 1
         ORDER BY {order_clause}
         LIMIT ?")
@@ -1069,7 +1109,8 @@ fn adjust_lighten(mut color: Rgb, luminance: f32, threshold: f32) -> Rgb {
 }
 
 #[api_v2_operation]
-async fn get_art_colors(request: Query<ArtColorsRequest>) -> Result<Json<Vec<Rgb>>, ()> {
+async fn get_art_colors(request_query: Query<ArtColorsRequest>) -> Result<Json<Vec<Rgb>>, ()> {
+    let request = request_query.into_inner();
     let connection = establish_connection().unwrap();
     let art = song
         .filter(song_id.eq(request.song_id))
@@ -1190,7 +1231,8 @@ async fn update_path_mappings(request: Json<Vec<NtfsMapping>>) -> Result<Json<()
 
 #[api_v2_operation]
 async fn get_db_path() -> Result<Json<Dir>, ()> {
-    let mut file = File::open(".env").unwrap();
+    let env_path = get_env_path();
+    let mut file = File::open(env_path).unwrap();
     let mut contents = String::new();
     let _ = file.read_to_string(&mut contents);
     let delim_escaped = get_delim_escaped();
@@ -1207,6 +1249,116 @@ async fn get_db_path() -> Result<Json<Dir>, ()> {
     }));
 }
 
+#[api_v2_operation]
+async fn add_tag(request_json: Json<TagRequest>) -> Result<Json<()>, ()> {
+    let request = request_json.into_inner();
+    let connection = establish_connection().unwrap();
+    diesel::insert_into(tag)
+        .values((
+            tag_name.eq(request.name.to_owned()),
+            tag_color.eq(request.color.to_owned()),
+            tag_order.eq(request.order),
+        ))
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn update_tag(
+    request_path: Path<(i32,)>,
+    request_json: Json<TagRequest>,
+) -> Result<Json<()>, ()> {
+    let request = request_json.into_inner();
+    let id_path = request_path.into_inner();
+    let connection = establish_connection().unwrap();
+    diesel::update(tag.filter(tag_id.eq(id_path.0)))
+        .set((
+            tag_name.eq(request.name.to_owned()),
+            tag_color.eq(request.color.to_owned()),
+            tag_order.eq(request.order),
+        ))
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn get_tags() -> Result<Json<Vec<TagResponse>>, ()> {
+    let connection = establish_connection().unwrap();
+    let tags = diesel::sql_query(f!("
+        SELECT t.tag_id, tag_name, tag_color, tag_order, COUNT(st.song_id) as song_count FROM tag t
+        LEFT OUTER JOIN song_tag st ON st.tag_id = t.tag_id
+        GROUP BY t.tag_id
+    "))
+    .load::<TagRes>(&connection)
+    .unwrap()
+    .iter()
+    .map(|t| TagResponse {
+        id: t.tag_id,
+        name: t.tag_name.to_owned(),
+        color: t.tag_color.to_owned(),
+        order: t.tag_order,
+        song_count: t.song_count,
+    })
+    .collect::<Vec<_>>();
+    return Ok(Json(tags));
+}
+
+#[api_v2_operation]
+async fn delete_tag(request_path: Path<(i32,)>) -> Result<Json<()>, ()> {
+    let tag_id_req = request_path.into_inner();
+    let connection = establish_connection().unwrap();
+
+    diesel::delete(song_tag::table.filter(song_tag::tag_id.eq(tag_id_req.0)))
+        .execute(&connection)
+        .unwrap();
+    diesel::delete(tag.filter(tag_id.eq(tag_id_req.0)))
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn add_songs_to_tag(
+    request_path: Path<(i32,)>,
+    request_json: Json<Vec<i32>>,
+) -> Result<Json<()>, ()> {
+    let req_tag_id = request_path.into_inner();
+    let song_ids = request_json.into_inner();
+    let connection = establish_connection().unwrap();
+    let inserts = song_ids
+        .iter()
+        .map(|s| (song_tag::song_id.eq(s), song_tag::tag_id.eq(req_tag_id.0)))
+        .collect::<Vec<_>>();
+    diesel::replace_into(song_tag::table)
+        .values(inserts)
+        .execute(&connection)
+        .unwrap();
+    return Ok(Json(()));
+}
+
+#[api_v2_operation]
+async fn remove_songs_from_tag(
+    request_path: Path<(i32,)>,
+    request_json: Json<Vec<i32>>,
+) -> Result<Json<()>, ()> {
+    let req_tag_id = request_path.into_inner();
+    let song_ids = request_json.into_inner();
+    let connection = establish_connection().unwrap();
+
+    diesel::delete(
+        song_tag::table.filter(
+            song_tag::tag_id
+                .eq(req_tag_id.0)
+                .and(song_tag::song_id.eq_any(song_ids)),
+        ),
+    )
+    .execute(&connection)
+    .unwrap();
+    return Ok(Json(()));
+}
+
 #[derive(QueryableByName, Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
 struct SearchRes {
@@ -1218,6 +1370,23 @@ struct SearchRes {
     artist: Option<String>,
     #[sql_type = "Integer"]
     correlation_id: i32,
+    #[sql_type = "Nullable<Text>"]
+    tag_color: Option<String>,
+}
+
+#[derive(QueryableByName, Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct TagRes {
+    #[sql_type = "Integer"]
+    tag_id: i32,
+    #[sql_type = "Text"]
+    tag_name: String,
+    #[sql_type = "Text"]
+    tag_color: String,
+    #[sql_type = "Integer"]
+    tag_order: i32,
+    #[sql_type = "Integer"]
+    song_count: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]
@@ -1225,6 +1394,33 @@ struct SearchRes {
 struct Dir {
     is_file: bool,
     name: String,
+}
+
+#[derive(Deserialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct TagRequest {
+    name: String,
+    color: String,
+    order: i32,
+}
+
+#[derive(Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct TagResponse {
+    id: i32,
+    name: String,
+    color: String,
+    order: i32,
+    song_count: i32,
+}
+
+#[derive(Serialize, Apiv2Schema)]
+#[serde(rename_all = "camelCase")]
+struct SongTag {
+    id: i32,
+    name: String,
+    color: String,
+    order: i32,
 }
 
 #[derive(Serialize, Apiv2Schema)]
@@ -1268,17 +1464,18 @@ struct FolderUpdate {
 
 #[derive(Serialize, Apiv2Schema)]
 #[serde(rename_all = "camelCase")]
-pub struct Song {
-    pub id: i32,
-    pub path: String,
-    pub artist: String,
-    pub album_artist: String,
-    pub name: String,
-    pub album: String,
-    pub track: i32,
-    pub disc: i32,
-    pub time: i32,
-    pub has_art: bool,
+struct Song {
+    id: i32,
+    path: String,
+    artist: String,
+    album_artist: String,
+    name: String,
+    album: String,
+    track: i32,
+    disc: i32,
+    time: i32,
+    has_art: bool,
+    tags: Vec<SongTag>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]
@@ -1290,6 +1487,7 @@ struct SongRequest {
     album_artist_id: Option<i32>,
     album_id: Option<i32>,
     song_name: Option<String>,
+    tag_id: Option<i32>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]

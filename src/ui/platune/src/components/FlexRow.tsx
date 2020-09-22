@@ -4,7 +4,7 @@ interface FlexRowProps extends React.DetailedHTMLProps<React.HTMLAttributes<HTML
   center?: boolean;
 }
 
-export const FlexRow: React.FC<FlexRowProps> = props => {
+export const FlexRow = React.forwardRef<HTMLDivElement, FlexRowProps>((props, ref) => {
   const style: React.CSSProperties = { ...props.style, display: 'flex', flex: 1, flexDirection: 'row' };
   if (props.center !== false && !props.style?.alignItems) {
     style.alignItems = 'center';
@@ -12,9 +12,10 @@ export const FlexRow: React.FC<FlexRowProps> = props => {
   if (props.center !== false && !props.style?.alignContent) {
     style.alignContent = 'center';
   }
+  const { center, ...styleProps } = props;
   return (
-    <div {...props} style={style}>
+    <div {...styleProps} style={style} ref={ref}>
       {props.children}
     </div>
   );
-};
+});

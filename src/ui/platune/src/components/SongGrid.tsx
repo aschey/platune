@@ -1,8 +1,25 @@
-import { Button, EditableText, Text } from '@blueprintjs/core';
+import { Button, EditableText, Text, Tag, Intent, Colors } from '@blueprintjs/core';
 import _, { Dictionary } from 'lodash';
-import React, { useCallback, useEffect, useState } from 'react';
-import Draggable from 'react-draggable';
-import { Column, defaultTableRowRenderer, Table, TableHeaderProps, TableRowProps } from 'react-virtualized';
+import React, { useCallback, useEffect, useState, useReducer, useRef } from 'react';
+import { default as DraggableCol } from 'react-draggable';
+import {
+  Draggable,
+  DraggableProvided,
+  DraggableStateSnapshot,
+  Droppable,
+  DraggableRubric,
+  DroppableProvided,
+  DroppableStateSnapshot,
+} from 'react-beautiful-dnd';
+import {
+  Column,
+  defaultTableRowRenderer,
+  GridCellProps,
+  Table,
+  TableCellProps,
+  TableHeaderProps,
+  TableRowProps,
+} from 'react-virtualized';
 import { useObservable } from 'rxjs-hooks';
 import { toastSuccess } from '../appToaster';
 import { audioQueue } from '../audio';
@@ -12,6 +29,13 @@ import { Song } from '../models/song';
 import { formatMs, formatRgb, range, setCssVar, sleep } from '../util';
 import { Controls } from './Controls';
 import { FlexCol } from './FlexCol';
+import { normal } from 'color-blend';
+import { hexToRgb } from '../themes/colorMixer';
+import { lightTheme } from '../themes/light';
+import ReactDOM from 'react-dom';
+import { FlexRow } from './FlexRow';
+import { GridTag } from './GridTag';
+import { theme } from './App';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -22,6 +46,8 @@ interface SongGridProps {
   setSongs: (songs: Song[]) => void;
   queuedSongs: Song[];
   setQueuedSongs: (songs: Song[]) => void;
+  selectedFiles: string[];
+  setSelectedFiles: (selectedFiles: string[]) => void;
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
@@ -33,10 +59,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
   setSongs,
   queuedSongs,
   setQueuedSongs,
+  selectedFiles,
+  setSelectedFiles,
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = useState('');
+
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
 
@@ -52,7 +80,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     album: remainingWidth * 0.2,
     track: trackWidth,
     time: timeWidth,
-    path: remainingWidth * 0.2,
+    tags: remainingWidth * 0.2,
   });
   const [widths2, setWidths2] = useState({
     edit: editWidth,
@@ -62,11 +90,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
     album: remainingWidth * 0.2,
     track: trackWidth,
     time: timeWidth,
-    path: remainingWidth * 0.4,
+    tags: remainingWidth * 0.4,
   });
 
-  const mainRef = React.createRef<Table>();
-  const otherRef = React.createRef<Table>();
+  const mainRef = useRef<Table>();
+  const otherRef = useRef<Table>();
+  const draggingFile = useRef<string>('');
   const playingFile = useObservable(() => audioQueue.playingSource);
   const numTries = 10;
 
@@ -134,7 +163,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
       album: remainingWidth * 0.2,
       track: trackWidth,
       time: timeWidth,
-      path: remainingWidth * 0.2,
+      tags: remainingWidth * 0.2,
     });
 
     setWidths2({
@@ -145,15 +174,15 @@ export const SongGrid: React.FC<SongGridProps> = ({
       album: remainingWidth * 0.2,
       track: trackWidth,
       time: timeWidth,
-      path: remainingWidth * 0.4,
+      tags: remainingWidth * 0.4,
     });
-  }, [width]);
+  }, [width, remainingWidth]);
 
   const headerRenderer = (props: TableHeaderProps) => {
     return (
       <>
         <div className='ReactVirtualized__Table__headerTruncatedText'>{props.label}</div>
-        <Draggable
+        <DraggableCol
           axis='none'
           defaultClassName='DragHandle'
           defaultClassNameDragging='DragHandleActive'
@@ -163,18 +192,18 @@ export const SongGrid: React.FC<SongGridProps> = ({
           }}
         >
           <span className='DragHandleIcon'>⋮</span>
-        </Draggable>
+        </DraggableCol>
       </>
     );
   };
 
-  const editCellRenderer = (rowIndex: number) => {
+  const editCellRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
     const isEditingRow = editingFile === path;
-    const isSelectedRow = selectedFile === path;
+    const isSelectedRow = selectedFiles.indexOf(path) > -1;
     const isPlayingRow = playingFile === path;
     const classes = `${isEditingRow ? 'editing' : ''} ${
       isPlayingRow ? 'playing' : isSelectedRow ? 'selected' : rowIndex % 2 === 0 ? 'striped-even' : 'striped-odd'
@@ -191,11 +220,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
             minimal
             className={isPlayingRow ? 'playing' : ''}
             icon={isEditingRow ? 'saved' : isPlayingRow ? 'volume-up' : 'edit'}
-            onClick={() => {
+            onClick={(e: React.MouseEvent) => {
               const cur = songs[rowIndex];
               let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
               if (selectedGrid === 'album') {
-                updateSelectedAlbum(cur.id, albumIndex);
+                const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
+                const song = hasArt.length > 0 ? hasArt[0] : cur;
+                updateSelectedAlbum(song.id, song.hasArt, albumIndex);
               }
 
               if (isEditingRow) {
@@ -203,7 +234,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
                 toastSuccess();
                 setEditingFile('');
               } else {
-                setSelectedFile(path);
+                onFileSelect(e, path);
                 setEditingFile(path);
               }
             }}
@@ -211,6 +242,24 @@ export const SongGrid: React.FC<SongGridProps> = ({
         </FlexCol>
       </div>
     );
+  };
+
+  const onFileSelect = (e: React.MouseEvent, path: string) => {
+    if (e.ctrlKey) {
+      setSelectedFiles(selectedFiles.concat([path]));
+    } else if (e.shiftKey) {
+      const paths = songs.map(s => s.path);
+      const index = paths.indexOf(path);
+
+      for (let i = index - 1; i >= 0; i--) {
+        if (selectedFiles.indexOf(paths[i]) > -1) {
+          setSelectedFiles(selectedFiles.concat(paths.slice(i + 1, index + 1)));
+          break;
+        }
+      }
+    } else {
+      setSelectedFiles([path]);
+    }
   };
 
   const onDoubleClick = async (path: string) => {
@@ -261,28 +310,88 @@ export const SongGrid: React.FC<SongGridProps> = ({
       child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
     } else if (path === playingFile) {
       classes += ' playing';
-    } else if (path === selectedFile) {
+    } else if (selectedFiles.indexOf(path) > -1) {
       classes += ' selected';
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
+
     return (
-      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={() => onRowClick(path)}>
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         <Text ellipsize>{child}</Text>
       </div>
     );
   };
 
-  const genericCellRenderer = (rowIndex: number, field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time') => {
+  const cellRenderer2 = (
+    rowIndex: number,
+    path: string,
+    value: string,
+    draggingSong: string,
+    canEdit: boolean = true
+  ) => {
+    let classes = 'bp3-table-cell grid-cell';
+    let child: JSX.Element | string = value;
+    if (path === editingFile) {
+      classes += ' editing selected';
+      child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
+    } else if (path === playingFile) {
+      classes += ' playing';
+    } else if (selectedFiles.indexOf(path) > -1) {
+      classes += ' selected';
+    } else {
+      classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
+    }
+
+    return path === draggingSong ? (
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
+        <Text ellipsize>{child}</Text>
+      </div>
+    ) : (
+      <Draggable draggableId={path} index={rowIndex} key={path}>
+        {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
+          return (
+            <div
+              ref={provided.innerRef}
+              {...provided.dragHandleProps}
+              {...provided.draggableProps}
+              style={{ ...provided.draggableProps.style, ...provided.draggableProps.style, transform: 'none' }}
+              key={path}
+              className={classes}
+              onDoubleClick={() => onDoubleClick(path)}
+              onClick={e => onRowClick(e, path)}
+            >
+              <Text ellipsize>{child}</Text>
+            </div>
+          );
+        }}
+      </Draggable>
+    );
+  };
+
+  const genericCellRenderer = ({ rowIndex, dataKey }: TableCellProps) => {
+    if (rowIndex >= songs.length) {
+      return null;
+    }
+    const path = songs[rowIndex].path;
+    const value = (songs as any)[rowIndex][dataKey].toString();
+    return cellRenderer(rowIndex, path, value);
+  };
+
+  const genericCellRenderer2 = (
+    rowIndex: number,
+    field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time',
+    draggingSong: string
+  ) => {
     if (rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
     const value = songs[rowIndex][field].toString();
-    return cellRenderer(rowIndex, path, value);
+    return cellRenderer2(rowIndex, path, value, draggingSong);
   };
 
-  const trackRenderer = (rowIndex: number) => {
+  const trackRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
@@ -294,7 +403,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return cellRenderer(rowIndex, path, value);
   };
 
-  const timeRenderer = (rowIndex: number) => {
+  const timeRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
@@ -304,13 +413,57 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return cellRenderer(rowIndex, path, fmtValue);
   };
 
-  const pathRenderer = (rowIndex: number) => {
+  const tagRenderer = ({ rowIndex }: TableCellProps) => {
     if (rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
-    let value = songs[rowIndex].path;
-    return cellRenderer(rowIndex, path, value, false);
+
+    let classes = 'bp3-table-cell grid-cell';
+    //let child: JSX.Element | string = value;
+    if (path === editingFile) {
+      classes += ' editing selected';
+      //child = canEdit ? <EditableText defaultValue={value} className='editing' /> : value;
+    } else if (path === playingFile) {
+      classes += ' playing';
+    } else if (selectedFiles.indexOf(path) > -1) {
+      classes += ' selected';
+    } else {
+      classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
+    }
+
+    const estWidth = songs[rowIndex].tags.reduce((prev, current) => prev + current.name.length * 6 + 20, 0);
+    let shownTags = [];
+    let extra = 0;
+    const width = selectedGrid === 'song' ? widths.tags : widths2.tags;
+    if (estWidth >= width) {
+      const availWidth = width - 45;
+      let total = 0;
+      for (let tag of songs[rowIndex].tags) {
+        total += tag.name.length * 6 + 20;
+        if (total < availWidth) {
+          shownTags.push(tag);
+        } else {
+          extra++;
+        }
+      }
+    } else {
+      shownTags = songs[rowIndex].tags;
+    }
+    return (
+      <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
+        {shownTags
+          .sort(t => t.order)
+          .map(t => (
+            <GridTag tag={t} isLightTheme={isLightTheme} key={path + t.name} songId={songs[rowIndex].id} />
+          ))}
+        {extra > 0 ? (
+          <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
+            +{extra}
+          </Button>
+        ) : null}
+      </div>
+    );
   };
 
   const resizeRow = (props: { dataKey: string; deltaX: number }) => {
@@ -324,11 +477,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
     }
   };
 
-  const onRowClick = (path: string) => {
-    setSelectedFile(path);
+  const onRowClick = (e: React.MouseEvent, path: string) => {
+    onFileSelect(e, path);
     const cur = songs.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
-    updateSelectedAlbum(cur.id, albumIndex);
+    const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
+    const song = hasArt.length > 0 ? hasArt[0] : cur;
+    updateSelectedAlbum(song.id, song.hasArt, albumIndex);
 
     if (path === editingFile) {
       return;
@@ -342,18 +497,19 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
 
-  const updateSelectedAlbum = async (songIndex: number, albumIndex: number) => {
-    if (getAlbumSongs(albumIndex)[0].hasArt) {
-      updateColors(songIndex, albumIndex);
+  const updateSelectedAlbum = async (songId: number, hasArt: boolean, albumIndex: number) => {
+    if (hasArt) {
+      await updateColors(songId, albumIndex);
     }
     setSelectedAlbum(albumKeys[albumIndex]);
   };
 
-  const updateColors = async (songIndex: number, albumIndex: number) => {
-    const colors = await loadColors(songIndex);
+  const updateColors = async (songId: number, albumIndex: number) => {
+    const colors = await loadColors(songId);
     const bg = colors[0];
     const fg = colors[1];
     const secondary = colors[2];
+
     setCssVar('--grid-selected-text-color', formatRgb(fg));
     setCssVar('--grid-selected-shadow-1', formatRgb(bg));
     setCssVar('--grid-selected-shadow-2', formatRgb(bg));
@@ -361,6 +517,17 @@ export const SongGrid: React.FC<SongGridProps> = ({
     setCssVar('--grid-selected-background', formatRgb(secondary));
     setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
     setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
+    songs
+      .find(s => s.id === songId)
+      ?.tags?.forEach(({ color }, i) => {
+        const [r, g, b] = color.split(',').map(parseFloat);
+        const first = { ...fg, a: 1 };
+        const blended1 = normal(first, { r, g, b, a: 0.15 });
+        const blended2 = normal(first, { r, g, b, a: 0.25 });
+        setCssVar(`--tag-bg-${i + 1}`, formatRgb(blended1));
+        setCssVar(`--tag-fg-${i + 1}`, formatRgb(blended2));
+        console.log('here');
+      });
   };
 
   const rowRenderer = (props: TableRowProps) => {
@@ -374,7 +541,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (`${props.rowData[0].albumArtist} ${props.rowData[0].album}` === selectedAlbum) {
       props.className += ' album-selected-row';
     }
-    if (groupedSongs[albumKeys[props.index]][0].hasArt) {
+    if (groupedSongs[albumKeys[props.index]].filter(s => s.hasArt).length > 0) {
       props.className += ' has-art';
     }
 
@@ -384,19 +551,29 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const onPlay = async () => {
-    const fileToPlay = playingFile !== '' ? playingFile : selectedFile;
+    const fileToPlay = playingFile !== '' ? playingFile : selectedFiles[0];
     await startQueue(fileToPlay ?? '');
   };
 
-  const multiSongRenderer = (rowIndex: number, cellRenderer: (index: number) => void) => {
-    let g = groupedSongs[albumKeys[rowIndex]];
-    return <div className='rowParent'>{g.map(gg => cellRenderer(gg.index))}</div>;
+  const multiSongRenderer = (props: TableCellProps, cellRenderer: (props: TableCellProps) => JSX.Element | null) => {
+    let g = groupedSongs[albumKeys[props.rowIndex]];
+    return <div className='rowParent'>{g.map(gg => cellRenderer({ ...props, rowIndex: gg.index }))}</div>;
   };
 
-  const otherGrid = (
+  const multiSongRenderer2 = (props: TableCellProps, draggingSong: string) => {
+    let g = groupedSongs[albumKeys[props.rowIndex]];
+    return <div className='rowParent'>{g.map(gg => genericCellRenderer2(gg.index, 'name', draggingSong))}</div>;
+  };
+
+  const otherGrid = (draggingSong: string) => (
     <div style={{ height }}>
       <Table
-        ref={otherRef}
+        className='main-grid'
+        ref={ref => {
+          if (ref) {
+            otherRef.current = ref;
+          }
+        }}
         width={width - 5}
         height={height}
         headerHeight={25}
@@ -413,17 +590,44 @@ export const SongGrid: React.FC<SongGridProps> = ({
           label='Album'
           cellRenderer={({ rowIndex }) => {
             let gg = groupedSongs[albumKeys[rowIndex]];
-            let g = gg[0];
+            let hasArt = gg.filter(ggg => ggg.hasArt);
+            let g = hasArt.length > 0 ? hasArt[0] : gg[0];
             return (
               <FlexCol
                 center={false}
                 style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 140) }}
-                onClick={() => updateSelectedAlbum(g.id, rowIndex)}
+                onClick={() => updateSelectedAlbum(g.id, g.hasArt, rowIndex)}
               >
-                <Text ellipsize>{g.albumArtist}</Text>
-                <div style={{ paddingBottom: 5 }}>
-                  <Text ellipsize>{g.album}</Text>
-                </div>
+                {draggingSong === `album-${albumKeys[rowIndex]}` ? (
+                  <>
+                    <Text ellipsize>{g.albumArtist}</Text>
+                    <div style={{ paddingBottom: 5 }}>
+                      <Text ellipsize>{g.album}</Text>
+                    </div>
+                  </>
+                ) : (
+                  <Draggable draggableId={`album-${albumKeys[rowIndex]}`} index={rowIndex} key={albumKeys[rowIndex]}>
+                    {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
+                      return (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.dragHandleProps}
+                          {...provided.draggableProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            ...provided.draggableProps.style,
+                            transform: 'none',
+                          }}
+                        >
+                          <Text ellipsize>{g.albumArtist}</Text>
+                          <div style={{ paddingBottom: 5 }}>
+                            <Text ellipsize>{g.album}</Text>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </Draggable>
+                )}
 
                 {g.hasArt ? (
                   <img
@@ -447,7 +651,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey=''
           label=''
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, editCellRenderer)}
+          cellRenderer={props => multiSongRenderer(props, editCellRenderer)}
           width={widths2.edit}
           minWidth={widths2.edit}
         />
@@ -455,7 +659,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex, dataKey }) => multiSongRenderer(rowIndex, i => genericCellRenderer(i, 'name'))}
+          cellRenderer={props => multiSongRenderer2(props, draggingSong)}
           width={widths2.name}
           minWidth={widths2.name}
         />
@@ -463,7 +667,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='track'
           label='Track'
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, trackRenderer)}
+          cellRenderer={props => multiSongRenderer(props, trackRenderer)}
           width={widths2.track}
           minWidth={widths2.track}
         />
@@ -471,26 +675,31 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='time'
           label='Time'
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, timeRenderer)}
+          cellRenderer={props => multiSongRenderer(props, timeRenderer)}
           width={widths2.time}
           minWidth={widths2.time}
         />
         <Column
           headerRenderer={headerRenderer}
-          dataKey='path'
-          label='Path'
-          cellRenderer={({ rowIndex }) => multiSongRenderer(rowIndex, pathRenderer)}
-          width={widths2.path}
-          minWidth={widths2.path}
+          dataKey=''
+          label='Tags'
+          cellRenderer={props => multiSongRenderer(props, tagRenderer)}
+          width={widths2.tags}
+          minWidth={widths2.tags}
         />
       </Table>
     </div>
   );
 
-  const mainGrid = (
+  const mainGrid = (draggingSong: string) => (
     <div style={{ height }}>
       <Table
-        ref={mainRef}
+        className='main-grid'
+        ref={ref => {
+          if (ref) {
+            mainRef.current = ref;
+          }
+        }}
         width={width - 5}
         height={height}
         headerHeight={25}
@@ -502,7 +711,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         <Column
           headerRenderer={headerRenderer}
           dataKey=''
-          cellRenderer={({ rowIndex }) => editCellRenderer(rowIndex)}
+          cellRenderer={editCellRenderer}
           width={widths.edit}
           minWidth={widths.edit}
         />
@@ -510,7 +719,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'name')}
+          cellRenderer={({ rowIndex }) => genericCellRenderer2(rowIndex, 'name', draggingSong)}
           width={widths.name}
           minWidth={widths.name}
         />
@@ -518,7 +727,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='albumArtist'
           label='Album Artist'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'albumArtist')}
+          cellRenderer={genericCellRenderer}
           width={widths.albumArtist}
           minWidth={widths.albumArtist}
         />
@@ -526,7 +735,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='artist'
           label='Artist'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'artist')}
+          cellRenderer={genericCellRenderer}
           width={widths.artist}
           minWidth={widths.artist}
         />
@@ -534,7 +743,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='album'
           label='Album'
-          cellRenderer={({ rowIndex }) => genericCellRenderer(rowIndex, 'album')}
+          cellRenderer={genericCellRenderer}
           width={widths.album}
           minWidth={widths.album}
         />
@@ -542,7 +751,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='track'
           label='Track'
-          cellRenderer={({ rowIndex }) => trackRenderer(rowIndex)}
+          cellRenderer={trackRenderer}
           width={widths.track}
           minWidth={widths.track}
         />
@@ -550,17 +759,17 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='time'
           label='Time'
-          cellRenderer={({ rowIndex }) => timeRenderer(rowIndex)}
+          cellRenderer={timeRenderer}
           width={widths.time}
           minWidth={widths.time}
         />
         <Column
           headerRenderer={headerRenderer}
           dataKey='path'
-          label='Path'
-          cellRenderer={({ rowIndex }) => pathRenderer(rowIndex)}
-          width={widths.path}
-          minWidth={widths.path}
+          label='Tags'
+          cellRenderer={tagRenderer}
+          width={widths.tags}
+          minWidth={widths.tags}
         />
       </Table>
     </div>
@@ -568,7 +777,65 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   return (
     <>
-      <div>{selectedGrid === 'song' ? mainGrid : otherGrid}</div>
+      <Droppable
+        isDropDisabled
+        droppableId='mainGrid'
+        mode='virtual'
+        renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => {
+          const albumDrag = rubric.draggableId.startsWith('album-');
+          return (
+            <div
+              {...provided.draggableProps}
+              {...provided.dragHandleProps}
+              ref={provided.innerRef}
+              style={{ ...provided.draggableProps.style, background: 'rgba(var(--background-main), 0.7)' }}
+            >
+              <FlexRow style={{ paddingLeft: 5 }}>
+                <FlexCol>
+                  <div>
+                    {!albumDrag
+                      ? songs[rubric.source.index].name
+                      : groupedSongs[albumKeys[rubric.source.index]][0].artist}
+                  </div>
+                  {albumDrag ? <Text ellipsize>{groupedSongs[albumKeys[rubric.source.index]][0].album}</Text> : null}
+                </FlexCol>
+
+                {selectedFiles.length > 1 ? (
+                  <FlexCol
+                    style={{
+                      borderRadius: '50%',
+                      background: 'rgba(var(--intent-primary), 0.4)',
+                      width: 20,
+                      height: 20,
+                      alignSelf: 'right',
+                      position: 'absolute',
+                      right: -10,
+                      top: -10,
+                    }}
+                  >
+                    {selectedFiles.length}
+                  </FlexCol>
+                ) : null}
+              </FlexRow>
+            </div>
+          );
+        }}
+      >
+        {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
+          const node = ReactDOM.findDOMNode(selectedGrid === 'song' ? mainRef.current : otherRef.current);
+          if (node instanceof HTMLElement) {
+            droppableProvided.innerRef(node);
+          }
+
+          return (
+            <div>
+              {selectedGrid === 'song'
+                ? mainGrid(snapshot.draggingFromThisWith ?? '')
+                : otherGrid(snapshot.draggingFromThisWith ?? '')}
+            </div>
+          );
+        }}
+      </Droppable>
       <Controls
         onPlay={onPlay}
         onPrevious={onPrevious}

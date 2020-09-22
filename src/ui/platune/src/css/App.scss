@@ -2,8 +2,7 @@ html,
 body {
   background: rgba(var(--background-main), 1);
   color: rgba(var(--text-main), 1);
-  transition: var(--transition);
-  overflow-x: hidden;
+  overflow: hidden;
 }
 body * {
   user-select: none;
@@ -16,7 +15,8 @@ body * {
 }
 
 button,
-.search {
+.search,
+.bp3-input {
   -webkit-app-region: no-drag;
 }
 
@@ -79,8 +79,8 @@ canvas {
 }
 
 .card {
-  border: 1px solid rgba(var(--card-shadow), 1);
-  box-shadow: rgba(var(--card-shadow), 1) 1px 1px;
+  border: 1px solid rgba(var(--card-shadow), 0.5);
+  box-shadow: rgba(var(--card-shadow), 0.5) 1px 1px;
   background: rgba(var(--background-secondary), 1);
   border-radius: 5px;
   transition: var(--transition);
@@ -100,6 +100,7 @@ canvas {
   flex-direction: row;
   justify-content: center;
   padding: 0;
+  text-transform: none;
 }
 
 .ReactVirtualized__Table__headerTruncatedText {
@@ -119,11 +120,20 @@ canvas {
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
   position: relative;
   z-index: 1;
+  background: rgba(var(--background-secondary), 1);
 }
 
 .album-selected-row.has-art {
   .selected.grid-cell {
     background: rgba(var(--grid-selected-background), 0.5);
+  }
+
+  @for $i from 1 through 20 {
+    .grid-tag:nth-of-type(#{$i}) {
+      border: 1px solid rgba(var(--tag-bg-#{$i}), 0.5) !important;
+      background: rgba(var(--tag-bg-#{$i}), 0.3) !important;
+      color: rgba(var(--tag-fg-#{$i}), 1) !important;
+    }
   }
 }
 
@@ -214,7 +224,7 @@ canvas {
 
 .has-art.ReactVirtualized__Table__row.album-selected-row .rowParent .striped-even:not(.selected) {
   transition: var(--transition);
-  background: rgba(var(--grid-selected-stripe-even), 1);
+  background: rgba(var(--grid-selected-stripe-even), 0.5);
 }
 
 .rowParent:first-child {
@@ -286,6 +296,32 @@ svg[data-icon='list-detail-view'] {
 }
 
 .tag-text {
-  max-width: 135px;
+  max-width: 120px;
   padding-right: 5px;
+}
+
+.sketch-picker {
+  background: rgba(var(--background-secondary), 1) !important;
+}
+
+.sketch-picker input {
+  background: rgba(var(--background-secondary), 1);
+  color: rgba(var(--text-main), 1);
+}
+
+.sketch-picker span {
+  color: rgba(var(--text-main), 1) !important;
+}
+
+.main-grid {
+  transition: var(--table-transition) !important;
+}
+.main-grid * {
+  transition: var(--table-transition) !important;
+}
+
+label {
+  display: inline-block;
+  width: 100px;
+  text-align: right;
 }

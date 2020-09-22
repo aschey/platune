@@ -47,7 +47,7 @@
 .bp3-navbar button * {
   transition: none;
 }
-.bp3-button[class*="bp3-intent-"].hover-intent:not(:hover) {
+.bp3-button[class*='bp3-intent-'].hover-intent:not(:hover) {
   color: rgba(var(--window-controls-color), 1);
 }
 
@@ -69,4 +69,24 @@
 
 .bp3-icon {
   color: rgba(var(--text-secondary), 1);
+}
+
+.bp3-tag.bp3-minimal.bp3-intent-primary {
+  border: 1px solid rgba(var(--intent-primary), 0.25);
+}
+
+.bp3-tag.bp3-minimal.bp3-intent-success {
+  border: 1px solid rgba(var(--intent-success), 0.25);
+}
+
+.bp3-tag.bp3-minimal.bp3-intent-warning {
+  border: 1px solid rgba(var(--intent-warning), 0.25);
+}
+
+.bp3-tag.bp3-minimal.bp3-intent-danger {
+  border: 1px solid rgba(var(--intent-danger), 0.25);
+}
+
+.bp3-input-ghost {
+  color: rgba(var(--text-main), 1);
 }

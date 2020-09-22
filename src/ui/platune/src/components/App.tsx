@@ -8,7 +8,13 @@ import { applyTheme } from '../themes/themes';
 import { MainNavBar } from './MainNavBar';
 import { QueueGrid } from './QueueGrid';
 import { SongGrid } from './SongGrid';
-import _ from 'lodash';
+import _, { initial } from 'lodash';
+import { setCssVar } from '../util';
+import { DragDropContext, DragStart, DropResult, ResponderProvided } from 'react-beautiful-dnd';
+import { getJson, putJson } from '../fetchUtil';
+import { toastSuccess } from '../appToaster';
+import { SongTag } from '../models/songTag';
+import { Search } from '../models/search';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -23,6 +29,9 @@ const App: React.FC<{}> = () => {
   const [songs, setSongs] = useState<Song[]>([]);
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [songTags, setSongTags] = useState<SongTag[]>([]);
+  const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
 
   const getWidth = useCallback(() => window.innerWidth - gridMargin, [gridMargin]);
   const getHeight = () => window.innerHeight - 110;
@@ -44,6 +53,9 @@ const App: React.FC<{}> = () => {
   }, 5);
 
   useEffect(() => {
+    let w = window as any;
+    //w['__react-beautiful-dnd-disable-dev-warnings'] = true;
+
     window.addEventListener('resize', debounced);
     return () => window.removeEventListener('resize', debounced);
   });
@@ -58,21 +70,30 @@ const App: React.FC<{}> = () => {
     if (gridRef.current && sidePanelWidth !== gridMargin) {
       const { unwrapGrid } = wrapGrid(gridRef.current, {
         duration: 150,
+        easing: 'linear',
         onStart: () => {
+          setCssVar(
+            '--table-transition',
+            'color 1s, background 1s, border 1s, box-shadow 1s, width 150ms, min-width 150ms, max-width 150ms'
+          );
           if (gridMargin > 0) {
+            setWidth(window.innerWidth);
             setGridMargin(0);
+          } else {
+            setWidth(window.innerWidth - 200);
           }
         },
         onEnd: () => {
           if (gridMargin === 0) {
             setGridMargin(200);
           }
+          setCssVar('--table-transition', 'color 1s, background 1s, border 1s, box-shadow 1s');
         },
       });
       // Remove animations after resizing because they don't play nicely with the virtualized grid
       setTimeout(unwrapGrid, 1);
     }
-    setWidth(getWidth());
+
     if (sidePanelWidth > 0) {
       setGridClasses('expanded');
     } else {
@@ -80,8 +101,38 @@ const App: React.FC<{}> = () => {
     }
   }, [sidePanelWidth, gridMargin, getWidth, gridRef]);
 
+  const onDragEnd = async ({ source, destination, draggableId }: DropResult) => {
+    if (source.droppableId === 'mainGrid' && destination?.droppableId?.startsWith('tag-')) {
+      const tagId = destination.droppableId.split('-')[1];
+      if (draggableId.startsWith('album-')) {
+        let albumKey = draggableId.replace('album-', '');
+        let albumSongs = songs.filter(s => `${s.albumArtist} ${s.album}` === albumKey).map(s => s.id);
+        await putJson(`/tags/${tagId}/addSongs`, albumSongs);
+      } else if (selectedFiles.includes(draggableId)) {
+        const songIds = songs.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
+        await putJson(`/tags/${tagId}/addSongs`, songIds);
+      } else {
+        const songIds = songs.filter(s => draggableId == s.path).map(s => s.id);
+        await putJson(`/tags/${tagId}/addSongs`, songIds);
+      }
+      toastSuccess();
+      const tags = await getJson<SongTag[]>('/tags');
+      setSongTags(tags);
+      const refreshedSongs = await getJson<Song[]>('/songs');
+      setSongs(refreshedSongs);
+    }
+  };
+
+  const onBeforeDragStart = (initial: DragStart) => {
+    if (initial.source.droppableId === 'mainGrid') {
+      if (selectedFiles.length && selectedFiles.indexOf(initial.draggableId) == -1) {
+        setSelectedFiles([]);
+      }
+    }
+  };
+
   return (
-    <>
+    <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
       <MainNavBar
         sidePanelWidth={sidePanelWidth}
         setSidePanelWidth={setSidePanelWidth}
@@ -91,6 +142,8 @@ const App: React.FC<{}> = () => {
         isLight={themeDetails}
         songs={songs}
         setSongs={setSongs}
+        selectedSearch={selectedSearch}
+        setSelectedSearch={setSelectedSearch}
       />
       <div
         ref={gridRef}
@@ -104,7 +157,14 @@ const App: React.FC<{}> = () => {
       >
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid queuedSongs={queuedSongs} />
+            <QueueGrid
+              queuedSongs={queuedSongs}
+              isLightTheme={themeDetails}
+              songTags={songTags}
+              setSongTags={setSongTags}
+              setSongs={setSongs}
+              setSelectedSearch={setSelectedSearch}
+            />
           </div>
         </div>
         <SongGrid
@@ -116,9 +176,11 @@ const App: React.FC<{}> = () => {
           setSongs={setSongs}
           queuedSongs={queuedSongs}
           setQueuedSongs={setQueuedSongs}
+          selectedFiles={selectedFiles}
+          setSelectedFiles={setSelectedFiles}
         />
       </div>
-    </>
+    </DragDropContext>
   );
 };
 

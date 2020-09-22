@@ -12,6 +12,8 @@ import {
   NavbarGroup,
   NavbarHeading,
   Popover,
+  Tag,
+  TagInput,
 } from '@blueprintjs/core';
 import { HotkeyScope, HotkeysEvents } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
 import { IItemRendererProps, Omnibar, Suggest } from '@blueprintjs/select';
@@ -27,6 +29,8 @@ import { Search } from '../models/search';
 import { Song } from '../models/song';
 import { Settings } from './Settings';
 import { globalHotkeys } from '../globalHotkeys';
+import { SideTag } from './SideTag';
+import { shadeColorRgb } from '../themes/colorMixer';
 
 interface MainNavBarProps {
   setSelectedGrid: (grid: string) => void;
@@ -37,6 +41,8 @@ interface MainNavBarProps {
   setSidePanelWidth: (width: number) => void;
   songs: Song[];
   setSongs: (songs: Song[]) => void;
+  selectedSearch: Search | null;
+  setSelectedSearch: (selectedSearch: Search | null) => void;
 }
 const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
@@ -50,13 +56,19 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   setSidePanelWidth,
   songs,
   setSongs,
+  selectedSearch,
+  setSelectedSearch,
 }) => {
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Search[]>([]);
-  const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
+
+  useEffect(() => {
+    updateSearch();
+  }, [selectedSearch]);
+
   const debounced = _.debounce(async (input: string) => {
     let res = await getJson<Search[]>(
       `/search?limit=10&searchString=${encodeURIComponent(
@@ -118,18 +130,39 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         key={props.index}
         active={active}
         onClick={props.handleClick}
-        style={{ paddingBottom: props.index === searchResults.length - 1 ? 0 : 10 }}
+        style={{
+          paddingBottom: props.index === searchResults.length - 1 ? 0 : 10,
+          backgroundColor: active ? 'rgba(var(--intent-primary), 0.3)' : undefined,
+        }}
         text={
-          <>
-            <div>{highlightText(searchRes.entryValue, props.query, active)}</div>
-            <div
-              style={{ fontSize: 12, color: active ? 'rgba(255, 255, 255, 0.6)' : 'rgba(var(--text-secondary), 0.8)' }}
+          searchRes.entryType.toLowerCase() === 'tag' ? (
+            <Tag
+              minimal
+              style={{
+                border: `1px solid rgba(${searchRes.tagColor}, 0.25)`,
+                backgroundColor: `rgba(${searchRes.tagColor}, 0.15)`,
+                color: `rgba(${shadeColorRgb(searchRes.tagColor as string, isLight ? -50 : 100)}, 1)`,
+                marginBottom: 5,
+              }}
             >
-              {searchRes.artist === null
-                ? searchRes.entryType.split('_').map(capitalize).join(' ')
-                : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
-            </div>
-          </>
+              {searchRes.entryValue}
+            </Tag>
+          ) : (
+            <>
+              <div>{highlightText(searchRes.entryValue, props.query, active)}</div>
+
+              <div
+                style={{
+                  fontSize: 12,
+                  color: active ? 'rgba(255, 255, 255, 0.6)' : 'rgba(var(--text-secondary), 0.8)',
+                }}
+              >
+                {searchRes.artist === null
+                  ? searchRes.entryType.split('_').map(capitalize).join(' ')
+                  : `${capitalize(searchRes.entryType)} by ${searchRes.artist}`}
+              </div>
+            </>
+          )
         }
       />
     );
@@ -144,21 +177,27 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     );
   };
 
-  const updateSearch = (val: Search) => {
-    switch (val.entryType) {
+  const updateSearch = () => {
+    if (!selectedSearch) {
+      return;
+    }
+    switch (selectedSearch.entryType) {
       case 'song':
-        getJson<Song[]>(`/songs?artistId=${val.correlationId}&songName=${encodeURIComponent(val.entryValue)}`).then(
-          setSongs
-        );
+        getJson<Song[]>(
+          `/songs?artistId=${selectedSearch.correlationId}&songName=${encodeURIComponent(selectedSearch.entryValue)}`
+        ).then(setSongs);
         break;
       case 'album':
-        getJson<Song[]>(`/songs?albumId=${val.correlationId}`).then(setSongs);
+        getJson<Song[]>(`/songs?albumId=${selectedSearch.correlationId}`).then(setSongs);
         break;
       case 'artist':
-        getJson<Song[]>(`/songs?artistId=${val.correlationId}`).then(setSongs);
+        getJson<Song[]>(`/songs?artistId=${selectedSearch.correlationId}`).then(setSongs);
         break;
       case 'album_artist':
-        getJson<Song[]>(`/songs?albumArtistId=${val.correlationId}`).then(setSongs);
+        getJson<Song[]>(`/songs?albumArtistId=${selectedSearch.correlationId}`).then(setSongs);
+        break;
+      case 'tag':
+        getJson<Song[]>(`/songs?tagId=${selectedSearch.correlationId}`).then(setSongs);
         break;
     }
   };
@@ -224,6 +263,13 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
             <img src={`${process.env.PUBLIC_URL}/res/logo.svg`} alt='platune logo' width={28} height={28} />
           </NavbarHeading>
           <NavbarDivider />
+          <Button
+            minimal
+            icon={sidePanelWidth > 0 ? 'double-chevron-left' : 'double-chevron-right'}
+            onClick={toggleSideBar}
+          />
+
+          <div style={{ width: 5 }} />
           <Popover
             autoFocus={false}
             content={
@@ -257,36 +303,46 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           </Popover>
 
           <div style={{ width: 5 }} />
-          <Button
-            minimal
-            icon={sidePanelWidth > 0 ? 'double-chevron-left' : 'double-chevron-right'}
-            onClick={toggleSideBar}
-          />
-          <div style={{ width: 5 }} />
         </NavbarGroup>
-        <MusicSuggest
-          fill
-          resetOnSelect
-          className='search'
-          inputValueRenderer={val => val.entryValue}
-          itemRenderer={searchItemRenderer}
-          selectedItem={selectedSearch}
-          initialContent='Type to search'
-          onItemSelect={(val, event) => {
-            updateSearch(val);
-            setSelectedSearch(val);
-          }}
-          items={searchResults}
-          popoverProps={{ minimal: true }}
-          itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
-          inputProps={{
-            leftIcon: 'search',
-            rightElement: <Button minimal icon='small-cross' onClick={clearSearch} />,
-          }}
-          onQueryChange={async (input, event) => {
-            await debounced(input);
-          }}
-        />
+        {selectedSearch?.entryType === 'tag' ? (
+          <div style={{ width: 300, position: 'absolute', top: 5, left: 150 }}>
+            <TagInput
+              leftIcon='search'
+              tagProps={{
+                style: {
+                  border: `1px solid rgba(${selectedSearch.tagColor}, 0.25)`,
+                  backgroundColor: `rgba(${selectedSearch.tagColor}, 0.15)`,
+                  color: `rgba(${shadeColorRgb(selectedSearch.tagColor as string, isLight ? -50 : 100)}, 1)`,
+                },
+              }}
+              values={[selectedSearch.entryValue]}
+              onRemove={clearSearch}
+            />
+          </div>
+        ) : (
+          <MusicSuggest
+            fill
+            resetOnSelect
+            className='search'
+            inputValueRenderer={val => val.entryValue}
+            itemRenderer={searchItemRenderer}
+            selectedItem={selectedSearch}
+            initialContent='Type to search'
+            onItemSelect={(val, event) => {
+              setSelectedSearch(val);
+            }}
+            items={searchResults}
+            popoverProps={{ minimal: true }}
+            itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
+            inputProps={{
+              leftIcon: 'search',
+              rightElement: <Button minimal icon='small-cross' onClick={clearSearch} />,
+            }}
+            onQueryChange={async (input, event) => {
+              await debounced(input);
+            }}
+          />
+        )}
         <MusicOmnibar
           resetOnSelect
           isOpen={omnibarOpen}
@@ -294,7 +350,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           items={searchResults}
           onItemSelect={(val, event) => {
             setOmnibarOpen(false);
-            updateSearch(val);
+
             setSelectedSearch(val);
           }}
           onClose={() => setOmnibarOpen(false)}

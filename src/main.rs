@@ -6,6 +6,9 @@ mod server;
 #[macro_use]
 extern crate diesel;
 
+#[macro_use]
+extern crate diesel_migrations;
+
 use async_std::task;
 use fstrings::*;
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
