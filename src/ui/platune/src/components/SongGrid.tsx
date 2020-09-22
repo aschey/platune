@@ -782,6 +782,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         droppableId='mainGrid'
         mode='virtual'
         renderClone={(provided: DraggableProvided, snapshot: DraggableStateSnapshot, rubric: DraggableRubric) => {
+          const albumDrag = rubric.draggableId.startsWith('album-');
           return (
             <div
               {...provided.draggableProps}
@@ -791,14 +792,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
             >
               <FlexRow style={{ paddingLeft: 5 }}>
                 <FlexCol>
-                  <Text ellipsize>
-                    {selectedGrid === 'song'
+                  <div>
+                    {!albumDrag
                       ? songs[rubric.source.index].name
                       : groupedSongs[albumKeys[rubric.source.index]][0].artist}
-                  </Text>
-                  {selectedGrid === 'album' ? (
-                    <Text ellipsize>{groupedSongs[albumKeys[rubric.source.index]][0].album}</Text>
-                  ) : null}
+                  </div>
+                  {albumDrag ? <Text ellipsize>{groupedSongs[albumKeys[rubric.source.index]][0].album}</Text> : null}
                 </FlexCol>
 
                 {selectedFiles.length > 1 ? (
