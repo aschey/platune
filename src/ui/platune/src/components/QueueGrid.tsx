@@ -121,13 +121,12 @@ export const QueueGrid: React.FC<QueueGridProps> = ({
   return (
     <>
       <div style={{ maxWidth: width, paddingLeft: 5 }}>
-        <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width + 5 }} />
+        <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)' }} />
         <FlexCol
           style={{
             fontSize: 16,
             background: 'rgba(var(--background-secondary), 1)',
             paddingBottom: 5,
-            minWidth: width + 5,
           }}
         >
           <FlexRow style={{ fontWeight: 700 }}>
@@ -178,14 +177,13 @@ export const QueueGrid: React.FC<QueueGridProps> = ({
           })}
         </div>
 
-        <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)', minWidth: width }} />
+        <div style={{ minHeight: 10, background: 'rgba(var(--background-secondary), 1)' }} />
         <FlexCol
           style={{
             fontSize: 16,
             fontWeight: 700,
             background: 'rgba(var(--background-secondary), 1)',
             paddingBottom: 5,
-            minWidth: width,
           }}
         >
           Now Playing
