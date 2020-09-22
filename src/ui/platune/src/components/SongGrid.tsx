@@ -598,7 +598,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
                 style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 140) }}
                 onClick={() => updateSelectedAlbum(g.id, g.hasArt, rowIndex)}
               >
-                {draggingSong === albumKeys[rowIndex] ? (
+                {draggingSong === `album-${albumKeys[rowIndex]}` ? (
                   <>
                     <Text ellipsize>{g.albumArtist}</Text>
                     <div style={{ paddingBottom: 5 }}>
