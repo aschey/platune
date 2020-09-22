@@ -563,7 +563,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return <div className='rowParent'>{g.map(gg => cellRenderer({ ...props, rowIndex: gg.index }))}</div>;
   };
 
-  const otherGrid = (
+  const multiSongRenderer2 = (props: TableCellProps, draggingSong: string) => {
+    let g = groupedSongs[albumKeys[props.rowIndex]];
+    return <div className='rowParent'>{g.map(gg => genericCellRenderer2(gg.index, 'name', draggingSong))}</div>;
+  };
+
+  const otherGrid = (draggingSong: string) => (
     <div style={{ height }}>
       <Table
         className='main-grid'
@@ -631,7 +636,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
           headerRenderer={headerRenderer}
           dataKey='name'
           label='Title'
-          cellRenderer={props => multiSongRenderer(props, genericCellRenderer)}
+          cellRenderer={props => multiSongRenderer2(props, draggingSong)}
           width={widths2.name}
           minWidth={widths2.name}
         />
@@ -790,7 +795,13 @@ export const SongGrid: React.FC<SongGridProps> = ({
             droppableProvided.innerRef(node);
           }
 
-          return <div>{selectedGrid === 'song' ? mainGrid(snapshot.draggingFromThisWith ?? '') : otherGrid}</div>;
+          return (
+            <div>
+              {selectedGrid === 'song'
+                ? mainGrid(snapshot.draggingFromThisWith ?? '')
+                : otherGrid(snapshot.draggingFromThisWith ?? '')}
+            </div>
+          );
         }}
       </Droppable>
       <Controls
