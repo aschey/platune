@@ -41,6 +41,8 @@ interface MainNavBarProps {
   setSidePanelWidth: (width: number) => void;
   songs: Song[];
   setSongs: (songs: Song[]) => void;
+  selectedSearch: Search | null;
+  setSelectedSearch: (selectedSearch: Search | null) => void;
 }
 const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
@@ -54,13 +56,19 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   setSidePanelWidth,
   songs,
   setSongs,
+  selectedSearch,
+  setSelectedSearch,
 }) => {
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Search[]>([]);
-  const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
+
+  useEffect(() => {
+    updateSearch();
+  }, [selectedSearch]);
+
   const debounced = _.debounce(async (input: string) => {
     let res = await getJson<Search[]>(
       `/search?limit=10&searchString=${encodeURIComponent(
@@ -169,24 +177,27 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     );
   };
 
-  const updateSearch = (val: Search) => {
-    switch (val.entryType) {
+  const updateSearch = () => {
+    if (!selectedSearch) {
+      return;
+    }
+    switch (selectedSearch.entryType) {
       case 'song':
-        getJson<Song[]>(`/songs?artistId=${val.correlationId}&songName=${encodeURIComponent(val.entryValue)}`).then(
-          setSongs
-        );
+        getJson<Song[]>(
+          `/songs?artistId=${selectedSearch.correlationId}&songName=${encodeURIComponent(selectedSearch.entryValue)}`
+        ).then(setSongs);
         break;
       case 'album':
-        getJson<Song[]>(`/songs?albumId=${val.correlationId}`).then(setSongs);
+        getJson<Song[]>(`/songs?albumId=${selectedSearch.correlationId}`).then(setSongs);
         break;
       case 'artist':
-        getJson<Song[]>(`/songs?artistId=${val.correlationId}`).then(setSongs);
+        getJson<Song[]>(`/songs?artistId=${selectedSearch.correlationId}`).then(setSongs);
         break;
       case 'album_artist':
-        getJson<Song[]>(`/songs?albumArtistId=${val.correlationId}`).then(setSongs);
+        getJson<Song[]>(`/songs?albumArtistId=${selectedSearch.correlationId}`).then(setSongs);
         break;
       case 'tag':
-        getJson<Song[]>(`/songs?tagId=${val.correlationId}`).then(setSongs);
+        getJson<Song[]>(`/songs?tagId=${selectedSearch.correlationId}`).then(setSongs);
         break;
     }
   };
@@ -318,7 +329,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
             selectedItem={selectedSearch}
             initialContent='Type to search'
             onItemSelect={(val, event) => {
-              updateSearch(val);
               setSelectedSearch(val);
             }}
             items={searchResults}
@@ -340,7 +350,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           items={searchResults}
           onItemSelect={(val, event) => {
             setOmnibarOpen(false);
-            updateSearch(val);
+
             setSelectedSearch(val);
           }}
           onClose={() => setOmnibarOpen(false)}

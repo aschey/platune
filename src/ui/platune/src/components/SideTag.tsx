@@ -3,6 +3,7 @@ import React from 'react';
 import { toastSuccess } from '../appToaster';
 import { deleteJson, getJson } from '../fetchUtil';
 import { EditSongTag } from '../models/editSongTag';
+import { Search } from '../models/search';
 import { SongTag } from '../models/songTag';
 import { hexToRgb, isLight, shadeColorRgb } from '../themes/colorMixer';
 import { theme } from './App';
@@ -16,6 +17,7 @@ interface SideTagProps {
   setSongTags: (songTags: SongTag[]) => void;
   isDraggingOver: boolean;
   isLightTheme: boolean;
+  setSelectedSearch: (selectedSearch: Search) => void;
 }
 export const SideTag: React.FC<SideTagProps> = ({
   tag,
@@ -24,6 +26,7 @@ export const SideTag: React.FC<SideTagProps> = ({
   setSongTags,
   isDraggingOver,
   isLightTheme,
+  setSelectedSearch,
 }) => {
   const editTag = () => {
     setTag(tag);
@@ -40,6 +43,15 @@ export const SideTag: React.FC<SideTagProps> = ({
 
   return (
     <Tag
+      onDoubleClick={() =>
+        setSelectedSearch({
+          entryValue: tag.name,
+          entryType: 'tag',
+          artist: null,
+          correlationId: tag.id,
+          tagColor: tag.color,
+        })
+      }
       minimal
       style={{
         border: `1px solid rgba(${color}, 0.25)`,

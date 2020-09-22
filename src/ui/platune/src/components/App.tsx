@@ -14,6 +14,7 @@ import { DragDropContext, DragStart, DropResult, ResponderProvided } from 'react
 import { getJson, putJson } from '../fetchUtil';
 import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
+import { Search } from '../models/search';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -30,6 +31,7 @@ const App: React.FC<{}> = () => {
   const [gridMargin, setGridMargin] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [songTags, setSongTags] = useState<SongTag[]>([]);
+  const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
 
   const getWidth = useCallback(() => window.innerWidth - gridMargin, [gridMargin]);
   const getHeight = () => window.innerHeight - 110;
@@ -138,6 +140,8 @@ const App: React.FC<{}> = () => {
         isLight={themeDetails}
         songs={songs}
         setSongs={setSongs}
+        selectedSearch={selectedSearch}
+        setSelectedSearch={setSelectedSearch}
       />
       <div
         ref={gridRef}
@@ -157,6 +161,7 @@ const App: React.FC<{}> = () => {
               songTags={songTags}
               setSongTags={setSongTags}
               setSongs={setSongs}
+              setSelectedSearch={setSelectedSearch}
             />
           </div>
         </div>

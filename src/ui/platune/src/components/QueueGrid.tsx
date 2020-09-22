@@ -33,6 +33,7 @@ import { theme } from './App';
 import { toastSuccess } from '../appToaster';
 import { SideTag } from './SideTag';
 import { EditSongTag } from '../models/editSongTag';
+import { Search } from '../models/search';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -40,9 +41,17 @@ interface QueueGridProps {
   songTags: SongTag[];
   setSongTags: (songTags: SongTag[]) => void;
   setSongs: (songs: Song[]) => void;
+  setSelectedSearch: (selectedSearch: Search | null) => void;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme, songTags, setSongTags, setSongs }) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({
+  queuedSongs,
+  isLightTheme,
+  songTags,
+  setSongTags,
+  setSongs,
+  setSelectedSearch,
+}) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0', id: null });
@@ -158,6 +167,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme,
                           setIsPopupOpen={setIsPopupOpen}
                           setSongTags={setSongTags}
                           isLightTheme={isLightTheme}
+                          setSelectedSearch={setSelectedSearch}
                         />
                       </div>
                     </>
