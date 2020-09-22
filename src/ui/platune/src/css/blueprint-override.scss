@@ -86,3 +86,7 @@
 .bp3-tag.bp3-minimal.bp3-intent-danger {
   border: 1px solid rgba(var(--intent-danger), 0.25);
 }
+
+.bp3-input-ghost {
+  color: rgba(var(--text-main), 1);
+}

@@ -13,6 +13,7 @@ import {
   NavbarHeading,
   Popover,
   Tag,
+  TagInput,
 } from '@blueprintjs/core';
 import { HotkeyScope, HotkeysEvents } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
 import { IItemRendererProps, Omnibar, Suggest } from '@blueprintjs/select';
@@ -133,6 +134,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
                 border: `1px solid rgba(${searchRes.tagColor}, 0.25)`,
                 backgroundColor: `rgba(${searchRes.tagColor}, 0.15)`,
                 color: `rgba(${shadeColorRgb(searchRes.tagColor as string, isLight ? -50 : 100)}, 1)`,
+                marginBottom: 5,
               }}
             >
               {searchRes.entryValue}
@@ -182,6 +184,9 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         break;
       case 'album_artist':
         getJson<Song[]>(`/songs?albumArtistId=${val.correlationId}`).then(setSongs);
+        break;
+      case 'tag':
+        getJson<Song[]>(`/songs?tagId=${val.correlationId}`).then(setSongs);
         break;
     }
   };
@@ -288,29 +293,46 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
           <div style={{ width: 5 }} />
         </NavbarGroup>
-        <MusicSuggest
-          fill
-          resetOnSelect
-          className='search'
-          inputValueRenderer={val => val.entryValue}
-          itemRenderer={searchItemRenderer}
-          selectedItem={selectedSearch}
-          initialContent='Type to search'
-          onItemSelect={(val, event) => {
-            updateSearch(val);
-            setSelectedSearch(val);
-          }}
-          items={searchResults}
-          popoverProps={{ minimal: true }}
-          itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
-          inputProps={{
-            leftIcon: 'search',
-            rightElement: <Button minimal icon='small-cross' onClick={clearSearch} />,
-          }}
-          onQueryChange={async (input, event) => {
-            await debounced(input);
-          }}
-        />
+        {selectedSearch?.entryType === 'tag' ? (
+          <div style={{ width: 300, position: 'absolute', top: 5, left: 150 }}>
+            <TagInput
+              leftIcon='search'
+              tagProps={{
+                style: {
+                  border: `1px solid rgba(${selectedSearch.tagColor}, 0.25)`,
+                  backgroundColor: `rgba(${selectedSearch.tagColor}, 0.15)`,
+                  color: `rgba(${shadeColorRgb(selectedSearch.tagColor as string, isLight ? -50 : 100)}, 1)`,
+                },
+              }}
+              values={[selectedSearch.entryValue]}
+              onRemove={clearSearch}
+            />
+          </div>
+        ) : (
+          <MusicSuggest
+            fill
+            resetOnSelect
+            className='search'
+            inputValueRenderer={val => val.entryValue}
+            itemRenderer={searchItemRenderer}
+            selectedItem={selectedSearch}
+            initialContent='Type to search'
+            onItemSelect={(val, event) => {
+              updateSearch(val);
+              setSelectedSearch(val);
+            }}
+            items={searchResults}
+            popoverProps={{ minimal: true }}
+            itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
+            inputProps={{
+              leftIcon: 'search',
+              rightElement: <Button minimal icon='small-cross' onClick={clearSearch} />,
+            }}
+            onQueryChange={async (input, event) => {
+              await debounced(input);
+            }}
+          />
+        )}
         <MusicOmnibar
           resetOnSelect
           isOpen={omnibarOpen}

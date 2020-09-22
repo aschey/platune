@@ -975,6 +975,12 @@ async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>,
                 .collect(),
         })
     }
+    if let Some(req_tag_id) = request.tag_id {
+        song_res = song_res
+            .into_iter()
+            .filter(|s| s.tags.iter().map(|t| t.id).any(|t| t == req_tag_id))
+            .collect::<Vec<_>>();
+    }
     &song_res.sort_case_insensitive("album artist".to_owned());
     return Ok(Json(song_res));
 }
@@ -1481,6 +1487,7 @@ struct SongRequest {
     album_artist_id: Option<i32>,
     album_id: Option<i32>,
     song_name: Option<String>,
+    tag_id: Option<i32>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]
