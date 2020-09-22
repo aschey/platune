@@ -32,7 +32,7 @@ import { globalHotkeys } from '../globalHotkeys';
 import { SideTag } from './SideTag';
 import { shadeColorRgb } from '../themes/colorMixer';
 import { useDispatch } from 'react-redux';
-import { fetchSongs } from '../state/songs';
+import { fetchSongs, setFilters } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 
 interface MainNavBarProps {
@@ -178,7 +178,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     );
   };
 
-  const updateSearch = () => {
+  const updateSearch = async () => {
     if (!selectedSearch) {
       return;
     }
@@ -200,11 +200,13 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         params = `tagId=${selectedSearch.correlationId}`;
         break;
     }
-    dispatch(fetchSongs(params));
+    await dispatch(setFilters(params));
+    dispatch(fetchSongs());
   };
 
   const clearSearch = useCallback(async () => {
     toastMessage('Resetting...');
+    await dispatch(setFilters(''));
     dispatch(fetchSongs());
     setSearchResults([]);
     setSelectedSearch(null);

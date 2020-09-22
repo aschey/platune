@@ -458,6 +458,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         {shownTags
+          .slice()
           .sort(t => t.order)
           .map(t => (
             <GridTag tag={t} isLightTheme={isLightTheme} key={path + t.name} songId={songs[rowIndex].id} />

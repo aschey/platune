@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { toastSuccess } from '../appToaster';
 import { putJson } from '../fetchUtil';
 import { GridTagRes } from '../models/gridTagRes';
+import { fetchSongs } from '../state/songs';
+import { useAppDispatch } from '../state/store';
 import { shadeColor, shadeColorRgb } from '../themes/colorMixer';
 import { FlexRow } from './FlexRow';
 
@@ -14,9 +16,11 @@ interface GridTagProps {
 }
 export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId }) => {
   const [showDelete, setShowDelete] = useState(false);
+  const dispatch = useAppDispatch();
   const { color, name, id } = tag;
   const removeTag = async () => {
     await putJson(`/tags/${id}/removeSongs`, [songId]);
+    dispatch(fetchSongs());
     toastSuccess();
   };
   return (
