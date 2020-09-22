@@ -350,7 +350,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     ) : (
       <Draggable draggableId={path} index={rowIndex} key={path}>
         {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
-          const node = (
+          return (
             <div
               ref={provided.innerRef}
               {...provided.dragHandleProps}
@@ -364,8 +364,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
               <Text ellipsize>{child}</Text>
             </div>
           );
-
-          return node;
         }}
       </Draggable>
     );
@@ -600,10 +598,36 @@ export const SongGrid: React.FC<SongGridProps> = ({
                 style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 140) }}
                 onClick={() => updateSelectedAlbum(g.id, g.hasArt, rowIndex)}
               >
-                <Text ellipsize>{g.albumArtist}</Text>
-                <div style={{ paddingBottom: 5 }}>
-                  <Text ellipsize>{g.album}</Text>
-                </div>
+                {draggingSong === albumKeys[rowIndex] ? (
+                  <>
+                    <Text ellipsize>{g.albumArtist}</Text>
+                    <div style={{ paddingBottom: 5 }}>
+                      <Text ellipsize>{g.album}</Text>
+                    </div>
+                  </>
+                ) : (
+                  <Draggable draggableId={`album-${albumKeys[rowIndex]}`} index={rowIndex} key={albumKeys[rowIndex]}>
+                    {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => {
+                      return (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.dragHandleProps}
+                          {...provided.draggableProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            ...provided.draggableProps.style,
+                            transform: 'none',
+                          }}
+                        >
+                          <Text ellipsize>{g.albumArtist}</Text>
+                          <div style={{ paddingBottom: 5 }}>
+                            <Text ellipsize>{g.album}</Text>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </Draggable>
+                )}
 
                 {g.hasArt ? (
                   <img
@@ -766,7 +790,17 @@ export const SongGrid: React.FC<SongGridProps> = ({
               style={{ ...provided.draggableProps.style, background: 'rgba(var(--background-main), 0.7)' }}
             >
               <FlexRow style={{ paddingLeft: 5 }}>
-                <Text ellipsize>{songs[rubric.source.index].name}</Text>
+                <FlexCol>
+                  <Text ellipsize>
+                    {selectedGrid === 'song'
+                      ? songs[rubric.source.index].name
+                      : groupedSongs[albumKeys[rubric.source.index]][0].artist}
+                  </Text>
+                  {selectedGrid === 'album' ? (
+                    <Text ellipsize>{groupedSongs[albumKeys[rubric.source.index]][0].album}</Text>
+                  ) : null}
+                </FlexCol>
+
                 {selectedFiles.length > 1 ? (
                   <FlexCol
                     style={{

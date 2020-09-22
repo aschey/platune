@@ -104,12 +104,14 @@ const App: React.FC<{}> = () => {
   const onDragEnd = async ({ source, destination, draggableId }: DropResult) => {
     if (source.droppableId === 'mainGrid' && destination?.droppableId?.startsWith('tag-')) {
       const tagId = destination.droppableId.split('-')[1];
-      if (selectedFiles.includes(draggableId)) {
-        //console.log(selectedFiles);
+      if (draggableId.startsWith('album-')) {
+        let albumKey = draggableId.replace('album-', '');
+        let albumSongs = songs.filter(s => `${s.albumArtist} ${s.album}` === albumKey).map(s => s.id);
+        await putJson(`/tags/${tagId}/addSongs`, albumSongs);
+      } else if (selectedFiles.includes(draggableId)) {
         const songIds = songs.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
         await putJson(`/tags/${tagId}/addSongs`, songIds);
       } else {
-        //console.log(draggableId);
         const songIds = songs.filter(s => draggableId == s.path).map(s => s.id);
         await putJson(`/tags/${tagId}/addSongs`, songIds);
       }
