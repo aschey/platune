@@ -501,7 +501,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const updateSelectedAlbum = async (songId: number, hasArt: boolean, albumIndex: number) => {
     if (hasArt) {
-      debugger;
       await updateColors(songId, albumIndex);
     }
     setSelectedAlbum(albumKeys[albumIndex]);
