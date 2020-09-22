@@ -112,7 +112,7 @@ const App: React.FC<{}> = () => {
         const songIds = songs.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
         await putJson(`/tags/${tagId}/addSongs`, songIds);
       } else {
-        const songIds = songs.filter(s => draggableId == s.path).map(s => s.id);
+        const songIds = songs.filter(s => draggableId === s.path).map(s => s.id);
         await putJson(`/tags/${tagId}/addSongs`, songIds);
       }
       toastSuccess();

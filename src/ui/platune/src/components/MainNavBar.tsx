@@ -31,6 +31,9 @@ import { Settings } from './Settings';
 import { globalHotkeys } from '../globalHotkeys';
 import { SideTag } from './SideTag';
 import { shadeColorRgb } from '../themes/colorMixer';
+import { useDispatch } from 'react-redux';
+import { fetchSongs } from '../state/songs';
+import { useAppDispatch } from '../state/store';
 
 interface MainNavBarProps {
   setSelectedGrid: (grid: string) => void;
@@ -62,6 +65,8 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [searchResults, setSearchResults] = useState<Search[]>([]);
+
+  const dispatch = useAppDispatch();
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
 
@@ -204,8 +209,10 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
   const clearSearch = useCallback(async () => {
     toastMessage('Resetting...');
-    const allSongs = await getJson<Song[]>('/songs');
-    setSongs(allSongs);
+
+    // const allSongs = await getJson<Song[]>('/songs');
+    // setSongs(allSongs);
+    dispatch(fetchSongs());
     setSearchResults([]);
     setSelectedSearch(null);
   }, [setSongs]);

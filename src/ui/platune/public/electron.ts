@@ -91,7 +91,8 @@ const getIcon = () => {
 };
 
 const installExtensions = async () => {
-  const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
+  const { default: installExtension, REACT_DEVELOPER_TOOLS, REDUX_DEVTOOLS } = require('electron-devtools-installer');
   const forceDownload = true;
   await installExtension(REACT_DEVELOPER_TOOLS, forceDownload);
+  await installExtension(REDUX_DEVTOOLS, forceDownload);
 };

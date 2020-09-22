@@ -36,6 +36,11 @@ import ReactDOM from 'react-dom';
 import { FlexRow } from './FlexRow';
 import { GridTag } from './GridTag';
 import { theme } from './App';
+import { fetchSongs, selectSongs, SliceState } from '../state/songs';
+import { shallowEqual, useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch } from '../state/store';
+import { deepStrictEqual } from 'assert';
+import { deepCompareKeys } from '@blueprintjs/core/lib/esm/common/utils';
 
 interface SongGridProps {
   selectedGrid: string;
@@ -55,7 +60,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   isLightTheme,
   width,
   height,
-  songs,
+  //songs,
   setSongs,
   queuedSongs,
   setQueuedSongs,
@@ -67,6 +72,10 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
+
+  const dispatch = useAppDispatch();
+
+  const songsSelector = useSelector(selectSongs);
 
   const editWidth = 30;
   const trackWidth = 70;
@@ -120,18 +129,19 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   useEffect(() => {
-    loadSongs().then(setSongs);
-  }, [loadSongs, setSongs]);
+    //loadSongs().then(setSongs);
+    dispatch(fetchSongs());
+  }, []);
 
   useEffect(() => {
-    songs.forEach((song, i) => (song.index = i));
-    let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
+    //songsSelector?.forEach((song, i) => (song.index = i));
+    let g = _.groupBy(songsSelector, ss => ss.albumArtist + ' ' + ss.album);
     setGroupedSongs(g);
     setAlbumKeys(_.keys(g));
-  }, [songs]);
+  }, [songsSelector]);
 
   useEffect(() => {
-    if (songs.length === 0) {
+    if (songsSelector?.length === 0) {
       return;
     }
     const ref = selectedGrid === 'song' ? mainRef.current : otherRef.current;
@@ -142,7 +152,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     ref.forceUpdateGrid();
     ref.measureAllRows();
     ref.recomputeRowHeights();
-  }, [width, selectedGrid, songs, mainRef, otherRef]);
+  }, [width, selectedGrid, songsSelector, mainRef, otherRef]);
 
   useEffect(() => {
     if (selectedGrid === 'song') {
@@ -198,10 +208,10 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const editCellRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (rowIndex >= songsSelector.length) {
       return null;
     }
-    const path = songs[rowIndex].path;
+    const path = songsSelector[rowIndex].path;
     const isEditingRow = editingFile === path;
     const isSelectedRow = selectedFiles.indexOf(path) > -1;
     const isPlayingRow = playingFile === path;
@@ -221,7 +231,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             className={isPlayingRow ? 'playing' : ''}
             icon={isEditingRow ? 'saved' : isPlayingRow ? 'volume-up' : 'edit'}
             onClick={(e: React.MouseEvent) => {
-              const cur = songs[rowIndex];
+              const cur = songsSelector[rowIndex];
               let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
               if (selectedGrid === 'album') {
                 const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
@@ -248,7 +258,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (e.ctrlKey) {
       setSelectedFiles(selectedFiles.concat([path]));
     } else if (e.shiftKey) {
-      const paths = songs.map(s => s.path);
+      const paths = songsSelector.map(s => s.path);
       const index = paths.indexOf(path);
 
       for (let i = index - 1; i >= 0; i--) {
@@ -275,8 +285,8 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const startQueue = async (path: string) => {
-    const index = songs.map(s => s.path).indexOf(path);
-    const queue = songs.filter(s => s.index >= index);
+    const index = songsSelector.map(s => s.path).indexOf(path);
+    const queue = songsSelector.filter(s => s.index >= index);
     // Don't reset queue if currently paused and we're resuming the same song
     if (!(audioQueue.isPaused() && path === playingFile)) {
       setQueuedSongs(queue);
@@ -294,7 +304,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (playingIndex > 0) {
       audioQueue.previous();
     } else {
-      const songPaths = songs.map(s => s.path);
+      const songPaths = songsSelector.map(s => s.path);
       const songIndex = songPaths.indexOf(playingFile);
       if (songIndex > 0) {
         await startQueue(songPaths[songIndex - 1]);
@@ -370,11 +380,11 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const genericCellRenderer = ({ rowIndex, dataKey }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (rowIndex >= songsSelector.length) {
       return null;
     }
-    const path = songs[rowIndex].path;
-    const value = (songs as any)[rowIndex][dataKey].toString();
+    const path = songsSelector[rowIndex].path;
+    const value = (songsSelector as any)[rowIndex][dataKey].toString();
     return cellRenderer(rowIndex, path, value);
   };
 
@@ -383,20 +393,20 @@ export const SongGrid: React.FC<SongGridProps> = ({
     field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time',
     draggingSong: string
   ) => {
-    if (rowIndex >= songs.length) {
+    if (rowIndex >= songsSelector.length) {
       return null;
     }
-    const path = songs[rowIndex].path;
-    const value = songs[rowIndex][field].toString();
+    const path = songsSelector[rowIndex].path;
+    const value = songsSelector[rowIndex][field].toString();
     return cellRenderer2(rowIndex, path, value, draggingSong);
   };
 
   const trackRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (rowIndex >= songsSelector.length) {
       return null;
     }
-    const path = songs[rowIndex].path;
-    let value = songs[rowIndex].track.toString();
+    const path = songsSelector[rowIndex].path;
+    let value = songsSelector[rowIndex].track.toString();
     if (value === '0') {
       value = '';
     }
@@ -404,20 +414,20 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const timeRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (rowIndex >= songsSelector.length) {
       return null;
     }
-    const path = songs[rowIndex].path;
-    let value = songs[rowIndex]['time'];
+    const path = songsSelector[rowIndex].path;
+    let value = songsSelector[rowIndex]['time'];
     let fmtValue = formatMs(value);
     return cellRenderer(rowIndex, path, fmtValue);
   };
 
   const tagRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (rowIndex >= songsSelector.length) {
       return null;
     }
-    const path = songs[rowIndex].path;
+    const path = songsSelector[rowIndex].path;
 
     let classes = 'bp3-table-cell grid-cell';
     //let child: JSX.Element | string = value;
@@ -432,14 +442,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
 
-    const estWidth = songs[rowIndex].tags.reduce((prev, current) => prev + current.name.length * 6 + 20, 0);
+    const estWidth = songsSelector[rowIndex].tags.reduce((prev, current) => prev + current.name.length * 6 + 20, 0);
     let shownTags = [];
     let extra = 0;
     const width = selectedGrid === 'song' ? widths.tags : widths2.tags;
     if (estWidth >= width) {
       const availWidth = width - 45;
       let total = 0;
-      for (let tag of songs[rowIndex].tags) {
+      for (let tag of songsSelector[rowIndex].tags) {
         total += tag.name.length * 6 + 20;
         if (total < availWidth) {
           shownTags.push(tag);
@@ -448,14 +458,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
         }
       }
     } else {
-      shownTags = songs[rowIndex].tags;
+      shownTags = songsSelector[rowIndex].tags;
     }
     return (
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         {shownTags
           .sort(t => t.order)
           .map(t => (
-            <GridTag tag={t} isLightTheme={isLightTheme} key={path + t.name} songId={songs[rowIndex].id} />
+            <GridTag tag={t} isLightTheme={isLightTheme} key={path + t.name} songId={songsSelector[rowIndex].id} />
           ))}
         {extra > 0 ? (
           <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
@@ -479,7 +489,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const onRowClick = (e: React.MouseEvent, path: string) => {
     onFileSelect(e, path);
-    const cur = songs.filter(s => s.path === path)[0];
+    const cur = songsSelector.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
     const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
     const song = hasArt.length > 0 ? hasArt[0] : cur;
@@ -517,7 +527,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     setCssVar('--grid-selected-background', formatRgb(secondary));
     setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
     setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
-    songs
+    songsSelector
       .find(s => s.id === songId)
       ?.tags?.forEach(({ color }, i) => {
         const [r, g, b] = color.split(',').map(parseFloat);
@@ -580,7 +590,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         rowCount={albumKeys.length}
         rowRenderer={rowRenderer2}
         overscanRowCount={0}
-        estimatedRowSize={groupedSongs?.keys?.length > 0 ? (songs.length / groupedSongs.keys.length) * 25 : 250}
+        estimatedRowSize={groupedSongs?.keys?.length > 0 ? (songsSelector.length / groupedSongs.keys.length) * 25 : 250}
         rowHeight={index => Math.max(groupedSongs[albumKeys[index.index]].length * 25 + 40, 180)}
         rowGetter={({ index }) => groupedSongs[albumKeys[index]]}
       >
@@ -704,9 +714,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
         height={height}
         headerHeight={25}
         rowHeight={25}
-        rowCount={songs.length}
+        rowCount={songsSelector?.length || 0}
         rowRenderer={rowRenderer}
-        rowGetter={({ index }) => songs[index]}
+        rowGetter={({ index }) => songsSelector[index]}
       >
         <Column
           headerRenderer={headerRenderer}
@@ -794,7 +804,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
                 <FlexCol>
                   <div>
                     {!albumDrag
-                      ? songs[rubric.source.index].name
+                      ? songsSelector[rubric.source.index].name
                       : groupedSongs[albumKeys[rubric.source.index]][0].artist}
                   </div>
                   {albumDrag ? <Text ellipsize>{groupedSongs[albumKeys[rubric.source.index]][0].album}</Text> : null}
