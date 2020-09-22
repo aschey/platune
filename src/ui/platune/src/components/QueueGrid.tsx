@@ -40,7 +40,6 @@ interface QueueGridProps {
   isLightTheme: boolean;
   songTags: SongTag[];
   setSongTags: (songTags: SongTag[]) => void;
-  setSongs: (songs: Song[]) => void;
   setSelectedSearch: (selectedSearch: Search | null) => void;
 }
 
@@ -49,7 +48,6 @@ export const QueueGrid: React.FC<QueueGridProps> = ({
   isLightTheme,
   songTags,
   setSongTags,
-  setSongs,
   setSelectedSearch,
 }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
@@ -268,14 +266,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({
           </div>
         )}
       </div>
-      <AddEditTag
-        isOpen={isPopupOpen}
-        setIsOpen={setIsPopupOpen}
-        setSongTags={setSongTags}
-        tag={tag}
-        setTag={setTag}
-        setSongs={setSongs}
-      />
+      <AddEditTag isOpen={isPopupOpen} setIsOpen={setIsPopupOpen} setSongTags={setSongTags} tag={tag} setTag={setTag} />
     </div>
   );
 };

@@ -15,6 +15,9 @@ import { getJson, putJson } from '../fetchUtil';
 import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
 import { Search } from '../models/search';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchSongs, selectSongs } from '../state/songs';
+import { useAppDispatch } from '../state/store';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -26,12 +29,14 @@ const App: React.FC<{}> = () => {
   const [sidePanelWidth, setSidePanelWidth] = useState(0);
   const [gridCols, setGridCols] = useState(`0px ${window.innerWidth}px`);
   const [gridClasses, setGridClasses] = useState('grid');
-  const [songs, setSongs] = useState<Song[]>([]);
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [songTags, setSongTags] = useState<SongTag[]>([]);
   const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
+
+  const dispatch = useAppDispatch();
+  const songs = useSelector(selectSongs);
 
   const getWidth = useCallback(() => window.innerWidth - gridMargin, [gridMargin]);
   const getHeight = () => window.innerHeight - 110;
@@ -118,8 +123,8 @@ const App: React.FC<{}> = () => {
       toastSuccess();
       const tags = await getJson<SongTag[]>('/tags');
       setSongTags(tags);
-      const refreshedSongs = await getJson<Song[]>('/songs');
-      setSongs(refreshedSongs);
+
+      dispatch(fetchSongs());
     }
   };
 
@@ -140,8 +145,6 @@ const App: React.FC<{}> = () => {
         setSelectedGrid={setSelectedGrid}
         updateTheme={updateTheme}
         isLight={themeDetails}
-        songs={songs}
-        setSongs={setSongs}
         selectedSearch={selectedSearch}
         setSelectedSearch={setSelectedSearch}
       />
@@ -162,7 +165,6 @@ const App: React.FC<{}> = () => {
               isLightTheme={themeDetails}
               songTags={songTags}
               setSongTags={setSongTags}
-              setSongs={setSongs}
               setSelectedSearch={setSelectedSearch}
             />
           </div>
@@ -172,8 +174,6 @@ const App: React.FC<{}> = () => {
           isLightTheme={themeDetails}
           width={width}
           height={height}
-          songs={songs}
-          setSongs={setSongs}
           queuedSongs={queuedSongs}
           setQueuedSongs={setQueuedSongs}
           selectedFiles={selectedFiles}

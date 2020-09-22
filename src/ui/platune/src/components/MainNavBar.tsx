@@ -42,8 +42,6 @@ interface MainNavBarProps {
   isLight: boolean;
   sidePanelWidth: number;
   setSidePanelWidth: (width: number) => void;
-  songs: Song[];
-  setSongs: (songs: Song[]) => void;
   selectedSearch: Search | null;
   setSelectedSearch: (selectedSearch: Search | null) => void;
 }
@@ -57,8 +55,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   isLight,
   sidePanelWidth,
   setSidePanelWidth,
-  songs,
-  setSongs,
   selectedSearch,
   setSelectedSearch,
 }) => {
@@ -186,36 +182,33 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     if (!selectedSearch) {
       return;
     }
+    let params = '';
     switch (selectedSearch.entryType) {
       case 'song':
-        getJson<Song[]>(
-          `/songs?artistId=${selectedSearch.correlationId}&songName=${encodeURIComponent(selectedSearch.entryValue)}`
-        ).then(setSongs);
+        params = `artistId=${selectedSearch.correlationId}&songName=${encodeURIComponent(selectedSearch.entryValue)}`;
+
         break;
       case 'album':
-        getJson<Song[]>(`/songs?albumId=${selectedSearch.correlationId}`).then(setSongs);
+        params = `albumId=${selectedSearch.correlationId}`;
         break;
       case 'artist':
-        getJson<Song[]>(`/songs?artistId=${selectedSearch.correlationId}`).then(setSongs);
+        params = `artistId=${selectedSearch.correlationId}`;
         break;
       case 'album_artist':
-        getJson<Song[]>(`/songs?albumArtistId=${selectedSearch.correlationId}`).then(setSongs);
-        break;
+        params = `albumArtistId=${selectedSearch.correlationId}`;
       case 'tag':
-        getJson<Song[]>(`/songs?tagId=${selectedSearch.correlationId}`).then(setSongs);
+        params = `tagId=${selectedSearch.correlationId}`;
         break;
     }
+    dispatch(fetchSongs(params));
   };
 
   const clearSearch = useCallback(async () => {
     toastMessage('Resetting...');
-
-    // const allSongs = await getJson<Song[]>('/songs');
-    // setSongs(allSongs);
     dispatch(fetchSongs());
     setSearchResults([]);
     setSelectedSearch(null);
-  }, [setSongs]);
+  }, [setSearchResults, setSelectedSearch]);
 
   const toggleSideBar = useCallback(() => setSidePanelWidth(sidePanelWidth > 0 ? 0 : 200), [
     setSidePanelWidth,
