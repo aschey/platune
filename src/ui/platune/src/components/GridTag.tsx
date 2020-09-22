@@ -1,17 +1,24 @@
 import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
 import { lighten } from 'color-blend';
 import React, { useState } from 'react';
+import { toastSuccess } from '../appToaster';
+import { putJson } from '../fetchUtil';
+import { GridTagRes } from '../models/gridTagRes';
 import { shadeColor, shadeColorRgb } from '../themes/colorMixer';
 import { FlexRow } from './FlexRow';
 
 interface GridTagProps {
-  name: string;
-  color: string;
+  tag: GridTagRes;
   isLightTheme: boolean;
+  songId: number;
 }
-export const GridTag: React.FC<GridTagProps> = ({ name, color, isLightTheme }) => {
+export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId }) => {
   const [showDelete, setShowDelete] = useState(false);
-
+  const { color, name, id } = tag;
+  const removeTag = async () => {
+    await putJson(`/tags/${id}/removeSongs`, [songId]);
+    toastSuccess();
+  };
   return (
     <Tag
       minimal
@@ -29,7 +36,7 @@ export const GridTag: React.FC<GridTagProps> = ({ name, color, isLightTheme }) =
     >
       <FlexRow>
         {showDelete ? (
-          <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }}>
+          <Button minimal small style={{ minHeight: 20, minWidth: 20, marginRight: 2 }} onClick={removeTag}>
             <Icon iconSize={12} icon='delete' style={{ paddingBottom: 2 }} />
           </Button>
         ) : null}

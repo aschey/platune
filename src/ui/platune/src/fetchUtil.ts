@@ -11,6 +11,7 @@ const success = async <T>(response: Response): Promise<T> => {
       const res = await response.text();
       throw new Error(res);
     }
+    console.log(response);
     throw new Error('An error occurred');
   }
   const data: T = await response.json();

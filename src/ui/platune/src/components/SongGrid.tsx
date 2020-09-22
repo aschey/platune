@@ -457,7 +457,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         {shownTags
           .sort(t => t.order)
           .map(t => (
-            <GridTag name={t.name} color={t.color} isLightTheme={isLightTheme} key={path + t.name} />
+            <GridTag tag={t} isLightTheme={isLightTheme} key={path + t.name} songId={songs[rowIndex].id} />
           ))}
         {extra > 0 ? (
           <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
