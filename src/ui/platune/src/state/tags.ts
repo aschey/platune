@@ -5,12 +5,6 @@ import { SongTag } from '../models/songTag';
 
 type TagState = { state: 'idle' | 'pending' | 'finished'; data: SongTag[] };
 
-const initialState: TagState = { state: 'idle', data: [] };
-
-interface State {
-  tags: TagState;
-}
-
 export const fetchTags = createAsyncThunk('fetchTags', async () => getJson<SongTag[]>('/tags'));
 
 export const addEditTag = createAsyncThunk('addEditTag', async (tag: EditSongTag) => {
@@ -29,7 +23,7 @@ export const deleteTag = createAsyncThunk('deleteTag', async (tagId: number) => 
 
 const tagsSlice = createSlice({
   name: 'tags',
-  initialState,
+  initialState: { state: 'idle', data: [] } as TagState,
   reducers: {},
   extraReducers: builder => {
     builder.addCase(fetchTags.fulfilled, (state, { payload }) => {
@@ -44,6 +38,6 @@ const tagsSlice = createSlice({
   },
 });
 
-export const selectTags = (state: State) => state.tags.data;
+export const selectTags = (state: { tags: TagState }) => state.tags.data;
 
 export default tagsSlice.reducer;

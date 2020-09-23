@@ -23,7 +23,11 @@ const createWindow = () => {
       backgroundThrottling: false,
     },
   });
-  mainWindow.loadURL(isDev ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
+  mainWindow.loadURL(
+    isDev && process.env['PLATUNE_PROD'] !== '1'
+      ? 'http://localhost:3000'
+      : `file://${path.join(__dirname, '../build/index.html')}`
+  );
 
   mainWindow.on('closed', () => {
     mainWindow = null;

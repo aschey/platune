@@ -31,13 +31,12 @@ import { Settings } from './Settings';
 import { globalHotkeys } from '../globalHotkeys';
 import { SideTag } from './SideTag';
 import { shadeColorRgb } from '../themes/colorMixer';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { fetchSongs, setFilters } from '../state/songs';
 import { useAppDispatch } from '../state/store';
+import { GridType, selectGrid, setSelectedGrid } from '../state/selectedGrid';
 
 interface MainNavBarProps {
-  setSelectedGrid: (grid: string) => void;
-  selectedGrid: string;
   updateTheme: (newThemeName: string) => void;
   isLight: boolean;
   sidePanelWidth: number;
@@ -49,8 +48,6 @@ const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
 
 export const MainNavBar: React.FC<MainNavBarProps> = ({
-  selectedGrid,
-  setSelectedGrid,
   updateTheme,
   isLight,
   sidePanelWidth,
@@ -63,6 +60,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const [searchResults, setSearchResults] = useState<Search[]>([]);
 
   const dispatch = useAppDispatch();
+  const selectedGrid = useSelector(selectGrid);
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
 
@@ -230,14 +228,14 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         global: true,
         combo: 'shift + a',
         label: 'Show album grid',
-        onKeyDown: () => setSelectedGrid('album'),
+        onKeyDown: () => dispatch(setSelectedGrid(GridType.Album)),
         preventDefault: true,
       }),
       new Hotkey({
         global: true,
         combo: 'shift + l',
         label: 'Show song list',
-        onKeyDown: () => setSelectedGrid('song'),
+        onKeyDown: () => dispatch(setSelectedGrid(GridType.Song)),
         preventDefault: true,
       }),
       new Hotkey({
@@ -365,17 +363,17 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
             <Button
               outlined
               style={{ width: 30, height: 30 }}
-              intent={selectedGrid === 'song' ? Intent.PRIMARY : Intent.NONE}
-              onClick={() => setSelectedGrid('song')}
+              intent={selectedGrid === GridType.Song ? Intent.PRIMARY : Intent.NONE}
+              onClick={() => dispatch(setSelectedGrid(GridType.Song))}
             >
               <FontAwesomeIcon icon={faThList} style={{ marginTop: 1.5 }} />
             </Button>
             <div style={{ width: 3 }}></div>
             <Button
               outlined
-              intent={selectedGrid === 'album' ? Intent.PRIMARY : Intent.NONE}
+              intent={selectedGrid === GridType.Album ? Intent.PRIMARY : Intent.NONE}
               icon='list-detail-view'
-              onClick={() => setSelectedGrid('album')}
+              onClick={() => dispatch(setSelectedGrid(GridType.Album))}
             />
           </ButtonGroup>
           <div style={{ width: 20 }} />

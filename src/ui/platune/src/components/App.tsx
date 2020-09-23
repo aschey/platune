@@ -25,7 +25,7 @@ export const theme = darkTheme;
 applyTheme(themeName);
 
 const App: React.FC<{}> = () => {
-  const [selectedGrid, setSelectedGrid] = useState('song');
+  //const [selectedGrid, setSelectedGrid] = useState('song');
   const [themeDetails, setThemeDetails] = useState(isLight(theme.backgroundMain));
   const [sidePanelWidth, setSidePanelWidth] = useState(0);
   const [gridCols, setGridCols] = useState(`0px ${window.innerWidth}px`);
@@ -129,7 +129,7 @@ const App: React.FC<{}> = () => {
 
   const onBeforeDragStart = (initial: DragStart) => {
     if (initial.source.droppableId === 'mainGrid') {
-      if (selectedFiles.length && selectedFiles.indexOf(initial.draggableId) == -1) {
+      if (selectedFiles.length && selectedFiles.indexOf(initial.draggableId) === -1) {
         setSelectedFiles([]);
       }
     }
@@ -140,8 +140,6 @@ const App: React.FC<{}> = () => {
       <MainNavBar
         sidePanelWidth={sidePanelWidth}
         setSidePanelWidth={setSidePanelWidth}
-        selectedGrid={selectedGrid}
-        setSelectedGrid={setSelectedGrid}
         updateTheme={updateTheme}
         isLight={themeDetails}
         selectedSearch={selectedSearch}
@@ -163,7 +161,6 @@ const App: React.FC<{}> = () => {
           </div>
         </div>
         <SongGrid
-          selectedGrid={selectedGrid}
           isLightTheme={themeDetails}
           width={width}
           height={height}

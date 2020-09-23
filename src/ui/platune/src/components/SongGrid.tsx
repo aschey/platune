@@ -41,9 +41,9 @@ import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useAppDispatch } from '../state/store';
 import { deepStrictEqual } from 'assert';
 import { deepCompareKeys } from '@blueprintjs/core/lib/esm/common/utils';
+import { GridType, selectGrid } from '../state/selectedGrid';
 
 interface SongGridProps {
-  selectedGrid: string;
   isLightTheme: boolean;
   width: number;
   height: number;
@@ -54,7 +54,6 @@ interface SongGridProps {
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
-  selectedGrid,
   isLightTheme,
   width,
   height,
@@ -72,6 +71,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const dispatch = useAppDispatch();
 
   const songs = useSelector(selectSongs);
+  const selectedGrid = useSelector(selectGrid);
 
   const editWidth = 30;
   const trackWidth = 70;
@@ -139,7 +139,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     if (songs?.length === 0) {
       return;
     }
-    const ref = selectedGrid === 'song' ? mainRef.current : otherRef.current;
+    const ref = selectedGrid === GridType.Song ? mainRef.current : otherRef.current;
     if (!ref?.props?.rowCount) {
       return;
     }
@@ -150,7 +150,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   }, [width, selectedGrid, songs, mainRef, otherRef]);
 
   useEffect(() => {
-    if (selectedGrid === 'song') {
+    if (selectedGrid === GridType.Song) {
       mainRef.current?.recomputeRowHeights();
       setCssVar('--header-padding', '5px');
     } else {
@@ -228,7 +228,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
             onClick={(e: React.MouseEvent) => {
               const cur = songs[rowIndex];
               let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
-              if (selectedGrid === 'album') {
+              if (selectedGrid === GridType.Album) {
                 const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
                 const song = hasArt.length > 0 ? hasArt[0] : cur;
                 updateSelectedAlbum(song.id, song.hasArt, albumIndex);
@@ -440,7 +440,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const estWidth = songs[rowIndex].tags.reduce((prev, current) => prev + current.name.length * 6 + 20, 0);
     let shownTags = [];
     let extra = 0;
-    const width = selectedGrid === 'song' ? widths.tags : widths2.tags;
+    const width = selectedGrid === GridType.Song ? widths.tags : widths2.tags;
     if (estWidth >= width) {
       const availWidth = width - 45;
       let total = 0;
@@ -473,10 +473,10 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const resizeRow = (props: { dataKey: string; deltaX: number }) => {
-    const newWidths: any = _.cloneDeep(selectedGrid === 'song' ? widths : widths2);
+    const newWidths: any = _.cloneDeep(selectedGrid === GridType.Song ? widths : widths2);
 
     newWidths[props.dataKey] += props.deltaX;
-    if (selectedGrid === 'song') {
+    if (selectedGrid === GridType.Song) {
       setWidths(newWidths);
     } else {
       setWidths2(newWidths);
@@ -828,14 +828,14 @@ export const SongGrid: React.FC<SongGridProps> = ({
         }}
       >
         {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
-          const node = ReactDOM.findDOMNode(selectedGrid === 'song' ? mainRef.current : otherRef.current);
+          const node = ReactDOM.findDOMNode(selectedGrid === GridType.Song ? mainRef.current : otherRef.current);
           if (node instanceof HTMLElement) {
             droppableProvided.innerRef(node);
           }
 
           return (
             <div>
-              {selectedGrid === 'song'
+              {selectedGrid === GridType.Song
                 ? mainGrid(snapshot.draggingFromThisWith ?? '')
                 : otherGrid(snapshot.draggingFromThisWith ?? '')}
             </div>

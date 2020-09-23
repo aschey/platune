@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getJson } from '../fetchUtil';
 import { Song } from '../models/song';
 import { AppDispatch } from './store';
@@ -26,7 +26,7 @@ const songsSlice = createSlice({
   name: 'songs',
   initialState,
   reducers: {
-    setFilters: (state, { payload }) => {
+    setFilters: (state, { payload }: PayloadAction<string>) => {
       state.filters = payload;
     },
   },
