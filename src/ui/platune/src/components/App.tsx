@@ -15,17 +15,16 @@ import { getJson, putJson } from '../fetchUtil';
 import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
 import { Search } from '../models/search';
-import { useDispatch, useSelector } from 'react-redux';
+import { batch, useDispatch, useSelector } from 'react-redux';
 import { fetchSongs, selectSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
-import { fetchTags } from '../state/tags';
+import { addSongsToTag, fetchTags } from '../state/tags';
 
 const themeName = 'dark';
 export const theme = darkTheme;
 applyTheme(themeName);
 
 const App: React.FC<{}> = () => {
-  //const [selectedGrid, setSelectedGrid] = useState('song');
   const [themeDetails, setThemeDetails] = useState(isLight(theme.backgroundMain));
   const [sidePanelWidth, setSidePanelWidth] = useState(0);
   const [gridCols, setGridCols] = useState(`0px ${window.innerWidth}px`);
@@ -108,22 +107,22 @@ const App: React.FC<{}> = () => {
 
   const onDragEnd = async ({ source, destination, draggableId }: DropResult) => {
     if (source.droppableId === 'mainGrid' && destination?.droppableId?.startsWith('tag-')) {
-      const tagId = destination.droppableId.split('-')[1];
+      const tagId = parseInt(destination.droppableId.split('-')[1]);
+      let songIds: number[];
       if (draggableId.startsWith('album-')) {
         let albumKey = draggableId.replace('album-', '');
-        let albumSongs = songs.filter(s => `${s.albumArtist} ${s.album}` === albumKey).map(s => s.id);
-        await putJson(`/tags/${tagId}/addSongs`, albumSongs);
+        songIds = songs.filter(s => `${s.albumArtist} ${s.album}` === albumKey).map(s => s.id);
       } else if (selectedFiles.includes(draggableId)) {
-        const songIds = songs.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
-        await putJson(`/tags/${tagId}/addSongs`, songIds);
+        songIds = songs.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
       } else {
-        const songIds = songs.filter(s => draggableId === s.path).map(s => s.id);
-        await putJson(`/tags/${tagId}/addSongs`, songIds);
+        songIds = songs.filter(s => draggableId === s.path).map(s => s.id);
       }
-      toastSuccess();
-      dispatch(fetchTags());
+      batch(async () => {
+        await dispatch(addSongsToTag({ tagId, songIds }));
+        dispatch(fetchSongs());
+      });
 
-      dispatch(fetchSongs());
+      toastSuccess();
     }
   };
 

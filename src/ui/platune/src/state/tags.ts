@@ -7,6 +7,22 @@ type TagState = { state: 'idle' | 'pending' | 'finished'; data: SongTag[] };
 
 export const fetchTags = createAsyncThunk('fetchTags', async () => getJson<SongTag[]>('/tags'));
 
+export const addSongsToTag = createAsyncThunk(
+  'addSongsToTag',
+  async ({ tagId, songIds }: { tagId: number; songIds: number[] }) => {
+    await putJson(`/tags/${tagId}/addSongs`, songIds);
+    return getJson<SongTag[]>('/tags');
+  }
+);
+
+export const removeSongsFromTag = createAsyncThunk(
+  'removeSongsFromTag',
+  async ({ tagId, songIds }: { tagId: number; songIds: number[] }) => {
+    await putJson(`/tags/${tagId}/removeSongs`, songIds);
+    return getJson<SongTag[]>('/tags');
+  }
+);
+
 export const addEditTag = createAsyncThunk('addEditTag', async (tag: EditSongTag) => {
   if (tag.id === null) {
     await postJson('/tags', tag);
@@ -33,6 +49,12 @@ const tagsSlice = createSlice({
       state.data = payload;
     });
     builder.addCase(deleteTag.fulfilled, (state, { payload }) => {
+      state.data = payload;
+    });
+    builder.addCase(addSongsToTag.fulfilled, (state, { payload }) => {
+      state.data = payload;
+    });
+    builder.addCase(removeSongsFromTag.fulfilled, (state, { payload }) => {
       state.data = payload;
     });
   },

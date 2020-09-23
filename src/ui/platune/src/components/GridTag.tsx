@@ -1,11 +1,13 @@
 import { Button, Icon, Intent, Tag, Text } from '@blueprintjs/core';
 import { lighten } from 'color-blend';
 import React, { useState } from 'react';
+import { batch } from 'react-redux';
 import { toastSuccess } from '../appToaster';
 import { putJson } from '../fetchUtil';
 import { GridTagRes } from '../models/gridTagRes';
 import { fetchSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
+import { removeSongsFromTag } from '../state/tags';
 import { shadeColor, shadeColorRgb } from '../themes/colorMixer';
 import { FlexRow } from './FlexRow';
 
@@ -19,8 +21,11 @@ export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId }) =
   const dispatch = useAppDispatch();
   const { color, name, id } = tag;
   const removeTag = async () => {
-    await putJson(`/tags/${id}/removeSongs`, [songId]);
-    dispatch(fetchSongs());
+    batch(async () => {
+      await dispatch(removeSongsFromTag({ tagId: id, songIds: [songId] }));
+      dispatch(fetchSongs());
+    });
+
     toastSuccess();
   };
   return (

@@ -16,6 +16,7 @@ import { Song } from '../models/song';
 import { useAppDispatch } from '../state/store';
 import { fetchSongs } from '../state/songs';
 import { addEditTag, fetchTags } from '../state/tags';
+import { batch } from 'react-redux';
 
 interface AddEditTagProps {
   isOpen: boolean;
@@ -29,9 +30,12 @@ export const AddEditTag: React.FC<AddEditTagProps> = ({ isOpen, setIsOpen, tag, 
 
   const onSave = async () => {
     setIsOpen(false);
-    await dispatch(addEditTag(tag));
+    batch(async () => {
+      await dispatch(addEditTag(tag));
+      dispatch(fetchSongs());
+    });
+
     toastSuccess();
-    await dispatch(fetchSongs());
   };
 
   return (
