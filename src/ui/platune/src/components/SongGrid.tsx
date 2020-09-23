@@ -100,24 +100,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const mainRef = useRef<Table>();
   const otherRef = useRef<Table>();
-  const draggingFile = useRef<string>('');
   const playingFile = useObservable(() => audioQueue.playingSource);
-  const numTries = 10;
-
-  const loadSongs = useCallback(async () => {
-    for (let i of range(numTries)) {
-      try {
-        const songs = await getJson<Song[]>('/songs?offset=0&limit=15000');
-        return songs;
-      } catch (e) {
-        if (i === numTries - 1) {
-          throw e;
-        }
-        await sleep(1000);
-      }
-    }
-    return [];
-  }, []);
 
   const loadColors = async (songId: number) => {
     const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}&isLight=${isLightTheme}`);

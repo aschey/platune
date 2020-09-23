@@ -1,5 +1,6 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
 import { useDispatch } from 'react-redux';
+import logger from 'redux-logger';
 
 import songsReducer from './songs';
 import tagsReducer from './tags';
@@ -11,6 +12,7 @@ const store = configureStore({
     tags: tagsReducer,
     selectedGrid: selectedGridReducer,
   },
+  middleware: getDefaultMiddleware => getDefaultMiddleware().concat(logger),
 });
 
 export default store;
