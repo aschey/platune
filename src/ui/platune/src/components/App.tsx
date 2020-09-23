@@ -18,7 +18,7 @@ import { Search } from '../models/search';
 import { batch, useDispatch, useSelector } from 'react-redux';
 import { fetchSongs, selectSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
-import { addSongsToTag, fetchTags } from '../state/tags';
+import { addSongsToTag, fetchTags } from '../state/songs';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -117,10 +117,7 @@ const App: React.FC<{}> = () => {
       } else {
         songIds = songs.filter(s => draggableId === s.path).map(s => s.id);
       }
-      batch(async () => {
-        await dispatch(addSongsToTag({ tagId, songIds }));
-        dispatch(fetchSongs());
-      });
+      dispatch(addSongsToTag({ tagId, songIds }));
 
       toastSuccess();
     }

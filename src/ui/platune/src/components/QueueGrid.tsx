@@ -35,7 +35,7 @@ import { SideTag } from './SideTag';
 import { EditSongTag } from '../models/editSongTag';
 import { Search } from '../models/search';
 import { useAppDispatch } from '../state/store';
-import { fetchTags, selectTags } from '../state/tags';
+import { fetchTags, selectTags } from '../state/songs';
 import { useSelector } from 'react-redux';
 
 interface QueueGridProps {
@@ -146,10 +146,6 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme,
             return (
               <Droppable droppableId={`tag-${s.id}`} key={i}>
                 {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {
-                  if (snapshot.isDraggingOver) {
-                    console.log('dragging', s.name);
-                  }
-
                   return (
                     <>
                       <div

@@ -7,7 +7,7 @@ import { putJson } from '../fetchUtil';
 import { GridTagRes } from '../models/gridTagRes';
 import { fetchSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
-import { removeSongsFromTag } from '../state/tags';
+import { removeSongsFromTag } from '../state/songs';
 import { shadeColor, shadeColorRgb } from '../themes/colorMixer';
 import { FlexRow } from './FlexRow';
 
@@ -21,10 +21,7 @@ export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId }) =
   const dispatch = useAppDispatch();
   const { color, name, id } = tag;
   const removeTag = async () => {
-    batch(async () => {
-      await dispatch(removeSongsFromTag({ tagId: id, songIds: [songId] }));
-      dispatch(fetchSongs());
-    });
+    dispatch(removeSongsFromTag({ tagId: id, songIds: [songId] }));
 
     toastSuccess();
   };
@@ -40,7 +37,7 @@ export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId }) =
         backgroundColor: `rgba(${color}, 0.15)`,
         color: `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 100)}, 1)`,
       }}
-      onMouseEnter={() => setShowDelete(true)}
+      onMouseOver={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}
     >
       <FlexRow>

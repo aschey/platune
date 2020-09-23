@@ -6,7 +6,7 @@ import { EditSongTag } from '../models/editSongTag';
 import { Search } from '../models/search';
 import { SongTag } from '../models/songTag';
 import { useAppDispatch } from '../state/store';
-import { deleteTag } from '../state/tags';
+import { deleteTag } from '../state/songs';
 import { hexToRgb, isLight, shadeColorRgb } from '../themes/colorMixer';
 import { theme } from './App';
 import { FlexCol } from './FlexCol';

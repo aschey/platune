@@ -15,7 +15,7 @@ import { EditSongTag } from '../models/editSongTag';
 import { Song } from '../models/song';
 import { useAppDispatch } from '../state/store';
 import { fetchSongs } from '../state/songs';
-import { addEditTag, fetchTags } from '../state/tags';
+import { addEditTag, fetchTags } from '../state/songs';
 import { batch } from 'react-redux';
 
 interface AddEditTagProps {

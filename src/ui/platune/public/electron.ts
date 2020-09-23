@@ -8,6 +8,10 @@ import contextMenu from 'electron-context-menu';
 let mainWindow: BrowserWindow | null;
 let server: net.Server | null;
 
+const isInstalled = !isDev;
+
+const devMode = isDev && process.env['PLATUNE_PROD'] !== '1';
+
 const createWindow = () => {
   const dispose = contextMenu();
   mainWindow = new BrowserWindow({
@@ -23,11 +27,7 @@ const createWindow = () => {
       backgroundThrottling: false,
     },
   });
-  mainWindow.loadURL(
-    isDev && process.env['PLATUNE_PROD'] !== '1'
-      ? 'http://localhost:3000'
-      : `file://${path.join(__dirname, '../build/index.html')}`
-  );
+  mainWindow.loadURL(devMode ? 'http://localhost:3000' : `file://${path.join(__dirname, '../build/index.html')}`);
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -49,7 +49,7 @@ const createWindow = () => {
 };
 
 app.on('ready', async () => {
-  if (isDev) {
+  if (devMode) {
     protocol.registerFileProtocol('file', (request, cb) => {
       const pathname = decodeURI(request.url.replace('file:///', ''));
       cb(pathname);
@@ -57,10 +57,11 @@ app.on('ready', async () => {
     await installExtensions();
   }
 
-  const spawnServer = !isDev;
-  if (spawnServer) {
+  if (!devMode) {
     server = net.createServer();
     server.listen(8001);
+  }
+  if (isInstalled) {
     let command =
       process.platform === 'win32'
         ? `${app.getPath('home')}\\AppData\\Local\\Programs\\platune-server\\platune-server.exe`
