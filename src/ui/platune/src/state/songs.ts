@@ -1,7 +1,8 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { deleteJson, getJson, putJson } from '../fetchUtil';
+import { deleteJson, getJson, postJson, putJson } from '../fetchUtil';
 import { EditSongTag } from '../models/editSongTag';
 import { Song } from '../models/song';
+import { SongRequest } from '../models/songRequest';
 import { SongTag } from '../models/songTag';
 import { AppDispatch } from './store';
 
@@ -9,10 +10,15 @@ type SongState = {
   loadingState: 'idle' | 'pending' | 'finished';
   songData: Song[];
   tagData: SongTag[];
-  filters: string;
+  filters: SongRequest;
 };
 
-const initialState: SongState = { loadingState: 'idle', songData: [], tagData: [], filters: '' };
+const initialState: SongState = {
+  loadingState: 'idle',
+  songData: [],
+  tagData: [],
+  filters: {},
+};
 
 interface State {
   songs: SongState;
@@ -25,8 +31,7 @@ interface Thunk {
 
 export const fetchSongs = createAsyncThunk<Song[], undefined, Thunk>('songs', async (_, thunkApi) => {
   const state = thunkApi.getState();
-  const url = state.songs.filters.length ? `/songs?${state.songs.filters}` : '/songs';
-  return getJson<Song[]>(url);
+  return postJson<Song[]>('/songs', state.songs.filters);
 });
 
 export const fetchTags = createAsyncThunk('fetchTags', async () => getJson<SongTag[]>('/tags'));
@@ -67,7 +72,7 @@ const songsSlice = createSlice({
   name: 'songs',
   initialState,
   reducers: {
-    setFilters: (state, { payload }: PayloadAction<string>) => {
+    setFilters: (state, { payload }: PayloadAction<SongRequest>) => {
       state.filters = payload;
     },
     addTags: (state, { payload }: PayloadAction<{ tagId: number; songIds: number[] }>) => {

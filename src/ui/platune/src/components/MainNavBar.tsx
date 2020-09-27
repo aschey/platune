@@ -35,6 +35,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchSongs, setFilters } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { GridType, selectGrid, setSelectedGrid } from '../state/selectedGrid';
+import { SongRequest } from '../models/songRequest';
 
 interface MainNavBarProps {
   updateTheme: (newThemeName: string) => void;
@@ -180,22 +181,32 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     if (!selectedSearch) {
       return;
     }
-    let params = '';
+    let params: SongRequest = {};
     switch (selectedSearch.entryType) {
       case 'song':
-        params = `artistId=${selectedSearch.correlationId}&songName=${encodeURIComponent(selectedSearch.entryValue)}`;
-
+        params = {
+          artistId: selectedSearch.correlationId,
+          songName: selectedSearch.entryValue,
+        };
         break;
       case 'album':
-        params = `albumId=${selectedSearch.correlationId}`;
+        params = {
+          albumId: selectedSearch.correlationId,
+        };
         break;
       case 'artist':
-        params = `artistId=${selectedSearch.correlationId}`;
+        params = {
+          artistId: selectedSearch.correlationId,
+        };
         break;
       case 'album_artist':
-        params = `albumArtistId=${selectedSearch.correlationId}`;
+        params = {
+          albumArtistId: selectedSearch.correlationId,
+        };
       case 'tag':
-        params = `tagId=${selectedSearch.correlationId}`;
+        params = {
+          tagIds: [selectedSearch.correlationId],
+        };
         break;
     }
     await dispatch(setFilters(params));
@@ -204,7 +215,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
   const clearSearch = useCallback(async () => {
     toastMessage('Resetting...');
-    await dispatch(setFilters(''));
+    await dispatch(setFilters({}));
     dispatch(fetchSongs());
     setSearchResults([]);
     setSelectedSearch(null);

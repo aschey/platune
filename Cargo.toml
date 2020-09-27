@@ -9,33 +9,33 @@ build="build.rs"
 pnet_datalink = "0.26.0"
 
 [dependencies]
-serde = "1.0"
-serde_derive = "1.0"
-serde_json = "1.0"
-actix-web = "2.0.0"
-actix-cors = "0.2.0"
-actix-service = "1.0.5"
-actix-http = "1.0.1"
-actix-rt = "1.0.0"
-actix-files = "0.2.2"
-actix-server = "1.0.2"
-mime_guess = "2.0.1"
-subprocess = "0.2.4"
-fstrings = "0.2.2"
+serde = "1.0.116"
+serde_derive = "1.0.116"
+serde_json = "1.0.57"
+actix-web = "3.0.2"
+actix-cors = "0.4.0"
+actix-service = "1.0.6"
+actix-http = "2.0.0"
+actix-rt = "1.1.1"
+actix-files = "0.3.0"
+actix-server = "1.0.4"
+mime_guess = "2.0.3"
+subprocess = "0.2.6"
+fstrings = "0.2.3"
 futures = "0.3.5"
-dirs = "2.0.2"
-diesel = { version = "1.4.4", features = ["sqlite"] }
+dirs = "3.0.1"
+diesel = { version = "1.4.5", features = ["sqlite", "r2d2"] }
 diesel_migrations = "1.4.0"
-paperclip = { git = "https://github.com/wafflespeanut/paperclip", rev = "90038bf", features = ["actix"] }
-paperclip-actix = { git = "https://github.com/wafflespeanut/paperclip", rev = "90038bf" }
+paperclip = { git = "https://github.com/wafflespeanut/paperclip", rev = "c3f81f6", features = ["actix"] }
+paperclip-actix = { git = "https://github.com/wafflespeanut/paperclip", rev = "c3f81f6" }
 dotenv = "0.15.0"
-sysinfo = "0.13.1"
+sysinfo = "0.15.2"
 itertools = "0.9.0"
-failure = "0.1.7"
+failure = "0.1.8"
 katatsuki = { git = "https://github.com/aschey/seiri", rev = "169b0b8" }
 num_cpus = "1.13.0"
-async-std = { version = "1.5.0", features = ["attributes"] }
-image = "0.23.4"
+async-std = { version = "1.6.4", features = ["attributes", "tokio02"] }
+image = "0.23.10"
 color-thief = "0.2.1"
 whoami = "0.9.0"
 regex = "1.3.9"

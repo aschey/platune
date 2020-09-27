@@ -1,5 +1,5 @@
 import { Button, Icon, Menu, MenuItem, Popover, Tag, Text } from '@blueprintjs/core';
-import React from 'react';
+import React, { useState } from 'react';
 import { toastSuccess } from '../appToaster';
 import { deleteJson, getJson } from '../fetchUtil';
 import { EditSongTag } from '../models/editSongTag';
@@ -30,6 +30,8 @@ export const SideTag: React.FC<SideTagProps> = ({
 }) => {
   const dispatch = useAppDispatch();
 
+  const [hovered, setHovered] = useState(false);
+
   const editTag = () => {
     setTag(tag);
     setIsPopupOpen(true);
@@ -53,12 +55,15 @@ export const SideTag: React.FC<SideTagProps> = ({
           tagColor: tag.color,
         })
       }
+      onMouseOver={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       minimal
       style={{
         border: `1px solid rgba(${color}, 0.25)`,
-        backgroundColor: `rgba(${color}, 0.15)`,
+        backgroundColor: `rgba(${color}, ${hovered ? 0.3 : 0.15})`,
         color: `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 100)}, 1)`,
         boxShadow: isDraggingOver ? `inset 0 0 8px 8px rgba(${color}, 0.6)` : undefined,
+        cursor: hovered ? 'pointer' : undefined,
       }}
     >
       {

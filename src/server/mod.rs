@@ -177,7 +177,7 @@ pub fn run_server(tx: mpsc::Sender<Server>) -> std::io::Result<()> {
             .route("/updateDbPath", web::put().to(update_db_path))
             .route("/getNtfsMounts", web::get().to(get_ntfs_mounts))
             .route("/updatePathMappings", web::put().to(update_path_mappings))
-            .route("/songs", web::get().to(get_songs))
+            .route("/songs", web::post().to(get_songs))
             .route("/albumArt", web::get().to(get_album_art))
             .route("/albumArtColors", web::get().to(get_art_colors))
             .route("/search", web::get().to(search))
@@ -890,7 +890,7 @@ fn sync_folder_mappings(mapping: Vec<NtfsMapping>) {
 }
 
 #[api_v2_operation]
-async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
+async fn get_songs(request_query: Json<SongRequest>) -> Result<Json<Vec<Song>>, ()> {
     let request = request_query.into_inner();
     let connection = establish_connection().unwrap();
     let mut query: diesel::query_builder::BoxedSelectStatement<_, _, diesel::sqlite::Sqlite> = song
@@ -977,10 +977,16 @@ async fn get_songs(request_query: Query<SongRequest>) -> Result<Json<Vec<Song>>,
                 .collect(),
         })
     }
-    if let Some(req_tag_id) = request.tag_id {
+    if let Some(req_tag_ids) = request.tag_ids {
         song_res = song_res
             .into_iter()
-            .filter(|s| s.tags.iter().map(|t| t.id).any(|t| t == req_tag_id))
+            .filter(|s| {
+                s.tags.len() > 0
+                    && s.tags
+                        .iter()
+                        .map(|t| t.id)
+                        .all(|t| req_tag_ids.contains(&t))
+            })
             .collect::<Vec<_>>();
     }
     &song_res.sort_case_insensitive("album artist".to_owned());
@@ -1489,7 +1495,7 @@ struct SongRequest {
     album_artist_id: Option<i32>,
     album_id: Option<i32>,
     song_name: Option<String>,
-    tag_id: Option<i32>,
+    tag_ids: Option<Vec<i32>>,
 }
 
 #[derive(Deserialize, Apiv2Schema)]
