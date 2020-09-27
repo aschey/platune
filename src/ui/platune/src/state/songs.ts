@@ -55,8 +55,8 @@ export const removeSongsFromTag = createAsyncThunk<SongTag[], { tagId: number; s
 );
 
 export const addEditTag = createAsyncThunk('addEditTag', async (tag: EditSongTag) => {
-  if (tag.id === null) {
-    await putJson('/tags', tag);
+  if (tag.id === undefined) {
+    await postJson('/tags', tag);
   } else {
     await putJson(`/tags/${tag.id}`, tag);
   }
@@ -74,6 +74,24 @@ const songsSlice = createSlice({
   reducers: {
     setFilters: (state, { payload }: PayloadAction<SongRequest>) => {
       state.filters = payload;
+    },
+    setFilterTag: (state, { payload }: PayloadAction<{ tagId: number; append: boolean }>) => {
+      const { tagId, append } = payload;
+      const tagIds = state.filters.tagIds;
+      if (tagIds?.includes(tagId)) {
+        tagIds.splice(tagIds.indexOf(tagId), 1);
+      } else if (tagIds === undefined || !append) {
+        state.filters.tagIds = [tagId];
+      } else {
+        tagIds.push(tagId);
+      }
+    },
+    removeFilterTag: (state, { payload }: PayloadAction<number>) => {
+      if (state.filters.tagIds === undefined) {
+        state.filters.tagIds = [payload];
+      } else {
+        state.filters.tagIds.push(payload);
+      }
     },
     addTags: (state, { payload }: PayloadAction<{ tagId: number; songIds: number[] }>) => {
       const tag = state.tagData.find(t => t.id === payload.tagId);
@@ -133,10 +151,12 @@ const songsSlice = createSlice({
   },
 });
 
-export const { setFilters } = songsSlice.actions;
+export const { setFilters, setFilterTag } = songsSlice.actions;
 
 export const selectSongs = (state: State) => state.songs.songData;
 
 export const selectTags = (state: State) => state.songs.tagData;
+
+export const selectChosenTags = (state: State) => state.songs.filters.tagIds;
 
 export default songsSlice.reducer;

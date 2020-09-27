@@ -13,7 +13,6 @@ import {
   NavbarHeading,
   Popover,
   Tag,
-  TagInput,
 } from '@blueprintjs/core';
 import { HotkeyScope, HotkeysEvents } from '@blueprintjs/core/lib/esm/components/hotkeys/hotkeysEvents';
 import { IItemRendererProps, Omnibar, Suggest } from '@blueprintjs/select';
@@ -36,6 +35,7 @@ import { fetchSongs, setFilters } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { GridType, selectGrid, setSelectedGrid } from '../state/selectedGrid';
 import { SongRequest } from '../models/songRequest';
+import { clearSearch, fetchSearchResults, selectSearchResults } from '../state/search';
 
 interface MainNavBarProps {
   updateTheme: (newThemeName: string) => void;
@@ -58,28 +58,53 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 }) => {
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [searchResults, setSearchResults] = useState<Search[]>([]);
+  const searchResults = useSelector(selectSearchResults);
+  //const [searchResults, setSearchResults] = useState<Search[]>([]);
 
   const dispatch = useAppDispatch();
   const selectedGrid = useSelector(selectGrid);
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
 
+  const updateSearch = useCallback(() => {
+    if (!selectedSearch) {
+      return;
+    }
+    let params: SongRequest = {};
+    switch (selectedSearch.entryType) {
+      case 'song':
+        params = {
+          artistId: selectedSearch.correlationId,
+          songName: selectedSearch.entryValue,
+        };
+        break;
+      case 'album':
+        params = {
+          albumId: selectedSearch.correlationId,
+        };
+        break;
+      case 'artist':
+        params = {
+          artistId: selectedSearch.correlationId,
+        };
+        break;
+      case 'album_artist':
+        params = {
+          albumArtistId: selectedSearch.correlationId,
+        };
+        break;
+    }
+    dispatch(setFilters(params));
+    dispatch(fetchSongs());
+  }, [selectedSearch, dispatch]);
+
   useEffect(() => {
     updateSearch();
-  }, [selectedSearch]);
+  }, [selectedSearch, updateSearch]);
 
-  const debounced = _.debounce(async (input: string) => {
-    let res = await getJson<Search[]>(
-      `/search?limit=10&searchString=${encodeURIComponent(
-        input
-          .split(/\s+/)
-          .map(s => `"${s}"`)
-          .join(' ')
-      )}*`
-    );
-    setSearchResults(res);
-  });
+  const search = (searchString: string, includeTags: boolean) => {
+    dispatch(fetchSearchResults({ searchString, limit: 10, includeTags }));
+  };
 
   const escapeRegExpChars = (text: string) => {
     return text.replace(/([.*+?^=!:${}()|[\]/\\])/g, '\\$1');
@@ -131,7 +156,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         active={active}
         onClick={props.handleClick}
         style={{
-          paddingBottom: props.index === searchResults.length - 1 ? 0 : 10,
+          //paddingBottom: props.index === searchResults.length - 1 ? 0 : 10,
           backgroundColor: active ? 'rgba(var(--intent-primary), 0.3)' : undefined,
         }}
         text={
@@ -142,7 +167,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
                 border: `1px solid rgba(${searchRes.tagColor}, 0.25)`,
                 backgroundColor: `rgba(${searchRes.tagColor}, 0.15)`,
                 color: `rgba(${shadeColorRgb(searchRes.tagColor as string, isLight ? -50 : 100)}, 1)`,
-                marginBottom: 5,
               }}
             >
               {searchRes.entryValue}
@@ -177,49 +201,13 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     );
   };
 
-  const updateSearch = async () => {
-    if (!selectedSearch) {
-      return;
-    }
-    let params: SongRequest = {};
-    switch (selectedSearch.entryType) {
-      case 'song':
-        params = {
-          artistId: selectedSearch.correlationId,
-          songName: selectedSearch.entryValue,
-        };
-        break;
-      case 'album':
-        params = {
-          albumId: selectedSearch.correlationId,
-        };
-        break;
-      case 'artist':
-        params = {
-          artistId: selectedSearch.correlationId,
-        };
-        break;
-      case 'album_artist':
-        params = {
-          albumArtistId: selectedSearch.correlationId,
-        };
-      case 'tag':
-        params = {
-          tagIds: [selectedSearch.correlationId],
-        };
-        break;
-    }
-    await dispatch(setFilters(params));
-    dispatch(fetchSongs());
-  };
-
-  const clearSearch = useCallback(async () => {
+  const resetSearch = useCallback(() => {
     toastMessage('Resetting...');
-    await dispatch(setFilters({}));
+    dispatch(setFilters({}));
     dispatch(fetchSongs());
-    setSearchResults([]);
+    dispatch(clearSearch());
     setSelectedSearch(null);
-  }, [setSearchResults, setSelectedSearch]);
+  }, [setSelectedSearch, dispatch]);
 
   const toggleSideBar = useCallback(() => setSidePanelWidth(sidePanelWidth > 0 ? 0 : 200), [
     setSidePanelWidth,
@@ -253,7 +241,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         global: true,
         combo: 'shift + x',
         label: 'Clear search',
-        onKeyDown: clearSearch,
+        onKeyDown: resetSearch,
         preventDefault: true,
       }),
       new Hotkey({
@@ -264,7 +252,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         preventDefault: true,
       }),
     ]);
-  }, [clearSearch, omnibarOpen, setSelectedGrid, toggleSideBar]);
+  }, [resetSearch, omnibarOpen, toggleSideBar, dispatch]);
 
   return (
     <>
@@ -315,45 +303,33 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
           <div style={{ width: 5 }} />
         </NavbarGroup>
-        {selectedSearch?.entryType === 'tag' ? (
-          <div style={{ width: 300, position: 'absolute', top: 5, left: 150 }}>
-            <TagInput
-              leftIcon='search'
-              tagProps={{
-                style: {
-                  border: `1px solid rgba(${selectedSearch.tagColor}, 0.25)`,
-                  backgroundColor: `rgba(${selectedSearch.tagColor}, 0.15)`,
-                  color: `rgba(${shadeColorRgb(selectedSearch.tagColor as string, isLight ? -50 : 100)}, 1)`,
-                },
-              }}
-              values={[selectedSearch.entryValue]}
-              onRemove={clearSearch}
-            />
-          </div>
-        ) : (
-          <MusicSuggest
-            fill
-            resetOnSelect
-            className='search'
-            inputValueRenderer={val => val.entryValue}
-            itemRenderer={searchItemRenderer}
-            selectedItem={selectedSearch}
-            initialContent='Type to search'
-            onItemSelect={(val, event) => {
+        <MusicSuggest
+          fill
+          resetOnSelect
+          className='search'
+          inputValueRenderer={val => (val.entryType === 'tag' ? '' : val.entryValue)}
+          itemRenderer={searchItemRenderer}
+          selectedItem={selectedSearch}
+          initialContent='Type to search'
+          onItemSelect={val => {
+            if (val.entryType === 'tag') {
+              dispatch(setFilters({ tagIds: [val.correlationId] }));
+              dispatch(fetchSongs());
+            } else {
               setSelectedSearch(val);
-            }}
-            items={searchResults}
-            popoverProps={{ minimal: true }}
-            itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
-            inputProps={{
-              leftIcon: 'search',
-              rightElement: <Button minimal icon='small-cross' onClick={clearSearch} />,
-            }}
-            onQueryChange={async (input, event) => {
-              await debounced(input);
-            }}
-          />
-        )}
+            }
+          }}
+          items={searchResults}
+          popoverProps={{ minimal: true }}
+          itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
+          inputProps={{
+            leftIcon: 'search',
+            rightElement: <Button minimal icon='small-cross' onClick={resetSearch} />,
+          }}
+          onQueryChange={input => {
+            search(input, false);
+          }}
+        />
         <MusicOmnibar
           resetOnSelect
           isOpen={omnibarOpen}
@@ -361,12 +337,16 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           items={searchResults}
           onItemSelect={(val, event) => {
             setOmnibarOpen(false);
-
-            setSelectedSearch(val);
+            if (val.entryType === 'tag') {
+              dispatch(setFilters({ tagIds: [val.correlationId] }));
+              dispatch(fetchSongs());
+            } else {
+              setSelectedSearch(val);
+            }
           }}
           onClose={() => setOmnibarOpen(false)}
-          onQueryChange={async (input, event) => {
-            await debounced(input);
+          onQueryChange={input => {
+            search(input, true);
           }}
         />
         <NavbarGroup align={Alignment.RIGHT} style={{ height: 40, paddingTop: 1 }}>

@@ -47,7 +47,7 @@ interface QueueGridProps {
 export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme, setSelectedSearch }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0', id: null });
+  const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0' });
 
   const dispatch = useAppDispatch();
   const songTags = useSelector(selectTags);
@@ -56,7 +56,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme,
 
   useEffect(() => {
     dispatch(fetchTags());
-  }, []);
+  }, [dispatch]);
 
   const rowRenderer = (props: ListRowProps) => {
     if (props.style.width) {
@@ -110,7 +110,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme,
   };
 
   const addTag = () => {
-    setTag({ id: null, name: '', order: 1, color: '0,0,0' });
+    setTag({ name: '', order: 1, color: '0,0,0' });
     setIsPopupOpen(true);
   };
 

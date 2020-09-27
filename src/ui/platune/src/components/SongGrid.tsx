@@ -109,7 +109,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   useEffect(() => {
     dispatch(fetchSongs());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     //songs?.forEach((song, i) => (song.index = i));

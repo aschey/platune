@@ -1,5 +1,5 @@
 export interface EditSongTag {
-  id: number | null;
+  id?: number;
   name: string;
   color: string;
   order: number;
