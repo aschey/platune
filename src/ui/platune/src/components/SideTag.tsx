@@ -19,16 +19,8 @@ interface SideTagProps {
   setIsPopupOpen: (isPopupOpen: boolean) => void;
   isDraggingOver: boolean;
   isLightTheme: boolean;
-  setSelectedSearch: (selectedSearch: Search) => void;
 }
-export const SideTag: React.FC<SideTagProps> = ({
-  tag,
-  setTag,
-  setIsPopupOpen,
-  isDraggingOver,
-  isLightTheme,
-  setSelectedSearch,
-}) => {
+export const SideTag: React.FC<SideTagProps> = ({ tag, setTag, setIsPopupOpen, isDraggingOver, isLightTheme }) => {
   const dispatch = useAppDispatch();
   const selectedTagIds = useSelector(selectChosenTags);
 
@@ -50,8 +42,7 @@ export const SideTag: React.FC<SideTagProps> = ({
   return (
     <Tag
       onClick={e => {
-        dispatch(setFilterTag({ tagId: tag.id, append: e.ctrlKey }));
-        dispatch(fetchSongs());
+        dispatch(setFilterTag({ tagId: tag.id, append: e.ctrlKey, toggle: true }));
       }}
       onMouseOver={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

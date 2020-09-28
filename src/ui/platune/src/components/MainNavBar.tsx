@@ -30,11 +30,11 @@ import { Settings } from './Settings';
 import { globalHotkeys } from '../globalHotkeys';
 import { SideTag } from './SideTag';
 import { shadeColorRgb } from '../themes/colorMixer';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchSongs, setFilters } from '../state/songs';
+import { useSelector } from 'react-redux';
+import { fetchSongs, setFilters, setFilterTag } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { GridType, selectGrid, setSelectedGrid } from '../state/selectedGrid';
-import { SongRequest } from '../models/songRequest';
+import { FilterRequest } from '../models/filterRequest';
 import { clearSearch, fetchSearchResults, selectSearchResults } from '../state/search';
 
 interface MainNavBarProps {
@@ -42,27 +42,18 @@ interface MainNavBarProps {
   isLight: boolean;
   sidePanelWidth: number;
   setSidePanelWidth: (width: number) => void;
-  selectedSearch: Search | null;
-  setSelectedSearch: (selectedSearch: Search | null) => void;
 }
 const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
 
-export const MainNavBar: React.FC<MainNavBarProps> = ({
-  updateTheme,
-  isLight,
-  sidePanelWidth,
-  setSidePanelWidth,
-  selectedSearch,
-  setSelectedSearch,
-}) => {
+export const MainNavBar: React.FC<MainNavBarProps> = ({ updateTheme, isLight, sidePanelWidth, setSidePanelWidth }) => {
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const searchResults = useSelector(selectSearchResults);
-  //const [searchResults, setSearchResults] = useState<Search[]>([]);
+  const [selectedSearch, setSelectedSearch] = useState<Search | null>();
 
   const dispatch = useAppDispatch();
   const selectedGrid = useSelector(selectGrid);
+  const searchResults = useSelector(selectSearchResults);
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
 
@@ -70,7 +61,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     if (!selectedSearch) {
       return;
     }
-    let params: SongRequest = {};
+    let params: FilterRequest = {};
     switch (selectedSearch.entryType) {
       case 'song':
         params = {
@@ -95,7 +86,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         break;
     }
     dispatch(setFilters(params));
-    dispatch(fetchSongs());
   }, [selectedSearch, dispatch]);
 
   useEffect(() => {
@@ -204,8 +194,6 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const resetSearch = useCallback(() => {
     toastMessage('Resetting...');
     dispatch(setFilters({}));
-    dispatch(fetchSongs());
-    dispatch(clearSearch());
     setSelectedSearch(null);
   }, [setSelectedSearch, dispatch]);
 
@@ -213,6 +201,14 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
     setSidePanelWidth,
     sidePanelWidth,
   ]);
+
+  const setSelected = (val: Search) => {
+    if (val.entryType === 'tag') {
+      dispatch(setFilterTag({ tagId: val.correlationId, append: false, toggle: false }));
+    } else {
+      setSelectedSearch(val);
+    }
+  };
 
   useEffect(() => {
     globalHotkeys.register([
@@ -311,14 +307,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           itemRenderer={searchItemRenderer}
           selectedItem={selectedSearch}
           initialContent='Type to search'
-          onItemSelect={val => {
-            if (val.entryType === 'tag') {
-              dispatch(setFilters({ tagIds: [val.correlationId] }));
-              dispatch(fetchSongs());
-            } else {
-              setSelectedSearch(val);
-            }
-          }}
+          onItemSelect={setSelected}
           items={searchResults}
           popoverProps={{ minimal: true }}
           itemsEqual={(first, second) => first.entryValue === second.entryValue && first.artist === second.artist}
@@ -335,14 +324,9 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           isOpen={omnibarOpen}
           itemRenderer={searchItemRenderer}
           items={searchResults}
-          onItemSelect={(val, event) => {
+          onItemSelect={val => {
             setOmnibarOpen(false);
-            if (val.entryType === 'tag') {
-              dispatch(setFilters({ tagIds: [val.correlationId] }));
-              dispatch(fetchSongs());
-            } else {
-              setSelectedSearch(val);
-            }
+            setSelected(val);
           }}
           onClose={() => setOmnibarOpen(false)}
           onQueryChange={input => {

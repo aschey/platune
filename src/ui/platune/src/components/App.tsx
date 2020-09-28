@@ -32,7 +32,6 @@ const App: React.FC<{}> = () => {
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [selectedSearch, setSelectedSearch] = useState<Search | null>(null);
 
   const dispatch = useAppDispatch();
   const songs = useSelector(selectSongs);
@@ -138,8 +137,6 @@ const App: React.FC<{}> = () => {
         setSidePanelWidth={setSidePanelWidth}
         updateTheme={updateTheme}
         isLight={themeDetails}
-        selectedSearch={selectedSearch}
-        setSelectedSearch={setSelectedSearch}
       />
       <div
         ref={gridRef}
@@ -153,7 +150,7 @@ const App: React.FC<{}> = () => {
       >
         <div>
           <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid queuedSongs={queuedSongs} isLightTheme={themeDetails} setSelectedSearch={setSelectedSearch} />
+            <QueueGrid queuedSongs={queuedSongs} isLightTheme={themeDetails} />
           </div>
         </div>
         <SongGrid
