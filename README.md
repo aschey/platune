@@ -1,6 +1,7 @@
 ![Platune](res/platune-title.png)
 
 [![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/master/LICENSE)
+![Total Lines](https://img.shields.io/tokei/lines/github/aschey/platune?color=brightgreen)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)
 
 Created with
@@ -45,7 +46,8 @@ Platune is a cross-platform music player that supports sharing data between oper
 - Playback with gapless audio support
 - Search
 - Song queueing
+- Tags
 
 ### Features in Progress
 
-- Tags
+- Queue drag and drop
