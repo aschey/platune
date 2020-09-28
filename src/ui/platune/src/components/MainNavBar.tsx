@@ -33,26 +33,34 @@ import { shadeColorRgb } from '../themes/colorMixer';
 import { useSelector } from 'react-redux';
 import { fetchSongs, setFilters, setFilterTag } from '../state/songs';
 import { useAppDispatch } from '../state/store';
-import { GridType, selectGrid, setSelectedGrid } from '../state/selectedGrid';
 import { FilterRequest } from '../models/filterRequest';
 import { clearSearch, fetchSearchResults, selectSearchResults } from '../state/search';
+import { GridType } from '../enums/gridType';
 
 interface MainNavBarProps {
   updateTheme: (newThemeName: string) => void;
   isLight: boolean;
   sidePanelWidth: number;
   setSidePanelWidth: (width: number) => void;
+  selectedGrid: GridType;
+  setSelectedGrid: (selectedGrid: GridType) => void;
 }
 const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
 
-export const MainNavBar: React.FC<MainNavBarProps> = ({ updateTheme, isLight, sidePanelWidth, setSidePanelWidth }) => {
+export const MainNavBar: React.FC<MainNavBarProps> = ({
+  updateTheme,
+  isLight,
+  sidePanelWidth,
+  setSidePanelWidth,
+  selectedGrid,
+  setSelectedGrid,
+}) => {
   const [omnibarOpen, setOmnibarOpen] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedSearch, setSelectedSearch] = useState<Search | null>();
 
   const dispatch = useAppDispatch();
-  const selectedGrid = useSelector(selectGrid);
   const searchResults = useSelector(selectSearchResults);
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
@@ -223,14 +231,14 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ updateTheme, isLight, si
         global: true,
         combo: 'shift + a',
         label: 'Show album grid',
-        onKeyDown: () => dispatch(setSelectedGrid(GridType.Album)),
+        onKeyDown: () => setSelectedGrid(GridType.Album),
         preventDefault: true,
       }),
       new Hotkey({
         global: true,
         combo: 'shift + l',
         label: 'Show song list',
-        onKeyDown: () => dispatch(setSelectedGrid(GridType.Song)),
+        onKeyDown: () => setSelectedGrid(GridType.Song),
         preventDefault: true,
       }),
       new Hotkey({
@@ -339,7 +347,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ updateTheme, isLight, si
               outlined
               style={{ width: 30, height: 30 }}
               intent={selectedGrid === GridType.Song ? Intent.PRIMARY : Intent.NONE}
-              onClick={() => dispatch(setSelectedGrid(GridType.Song))}
+              onClick={() => setSelectedGrid(GridType.Song)}
             >
               <FontAwesomeIcon icon={faThList} style={{ marginTop: 1.5 }} />
             </Button>
@@ -348,7 +356,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({ updateTheme, isLight, si
               outlined
               intent={selectedGrid === GridType.Album ? Intent.PRIMARY : Intent.NONE}
               icon='list-detail-view'
-              onClick={() => dispatch(setSelectedGrid(GridType.Album))}
+              onClick={() => setSelectedGrid(GridType.Album)}
             />
           </ButtonGroup>
           <div style={{ width: 20 }} />

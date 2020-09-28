@@ -19,6 +19,7 @@ import { batch, useDispatch, useSelector } from 'react-redux';
 import { fetchSongs, selectSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { addSongsToTag, fetchTags } from '../state/songs';
+import { GridType } from '../enums/gridType';
 
 const themeName = 'dark';
 export const theme = darkTheme;
@@ -32,6 +33,7 @@ const App: React.FC<{}> = () => {
   const [queuedSongs, setQueuedSongs] = useState<Song[]>([]);
   const [gridMargin, setGridMargin] = useState(0);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [selectedGrid, setSelectedGrid] = useState(GridType.Song);
 
   const dispatch = useAppDispatch();
   const songs = useSelector(selectSongs);
@@ -137,6 +139,8 @@ const App: React.FC<{}> = () => {
         setSidePanelWidth={setSidePanelWidth}
         updateTheme={updateTheme}
         isLight={themeDetails}
+        selectedGrid={selectedGrid}
+        setSelectedGrid={setSelectedGrid}
       />
       <div
         ref={gridRef}
@@ -161,6 +165,7 @@ const App: React.FC<{}> = () => {
           setQueuedSongs={setQueuedSongs}
           selectedFiles={selectedFiles}
           setSelectedFiles={setSelectedFiles}
+          selectedGrid={selectedGrid}
         />
       </div>
     </DragDropContext>

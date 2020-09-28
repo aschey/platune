@@ -3,13 +3,11 @@ import { useDispatch } from 'react-redux';
 import logger from 'redux-logger';
 
 import songsReducer from './songs';
-import selectedGridReducer from './selectedGrid';
 import searchReducer from './search';
 
 const store = configureStore({
   reducer: {
     songs: songsReducer,
-    selectedGrid: selectedGridReducer,
     search: searchReducer,
   },
   middleware: getDefaultMiddleware =>

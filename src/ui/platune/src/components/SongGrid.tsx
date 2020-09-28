@@ -35,13 +35,10 @@ import { lightTheme } from '../themes/light';
 import ReactDOM from 'react-dom';
 import { FlexRow } from './FlexRow';
 import { GridTag } from './GridTag';
-import { theme } from './App';
 import { fetchSongs, selectSongs } from '../state/songs';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useAppDispatch } from '../state/store';
-import { deepStrictEqual } from 'assert';
-import { deepCompareKeys } from '@blueprintjs/core/lib/esm/common/utils';
-import { GridType, selectGrid } from '../state/selectedGrid';
+import { GridType } from '../enums/gridType';
 
 interface SongGridProps {
   isLightTheme: boolean;
@@ -51,6 +48,7 @@ interface SongGridProps {
   setQueuedSongs: (songs: Song[]) => void;
   selectedFiles: string[];
   setSelectedFiles: (selectedFiles: string[]) => void;
+  selectedGrid: GridType;
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
@@ -61,6 +59,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   setQueuedSongs,
   selectedFiles,
   setSelectedFiles,
+  selectedGrid,
 }) => {
   const [groupedSongs, setGroupedSongs] = useState<Dictionary<Song[]>>({});
   const [albumKeys, setAlbumKeys] = useState<string[]>([]);
@@ -71,7 +70,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const dispatch = useAppDispatch();
 
   const songs = useSelector(selectSongs);
-  const selectedGrid = useSelector(selectGrid);
 
   const editWidth = 30;
   const trackWidth = 70;
