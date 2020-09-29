@@ -29,7 +29,7 @@ import ReactDOM from 'react-dom';
 import { deleteJson, getJson } from '../fetchUtil';
 import { SongTag } from '../models/songTag';
 import { hexToRgb } from '../themes/colorMixer';
-import { theme } from './App';
+import { useThemeContext } from '../state/themeContext';
 import { toastSuccess } from '../appToaster';
 import { SideTag } from './SideTag';
 import { EditSongTag } from '../models/editSongTag';
@@ -40,16 +40,16 @@ import { useSelector } from 'react-redux';
 
 interface QueueGridProps {
   queuedSongs: Song[];
-  isLightTheme: boolean;
 }
 
-export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs, isLightTheme }) => {
+export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const playingSource = useObservable(() => audioQueue.playingSource);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0' });
 
   const dispatch = useAppDispatch();
   const songTags = useSelector(selectTags);
+  const { isLightTheme } = useThemeContext();
 
   const width = 200;
 

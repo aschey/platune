@@ -9,10 +9,9 @@ import { PathMapping } from './PathMapping';
 import { PathPicker } from './PathPicker';
 
 export const Settings: React.FC<{
-  updateTheme: (newThemeName: string) => void;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-}> = ({ updateTheme, isOpen, setIsOpen }) => {
+}> = ({ isOpen, setIsOpen }) => {
   const [closePending, setClosePending] = useState<boolean>(false);
   const [rows, setRows] = useState<Array<string>>([]);
   const [originalRows, setOriginalRows] = useState<Array<string>>([]);

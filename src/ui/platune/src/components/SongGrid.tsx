@@ -30,7 +30,7 @@ import { formatMs, formatRgb, range, setCssVar, sleep } from '../util';
 import { Controls } from './Controls';
 import { FlexCol } from './FlexCol';
 import { normal } from 'color-blend';
-import { hexToRgb } from '../themes/colorMixer';
+import { hexToRgb, isLight } from '../themes/colorMixer';
 import { lightTheme } from '../themes/light';
 import ReactDOM from 'react-dom';
 import { FlexRow } from './FlexRow';
@@ -39,9 +39,9 @@ import { fetchSongs, selectSongs } from '../state/songs';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useAppDispatch } from '../state/store';
 import { GridType } from '../enums/gridType';
+import { useThemeContext } from '../state/themeContext';
 
 interface SongGridProps {
-  isLightTheme: boolean;
   width: number;
   height: number;
   queuedSongs: Song[];
@@ -52,7 +52,6 @@ interface SongGridProps {
 }
 
 export const SongGrid: React.FC<SongGridProps> = ({
-  isLightTheme,
   width,
   height,
   queuedSongs,
@@ -68,7 +67,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const [editingFile, setEditingFile] = useState('');
 
   const dispatch = useAppDispatch();
-
+  const { isLightTheme } = useThemeContext();
   const songs = useSelector(selectSongs);
 
   const editWidth = 30;
@@ -110,7 +109,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
   }, [dispatch]);
 
   useEffect(() => {
-    //songs?.forEach((song, i) => (song.index = i));
     let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
     setGroupedSongs(g);
     setAlbumKeys(_.keys(g));
@@ -172,7 +170,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
           axis='none'
           defaultClassName='DragHandle'
           defaultClassNameDragging='DragHandleActive'
-          //bounds={{right: 100, left: 100, top: 0, bottom: 0}}
           onDrag={(event, { deltaX }) => {
             resizeRow({ dataKey: props.dataKey, deltaX });
           }}
@@ -486,12 +483,12 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const updateSelectedAlbum = async (songId: number, hasArt: boolean, albumIndex: number) => {
     if (hasArt) {
-      await updateColors(songId, albumIndex);
+      await updateColors(songId);
     }
     setSelectedAlbum(albumKeys[albumIndex]);
   };
 
-  const updateColors = async (songId: number, albumIndex: number) => {
+  const updateColors = async (songId: number) => {
     const colors = await loadColors(songId);
     const bg = colors[0];
     const fg = colors[1];

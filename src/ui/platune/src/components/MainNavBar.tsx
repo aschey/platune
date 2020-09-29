@@ -36,10 +36,9 @@ import { useAppDispatch } from '../state/store';
 import { FilterRequest } from '../models/filterRequest';
 import { clearSearch, fetchSearchResults, selectSearchResults } from '../state/search';
 import { GridType } from '../enums/gridType';
+import { useThemeContext } from '../state/themeContext';
 
 interface MainNavBarProps {
-  updateTheme: (newThemeName: string) => void;
-  isLight: boolean;
   sidePanelWidth: number;
   setSidePanelWidth: (width: number) => void;
   selectedGrid: GridType;
@@ -49,8 +48,6 @@ const MusicSuggest = Suggest.ofType<Search>();
 const MusicOmnibar = Omnibar.ofType<Search>();
 
 export const MainNavBar: React.FC<MainNavBarProps> = ({
-  updateTheme,
-  isLight,
   sidePanelWidth,
   setSidePanelWidth,
   selectedGrid,
@@ -62,6 +59,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
   const dispatch = useAppDispatch();
   const searchResults = useSelector(selectSearchResults);
+  const { setTheme, isLightTheme } = useThemeContext();
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
 
@@ -164,7 +162,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
               style={{
                 border: `1px solid rgba(${searchRes.tagColor}, 0.25)`,
                 backgroundColor: `rgba(${searchRes.tagColor}, 0.15)`,
-                color: `rgba(${shadeColorRgb(searchRes.tagColor as string, isLight ? -50 : 100)}, 1)`,
+                color: `rgba(${shadeColorRgb(searchRes.tagColor as string, isLightTheme ? -50 : 100)}, 1)`,
               }}
             >
               {searchRes.entryValue}
@@ -296,8 +294,8 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
                 />
                 <MenuItem icon='updated' text='Backup Now' />
                 <MenuItem icon='exchange' text='Switch Theme'>
-                  <MenuItem text={themeEntry('Dark', !isLight)} onClick={() => updateTheme('dark')} />
-                  <MenuItem text={themeEntry('Light', isLight)} onClick={() => updateTheme('light')} />
+                  <MenuItem text={themeEntry('Dark', !isLightTheme)} onClick={() => setTheme('dark')} />
+                  <MenuItem text={themeEntry('Light', isLightTheme)} onClick={() => setTheme('light')} />
                 </MenuItem>
               </Menu>
             }
@@ -378,7 +376,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
           </ButtonGroup>
         </NavbarGroup>
       </Navbar>
-      <Settings updateTheme={updateTheme} isOpen={isOpen} setIsOpen={setIsOpen} />
+      <Settings isOpen={isOpen} setIsOpen={setIsOpen} />
     </>
   );
 };

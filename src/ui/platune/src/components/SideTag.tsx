@@ -8,10 +8,10 @@ import { SongTag } from '../models/songTag';
 import { useAppDispatch } from '../state/store';
 import { setFilterTag, deleteTag, fetchSongs, selectChosenTags, setFilters } from '../state/songs';
 import { hexToRgb, isLight, shadeColorRgb } from '../themes/colorMixer';
-import { theme } from './App';
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { useSelector } from 'react-redux';
+import { useThemeContext } from '../state/themeContext';
 
 interface SideTagProps {
   tag: SongTag;
@@ -26,6 +26,7 @@ export const SideTag: React.FC<SideTagProps> = ({ tag, setTag, setIsPopupOpen, i
 
   const [hovered, setHovered] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const { themeVal } = useThemeContext();
 
   const editTag = () => {
     setTag(tag);
@@ -37,7 +38,7 @@ export const SideTag: React.FC<SideTagProps> = ({ tag, setTag, setIsPopupOpen, i
     toastSuccess();
   };
 
-  const color = isDraggingOver ? hexToRgb(theme.intentPrimary).join(',') : tag.color;
+  const color = isDraggingOver ? hexToRgb(themeVal.intentPrimary).join(',') : tag.color;
 
   return (
     <Tag

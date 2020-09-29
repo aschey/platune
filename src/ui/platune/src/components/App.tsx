@@ -1,5 +1,5 @@
 import { wrapGrid } from 'animate-css-grid';
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, createContext, useMemo, useContext } from 'react';
 import { Song } from '../models/song';
 import { isLight } from '../themes/colorMixer';
 import { darkTheme } from '../themes/dark';
@@ -20,13 +20,12 @@ import { fetchSongs, selectSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { addSongsToTag, fetchTags } from '../state/songs';
 import { GridType } from '../enums/gridType';
+import { ThemeContextProvider } from '../state/themeContext';
 
 const themeName = 'dark';
-export const theme = darkTheme;
 applyTheme(themeName);
 
 const App: React.FC<{}> = () => {
-  const [themeDetails, setThemeDetails] = useState(isLight(theme.backgroundMain));
   const [sidePanelWidth, setSidePanelWidth] = useState(0);
   const [gridCols, setGridCols] = useState(`0px ${window.innerWidth}px`);
   const [gridClasses, setGridClasses] = useState('grid');
@@ -45,12 +44,6 @@ const App: React.FC<{}> = () => {
   const [height, setHeight] = useState(getHeight());
 
   const gridRef = React.createRef<HTMLDivElement>();
-
-  const updateTheme = (newThemeName: string) => {
-    applyTheme(newThemeName);
-    const newTheme = newThemeName === 'light' ? lightTheme : darkTheme;
-    setThemeDetails(isLight(newTheme.backgroundMain));
-  };
 
   const debounced = _.debounce(async () => {
     setWidth(getWidth());
@@ -133,42 +126,41 @@ const App: React.FC<{}> = () => {
   };
 
   return (
-    <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
-      <MainNavBar
-        sidePanelWidth={sidePanelWidth}
-        setSidePanelWidth={setSidePanelWidth}
-        updateTheme={updateTheme}
-        isLight={themeDetails}
-        selectedGrid={selectedGrid}
-        setSelectedGrid={setSelectedGrid}
-      />
-      <div
-        ref={gridRef}
-        className={gridClasses}
-        style={{
-          paddingTop: 40,
-          display: 'grid',
-          gridTemplateRows: `${height}px 70px`,
-          gridTemplateColumns: gridCols,
-        }}
-      >
-        <div>
-          <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-            <QueueGrid queuedSongs={queuedSongs} isLightTheme={themeDetails} />
-          </div>
-        </div>
-        <SongGrid
-          isLightTheme={themeDetails}
-          width={width}
-          height={height}
-          queuedSongs={queuedSongs}
-          setQueuedSongs={setQueuedSongs}
-          selectedFiles={selectedFiles}
-          setSelectedFiles={setSelectedFiles}
+    <ThemeContextProvider>
+      <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
+        <MainNavBar
+          sidePanelWidth={sidePanelWidth}
+          setSidePanelWidth={setSidePanelWidth}
           selectedGrid={selectedGrid}
+          setSelectedGrid={setSelectedGrid}
         />
-      </div>
-    </DragDropContext>
+        <div
+          ref={gridRef}
+          className={gridClasses}
+          style={{
+            paddingTop: 40,
+            display: 'grid',
+            gridTemplateRows: `${height}px 70px`,
+            gridTemplateColumns: gridCols,
+          }}
+        >
+          <div>
+            <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
+              <QueueGrid queuedSongs={queuedSongs} />
+            </div>
+          </div>
+          <SongGrid
+            width={width}
+            height={height}
+            queuedSongs={queuedSongs}
+            setQueuedSongs={setQueuedSongs}
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            selectedGrid={selectedGrid}
+          />
+        </div>
+      </DragDropContext>
+    </ThemeContextProvider>
   );
 };
 
