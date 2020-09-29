@@ -117,7 +117,7 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, onPrevious, playingSo
           <SongProgress />
         </div>
 
-        <FlexRow style={{ marginLeft: 10 }}>
+        <FlexRow style={{ marginLeft: 10, overflow: 'hidden' }}>
           {playingSong?.hasArt ? (
             <img
               src={`http://localhost:5000/albumArt?songId=${playingSong.id}`}
@@ -126,14 +126,20 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, onPrevious, playingSo
               height={50}
             />
           ) : null}
-          <div style={{ paddingLeft: 10, paddingRight: '10%' }}>
-            <FlexRow>{playingSong?.name}</FlexRow>
-            <FlexRow>{playingSong?.album}</FlexRow>
-            <FlexRow>{playingSong?.artist}</FlexRow>
+          <div style={{ paddingLeft: 10, overflow: 'hidden' }}>
+            <FlexRow>
+              <Text ellipsize>{playingSong?.name}</Text>
+            </FlexRow>
+            <FlexRow>
+              <Text ellipsize>{playingSong?.album}</Text>
+            </FlexRow>
+            <FlexRow>
+              <Text ellipsize>{playingSong?.artist}</Text>
+            </FlexRow>
           </div>
           <FlexCol>
             {(songMillis ?? 0) > 0 ? (
-              <FlexRow style={{ fontSize: 16 }}>
+              <FlexRow style={{ fontSize: 16, paddingLeft: 10, paddingRight: 10 }}>
                 <div style={{ color: coloradjust }}>{formatMs(progress ?? 0)}</div>
                 <div style={{ color: shadeColor(themeVal.songTimeColor, songColorAdjust) }}>
                   /{formatMs(songMillis ?? 0)}
