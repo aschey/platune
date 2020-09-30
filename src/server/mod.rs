@@ -1,4 +1,5 @@
 mod models;
+use crate::diesel::connection::SimpleConnection;
 use crate::schema;
 use crate::schema::album::dsl::*;
 use crate::schema::album_artist::dsl::*;
@@ -144,7 +145,7 @@ pub fn establish_connection() -> AnyResult<SqliteConnection> {
     let database_url = env::var(DATABASE_URL)?;
     let connection = SqliteConnection::establish(&database_url)?;
     connection
-        .execute("PRAGMA foreign_keys = ON;PRAGMA journal_mode=WAL;")
+        .batch_execute("PRAGMA synchronous=NORMAL;PRAGMA foreign_keys=ON;PRAGMA journal_mode=WAL;PRAGMA busy_timeout=5000;")
         .unwrap();
 
     Ok(connection)
