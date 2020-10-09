@@ -209,7 +209,11 @@ canvas {
 
 .has-art.album-selected-row div:not(.editing) {
   transition: var(--transition);
-  color: inherit !important;
+  color: rgba(var(--grid-selected-text-color), 1);
+}
+
+.has-art.album-selected-row .bp3-tag div {
+  color: inherit;
 }
 
 .has-art .editing {
