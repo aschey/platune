@@ -26,7 +26,7 @@ import { audioQueue } from '../audio';
 import { getJson } from '../fetchUtil';
 import { Rgb } from '../models/rgb';
 import { Song } from '../models/song';
-import { formatMs, formatRgb, range, setCssVar, sleep } from '../util';
+import { formatCssVar, formatMs, formatRgb, range, setCssVar, sleep } from '../util';
 import { Controls } from './Controls';
 import { FlexCol } from './FlexCol';
 import { normal } from 'color-blend';
@@ -99,7 +99,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const otherRef = useRef<Table>();
   const playingFile = useObservable(() => audioQueue.playingSource);
 
-  const loadColors = async (songId: number) => {
+  const loadColors = async (songId: number): Promise<Rgb[]> => {
     const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}&isLight=${isLightTheme}`);
     return colors;
   };
@@ -207,9 +207,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
               const cur = songs[rowIndex];
               let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
               if (selectedGrid === GridType.Album) {
-                const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
-                const song = hasArt.length > 0 ? hasArt[0] : cur;
-                updateSelectedAlbum(song.id, song.hasArt, albumIndex);
+                const songs = getAlbumSongs(albumIndex);
+                //const song = hasArt.length > 0 ? hasArt[0] : cur;
+                updateSelectedAlbum(songs, albumIndex);
               }
 
               if (isEditingRow) {
@@ -401,7 +401,8 @@ export const SongGrid: React.FC<SongGridProps> = ({
       return null;
     }
     const path = songs[rowIndex].path;
-
+    const albumSongs = getAlbumSongs(albumKeys.indexOf(selectedAlbum))?.map(s => s.index);
+    const isSelectedAlbum = albumSongs?.includes(rowIndex);
     let classes = 'bp3-table-cell grid-cell';
     //let child: JSX.Element | string = value;
     if (path === editingFile) {
@@ -414,7 +415,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     } else {
       classes += rowIndex % 2 === 0 ? ' striped-even' : ' striped-odd';
     }
-
+    const hasArt = getAlbumSongs(albumKeys.indexOf(selectedAlbum))?.some(s => s.hasArt);
     const estWidth = songs[rowIndex].tags.reduce((prev, current) => prev + current.name.length * 6 + 20, 0);
     let shownTags = [];
     let extra = 0;
@@ -437,9 +438,16 @@ export const SongGrid: React.FC<SongGridProps> = ({
       <div key={path} className={classes} onDoubleClick={() => onDoubleClick(path)} onClick={e => onRowClick(e, path)}>
         {shownTags
           .slice()
+          .sort((a, b) => a.name.localeCompare(b.name))
           .sort(t => t.order)
           .map(t => (
-            <GridTag tag={t} isLightTheme={isLightTheme} key={path + t.name} songId={songs[rowIndex].id} />
+            <GridTag
+              tag={t}
+              isLightTheme={isLightTheme}
+              key={path + t.name}
+              songId={songs[rowIndex].id}
+              useCustomColors={isSelectedAlbum && hasArt}
+            />
           ))}
         {extra > 0 ? (
           <Button style={{ minHeight: 20, maxHeight: 20, marginTop: 2 }} small minimal outlined intent={Intent.PRIMARY}>
@@ -465,9 +473,10 @@ export const SongGrid: React.FC<SongGridProps> = ({
     onFileSelect(e, path);
     const cur = songs.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
-    const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
-    const song = hasArt.length > 0 ? hasArt[0] : cur;
-    updateSelectedAlbum(song.id, song.hasArt, albumIndex);
+    //const hasArt = getAlbumSongs(albumIndex).filter(s => s.hasArt);
+    const albumSongs = getAlbumSongs(albumIndex);
+    //const song = hasArt.length > 0 ? hasArt[0] : cur;
+    updateSelectedAlbum(albumSongs, albumIndex);
 
     if (path === editingFile) {
       return;
@@ -481,15 +490,30 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const getAlbumSongs = (albumIndex: number) => groupedSongs[albumKeys[albumIndex]];
 
-  const updateSelectedAlbum = async (songId: number, hasArt: boolean, albumIndex: number) => {
-    if (hasArt) {
-      await updateColors(songId);
+  const updateSelectedAlbum = async (songs: Song[], albumIndex: number) => {
+    const song = songs.find(s => s.hasArt);
+    
+    if (song !== undefined) {
+      const colors = await loadColors(song.id);
+      updateColors(colors);
+      const fg = colors[1];
+      songs
+        .map(s => s.tags)
+        .flatMap(t => t)
+        .forEach(({ color, name }, i) => {
+          const tagVar = formatCssVar(name);
+          const [r, g, b] = color.split(',').map(parseFloat);
+          const first = { ...fg, a: 1 };
+          const blended1 = normal(first, { r, g, b, a: 0.15 });
+          const blended2 = normal(first, { r, g, b, a: 0.25 });
+          setCssVar(`--tag-bg-${tagVar}`, formatRgb(blended1));
+          setCssVar(`--tag-fg-${tagVar}`, formatRgb(blended2));
+        });
     }
     setSelectedAlbum(albumKeys[albumIndex]);
   };
 
-  const updateColors = async (songId: number) => {
-    const colors = await loadColors(songId);
+  const updateColors = (colors: Rgb[]) => {
     const bg = colors[0];
     const fg = colors[1];
     const secondary = colors[2];
@@ -501,17 +525,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
     setCssVar('--grid-selected-background', formatRgb(secondary));
     setCssVar('--grid-selected-playing-row-background', formatRgb(colors[3]));
     setCssVar('--grid-selected-editing-row-color', formatRgb(colors[4]));
-    songs
-      .find(s => s.id === songId)
-      ?.tags?.forEach(({ color }, i) => {
-        const [r, g, b] = color.split(',').map(parseFloat);
-        const first = { ...fg, a: 1 };
-        const blended1 = normal(first, { r, g, b, a: 0.15 });
-        const blended2 = normal(first, { r, g, b, a: 0.25 });
-        setCssVar(`--tag-bg-${i + 1}`, formatRgb(blended1));
-        setCssVar(`--tag-fg-${i + 1}`, formatRgb(blended2));
-        console.log('here');
-      });
   };
 
   const rowRenderer = (props: TableRowProps) => {
@@ -580,7 +593,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
               <FlexCol
                 center={false}
                 style={{ paddingLeft: 10, height: Math.max(gg.length * 25, 140) }}
-                onClick={() => updateSelectedAlbum(g.id, g.hasArt, rowIndex)}
+                onClick={() => updateSelectedAlbum(gg, rowIndex)}
               >
                 {draggingSong === `album-${albumKeys[rowIndex]}` ? (
                   <>

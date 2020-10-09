@@ -209,7 +209,7 @@ canvas {
 
 .has-art.album-selected-row div:not(.editing) {
   transition: var(--transition);
-  color: rgba(var(--grid-selected-text-color), 1) !important;
+  color: inherit !important;
 }
 
 .has-art .editing {

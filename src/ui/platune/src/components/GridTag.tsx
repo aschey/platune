@@ -10,13 +10,15 @@ import { useAppDispatch } from '../state/store';
 import { removeSongsFromTag } from '../state/songs';
 import { shadeColor, shadeColorRgb } from '../themes/colorMixer';
 import { FlexRow } from './FlexRow';
+import { formatCssVar } from '../util';
 
 interface GridTagProps {
   tag: GridTagRes;
   isLightTheme: boolean;
   songId: number;
+  useCustomColors: boolean;
 }
-export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId }) => {
+export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId, useCustomColors }) => {
   const [showDelete, setShowDelete] = useState(false);
   const dispatch = useAppDispatch();
   const { color, name, id } = tag;
@@ -25,17 +27,23 @@ export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId }) =
 
     toastSuccess();
   };
+  const tagVar = formatCssVar(tag.name);
   return (
     <Tag
       minimal
-      className='grid-tag'
       style={{
         height: 20,
         marginTop: 2,
         marginRight: 5,
-        border: `1px solid rgba(${color}, 0.25)`,
-        backgroundColor: `rgba(${color}, 0.15)`,
-        color: `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 100)}, 1)`,
+        border: useCustomColors
+          ? `1px solid rgba(var(--tag-bg-${tagVar}), 0.5)`
+          : `1px solid rgba(${color}, 0.25)`,
+        backgroundColor: useCustomColors
+          ? `rgba(var(--tag-bg-${tagVar}), 0.3)`
+          : `rgba(${color}, 0.15)`,
+        color: useCustomColors
+          ? `rgba(var(--tag-fg-${tagVar}), 1)`
+          : `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 100)}, 1)`,
       }}
       onMouseOver={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}
