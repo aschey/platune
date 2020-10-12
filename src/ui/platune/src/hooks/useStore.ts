@@ -7,6 +7,7 @@ import shallow from 'zustand/shallow';
 import { postJson } from '../fetchUtil';
 import { FilterRequest } from '../models/filterRequest';
 import { Song } from '../models/song';
+import { getSongs } from './useSongs';
 
 type State = {
   filters: FilterRequest;
@@ -57,19 +58,11 @@ export const useFilters = () => {
   const subscription = useCallback(
     state => {
       cache.fetchQuery(['songs', state, tagFilters], getSongs);
-      //await cache.invalidateQueries('songs');
     },
     [tagFilters, getSongs]
   );
   useStore.subscribe<FilterRequest>(subscription, filterSelector);
   return useStore(useFilterSelector, shallow);
-};
-
-const getSongs = async (_: string, filters: FilterRequest, tagFilters: number[]) => {
-  console.log(filters, tagFilters);
-  let res = await postJson<Song[]>('/songs', { ...filters, tagIds: tagFilters });
-  console.log(res.length);
-  return res;
 };
 
 export const useTagFilters = () => {

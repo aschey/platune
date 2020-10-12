@@ -5,9 +5,9 @@ import { FilterRequest } from '../models/filterRequest';
 import { Song } from '../models/song';
 import { useFilters, useTagFilters } from './useStore';
 
-const getSongs = async (_: string, filters: FilterRequest, tagFilters: number[]) => {
+export const getSongs = async (_: string, filters: FilterRequest, tagFilters: number[]) => {
   let res = await postJson<Song[]>('/songs', { ...filters, tagIds: tagFilters });
-  console.log(res.length);
+  res.forEach((s, i) => (s.index = i));
   return res;
 };
 
@@ -21,12 +21,3 @@ export const useSongs = () => {
     staleTime: Infinity,
   });
 };
-
-// export const useSongs = () => {
-//   let { isLoading, error, data } = useSongsHelper();
-//   if (data === undefined) {
-//     console.log('undefined');
-//     data = [];
-//   }
-//   return { isLoading, error, data };
-// };
