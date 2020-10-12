@@ -35,11 +35,12 @@ import { lightTheme } from '../themes/light';
 import ReactDOM from 'react-dom';
 import { FlexRow } from './FlexRow';
 import { GridTag } from './GridTag';
-import { fetchSongs, selectSongs } from '../state/songs';
+import { selectSongs } from '../state/songs';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useAppDispatch } from '../state/store';
 import { GridType } from '../enums/gridType';
 import { useThemeContext } from '../state/themeContext';
+import { useSongs } from '../hooks/useSongs';
 
 interface SongGridProps {
   width: number;
@@ -66,9 +67,16 @@ export const SongGrid: React.FC<SongGridProps> = ({
   const [selectedAlbum, setSelectedAlbum] = useState('');
   const [editingFile, setEditingFile] = useState('');
 
-  const dispatch = useAppDispatch();
+  //const dispatch = useAppDispatch();
   const { isLightTheme } = useThemeContext();
-  const songs = useSelector(selectSongs);
+  //const [songs, setSongs] = useState<Song[]>([]);
+  //const songs = useSelector(selectSongs);
+  const { data: songs } = useSongs();
+  //useEffect(() => {
+  //   if (data !== undefined && isLoading == false) {
+  //     setSongs(data);
+  //   }
+  // }, [data, isLoading]);
 
   const editWidth = 30;
   const trackWidth = 70;
@@ -104,9 +112,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
     return colors;
   };
 
-  useEffect(() => {
-    dispatch(fetchSongs());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(fetchSongs());
+  // }, [dispatch]);
 
   useEffect(() => {
     let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);
@@ -181,7 +189,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const editCellRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (!songs || rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
@@ -228,6 +236,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const onFileSelect = (e: React.MouseEvent, path: string) => {
+    if (!songs) {
+      return;
+    }
     if (e.ctrlKey) {
       setSelectedFiles(selectedFiles.concat([path]));
     } else if (e.shiftKey) {
@@ -258,6 +269,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const startQueue = async (path: string) => {
+    if (!songs) {
+      return;
+    }
     const index = songs.map(s => s.path).indexOf(path);
     const queue = songs.filter(s => s.index >= index);
     // Don't reset queue if currently paused and we're resuming the same song
@@ -270,7 +284,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const onPrevious = async () => {
-    if (!playingFile) {
+    if (!playingFile || !songs) {
       return;
     }
     const playingIndex = audioQueue.queuedSongs.value.indexOf(playingFile);
@@ -353,7 +367,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const genericCellRenderer = ({ rowIndex, dataKey }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (!songs || rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
@@ -366,7 +380,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
     field: 'name' | 'albumArtist' | 'artist' | 'album' | 'time',
     draggingSong: string
   ) => {
-    if (rowIndex >= songs.length) {
+    if (!songs || rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
@@ -375,7 +389,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const trackRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (!songs || rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
@@ -387,7 +401,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const timeRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (!songs || rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
@@ -397,7 +411,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const tagRenderer = ({ rowIndex }: TableCellProps) => {
-    if (rowIndex >= songs.length) {
+    if (!songs || rowIndex >= songs.length) {
       return null;
     }
     const path = songs[rowIndex].path;
@@ -470,6 +484,9 @@ export const SongGrid: React.FC<SongGridProps> = ({
   };
 
   const onRowClick = (e: React.MouseEvent, path: string) => {
+    if (!songs) {
+      return;
+    }
     onFileSelect(e, path);
     const cur = songs.filter(s => s.path === path)[0];
     let albumIndex = albumKeys.findIndex(v => v === cur.albumArtist + ' ' + cur.album);
@@ -492,7 +509,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
 
   const updateSelectedAlbum = async (songs: Song[], albumIndex: number) => {
     const song = songs.find(s => s.hasArt);
-    
     if (song !== undefined) {
       const colors = await loadColors(song.id);
       updateColors(colors);
@@ -577,7 +593,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         rowCount={albumKeys.length}
         rowRenderer={rowRenderer2}
         overscanRowCount={0}
-        estimatedRowSize={groupedSongs?.keys?.length > 0 ? (songs.length / groupedSongs.keys.length) * 25 : 250}
+        estimatedRowSize={groupedSongs?.keys?.length > 0 ? (songs?.length ?? 0 / groupedSongs.keys.length) * 25 : 250}
         rowHeight={index => Math.max(groupedSongs[albumKeys[index.index]].length * 25 + 40, 180)}
         rowGetter={({ index }) => groupedSongs[albumKeys[index]]}
       >
@@ -703,7 +719,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
         rowHeight={25}
         rowCount={songs?.length || 0}
         rowRenderer={rowRenderer}
-        rowGetter={({ index }) => songs[index]}
+        rowGetter={({ index }) => (songs ? songs[index] : null)}
       >
         <Column
           headerRenderer={headerRenderer}
@@ -790,7 +806,7 @@ export const SongGrid: React.FC<SongGridProps> = ({
               <FlexRow style={{ paddingLeft: 5 }}>
                 <FlexCol>
                   <div>
-                    {!albumDrag
+                    {!albumDrag && songs
                       ? songs[rubric.source.index].name
                       : groupedSongs[albumKeys[rubric.source.index]][0].artist}
                   </div>

@@ -6,12 +6,13 @@ import { EditSongTag } from '../models/editSongTag';
 import { Search } from '../models/search';
 import { SongTag } from '../models/songTag';
 import { useAppDispatch } from '../state/store';
-import { setFilterTag, deleteTag, fetchSongs, selectChosenTags, setFilters } from '../state/songs';
+import { deleteTag } from '../state/songs';
 import { hexToRgb, isLight, shadeColorRgb } from '../themes/colorMixer';
 import { FlexCol } from './FlexCol';
 import { FlexRow } from './FlexRow';
 import { useSelector } from 'react-redux';
 import { useThemeContext } from '../state/themeContext';
+import { useTagFilters } from '../hooks/useStore';
 
 interface SideTagProps {
   tag: SongTag;
@@ -22,7 +23,8 @@ interface SideTagProps {
 }
 export const SideTag: React.FC<SideTagProps> = ({ tag, setTag, setIsPopupOpen, isDraggingOver, isLightTheme }) => {
   const dispatch = useAppDispatch();
-  const selectedTagIds = useSelector(selectChosenTags);
+  //const selectedTagIds = useSelector(selectChosenTags);
+  const { tagFilters: selectedTagIds, setFilterTag } = useTagFilters();
 
   const [hovered, setHovered] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -43,7 +45,7 @@ export const SideTag: React.FC<SideTagProps> = ({ tag, setTag, setIsPopupOpen, i
   return (
     <Tag
       onClick={e => {
-        dispatch(setFilterTag({ tagId: tag.id, append: e.ctrlKey, toggle: true }));
+        setFilterTag({ tagId: tag.id, append: e.ctrlKey, toggle: true });
       }}
       onMouseOver={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

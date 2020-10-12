@@ -16,14 +16,18 @@ import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
 import { Search } from '../models/search';
 import { batch, useDispatch, useSelector } from 'react-redux';
-import { fetchSongs, selectSongs } from '../state/songs';
+import { selectSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { addSongsToTag, fetchTags } from '../state/songs';
 import { GridType } from '../enums/gridType';
 import { ThemeContextProvider } from '../state/themeContext';
+import { QueryCache, ReactQueryCacheProvider } from 'react-query';
+import { ReactQueryDevtools } from 'react-query-devtools';
 
 const themeName = 'dark';
 applyTheme(themeName);
+
+const queryCache = new QueryCache();
 
 const App: React.FC<{}> = () => {
   const [sidePanelWidth, setSidePanelWidth] = useState(0);
@@ -126,41 +130,44 @@ const App: React.FC<{}> = () => {
   };
 
   return (
-    <ThemeContextProvider>
-      <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
-        <MainNavBar
-          sidePanelWidth={sidePanelWidth}
-          setSidePanelWidth={setSidePanelWidth}
-          selectedGrid={selectedGrid}
-          setSelectedGrid={setSelectedGrid}
-        />
-        <div
-          ref={gridRef}
-          className={gridClasses}
-          style={{
-            paddingTop: 40,
-            display: 'grid',
-            gridTemplateRows: `${height}px 70px`,
-            gridTemplateColumns: gridCols,
-          }}
-        >
-          <div>
-            <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-              <QueueGrid queuedSongs={queuedSongs} />
-            </div>
-          </div>
-          <SongGrid
-            width={width}
-            height={height}
-            queuedSongs={queuedSongs}
-            setQueuedSongs={setQueuedSongs}
-            selectedFiles={selectedFiles}
-            setSelectedFiles={setSelectedFiles}
+    <ReactQueryCacheProvider queryCache={queryCache}>
+      <ThemeContextProvider>
+        <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
+          <MainNavBar
+            sidePanelWidth={sidePanelWidth}
+            setSidePanelWidth={setSidePanelWidth}
             selectedGrid={selectedGrid}
+            setSelectedGrid={setSelectedGrid}
           />
-        </div>
-      </DragDropContext>
-    </ThemeContextProvider>
+          <div
+            ref={gridRef}
+            className={gridClasses}
+            style={{
+              paddingTop: 40,
+              display: 'grid',
+              gridTemplateRows: `${height}px 70px`,
+              gridTemplateColumns: gridCols,
+            }}
+          >
+            <div>
+              <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
+                <QueueGrid queuedSongs={queuedSongs} />
+              </div>
+            </div>
+            <SongGrid
+              width={width}
+              height={height}
+              queuedSongs={queuedSongs}
+              setQueuedSongs={setQueuedSongs}
+              selectedFiles={selectedFiles}
+              setSelectedFiles={setSelectedFiles}
+              selectedGrid={selectedGrid}
+            />
+          </div>
+        </DragDropContext>
+      </ThemeContextProvider>
+      <ReactQueryDevtools initialIsOpen={true} position={'bottom-right'} />
+    </ReactQueryCacheProvider>
   );
 };
 

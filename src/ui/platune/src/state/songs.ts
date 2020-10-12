@@ -32,16 +32,16 @@ interface Thunk {
   getState: () => State;
 }
 
-const getSongs = (thunkApi: { getState: () => State }) => {
-  const state = thunkApi.getState();
-  return postJson<Song[]>('/songs', { ...state.songs.filters, tagIds: state.songs.tagFilters });
-};
+// const getSongs = (thunkApi: { getState: () => State }) => {
+//   const state = thunkApi.getState();
+//   return postJson<Song[]>('/songs', { ...state.songs.filters, tagIds: state.songs.tagFilters });
+// };
 
 const getTags = () => getJson<SongTag[]>('/tags');
 
-export const fetchSongs = createAsyncThunk<Song[], undefined, Thunk>('songs', async (_, thunkApi) => {
-  return getSongs(thunkApi);
-});
+// export const fetchSongs = createAsyncThunk<Song[], undefined, Thunk>('songs', async (_, thunkApi) => {
+//   return getSongs(thunkApi);
+// });
 
 export const fetchTags = createAsyncThunk('fetchTags', async () => getJson<SongTag[]>('/tags'));
 
@@ -77,18 +77,18 @@ export const deleteTag = createAsyncThunk('deleteTag', async (tagId: number) => 
   return getTags();
 });
 
-export const setFilterTag = createAsyncThunk<Song[], { tagId: number; append: boolean; toggle: boolean }, Thunk>(
-  'setFilterTag',
-  async ({ tagId, append, toggle }, thunkApi) => {
-    thunkApi.dispatch(songsSlice.actions.setFilterTag({ tagId, append, toggle }));
-    return getSongs(thunkApi);
-  }
-);
+// export const setFilterTag = createAsyncThunk<Song[], { tagId: number; append: boolean; toggle: boolean }, Thunk>(
+//   'setFilterTag',
+//   async ({ tagId, append, toggle }, thunkApi) => {
+//     thunkApi.dispatch(songsSlice.actions.setFilterTag({ tagId, append, toggle }));
+//     return getSongs(thunkApi);
+//   }
+// );
 
-export const setFilters = createAsyncThunk<Song[], FilterRequest, Thunk>('setFilters', async (request, thunkApi) => {
-  thunkApi.dispatch(songsSlice.actions.setFilters(request));
-  return getSongs(thunkApi);
-});
+// export const setFilters = createAsyncThunk<Song[], FilterRequest, Thunk>('setFilters', async (request, thunkApi) => {
+//   thunkApi.dispatch(songsSlice.actions.setFilters(request));
+//   return getSongs(thunkApi);
+// });
 
 const songsSlice = createSlice({
   name: 'songs',
@@ -155,13 +155,13 @@ const songsSlice = createSlice({
       payload.forEach((song, i) => (song.index = i));
       state.songData = payload;
     };
-    builder.addCase(fetchSongs.pending, state => {
-      state.loadingState = 'pending';
-    });
+    // builder.addCase(fetchSongs.pending, state => {
+    //   state.loadingState = 'pending';
+    // });
     builder
-      .addCase(fetchSongs.fulfilled, setSongData)
-      .addCase(setFilterTag.fulfilled, setSongData)
-      .addCase(setFilters.fulfilled, setSongData)
+      //.addCase(fetchSongs.fulfilled, setSongData)
+      //.addCase(setFilterTag.fulfilled, setSongData)
+      //.addCase(setFilters.fulfilled, setSongData)
       .addCase(fetchTags.fulfilled, setTagData)
       .addCase(addEditTag.fulfilled, setTagData)
       .addCase(deleteTag.fulfilled, setTagData)
@@ -174,6 +174,10 @@ export const selectSongs = (state: State) => state.songs.songData;
 
 export const selectTags = (state: State) => state.songs.tagData;
 
-export const selectChosenTags = (state: State) => state.songs.tagFilters;
+//export const selectChosenTags = (state: State) => state.songs.tagFilters;
+
+//export const selectFilters = (state: State) => state.songs.filters;
+
+//export const { setFilters, setFilterTag } = songsSlice.actions;
 
 export default songsSlice.reducer;

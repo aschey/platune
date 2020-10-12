@@ -31,12 +31,12 @@ import { globalHotkeys } from '../globalHotkeys';
 import { SideTag } from './SideTag';
 import { shadeColorRgb } from '../themes/colorMixer';
 import { useSelector } from 'react-redux';
-import { fetchSongs, setFilters, setFilterTag } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { FilterRequest } from '../models/filterRequest';
 import { clearSearch, fetchSearchResults, selectSearchResults } from '../state/search';
 import { GridType } from '../enums/gridType';
 import { useThemeContext } from '../state/themeContext';
+import { useFilters, useTagFilters } from '../hooks/useStore';
 
 interface MainNavBarProps {
   sidePanelWidth: number;
@@ -60,6 +60,8 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
   const dispatch = useAppDispatch();
   const searchResults = useSelector(selectSearchResults);
   const { setTheme, isLightTheme } = useThemeContext();
+  const { setFilters } = useFilters();
+  const { setFilterTag } = useTagFilters();
 
   const globalHotkeysEvents = new HotkeysEvents(HotkeyScope.GLOBAL);
 
@@ -91,7 +93,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
         };
         break;
     }
-    dispatch(setFilters(params));
+    setFilters(params);
   }, [selectedSearch, dispatch]);
 
   useEffect(() => {
@@ -199,7 +201,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
   const resetSearch = useCallback(() => {
     toastMessage('Resetting...');
-    dispatch(setFilters({}));
+    setFilters({});
     setSelectedSearch(null);
   }, [setSelectedSearch, dispatch]);
 
@@ -210,7 +212,7 @@ export const MainNavBar: React.FC<MainNavBarProps> = ({
 
   const setSelected = (val: Search) => {
     if (val.entryType === 'tag') {
-      dispatch(setFilterTag({ tagId: val.correlationId, append: false, toggle: false }));
+      setFilterTag({ tagId: val.correlationId, append: false, toggle: false });
     } else {
       setSelectedSearch(val);
     }

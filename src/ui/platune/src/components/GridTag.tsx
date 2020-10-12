@@ -5,7 +5,6 @@ import { batch } from 'react-redux';
 import { toastSuccess } from '../appToaster';
 import { putJson } from '../fetchUtil';
 import { GridTagRes } from '../models/gridTagRes';
-import { fetchSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
 import { removeSongsFromTag } from '../state/songs';
 import { shadeColor, shadeColorRgb } from '../themes/colorMixer';
@@ -35,12 +34,8 @@ export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId, use
         height: 20,
         marginTop: 2,
         marginRight: 5,
-        border: useCustomColors
-          ? `1px solid rgba(var(--tag-bg-${tagVar}), 0.5)`
-          : `1px solid rgba(${color}, 0.25)`,
-        backgroundColor: useCustomColors
-          ? `rgba(var(--tag-bg-${tagVar}), 0.3)`
-          : `rgba(${color}, 0.15)`,
+        border: useCustomColors ? `1px solid rgba(var(--tag-bg-${tagVar}), 0.5)` : `1px solid rgba(${color}, 0.25)`,
+        backgroundColor: useCustomColors ? `rgba(var(--tag-bg-${tagVar}), 0.3)` : `rgba(${color}, 0.15)`,
         color: useCustomColors
           ? `rgba(var(--tag-fg-${tagVar}), 1)`
           : `rgba(${shadeColorRgb(color, isLightTheme ? -50 : 100)}, 1)`,
