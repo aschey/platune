@@ -5,7 +5,7 @@ import { FilterRequest } from '../models/filterRequest';
 import { Song } from '../models/song';
 import { useFilters, useTagFilters } from './useStore';
 
-export const getSongs = async (_: string, filters: FilterRequest, tagFilters: number[]) => {
+const getSongs = async (_: string, filters: FilterRequest, tagFilters: number[]) => {
   let res = await postJson<Song[]>('/songs', { ...filters, tagIds: tagFilters });
   res.forEach((s, i) => (s.index = i));
   return res;
@@ -14,7 +14,7 @@ export const getSongs = async (_: string, filters: FilterRequest, tagFilters: nu
 export const useSongs = () => {
   const { filters } = useFilters();
   const { tagFilters } = useTagFilters();
-  console.log(filters, tagFilters);
+  //console.log(filters, tagFilters);
   return useQuery(['songs', filters, tagFilters], getSongs, {
     refetchOnMount: false,
     refetchOnWindowFocus: false,
