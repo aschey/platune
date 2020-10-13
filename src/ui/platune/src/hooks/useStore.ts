@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import { useCallback, useEffect } from 'react';
-import { QueryCache, useQueryCache } from 'react-query';
 import create from 'zustand';
 import { devtools } from 'zustand/middleware';
 import shallow from 'zustand/shallow';
@@ -23,7 +22,6 @@ const useStore = create<State>(set => ({
   },
   setFilterTag: ({ tagId, append, toggle }: { tagId: number; append: boolean; toggle: boolean }) => {
     set(state => {
-      console.log(tagId, append, toggle);
       let tagFilters = state.tagFilters.slice();
       if (tagFilters?.includes(tagId) && toggle) {
         tagFilters.splice(tagFilters.indexOf(tagId), 1);
@@ -38,18 +36,16 @@ const useStore = create<State>(set => ({
   },
 }));
 
-const useFilterSelector = (state: State) => {
-  const { filters, setFilters } = state;
-  return { filters, setFilters };
-};
-const useTagFilterSelector = (state: State) => {
-  const { tagFilters, setFilterTag } = state;
-  return { tagFilters, setFilterTag };
-};
 export const useFilters = () => {
-  return useStore(useFilterSelector, shallow);
+  return useStore(
+    useCallback((state: State) => ({ filters: state.filters, setFilters: state.setFilters }), []),
+    shallow
+  );
 };
 
 export const useTagFilters = () => {
-  return useStore(useTagFilterSelector, shallow);
+  return useStore(
+    useCallback((state: State) => ({ tagFilters: state.tagFilters, setFilterTag: state.setFilterTag }), []),
+    shallow
+  );
 };

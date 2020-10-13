@@ -6,10 +6,10 @@ import { toastSuccess } from '../appToaster';
 import { putJson } from '../fetchUtil';
 import { GridTagRes } from '../models/gridTagRes';
 import { useAppDispatch } from '../state/store';
-import { removeSongsFromTag } from '../state/songs';
 import { shadeColor, shadeColorRgb } from '../themes/colorMixer';
 import { FlexRow } from './FlexRow';
 import { formatCssVar } from '../util';
+import { useRemoveSongsFromTag } from '../hooks/useTags';
 
 interface GridTagProps {
   tag: GridTagRes;
@@ -19,10 +19,10 @@ interface GridTagProps {
 }
 export const GridTag: React.FC<GridTagProps> = ({ tag, isLightTheme, songId, useCustomColors }) => {
   const [showDelete, setShowDelete] = useState(false);
-  const dispatch = useAppDispatch();
   const { color, name, id } = tag;
+  const removeSongsFromTag = useRemoveSongsFromTag();
   const removeTag = async () => {
-    dispatch(removeSongsFromTag({ tagId: id, songIds: [songId] }));
+    removeSongsFromTag(id, [songId]);
 
     toastSuccess();
   };

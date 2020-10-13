@@ -13,7 +13,7 @@ import { formatRgb } from '../util';
 import { EditSongTag } from '../models/editSongTag';
 import { Song } from '../models/song';
 import { useAppDispatch } from '../state/store';
-import { addEditTag, fetchTags } from '../state/songs';
+import { addEditTag } from '../state/songs';
 import { batch } from 'react-redux';
 import { useThemeContext } from '../state/themeContext';
 

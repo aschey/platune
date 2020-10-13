@@ -35,8 +35,8 @@ import { SideTag } from './SideTag';
 import { EditSongTag } from '../models/editSongTag';
 import { Search } from '../models/search';
 import { useAppDispatch } from '../state/store';
-import { fetchTags, selectTags } from '../state/songs';
 import { useSelector } from 'react-redux';
+import { useTags } from '../hooks/useTags';
 
 interface QueueGridProps {
   queuedSongs: Song[];
@@ -47,15 +47,11 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [tag, setTag] = useState<EditSongTag>({ name: '', order: 1, color: '0,0,0' });
 
-  const dispatch = useAppDispatch();
-  const songTags = useSelector(selectTags);
+  const { data: songTags } = useTags();
+
   const { isLightTheme } = useThemeContext();
 
   const width = 200;
-
-  useEffect(() => {
-    dispatch(fetchTags());
-  }, [dispatch]);
 
   const rowRenderer = (props: ListRowProps) => {
     if (props.style.width) {
@@ -141,7 +137,7 @@ export const QueueGrid: React.FC<QueueGridProps> = ({ queuedSongs }) => {
             paddingTop: 5,
           }}
         >
-          {songTags.map((s, i) => {
+          {songTags?.map((s, i) => {
             return (
               <Droppable droppableId={`tag-${s.id}`} key={i}>
                 {(droppableProvided: DroppableProvided, snapshot: DroppableStateSnapshot) => {

@@ -35,7 +35,6 @@ import { lightTheme } from '../themes/light';
 import ReactDOM from 'react-dom';
 import { FlexRow } from './FlexRow';
 import { GridTag } from './GridTag';
-import { selectSongs } from '../state/songs';
 import { shallowEqual, useDispatch, useSelector } from 'react-redux';
 import { useAppDispatch } from '../state/store';
 import { GridType } from '../enums/gridType';
@@ -111,10 +110,6 @@ export const SongGrid: React.FC<SongGridProps> = ({
     const colors = await getJson<Rgb[]>(`/albumArtColors?songId=${songId}&isLight=${isLightTheme}`);
     return colors;
   };
-
-  // useEffect(() => {
-  //   dispatch(fetchSongs());
-  // }, [dispatch]);
 
   useEffect(() => {
     let g = _.groupBy(songs, ss => ss.albumArtist + ' ' + ss.album);

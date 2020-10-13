@@ -1,12 +1,12 @@
-import { useQuery } from 'react-query';
 import { useSelector } from 'react-redux';
+import useSWR from 'swr';
 import { postJson } from '../fetchUtil';
 import { FilterRequest } from '../models/filterRequest';
 import { Song } from '../models/song';
 import { useFilters, useTagFilters } from './useStore';
 
-const getSongs = async (_: string, filters: FilterRequest, tagFilters: number[]) => {
-  let res = await postJson<Song[]>('/songs', { ...filters, tagIds: tagFilters });
+const getSongs = async (url: string, filters: FilterRequest, tagFilters: number[]) => {
+  let res = await postJson<Song[]>(url, { ...filters, tagIds: tagFilters });
   res.forEach((s, i) => (s.index = i));
   return res;
 };
@@ -14,10 +14,5 @@ const getSongs = async (_: string, filters: FilterRequest, tagFilters: number[])
 export const useSongs = () => {
   const { filters } = useFilters();
   const { tagFilters } = useTagFilters();
-  //console.log(filters, tagFilters);
-  return useQuery(['songs', filters, tagFilters], getSongs, {
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    staleTime: Infinity,
-  });
+  return useSWR(['/songs', filters, tagFilters], getSongs, { revalidateOnFocus: false });
 };

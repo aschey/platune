@@ -16,18 +16,15 @@ import { toastSuccess } from '../appToaster';
 import { SongTag } from '../models/songTag';
 import { Search } from '../models/search';
 import { batch, useDispatch, useSelector } from 'react-redux';
-import { selectSongs } from '../state/songs';
 import { useAppDispatch } from '../state/store';
-import { addSongsToTag, fetchTags } from '../state/songs';
 import { GridType } from '../enums/gridType';
 import { ThemeContextProvider } from '../state/themeContext';
-import { QueryCache, ReactQueryCacheProvider } from 'react-query';
 import { ReactQueryDevtools } from 'react-query-devtools';
+import { useSongs } from '../hooks/useSongs';
+import { useAddSongsToTag, useTags } from '../hooks/useTags';
 
 const themeName = 'dark';
 applyTheme(themeName);
-
-const queryCache = new QueryCache();
 
 const App: React.FC<{}> = () => {
   const [sidePanelWidth, setSidePanelWidth] = useState(0);
@@ -38,8 +35,8 @@ const App: React.FC<{}> = () => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [selectedGrid, setSelectedGrid] = useState(GridType.Song);
 
-  const dispatch = useAppDispatch();
-  const songs = useSelector(selectSongs);
+  const { data: songs } = useSongs();
+  const addSongsToTag = useAddSongsToTag();
 
   const getWidth = useCallback(() => window.innerWidth - gridMargin, [gridMargin]);
   const getHeight = () => window.innerHeight - 110;
@@ -107,15 +104,16 @@ const App: React.FC<{}> = () => {
     if (source.droppableId === 'mainGrid' && destination?.droppableId?.startsWith('tag-')) {
       const tagId = parseInt(destination.droppableId.split('-')[1]);
       let songIds: number[];
+      const songData = songs ?? [];
       if (draggableId.startsWith('album-')) {
         let albumKey = draggableId.replace('album-', '');
-        songIds = songs.filter(s => `${s.albumArtist} ${s.album}` === albumKey).map(s => s.id);
+        songIds = songData.filter(s => `${s.albumArtist} ${s.album}` === albumKey).map(s => s.id);
       } else if (selectedFiles.includes(draggableId)) {
-        songIds = songs.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
+        songIds = songData.filter(s => selectedFiles.includes(s.path)).map(s => s.id);
       } else {
-        songIds = songs.filter(s => draggableId === s.path).map(s => s.id);
+        songIds = songData.filter(s => draggableId === s.path).map(s => s.id);
       }
-      dispatch(addSongsToTag({ tagId, songIds }));
+      addSongsToTag(tagId, songIds);
 
       toastSuccess();
     }
@@ -130,44 +128,41 @@ const App: React.FC<{}> = () => {
   };
 
   return (
-    <ReactQueryCacheProvider queryCache={queryCache}>
-      <ThemeContextProvider>
-        <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
-          <MainNavBar
-            sidePanelWidth={sidePanelWidth}
-            setSidePanelWidth={setSidePanelWidth}
-            selectedGrid={selectedGrid}
-            setSelectedGrid={setSelectedGrid}
-          />
-          <div
-            ref={gridRef}
-            className={gridClasses}
-            style={{
-              paddingTop: 40,
-              display: 'grid',
-              gridTemplateRows: `${height}px 70px`,
-              gridTemplateColumns: gridCols,
-            }}
-          >
-            <div>
-              <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
-                <QueueGrid queuedSongs={queuedSongs} />
-              </div>
+    <ThemeContextProvider>
+      <DragDropContext onDragEnd={onDragEnd} onBeforeDragStart={onBeforeDragStart}>
+        <MainNavBar
+          sidePanelWidth={sidePanelWidth}
+          setSidePanelWidth={setSidePanelWidth}
+          selectedGrid={selectedGrid}
+          setSelectedGrid={setSelectedGrid}
+        />
+        <div
+          ref={gridRef}
+          className={gridClasses}
+          style={{
+            paddingTop: 40,
+            display: 'grid',
+            gridTemplateRows: `${height}px 70px`,
+            gridTemplateColumns: gridCols,
+          }}
+        >
+          <div>
+            <div style={{ display: sidePanelWidth > 0 ? 'block' : 'none' }}>
+              <QueueGrid queuedSongs={queuedSongs} />
             </div>
-            <SongGrid
-              width={width}
-              height={height}
-              queuedSongs={queuedSongs}
-              setQueuedSongs={setQueuedSongs}
-              selectedFiles={selectedFiles}
-              setSelectedFiles={setSelectedFiles}
-              selectedGrid={selectedGrid}
-            />
           </div>
-        </DragDropContext>
-      </ThemeContextProvider>
-      <ReactQueryDevtools initialIsOpen={true} position={'bottom-right'} />
-    </ReactQueryCacheProvider>
+          <SongGrid
+            width={width}
+            height={height}
+            queuedSongs={queuedSongs}
+            setQueuedSongs={setQueuedSongs}
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            selectedGrid={selectedGrid}
+          />
+        </div>
+      </DragDropContext>
+    </ThemeContextProvider>
   );
 };
 
