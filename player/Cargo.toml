@@ -12,3 +12,5 @@ gstreamer = "0.16.5"
 gstreamer-app = "0.16.5"
 gstreamer-audio = "0.16.5"
 gstreamer-player = "0.16.5"
+lazy_static = "1.4.0"
+tokio = { version="1.1.1", features=["full"] }
