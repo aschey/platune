@@ -4,15 +4,15 @@ use gstreamer_player::{
 };
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::song_start_actor::StartSeconds;
+use crate::{player_actor::PlayerCommand, song_start_actor::SongStartCommand};
 
 pub struct StateChangedActor {
     pub clock: Clock,
-    subscriber: Sender<StartSeconds>,
+    subscriber: Sender<SongStartCommand>,
 }
 
 impl StateChangedActor {
-    pub fn new(subscriber: Sender<StartSeconds>) -> StateChangedActor {
+    pub fn new(subscriber: Sender<SongStartCommand>) -> StateChangedActor {
         StateChangedActor {
             clock: SystemClock::obtain(),
             subscriber,
@@ -40,7 +40,7 @@ impl StateChangedActor {
             // next_player.set_uri(next_song);
             // next_player.pause();
             self.subscriber
-                .send(StartSeconds {
+                .send(SongStartCommand::Schedule {
                     nseconds: new_time,
                     player_id: next_player_id,
                 })
@@ -50,6 +50,7 @@ impl StateChangedActor {
     }
 }
 
+#[derive(Debug)]
 pub struct StateChanged {
     pub player_id: usize,
     pub state: PlayerState,

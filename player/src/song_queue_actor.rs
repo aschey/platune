@@ -4,59 +4,84 @@ use gstreamer::prelude::Cast;
 use gstreamer_player::{
     Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher, PlayerState,
 };
+use tokio::sync::mpsc::Sender;
+
+use crate::{player_actor::PlayerCommand, song_start_actor::SongStartCommand};
 
 pub struct SongQueueActor {
-    //pub players: [Player; 2],
-    pub songs: VecDeque<QueueItem>,
-    count: usize,
-    current_state: PlayerState,
+    pub songs: Vec<String>,
+    index: usize,
+    player: Sender<PlayerCommand>,
+    song_start: Sender<SongStartCommand>,
 }
 
 impl SongQueueActor {
-    pub fn new() -> SongQueueActor {
-        // let player1 = SongQueueActor::make_player(self.to_owned());
-        // let player2 = SongQueueActor::make_player();
+    pub fn new(
+        player: Sender<PlayerCommand>,
+        song_start: Sender<SongStartCommand>,
+    ) -> SongQueueActor {
         SongQueueActor {
-            //players: [player1, player2],
-            songs: VecDeque::new(),
-            count: 0,
-            current_state: PlayerState::Stopped,
+            songs: vec![],
+            index: 0,
+            player,
+            song_start,
         }
     }
 
     pub fn enqueue(&mut self, uri: String) {
-        self.songs.push_back(QueueItem { uri, duration: 0 });
+        self.songs.push(uri)
     }
 
-    pub fn start(&mut self, player: Player) {
-        let cur_song = self.songs.pop_front().unwrap();
-        player.set_uri(&cur_song.uri);
-        player.pause();
+    pub async fn set_queue(&mut self, queue: Vec<String>) {
+        let first = queue[0].to_owned();
+
+        self.index = 0;
+        self.player
+            .send(PlayerCommand::SetUri {
+                id: 0,
+                item: QueueItem {
+                    uri: first,
+                    position: 0,
+                },
+            })
+            .await
+            .unwrap();
+        if queue.len() > 1 {
+            let second = queue[1].to_owned();
+            self.song_start
+                .send(SongStartCommand::RecvItem {
+                    item: QueueItem {
+                        uri: second,
+                        position: 1,
+                    },
+                })
+                .await
+                .unwrap();
+        }
+        self.songs = queue;
     }
 
-    // pub fn recv_duration(&mut self, item: QueueItem) {
-    //     let mut song = self.songs.iter().find(|s| s.uri == item.uri).unwrap();
-    //     song.duration = item.duration;
-    // }
-
-    // fn make_player(queue: &SongQueueActor) -> Player {
-    //     let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
-    //     let player = Player::new(None, Some(&dispatcher.upcast::<PlayerSignalDispatcher>()));
-
-    //     player.connect_media_info_updated(move |player, info| {
-    //         queue.recv_duration(info.get_duration().unwrap());
-    //     });
-
-    //     player.connect_state_changed(move |player, player_state| {
-    //         // send(player_state)
-    //     });
-
-    //     return player;
-    // }
+    pub async fn next(&mut self) {
+        self.index += 1;
+        let next_song = self.songs[self.index].to_owned();
+        self.song_start
+            .send(SongStartCommand::RecvItem {
+                item: QueueItem {
+                    uri: next_song,
+                    position: self.index,
+                },
+            })
+            .await
+            .unwrap();
+    }
 }
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct QueueItem {
-    uri: String,
-    duration: u64,
-    //player: Player,
+    pub uri: String,
+    pub position: usize,
+}
+
+#[derive(Debug)]
+pub enum QueueCommand {
+    SetQueue { songs: Vec<String> },
 }

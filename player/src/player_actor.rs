@@ -12,28 +12,41 @@ use crate::{song_queue_actor::QueueItem, state_changed_actor::StateChanged};
 
 pub struct PlayerActor {
     pub players: [Player; 2],
+    position: usize,
 }
 
 impl PlayerActor {
-    pub fn new(state_tx: Sender<StateChanged>) -> PlayerActor {
+    pub fn new(state_tx: Sender<StateChanged>, player_tx: Sender<PlayerCommand>) -> PlayerActor {
         let state_tx2 = state_tx.clone();
+        let player_tx2 = player_tx.clone();
         PlayerActor {
             players: [
-                PlayerActor::make_player(0, state_tx),
-                PlayerActor::make_player(1, state_tx2),
+                PlayerActor::make_player(0, state_tx, player_tx),
+                PlayerActor::make_player(1, state_tx2, player_tx2),
             ],
+            position: 0,
         }
     }
     pub fn play(&mut self, id: usize) {
         self.players[id].play();
     }
 
+    pub fn play_if_first(&mut self, id: usize) {
+        println!("play if first");
+        if self.position == 0 {
+            self.players[id].play();
+        }
+    }
+
     pub fn pause(&mut self, id: usize) {
         self.players[id].pause();
     }
 
-    pub fn set_uri(&mut self, id: usize, uri: String) {
-        self.players[id].set_uri(&uri);
+    pub fn set_uri(&mut self, id: usize, item: QueueItem) {
+        println!("set uri");
+        self.players[id].set_uri(&item.uri);
+        self.players[id].pause();
+        self.position = item.position;
     }
 
     pub fn seek(&mut self, id: usize, position: u64) {
@@ -42,35 +55,25 @@ impl PlayerActor {
 
     fn make_player(
         id: usize,
-        // queue_tx: Sender<QueueItem>,
         state_tx: Sender<StateChanged>,
+        player_tx: Sender<PlayerCommand>,
     ) -> Player {
         let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
         let player = Player::new(None, Some(&dispatcher.upcast::<PlayerSignalDispatcher>()));
 
         let loaded = RefCell::new(false);
-        player.connect_media_info_updated(move |player, info| {
-            // info.get_uri()
-            // send(info.get_duration())
+        player.connect_media_info_updated(move |_, info| {
             if *loaded.borrow() {
-                //println!("loaded {:?}", id);
+                println!("loaded {:?}", id);
                 return;
             }
             let duration = info.get_duration().nseconds().unwrap_or_default();
-            // queue_tx.send(QueueItem {
-            //     uri: info.get_uri().to_owned(),
-            //     duration
-            // });
 
             if duration > 0 {
-                if id == 0 {
-                    player.play();
-                }
+                player_tx.try_send(PlayerCommand::PlayIfFirst { id }).ok();
 
                 *loaded.borrow_mut() = true;
             }
-
-            //let state_tx = state_tx.clone();
         });
 
         player.connect_state_changed(move |player, player_state| {
@@ -92,7 +95,8 @@ impl PlayerActor {
 #[derive(Debug)]
 pub enum PlayerCommand {
     Play { id: usize },
+    PlayIfFirst { id: usize },
     Pause { id: usize },
-    SetUri { id: usize, uri: String },
+    SetUri { id: usize, item: QueueItem },
     Seek { id: usize, position: u64 },
 }
