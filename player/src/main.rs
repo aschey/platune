@@ -1,12 +1,12 @@
 mod audio_main;
+mod dummy_player;
 mod duration_updated_actor;
+mod gstreamer_player_backend;
 mod player_actor;
+mod player_backend;
 mod song_queue_actor;
 mod song_start_actor;
 mod state_changed_actor;
-use byte_slice_cast::AsSliceOf;
-use gst::GstBinExtManual;
-use gst::{prelude::*, ClockTime};
 use gstreamer as gst;
 use gstreamer::{glib, prelude::Cast, Pipeline};
 use gstreamer_app as gst_app;
@@ -16,9 +16,7 @@ use song_queue_actor::{QueueCommand, QueueItem, SongQueueActor};
 use song_start_actor::{SongStartActor, SongStartCommand};
 use tokio::sync::mpsc::{self, Sender};
 
-use gstreamer_player::{
-    Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher, PlayerState,
-};
+use gstreamer_player_backend::GstreamerPlayer;
 use state_changed_actor::{StateChanged, StateChangedActor};
 
 use std::{
@@ -47,7 +45,7 @@ async fn main() {
     let player_tx4 = player_tx3.clone();
 
     tokio::spawn(async move {
-        let mut player = PlayerActor::new(state_tx, player_tx);
+        let mut player = PlayerActor::new::<GstreamerPlayer>(state_tx, player_tx);
         while let Some(msg) = player_rx.recv().await {
             match msg {
                 PlayerCommand::Play { id } => {
@@ -81,7 +79,6 @@ async fn main() {
     });
 
     tokio::spawn(async move {
-        //let p1 = &player1.into();
         let mut state_changed_actor = StateChangedActor::new(start_tx);
         while let Some(msg) = state_rx.recv().await {
             state_changed_actor.handle(msg).await;

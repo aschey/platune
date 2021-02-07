@@ -5,24 +5,31 @@ use gstreamer::{
     prelude::{Cast, ObjectExt},
     ClockId, ClockTime,
 };
-use gstreamer_player::{Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher};
+use gstreamer_player::{PlayerMediaInfo, PlayerState};
 use tokio::sync::mpsc::Sender;
 
-use crate::{song_queue_actor::QueueItem, state_changed_actor::StateChanged};
+use crate::{
+    player_backend::{FnMediaInfo, PlayerBackend, PlayerInfo, PlayerInit},
+    song_queue_actor::QueueItem,
+    state_changed_actor::StateChanged,
+};
 
 pub struct PlayerActor {
-    pub players: [Player; 2],
+    pub players: [Box<dyn PlayerBackend + Send>; 2],
     position: usize,
 }
 
 impl PlayerActor {
-    pub fn new(state_tx: Sender<StateChanged>, player_tx: Sender<PlayerCommand>) -> PlayerActor {
+    pub fn new<TInit: PlayerInit + Send + 'static>(
+        state_tx: Sender<StateChanged>,
+        player_tx: Sender<PlayerCommand>,
+    ) -> PlayerActor {
         let state_tx2 = state_tx.clone();
         let player_tx2 = player_tx.clone();
         PlayerActor {
             players: [
-                PlayerActor::make_player(0, state_tx, player_tx),
-                PlayerActor::make_player(1, state_tx2, player_tx2),
+                PlayerActor::make_player::<TInit>(0, state_tx, player_tx),
+                PlayerActor::make_player::<TInit>(1, state_tx2, player_tx2),
             ],
             position: 0,
         }
@@ -53,16 +60,15 @@ impl PlayerActor {
         self.players[id].seek(ClockTime::from_nseconds(position));
     }
 
-    fn make_player(
+    fn make_player<TInit: PlayerInit>(
         id: usize,
         state_tx: Sender<StateChanged>,
         player_tx: Sender<PlayerCommand>,
-    ) -> Player {
-        let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
-        let player = Player::new(None, Some(&dispatcher.upcast::<PlayerSignalDispatcher>()));
+    ) -> Box<dyn PlayerBackend + Send> {
+        let player = TInit::init();
 
         let loaded = RefCell::new(false);
-        player.connect_media_info_updated(move |_, info| {
+        let c: FnMediaInfo = Box::new(move |info: PlayerMediaInfo| {
             if *loaded.borrow() {
                 println!("loaded {:?}", id);
                 return;
@@ -76,17 +82,20 @@ impl PlayerActor {
             }
         });
 
-        player.connect_state_changed(move |player, player_state| {
+        player.connect_media_info_updated(c);
+        let c1 = Box::new(move |player_state: PlayerState, info: PlayerInfo| {
             println!("{:?} {:?}", id, player_state);
             state_tx
                 .try_send(StateChanged {
                     player_id: id,
                     state: player_state,
-                    position: player.get_position().nseconds().unwrap_or_default(),
-                    song_duration: player.get_duration().nseconds().unwrap_or_default(),
+                    position: info.position.nseconds().unwrap_or_default(),
+                    song_duration: info.duration.nseconds().unwrap_or_default(),
                 })
                 .ok();
         });
+
+        player.connect_state_changed(c1);
 
         return player;
     }
