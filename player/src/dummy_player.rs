@@ -1,8 +1,14 @@
 use gstreamer::ClockTime;
 
-use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend};
+use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend, PlayerInit};
 
 pub struct DummyPlayer {}
+
+impl PlayerInit for DummyPlayer {
+    fn init() -> Box<dyn PlayerBackend + Send> {
+        Box::new(DummyPlayer {})
+    }
+}
 
 impl PlayerBackend for DummyPlayer {
     fn play(&self) {

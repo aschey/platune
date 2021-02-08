@@ -7,6 +7,8 @@ mod player_backend;
 mod song_queue_actor;
 mod song_start_actor;
 mod state_changed_actor;
+#[cfg(test)]
+mod test;
 use gstreamer as gst;
 use gstreamer::{glib, prelude::Cast, Pipeline};
 use gstreamer_app as gst_app;
@@ -115,7 +117,8 @@ fn make_state_change_task(
     });
 }
 
-fn start_tasks<T: PlayerInit + Send + 'static>() -> (Sender<PlayerCommand>, Sender<QueueCommand>) {
+pub fn start_tasks<T: PlayerInit + Send + 'static>() -> (Sender<PlayerCommand>, Sender<QueueCommand>)
+{
     let (state_tx, state_rx) = mpsc::channel::<StateChanged>(32);
     let (start_tx, start_rx) = mpsc::channel::<SongStartCommand>(32);
     let (queue_tx, queue_rx) = mpsc::channel::<QueueCommand>(32);
