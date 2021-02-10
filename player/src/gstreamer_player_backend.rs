@@ -1,24 +1,18 @@
 use gstreamer::{glib::SignalHandlerId, prelude::Cast, ClockTime};
 use gstreamer_player::{Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher};
 
-use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend, PlayerInfo, PlayerInit};
+use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend, PlayerInfo};
 
+#[derive(Clone)]
 pub struct GstreamerPlayer {
     player: Player,
 }
 
 impl GstreamerPlayer {
-    pub fn new(player: Player) -> GstreamerPlayer {
-        GstreamerPlayer { player }
-    }
-}
-
-impl PlayerInit for GstreamerPlayer {
-    fn init() -> Box<dyn PlayerBackend + Send> {
+    pub fn new() -> GstreamerPlayer {
         let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
         let player = Player::new(None, Some(&dispatcher.upcast::<PlayerSignalDispatcher>()));
-        let gst_player = GstreamerPlayer::new(player);
-        Box::new(gst_player)
+        GstreamerPlayer { player }
     }
 }
 

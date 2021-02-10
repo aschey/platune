@@ -1,45 +1,45 @@
-use gstreamer::ClockTime;
+use std::sync::{
+    atomic::{AtomicU32, Ordering},
+    Arc,
+};
 
-use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend, PlayerInit};
+use gstreamer::{
+    glib::{translate::FromGlib, SignalHandlerId},
+    ClockTime,
+};
 
-pub struct DummyPlayer {}
+use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend};
 
-impl PlayerInit for DummyPlayer {
-    fn init() -> Box<dyn PlayerBackend + Send> {
-        Box::new(DummyPlayer {})
-    }
+#[derive(Clone)]
+pub struct DummyPlayer<'a> {
+    pub incr: &'a Arc<AtomicU32>,
 }
 
-impl PlayerBackend for DummyPlayer {
-    fn play(&self) {
-        todo!()
-    }
+impl<'a> PlayerBackend for DummyPlayer<'a> {
+    fn play(&self) {}
 
-    fn pause(&self) {
-        todo!()
-    }
+    fn pause(&self) {}
 
     fn set_uri(&self, uri: &str) {
-        todo!()
+        println!("incr");
+        &self.incr.fetch_add(1, Ordering::SeqCst);
     }
 
     fn get_position(&self) -> ClockTime {
-        todo!()
+        ClockTime::from_seconds(5)
     }
 
     fn get_duration(&self) -> ClockTime {
-        todo!()
+        ClockTime::from_seconds(5)
     }
 
-    fn seek(&self, position: ClockTime) {
-        todo!()
+    fn seek(&self, position: ClockTime) {}
+
+    fn connect_media_info_updated(&self, f: FnMediaInfo) -> SignalHandlerId {
+        SignalHandlerId::from_glib(1)
     }
 
-    fn connect_media_info_updated(&self, f: FnMediaInfo) -> gstreamer::glib::SignalHandlerId {
-        todo!()
-    }
-
-    fn connect_state_changed(&self, f: FnPlayerState) -> gstreamer::glib::SignalHandlerId {
-        todo!()
+    fn connect_state_changed(&self, f: FnPlayerState) -> SignalHandlerId {
+        SignalHandlerId::from_glib(1)
     }
 }

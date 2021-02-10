@@ -8,6 +8,8 @@ edition = "2018"
 
 [dependencies]
 byte-slice-cast = "1.0.0"
+futures = "0.3.12"
+generic-array = "0.14.4"
 gstreamer = "0.16.5"
 gstreamer-app = "0.16.5"
 gstreamer-audio = "0.16.5"
