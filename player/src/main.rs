@@ -161,19 +161,27 @@ async fn main() {
     let player2 = GstreamerPlayer::new();
     let (tasks, player_tx, queue_tx) = start_tasks(player1, player2);
 
+    // let song1 =
+    //     "file://c/shared_files/Music/Between the Buried and Me/Colors/04 Sun Of Nothing.m4a"
+    //         .to_owned();
+    // let song2 =
+    //     "file://c/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a"
+    //         .to_owned();
+
+    let song1 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned();
+    let song2 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors//05 Ants of the Sky.m4a".to_owned();
+
     queue_tx
         .send(QueueCommand::SetQueue {
-            songs: vec!["file://c/shared_files/Music/Between the Buried and Me/Colors/04 Sun Of Nothing.m4a".to_owned(),
-            "file://c/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned()],
+            songs: vec![song1, song2],
         })
         .await
         .unwrap();
-
-    player_tx.send(PlayerCommand::Play { id: 0 }).await.unwrap();
+    //player_tx.send(PlayerCommand::Play { id: 0 }).await.unwrap();
     player_tx
         .send(PlayerCommand::Seek {
             id: 0,
-            position: (60 * 10 + 58) * 1e9 as u64,
+            position: (60 * 10 + 57) * 1e9 as u64,
         })
         .await
         .unwrap();

@@ -1,16 +1,19 @@
 #[cfg(test)]
 mod test {
-    use futures::{future::join_all, FutureExt};
+    use core::panic;
+    use dummy_player::PlayerAction;
+    use futures::{future::join_all, FutureExt, TryFutureExt};
     use gst::glib::{translate::FromGlib, SignalHandlerId};
     use gstreamer as gst;
     use gstreamer::ClockTime;
+    use gstreamer_player::PlayerState;
     use lazy_static::lazy_static;
     use std::{
         borrow::{Borrow, BorrowMut},
         cell::{Ref, RefCell},
         sync::{
             atomic::{AtomicU32, Ordering},
-            Arc,
+            Arc, Mutex,
         },
         thread,
         time::Duration,
@@ -19,60 +22,47 @@ mod test {
 
     use crate::{
         dummy_player::{self, DummyPlayer},
+        player_actor::PlayerCommand,
         song_queue_actor::QueueCommand,
         start_tasks,
     };
 
-    // mock! {
-    //     DummyPlayer {}
-    //     impl Clone for DummyPlayer {
-    //         fn clone(&self) -> Self;
-    //     }
-
-    //     impl PlayerBackend for DummyPlayer {
-    //         fn play(&self) {
-
-    //         }
-
-    //         fn pause(&self);
-
-    //         fn set_uri(&self, uri: &str);
-
-    //         fn get_position(&self) -> ClockTime;
-
-    //         fn get_duration(&self) -> ClockTime;
-
-    //         fn seek(&self, position: ClockTime);
-
-    //         fn connect_media_info_updated(&self, f: FnMediaInfo) -> gstreamer::glib::SignalHandlerId;
-
-    //         fn connect_state_changed(&self, f: FnPlayerState) -> gstreamer::glib::SignalHandlerId;
-    //     }
-    // }
-
     lazy_static! {
-        static ref incr1: Arc<AtomicU32> = Arc::new(AtomicU32::new(0));
-        static ref incr2: Arc<AtomicU32> = Arc::new(AtomicU32::new(0));
+        static ref ACTIONS1: Mutex<Vec<PlayerAction>> = Mutex::new(vec!());
+        static ref ACTIONS2: Mutex<Vec<PlayerAction>> = Mutex::new(vec!());
     }
 
     #[tokio::test]
     async fn test() {
         gst::init().unwrap();
 
-        let mock1 = DummyPlayer { incr: &incr1 };
-        let mock2 = DummyPlayer { incr: &incr2 };
+        let mock1 = DummyPlayer {
+            actions: &ACTIONS1,
+            current_uri: "".to_owned(),
+        };
+        let mock2 = DummyPlayer {
+            actions: &ACTIONS2,
+            current_uri: "".to_owned(),
+        };
 
         let (mut tasks, player_tx, queue_tx) = start_tasks(mock1, mock2);
         queue_tx
-        .send(QueueCommand::SetQueue {
-            songs: vec!["file://c/shared_files/Music/Between the Buried and Me/Colors/04 Sun Of Nothing.m4a".to_owned(),
-            "file://c/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned()],
-        })
-        .await
-        .unwrap();
+            .send(QueueCommand::SetQueue {
+                songs: vec!["file://uri1".to_owned(), "file://uri2".to_owned()],
+            })
+            .await
+            .unwrap();
+        player_tx.send(PlayerCommand::Play { id: 0 }).await.unwrap();
+        let _ = timeout(Duration::from_secs(1), tasks).await;
+        //println!("{:?}", URIS1.lock().unwrap()[0]);
 
-        let res = timeout(Duration::from_secs(5), tasks).await;
-        println!("{:?}", incr1.load(Ordering::SeqCst));
-        res.unwrap();
+        let actions1 = ACTIONS1.lock().unwrap();
+
+        match &actions1[0] {
+            PlayerAction::SetUri { uri } => {
+                assert_eq!("file://uri1", uri)
+            }
+            _ => panic!("wrong type"),
+        }
     }
 }

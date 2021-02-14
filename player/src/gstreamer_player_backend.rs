@@ -18,14 +18,17 @@ impl GstreamerPlayer {
 
 impl PlayerBackend for GstreamerPlayer {
     fn play(&self) {
+        println!("play");
         self.player.play();
     }
 
     fn pause(&self) {
+        println!("pause");
         self.player.pause();
     }
 
-    fn set_uri(&self, uri: &str) {
+    fn set_uri(&mut self, uri: &str) {
+        println!("set uri");
         self.player.set_uri(uri);
     }
 
@@ -42,6 +45,7 @@ impl PlayerBackend for GstreamerPlayer {
     }
 
     fn connect_media_info_updated(&self, f: FnMediaInfo) -> SignalHandlerId {
+        println!("media info updated");
         self.player
             .connect_media_info_updated(move |_, media_info| {
                 f(media_info.to_owned());

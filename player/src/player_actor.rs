@@ -52,7 +52,6 @@ impl<T: PlayerBackend + Send + Clone + 'static> PlayerActor<T> {
     }
 
     pub fn set_uri(&mut self, id: usize, item: QueueItem) {
-        println!("set uri");
         self.players[id].set_uri(&item.uri);
         self.players[id].pause();
         self.position = item.position;
@@ -71,7 +70,6 @@ impl<T: PlayerBackend + Send + Clone + 'static> PlayerActor<T> {
         let loaded = RefCell::new(false);
         let c: FnMediaInfo = Box::new(move |info: PlayerMediaInfo| {
             if *loaded.borrow() {
-                println!("loaded {:?}", id);
                 return;
             }
             let duration = info.get_duration().nseconds().unwrap_or_default();
@@ -90,8 +88,8 @@ impl<T: PlayerBackend + Send + Clone + 'static> PlayerActor<T> {
                 .try_send(StateChanged {
                     player_id: id,
                     state: player_state,
-                    position: info.position.nseconds().unwrap_or_default(),
-                    song_duration: info.duration.nseconds().unwrap_or_default(),
+                    position: info.position.nseconds().unwrap_or_default() as i64,
+                    song_duration: info.duration.nseconds().unwrap_or_default() as i64,
                 })
                 .ok();
         });

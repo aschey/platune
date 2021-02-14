@@ -28,14 +28,14 @@ impl SongStartActor {
         self.next_song = item;
     }
 
-    pub async fn handle(&mut self, nseconds: u64, player_id: usize) -> () {
+    pub async fn handle(&mut self, nseconds: i64, player_id: usize) -> () {
         if let Some(shot) = &self.clock_id {
             shot.unschedule();
         }
 
         let clock_id = self
             .clock
-            .new_single_shot_id(ClockTime::from_nseconds(nseconds))
+            .new_single_shot_id(ClockTime::from_nseconds(nseconds as u64))
             .unwrap();
 
         let subscriber = self.subscriber.clone();
@@ -63,6 +63,6 @@ impl SongStartActor {
 
 #[derive(Debug)]
 pub enum SongStartCommand {
-    Schedule { nseconds: u64, player_id: usize },
+    Schedule { nseconds: i64, player_id: usize },
     RecvItem { item: QueueItem },
 }

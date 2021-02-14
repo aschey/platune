@@ -1,28 +1,50 @@
 use std::sync::{
     atomic::{AtomicU32, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 
 use gstreamer::{
     glib::{translate::FromGlib, SignalHandlerId},
     ClockTime,
 };
+use gstreamer_player::PlayerState;
 
 use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend};
 
 #[derive(Clone)]
 pub struct DummyPlayer<'a> {
-    pub incr: &'a Arc<AtomicU32>,
+    pub actions: &'a Mutex<Vec<PlayerAction>>,
+    pub current_uri: String,
+}
+
+pub enum PlayerAction {
+    SetUri { uri: String },
+    Played { uri: String },
+    Paused { uri: String },
 }
 
 impl<'a> PlayerBackend for DummyPlayer<'a> {
-    fn play(&self) {}
+    fn play(&self) {
+        &self.actions.lock().unwrap().push(PlayerAction::Played {
+            uri: self.current_uri.to_owned(),
+        });
+        println!("play");
+    }
 
-    fn pause(&self) {}
+    fn pause(&self) {
+        &self.actions.lock().unwrap().push(PlayerAction::Paused {
+            uri: self.current_uri.to_owned(),
+        });
+        println!("pause");
+    }
 
-    fn set_uri(&self, uri: &str) {
-        println!("incr");
-        &self.incr.fetch_add(1, Ordering::SeqCst);
+    fn set_uri(&mut self, uri: &str) {
+        &self.actions.lock().unwrap().push(PlayerAction::SetUri {
+            uri: uri.to_owned(),
+        });
+
+        self.current_uri = uri.to_owned();
+        println!("set uri");
     }
 
     fn get_position(&self) -> ClockTime {

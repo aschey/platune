@@ -24,7 +24,8 @@ impl StateChangedActor {
             //let position = msg.player.get_position().nseconds().unwrap();
             println!("playing {:?}", msg.player_id);
             let time = self.clock.get_time();
-            let nseconds = time.nseconds().unwrap();
+            let nseconds = time.nseconds().unwrap() as i64;
+            // Need to use signed values here because nseconds - msg.position could be negative
             let new_time = nseconds - msg.position + msg.song_duration;
 
             // let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
@@ -54,6 +55,6 @@ impl StateChangedActor {
 pub struct StateChanged {
     pub player_id: usize,
     pub state: PlayerState,
-    pub song_duration: u64,
-    pub position: u64,
+    pub song_duration: i64,
+    pub position: i64,
 }

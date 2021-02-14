@@ -7,7 +7,7 @@ pub type FnPlayerState = Box<dyn Fn(PlayerState, PlayerInfo) + Send>;
 pub trait PlayerBackend {
     fn play(&self);
     fn pause(&self);
-    fn set_uri(&self, uri: &str);
+    fn set_uri(&mut self, uri: &str);
     fn get_position(&self) -> ClockTime;
     fn get_duration(&self) -> ClockTime;
     fn seek(&self, position: ClockTime);
