@@ -13,6 +13,7 @@ use futures::{
     future::{join_all, Flatten, JoinAll},
     FutureExt,
 };
+use gst::{Clock, ClockExt, SystemClock};
 use gstreamer as gst;
 use gstreamer::{glib, prelude::Cast, Pipeline};
 use gstreamer_app as gst_app;
@@ -155,10 +156,12 @@ pub fn start_tasks<T: PlayerBackend + Send + Clone + 'static>(
 #[tokio::main]
 async fn main() {
     gst::init().unwrap();
+    let clock = SystemClock::obtain();
+    let base_time = clock.get_time();
 
     let main_loop = glib::MainLoop::new(None, false);
-    let player1 = GstreamerPlayer::new();
-    let player2 = GstreamerPlayer::new();
+    let player1 = GstreamerPlayer::new(base_time);
+    let player2 = GstreamerPlayer::new(base_time);
     let (tasks, player_tx, queue_tx) = start_tasks(player1, player2);
 
     // let song1 =

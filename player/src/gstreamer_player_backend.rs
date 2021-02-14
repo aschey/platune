@@ -1,4 +1,7 @@
-use gstreamer::{glib::SignalHandlerId, prelude::Cast, ClockTime};
+use gstreamer::{
+    glib::SignalHandlerId, prelude::Cast, Clock, ClockTime, ElementExt, Pipeline, PipelineExt,
+    SystemClock,
+};
 use gstreamer_player::{Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher};
 
 use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend, PlayerInfo};
@@ -9,9 +12,12 @@ pub struct GstreamerPlayer {
 }
 
 impl GstreamerPlayer {
-    pub fn new() -> GstreamerPlayer {
+    pub fn new(base_time: ClockTime) -> GstreamerPlayer {
         let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
         let player = Player::new(None, Some(&dispatcher.upcast::<PlayerSignalDispatcher>()));
+        let pipeline = player.get_pipeline().dynamic_cast::<Pipeline>().unwrap();
+        pipeline.set_base_time(base_time);
+
         GstreamerPlayer { player }
     }
 }

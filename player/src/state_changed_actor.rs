@@ -1,4 +1,4 @@
-use gstreamer::{prelude::Cast, Clock, ClockExt, ClockTime, SystemClock};
+use gstreamer::{prelude::Cast, Clock, ClockExt, ClockTime, GstObjectExt, SystemClock};
 use gstreamer_player::{
     Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher, PlayerState,
 };
