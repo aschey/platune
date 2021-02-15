@@ -1,7 +1,7 @@
-use gstreamer::{glib::SignalHandlerId, ClockTime};
+use gstreamer::{glib::SignalHandlerId, ClockTime, State};
 use gstreamer_player::{PlayerMediaInfo, PlayerState};
 
-pub type FnMediaInfo = Box<dyn Fn(PlayerMediaInfo) + Send>;
+pub type FnMediaInfo = Box<dyn Fn(PlayerMediaInfo, PlayerInfo) + Send>;
 pub type FnPlayerState = Box<dyn Fn(PlayerState, PlayerInfo) + Send>;
 
 pub trait PlayerBackend {
@@ -18,4 +18,5 @@ pub trait PlayerBackend {
 pub struct PlayerInfo {
     pub position: ClockTime,
     pub duration: ClockTime,
+    pub state: PlayerState,
 }

@@ -5,7 +5,7 @@ use std::sync::{
 
 use gstreamer::{
     glib::{translate::FromGlib, SignalHandlerId},
-    ClockTime,
+    ClockTime, State,
 };
 use gstreamer_player::PlayerState;
 

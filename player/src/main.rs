@@ -171,8 +171,17 @@ async fn main() {
     //     "file://c/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a"
     //         .to_owned();
 
-    let song1 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned();
-    let song2 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors//05 Ants of the Sky.m4a".to_owned();
+    // let song1 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned();
+    // let song2 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned();
+
+    // let song1 =
+    //     "file:///home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned();
+    // let song2 = "file:///home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a".to_owned();
+
+    let song1 = "file:///home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-17-Track 17.mp3"
+        .to_owned();
+    let song2 = "file:///home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-18-Track 18.mp3"
+        .to_owned();
 
     queue_tx
         .send(QueueCommand::SetQueue {
@@ -180,14 +189,15 @@ async fn main() {
         })
         .await
         .unwrap();
+
     //player_tx.send(PlayerCommand::Play { id: 0 }).await.unwrap();
-    player_tx
-        .send(PlayerCommand::Seek {
-            id: 0,
-            position: (60 * 10 + 57) * 1e9 as u64,
-        })
-        .await
-        .unwrap();
+    // player_tx
+    //     .send(PlayerCommand::Seek {
+    //         id: 0,
+    //         position: (60 * 10 + 50) * 1e9 as u64,
+    //     })
+    //     .await
+    //     .unwrap();
 
     main_loop.run();
 }

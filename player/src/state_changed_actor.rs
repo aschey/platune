@@ -27,7 +27,10 @@ impl StateChangedActor {
             let nseconds = time.nseconds().unwrap() as i64;
             // Need to use signed values here because nseconds - msg.position could be negative
             let new_time = nseconds - msg.position + msg.song_duration;
-
+            println!(
+                "new_time {:?} nseconds {:?} position {:?} duration {:?}",
+                new_time, nseconds, msg.position, msg.song_duration
+            );
             // let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
             // let player2 = Player::new(None, Some(&dispatcher.upcast::<PlayerSignalDispatcher>()));
             // player2.set_uri(

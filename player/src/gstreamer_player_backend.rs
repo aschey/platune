@@ -1,8 +1,18 @@
-use gstreamer::{
-    glib::SignalHandlerId, prelude::Cast, Clock, ClockTime, ElementExt, Pipeline, PipelineExt,
-    SystemClock,
+use std::{
+    cell::RefCell,
+    sync::{Arc, Mutex},
 };
-use gstreamer_player::{Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher};
+
+use gstreamer::{
+    glib::SignalHandlerId,
+    prelude::{Cast, ObjectExt, ObjectType},
+    Clock, ClockExt, ClockId, ClockTime, ElementExt, ElementExtManual, GstObjectExt,
+    GstObjectExtManual, Pipeline, PipelineExt, State, SystemClock,
+};
+use gstreamer_player::{
+    Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher, PlayerState,
+};
+use lazy_static::__Deref;
 
 use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend, PlayerInfo};
 
@@ -19,6 +29,14 @@ impl GstreamerPlayer {
         pipeline.set_base_time(base_time);
 
         GstreamerPlayer { player }
+    }
+}
+
+fn convert_state(state: State) -> PlayerState {
+    match state {
+        State::Paused => PlayerState::Paused,
+        State::Playing => PlayerState::Playing,
+        _ => PlayerState::Stopped,
     }
 }
 
@@ -53,8 +71,17 @@ impl PlayerBackend for GstreamerPlayer {
     fn connect_media_info_updated(&self, f: FnMediaInfo) -> SignalHandlerId {
         println!("media info updated");
         self.player
-            .connect_media_info_updated(move |_, media_info| {
-                f(media_info.to_owned());
+            .connect_media_info_updated(move |player, media_info| {
+                let (res, current, future) =
+                    player.get_pipeline().get_state(ClockTime::from_nseconds(0));
+                f(
+                    media_info.to_owned(),
+                    PlayerInfo {
+                        duration: player.get_duration(),
+                        position: player.get_position(),
+                        state: convert_state(current),
+                    },
+                );
             })
     }
 
@@ -65,6 +92,7 @@ impl PlayerBackend for GstreamerPlayer {
                 PlayerInfo {
                     duration: player.get_duration(),
                     position: player.get_position(),
+                    state,
                 },
             );
         })

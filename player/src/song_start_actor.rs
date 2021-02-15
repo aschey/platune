@@ -1,4 +1,4 @@
-use gstreamer::{Clock, ClockExtManual, ClockId, ClockTime, SystemClock};
+use gstreamer::{Clock, ClockExt, ClockExtManual, ClockId, ClockTime, SystemClock};
 use std::{thread, time::Duration};
 use tokio::sync::mpsc::Sender;
 
@@ -51,6 +51,10 @@ impl SongStartActor {
 
         clock_id
             .wait_async(move |_, _, _| {
+                println!(
+                    "wait event triggered {:?}",
+                    SystemClock::obtain().get_time()
+                );
                 subscriber
                     .try_send(PlayerCommand::Play { id: player_id })
                     .unwrap();
