@@ -9,6 +9,10 @@ mod song_start_actor;
 mod state_changed_actor;
 #[cfg(test)]
 mod test;
+use flexi_logger::{
+    colored_default_format, colored_detailed_format, colored_with_thread, style, DeferredNow,
+    Duplicate, LogTarget, Logger, Record,
+};
 use futures::{
     future::{join_all, Flatten, JoinAll},
     FutureExt,
@@ -18,6 +22,7 @@ use gstreamer as gst;
 use gstreamer::{glib, prelude::Cast, Pipeline};
 use gstreamer_app as gst_app;
 use gstreamer_audio as gst_audio;
+use log::{info, warn};
 use player_actor::{PlayerActor, PlayerCommand};
 use player_backend::PlayerBackend;
 //use player_backend::PlayerInit;
@@ -30,6 +35,7 @@ use tokio::{
 
 use gstreamer_player_backend::GstreamerPlayer;
 use state_changed_actor::{StateChanged, StateChangedActor};
+use yansi::{Color, Style};
 
 use std::{
     cell::RefCell,
@@ -153,8 +159,36 @@ pub fn start_tasks<T: PlayerBackend + Send + Clone + 'static>(
     )
 }
 
+pub fn colored(
+    w: &mut dyn std::io::Write,
+    now: &mut DeferredNow,
+    record: &Record,
+) -> Result<(), std::io::Error> {
+    let level = record.level();
+    write!(
+        w,
+        "[{}] T[{:?}] {} [{}:{}] {}",
+        Style::new(Color::Fixed(196))
+            .bold()
+            .paint(now.now().format("%Y-%m-%d %H:%M:%S%.6f %:z")),
+        style(level, thread::current().name().unwrap_or("<unnamed>")),
+        style(level, level),
+        record.file().unwrap_or("<unnamed>"),
+        record.line().unwrap_or(0),
+        style(level, &record.args())
+    )
+}
+
 #[tokio::main]
 async fn main() {
+    let mut logger = Logger::with_str("info")
+        .format_for_stdout(colored)
+        .log_target(LogTarget::StdOut) // write logs to file
+        // print warnings and errors also to the console
+        .start()
+        .unwrap();
+
+    warn!("test log");
     gst::init().unwrap();
     let clock = SystemClock::obtain();
     let base_time = clock.get_time();
