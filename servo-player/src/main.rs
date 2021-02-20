@@ -115,12 +115,12 @@ fn main() {
         run_example(
             &context,
             0.0,
-            "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
+            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a", //"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
         );
         run_example(
             &context,
-            54.629433106,
-            "C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
+            54.729433106 - 0.04498866213151927,
+            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a",//"C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
         );
         let context = context.lock().unwrap();
         let _ = context.resume();
