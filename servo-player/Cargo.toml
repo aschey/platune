@@ -1,0 +1,12 @@
+[package]
+name = "servo-player"
+version = "0.1.0"
+authors = ["aschey <aschey13@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+servo-media = { git = "https://github.com/servo/media", rev = "b23e722" }
+servo-media-auto = { git = "https://github.com/servo/media", rev = "b23e722" }
+servo-media-audio = { git = "https://github.com/servo/media", rev = "b23e722" }
