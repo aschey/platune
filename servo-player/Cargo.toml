@@ -8,5 +8,12 @@ edition = "2018"
 
 [dependencies]
 servo-media = { git = "https://github.com/servo/media", rev = "b23e722" }
-servo-media-auto = { git = "https://github.com/servo/media", rev = "b23e722" }
 servo-media-audio = { git = "https://github.com/servo/media", rev = "b23e722" }
+servo-media-auto = { git = "https://github.com/servo/media", rev = "b23e722" }
+flexi_logger = "0.17.1"
+yansi = "0.5.0"
+lazy_static = "1.4.0"
+log = "0.4.14"
+tokio = { version="1.1.1", features=["full"] }
+gstreamer = "0.15"
+gstreamer-audio = "0.15"

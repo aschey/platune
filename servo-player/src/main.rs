@@ -1,7 +1,11 @@
+use gstreamer::glib;
 use servo_media::{ClientContextId, ServoMedia};
-use servo_media_audio::context::{AudioContextOptions, RealTimeAudioContextOptions};
 use servo_media_audio::decoder::AudioDecoderCallbacks;
 use servo_media_audio::node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage};
+use servo_media_audio::{
+    buffer_source_node::AudioBufferSourceNodeOptions,
+    context::{AudioContext, AudioContextOptions, RealTimeAudioContextOptions},
+};
 use servo_media_audio::{
     buffer_source_node::{AudioBuffer, AudioBufferSourceNodeMessage},
     node::OnEndedCallback,
@@ -14,25 +18,23 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
 
-fn run_example(servo_media: Arc<ServoMedia>) {
+fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filename: &str) {
     let options = <RealTimeAudioContextOptions>::default();
     let sample_rate = options.sample_rate;
-    let context = servo_media.create_audio_context(
-        &ClientContextId::build(1, 1),
-        AudioContextOptions::RealTimeAudioContext(options),
-    );
     let context = context.lock().unwrap();
     let args: Vec<_> = env::args().collect();
-    let default = "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a";
-    let filename: &str = if args.len() == 2 {
-        args[1].as_ref()
-    } else if Path::new(default).exists() {
-        default
-    } else {
-        panic!("Usage: cargo run --bin audio_decoder <file_path>")
-    };
+    //let default = "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a";
+    //let default = "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a";
+    // let filename: &str = if args.len() == 2 {
+    //     args[1].as_ref()
+    // } else if Path::new(default).exists() {
+    //     default
+    // } else {
+    //     panic!("Usage: cargo run --bin audio_decoder <file_path>")
+    // };
     let mut file = File::open(filename).unwrap();
     let mut bytes = vec![];
+
     file.read_to_end(&mut bytes).unwrap();
     let decoded_audio: Arc<Mutex<Vec<Vec<f32>>>> = Arc::new(Mutex::new(Vec::new()));
     let decoded_audio_ = decoded_audio.clone();
@@ -81,28 +83,49 @@ fn run_example(servo_media: Arc<ServoMedia>) {
     );
     context.message_node(
         buffer_source,
-        AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Start(5.)),
+        AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Start(
+            start_time,
+        )),
     );
-    context.message_node(
-        buffer_source,
-        AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Stop(10.)),
-    );
+    // context.message_node(
+    //     buffer_source,
+    //     AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Stop()),
+    // );
     receiver2.recv().unwrap();
+
     context.message_node(
         buffer_source,
         AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetBuffer(Some(
             AudioBuffer::from_buffers(decoded_audio.lock().unwrap().to_vec(), sample_rate),
         ))),
     );
-    let _ = context.resume();
-    thread::sleep(time::Duration::from_millis(1000000));
-    let _ = context.close();
 }
 
 fn main() {
+    let main_loop = glib::MainLoop::new(None, false);
     ServoMedia::init::<servo_media_auto::Backend>();
     if let Ok(servo_media) = ServoMedia::get() {
-        run_example(servo_media);
+        let options = <RealTimeAudioContextOptions>::default();
+
+        let context = servo_media.create_audio_context(
+            &ClientContextId::build(1, 1),
+            AudioContextOptions::RealTimeAudioContext(options),
+        );
+
+        run_example(
+            &context,
+            0.0,
+            "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
+        );
+        run_example(
+            &context,
+            54.629433106,
+            "C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
+        );
+        let context = context.lock().unwrap();
+        let _ = context.resume();
+        main_loop.run();
+        let _ = context.close();
     } else {
         unreachable!()
     }
