@@ -1,4 +1,13 @@
-use gstreamer::glib;
+mod audio_node_wrapper;
+mod media_element_node;
+mod servo_backend;
+use gstreamer::{
+    glib::{self, filename_to_uri},
+    prelude::ObjectExt,
+    ClockTime, ElementExt, ElementFactory,
+};
+use gstreamer::{ElementExtManual, State};
+use log::info;
 use servo_media::{ClientContextId, ServoMedia};
 use servo_media_audio::decoder::AudioDecoderCallbacks;
 use servo_media_audio::node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage};
@@ -14,11 +23,11 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::{thread, time};
+use tokio::sync::mpsc;
 
-fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filename: &str) {
+async fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filename: &str) {
     let options = <RealTimeAudioContextOptions>::default();
     let sample_rate = options.sample_rate;
     let context = context.lock().unwrap();
@@ -39,11 +48,11 @@ fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filename: &s
     let decoded_audio: Arc<Mutex<Vec<Vec<f32>>>> = Arc::new(Mutex::new(Vec::new()));
     let decoded_audio_ = decoded_audio.clone();
     let decoded_audio__ = decoded_audio.clone();
-    let (sender, receiver) = mpsc::channel();
-    let (sender2, receiver2) = mpsc::channel();
+    let (sender, mut receiver) = mpsc::channel(32);
+    let (sender2, mut receiver2) = mpsc::channel(32);
     let callbacks = AudioDecoderCallbacks::new()
         .eos(move || {
-            sender2.send(()).unwrap();
+            sender2.try_send(()).unwrap();
         })
         .error(|e| {
             eprintln!("Error decoding audio {:?}", e);
@@ -58,12 +67,12 @@ fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filename: &s
                 .lock()
                 .unwrap()
                 .resize(channels as usize, Vec::new());
-            sender.send(()).unwrap();
+            sender.try_send(()).unwrap();
         })
         .build();
     context.decode_audio_data(bytes.to_vec(), callbacks);
     println!("Decoding audio");
-    receiver.recv().unwrap();
+    receiver.recv().await.unwrap();
     println!("Audio decoded");
     let buffer_source = context.create_node(
         AudioNodeInit::AudioBufferSourceNode(Default::default()),
@@ -91,14 +100,43 @@ fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filename: &s
     //     buffer_source,
     //     AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Stop()),
     // );
-    receiver2.recv().unwrap();
-
+    receiver2.recv().await.unwrap();
+    println!("{:?}", decoded_audio.lock().unwrap()[0][0]);
     context.message_node(
         buffer_source,
         AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetBuffer(Some(
             AudioBuffer::from_buffers(decoded_audio.lock().unwrap().to_vec(), sample_rate),
         ))),
     );
+}
+
+async fn get_duration(filename: &str) -> ClockTime {
+    let fakesink = ElementFactory::make("fakesink", None).unwrap();
+    let bin = ElementFactory::make("playbin", None).unwrap();
+    bin.set_property("video-sink", &fakesink).unwrap();
+    bin.set_property("audio-sink", &fakesink).unwrap();
+    let bus = bin.get_bus().unwrap();
+    bus.add_signal_watch();
+    let (sender, mut receiver) = mpsc::channel(1);
+    let bin_weak = bin.downgrade();
+    let handler_id = bus
+        .connect("message", false, move |_| {
+            let bin = bin_weak.upgrade().unwrap();
+            if let Some(duration) = bin.query_duration::<ClockTime>() {
+                sender.try_send(duration).unwrap();
+            }
+
+            None
+        })
+        .unwrap();
+
+    bin.set_property("uri", &filename_to_uri(filename, None).unwrap())
+        .unwrap();
+    bin.set_state(State::Playing).unwrap();
+    let duration = receiver.recv().await.unwrap();
+    bus.disconnect(handler_id);
+    bin.set_state(State::Null).unwrap();
+    return duration;
 }
 
 fn main() {
@@ -115,12 +153,12 @@ fn main() {
         run_example(
             &context,
             0.0,
-            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a", //"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
+            "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
         );
         run_example(
             &context,
             54.729433106 - 0.04498866213151927,
-            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a",//"C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
+            "C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
         );
         let context = context.lock().unwrap();
         let _ = context.resume();
