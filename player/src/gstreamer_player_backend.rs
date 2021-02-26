@@ -1,20 +1,21 @@
-use std::{
-    cell::RefCell,
-    sync::{Arc, Mutex},
-};
-
+use crate::time::BASE_TIME;
+use crate::SYSTEM_CLOCK;
+use crate::{glib::timeout_add_seconds, player_backend::FnPlayerInfo};
 use gstreamer::{
-    glib::SignalHandlerId,
+    format,
+    glib::{self, SignalHandlerId},
     prelude::{Cast, ObjectExt, ObjectType},
-    Clock, ClockExt, ClockId, ClockTime, ElementExt, ElementExtManual, GstObjectExt,
-    GstObjectExtManual, Pipeline, PipelineExt, State, SystemClock,
+    query, BusSyncReply, Clock, ClockExt, ClockExtManual, ClockId, ClockTime, Element, ElementExt,
+    ElementExtManual, GstBinExt, GstBinExtManual, GstObjectExt, GstObjectExtManual, Pipeline,
+    PipelineExt, State, SystemClock,
 };
 use gstreamer_player::{
     Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher, PlayerState,
 };
 use lazy_static::__Deref;
+use log::info;
 
-use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend, PlayerInfo};
+use crate::player_backend::{FnMediaInfo, PlayerBackend, PlayerInfo};
 
 #[derive(Clone)]
 pub struct GstreamerPlayer {
@@ -22,13 +23,22 @@ pub struct GstreamerPlayer {
 }
 
 impl GstreamerPlayer {
-    pub fn new(base_time: ClockTime) -> GstreamerPlayer {
+    pub fn new() -> GstreamerPlayer {
         let dispatcher = PlayerGMainContextSignalDispatcher::new(None);
         let player = Player::new(None, Some(&dispatcher.upcast::<PlayerSignalDispatcher>()));
+
         let pipeline = player.get_pipeline().dynamic_cast::<Pipeline>().unwrap();
-        pipeline.set_base_time(base_time);
+        pipeline.set_delay(ClockTime::from_seconds(1));
+        //let sink = pipeline.get_children()[0].get_pads()
+        pipeline.set_base_time(*BASE_TIME);
+        pipeline.set_start_time(*BASE_TIME);
+        pipeline.set_clock(Some(&*SYSTEM_CLOCK)).unwrap();
 
         GstreamerPlayer { player }
+    }
+
+    fn downcast(&self) {
+        self.player.downgrade();
     }
 }
 
@@ -42,17 +52,29 @@ fn convert_state(state: State) -> PlayerState {
 
 impl PlayerBackend for GstreamerPlayer {
     fn play(&self) {
-        println!("play");
+        info!("play");
         self.player.play();
     }
 
+    // fn schedule_play(&self, when: ClockTime) {
+    //     let clock_id = SYSTEM_CLOCK.new_single_shot_id(when).unwrap();
+    //     let player = self.player.downgrade();
+    //     clock_id
+    //         .wait_async(move |_, _, _| {
+    //             info!("wait event triggered");
+    //             player.upgrade().unwrap().play();
+    //         })
+    //         .unwrap();
+    // }
+
     fn pause(&self) {
-        println!("pause");
+        info!("pause");
         self.player.pause();
+        self.player.get_pipeline().set_state(State::Paused).unwrap();
     }
 
     fn set_uri(&mut self, uri: &str) {
-        println!("set uri");
+        info!("set uri");
         self.player.set_uri(uri);
     }
 
@@ -68,8 +90,33 @@ impl PlayerBackend for GstreamerPlayer {
         self.player.seek(position);
     }
 
+    // fn connect_about_to_finish(&self, f: FnPlayerInfo) -> SignalHandlerId {
+    //     self.player
+    //         .get_pipeline()
+    //         .connect("about-to-finish", false, move |values| {
+    //             // mark the beginning of a new track, or a new DJ.
+    //             let playbin = values[0]
+    //                 .get::<Element>()
+    //                 .expect("playbin \"audio-tags-changed\" signal values[1]")
+    //                 .unwrap();
+    //             info!(
+    //                 "about to finish {:?} {:?}",
+    //                 playbin.query_position::<ClockTime>(),
+    //                 playbin.query_duration::<ClockTime>()
+    //             );
+    //             f(PlayerInfo {
+    //                 duration: playbin.query_duration::<ClockTime>().unwrap(),
+    //                 position: playbin.query_position::<ClockTime>().unwrap(),
+    //                 state: PlayerState::Playing,
+    //             });
+    //             None
+    //         })
+    //         .unwrap()
+    // }
+
     fn connect_media_info_updated(&self, f: FnMediaInfo) -> SignalHandlerId {
-        println!("media info updated");
+        info!("media info updated");
+
         self.player
             .connect_media_info_updated(move |player, media_info| {
                 let (res, current, future) =
@@ -85,16 +132,13 @@ impl PlayerBackend for GstreamerPlayer {
             })
     }
 
-    fn connect_state_changed(&self, f: FnPlayerState) -> SignalHandlerId {
+    fn connect_state_changed(&self, f: FnPlayerInfo) -> SignalHandlerId {
         self.player.connect_state_changed(move |player, state| {
-            f(
+            f(PlayerInfo {
+                duration: player.get_duration(),
+                position: player.get_position(),
                 state,
-                PlayerInfo {
-                    duration: player.get_duration(),
-                    position: player.get_position(),
-                    state,
-                },
-            );
+            });
         })
     }
 }

@@ -1,3 +1,4 @@
+use crate::SYSTEM_CLOCK;
 use std::{
     cell::RefCell,
     sync::{Arc, Mutex},
@@ -7,9 +8,10 @@ use generic_array::{arr, ArrayLength, GenericArray};
 use gstreamer::{
     glib::clone::Downgrade,
     prelude::{Cast, ObjectExt},
-    ClockExt, ClockId, ClockTime, State, SystemClock,
+    ClockExt, ClockExtManual, ClockId, ClockTime, State, SystemClock,
 };
 use gstreamer_player::{PlayerMediaInfo, PlayerState};
+use log::info;
 use tokio::sync::mpsc::Sender;
 
 use crate::{
@@ -43,22 +45,27 @@ impl<T: PlayerBackend + Send + Clone + 'static> PlayerActor<T> {
         self.players[id].play();
     }
 
+    // pub fn schedule_play(&mut self, id: usize, when: i64) {
+    //     self.players[id].schedule_play(ClockTime::from_nseconds(when as u64));
+    // }
+
     pub fn play_if_first(&mut self, id: usize) {
-        println!("play if first");
+        info!("play if first");
         if self.position == 0 {
-            println!("playing first");
+            info!("playing first");
             self.players[id].play();
         }
     }
 
     pub fn pause(&mut self, id: usize) {
-        println!("pause {:?}", id);
-        self.players[id].pause();
+        info!("pause {:?}", id);
+        self.players[0].pause();
+        self.players[1].pause();
     }
 
     pub fn set_uri(&mut self, id: usize, item: QueueItem) {
         self.players[id].set_uri(&item.uri);
-        println!("pause {:?}", id);
+        info!("pause {:?}", id);
         self.players[id].pause();
         self.position = item.position;
     }
@@ -75,45 +82,49 @@ impl<T: PlayerBackend + Send + Clone + 'static> PlayerActor<T> {
     ) {
         let loaded = RefCell::new(false);
         let playing = RefCell::new(false);
+        let player_tx2 = player_tx.clone();
+        player.connect_media_info_updated(Box::new(move |media_info, player_info| {
+            //println!("media {:?}", media_info);
+            if *loaded.borrow() {
+                return;
+            }
 
-        let c: FnMediaInfo = Box::new(
-            move |media_info: PlayerMediaInfo, player_info: PlayerInfo| {
-                //println!("media {:?}", media_info);
-                if *loaded.borrow() {
-                    return;
-                }
+            info!("duration {:?}", player_info.duration);
 
-                println!("duration {:?}", player_info.duration);
+            if !*playing.borrow() {
+                player_tx2.try_send(PlayerCommand::PlayIfFirst { id }).ok();
+                *playing.borrow_mut() = true;
+                return;
+            }
 
-                if !*playing.borrow() {
-                    player_tx.try_send(PlayerCommand::PlayIfFirst { id }).ok();
-                    *playing.borrow_mut() = true;
-                    return;
-                }
+            let duration = player_info.duration.nseconds().unwrap_or_default();
+            if duration > 0 && player_info.state == PlayerState::Playing {
+                state_tx
+                    .try_send(StateChanged {
+                        player_id: id,
+                        state: PlayerState::Playing,
+                        position: player_info.position.nseconds().unwrap_or_default() as i64,
+                        song_duration: duration as i64,
+                    })
+                    .ok();
+                *loaded.borrow_mut() = true;
+            }
+        }));
 
-                let duration = player_info.duration.nseconds().unwrap_or_default();
-                if duration > 0 && player_info.state == PlayerState::Playing {
-                    state_tx
-                        .try_send(StateChanged {
-                            player_id: id,
-                            state: PlayerState::Playing,
-                            position: player_info.position.nseconds().unwrap_or_default() as i64,
-                            song_duration: duration as i64,
-                        })
-                        .ok();
-                    *loaded.borrow_mut() = true;
-                }
-            },
-        );
+        // player.connect_about_to_finish(Box::new(move |info| {
+        //     player_tx
+        //         .try_send(PlayerCommand::SchedulePlay {
+        //             id: id ^ 1,
+        //             when: SYSTEM_CLOCK.get_time().nseconds().unwrap() as i64
+        //                 - info.position.nseconds().unwrap() as i64
+        //                 + info.duration.nseconds().unwrap() as i64
+        //                 - 1000000000,
+        //         })
+        //         .unwrap();
+        // }));
 
-        player.connect_media_info_updated(c);
-        let c1 = Box::new(move |player_state: PlayerState, info: PlayerInfo| {
-            println!(
-                "{:?} {:?} {:?}",
-                id,
-                player_state,
-                SystemClock::obtain().get_time()
-            );
+        player.connect_state_changed(Box::new(move |info| {
+            info!("{:?} {:?}", id, info.state);
 
             // state_tx
             //     .try_send(StateChanged {
@@ -123,9 +134,7 @@ impl<T: PlayerBackend + Send + Clone + 'static> PlayerActor<T> {
             //         song_duration: info.duration.nseconds().unwrap_or_default() as i64,
             //     })
             //     .ok();
-        });
-
-        player.connect_state_changed(c1);
+        }));
     }
 }
 
@@ -133,6 +142,7 @@ impl<T: PlayerBackend + Send + Clone + 'static> PlayerActor<T> {
 pub enum PlayerCommand {
     Play { id: usize },
     PlayIfFirst { id: usize },
+    //SchedulePlay { id: usize, when: i64 },
     Pause { id: usize },
     SetUri { id: usize, item: QueueItem },
     Seek { id: usize, position: u64 },

@@ -9,6 +9,8 @@ mod song_start_actor;
 mod state_changed_actor;
 #[cfg(test)]
 mod test;
+mod time;
+use crate::time::SYSTEM_CLOCK;
 use flexi_logger::{
     colored_default_format, colored_detailed_format, colored_with_thread, style, DeferredNow,
     Duplicate, LogTarget, Logger, Record,
@@ -17,12 +19,16 @@ use futures::{
     future::{join_all, Flatten, JoinAll},
     FutureExt,
 };
-use gst::{Clock, ClockExt, SystemClock};
+use glib::filename_to_uri;
+use gst::{
+    gst_sys::gst_element_factory_make, prelude::ObjectExt, Clock, ClockExt, ClockTime, ElementExt,
+    ElementExtManual, State, SystemClock,
+};
 use gstreamer as gst;
 use gstreamer::{glib, prelude::Cast, Pipeline};
 use gstreamer_app as gst_app;
 use gstreamer_audio as gst_audio;
-use log::{info, warn};
+use log::{error, info, warn};
 use player_actor::{PlayerActor, PlayerCommand};
 use player_backend::PlayerBackend;
 //use player_backend::PlayerInit;
@@ -115,7 +121,9 @@ fn make_player_task<T: PlayerBackend + Send + Clone + 'static>(
                 }
                 PlayerCommand::Seek { id, position } => {
                     player.seek(id, position);
-                }
+                } // PlayerCommand::SchedulePlay { id, when } => {
+                  //     player.schedule_play(id, when);
+                  // }
             }
         }
     })
@@ -167,14 +175,12 @@ pub fn colored(
     let level = record.level();
     write!(
         w,
-        "[{}] T[{:?}] {} [{}:{}] {}",
-        Style::new(Color::Fixed(196))
-            .bold()
-            .paint(now.now().format("%Y-%m-%d %H:%M:%S%.6f %:z")),
-        style(level, thread::current().name().unwrap_or("<unnamed>")),
+        "[{} {}] {} [{}:{}] {}",
+        Style::new(Color::Cyan).paint(now.now().format("%Y-%m-%d %H:%M:%S%.6f")),
+        Style::new(Color::Cyan).paint(SYSTEM_CLOCK.get_time().nseconds().unwrap_or(0)),
         style(level, level),
-        record.file().unwrap_or("<unnamed>"),
-        record.line().unwrap_or(0),
+        Style::new(Color::Green).paint(record.file().unwrap_or("<unnamed>")),
+        Style::new(Color::Green).paint(record.line().unwrap_or(0)),
         style(level, &record.args())
     )
 }
@@ -183,27 +189,55 @@ pub fn colored(
 async fn main() {
     let mut logger = Logger::with_str("info")
         .format_for_stdout(colored)
-        .log_target(LogTarget::StdOut) // write logs to file
-        // print warnings and errors also to the console
+        .log_target(LogTarget::StdOut)
+        .set_palette("196;190;-;-;-".to_owned())
         .start()
         .unwrap();
 
-    warn!("test log");
     gst::init().unwrap();
-    let clock = SystemClock::obtain();
-    let base_time = clock.get_time();
 
     let main_loop = glib::MainLoop::new(None, false);
-    let player1 = GstreamerPlayer::new(base_time);
-    let player2 = GstreamerPlayer::new(base_time);
+
+    // let fakesink = gst::ElementFactory::make("fakesink", None).unwrap();
+    // let bin = gst::ElementFactory::make("playbin", None).unwrap();
+    // bin.set_property("video-sink", &fakesink).unwrap();
+    // bin.set_property("audio-sink", &fakesink).unwrap();
+    // let bus = bin.get_bus().unwrap();
+    // bus.add_signal_watch();
+    // let bin_weak = bin.downgrade();
+    // bus.connect("message", false, move |message| {
+    //     let bin = bin_weak.upgrade().unwrap();
+    //     info!(
+    //         "{:?}",
+    //         bin.query_duration::<ClockTime>().unwrap_or_default()
+    //     );
+    //     None
+    // })
+    // .unwrap();
+    // bin.set_property(
+    //     "uri",
+    //     &filename_to_uri(
+    //         "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
+    //         None,
+    //     )
+    //     .unwrap(),
+    // )
+    // .unwrap();
+    // bin.set_state(State::Playing).unwrap();
+    //main_loop.run();
+    //thread::sleep(Duration::from_secs(500));
+
+    let player1 = GstreamerPlayer::new();
+    let player2 = GstreamerPlayer::new();
+
     let (tasks, player_tx, queue_tx) = start_tasks(player1, player2);
 
-    // let song1 =
-    //     "file://c/shared_files/Music/Between the Buried and Me/Colors/04 Sun Of Nothing.m4a"
-    //         .to_owned();
-    // let song2 =
-    //     "file://c/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a"
-    //         .to_owned();
+    let song1 =
+        "file://c/shared_files/Music/Between the Buried and Me/Colors/04 Sun Of Nothing.m4a"
+            .to_owned();
+    let song2 =
+        "file://c/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a"
+            .to_owned();
 
     // let song1 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned();
     // let song2 = "file:///home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned();
@@ -212,10 +246,24 @@ async fn main() {
     //     "file:///home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned();
     // let song2 = "file:///home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a".to_owned();
 
-    let song1 = "file:///home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-17-Track 17.mp3"
-        .to_owned();
-    let song2 = "file:///home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-18-Track 18.mp3"
-        .to_owned();
+    // let song1 = filename_to_uri(
+    //     "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
+    //     None,
+    // )
+    // .unwrap()
+    // .to_string();
+    // let song2 = filename_to_uri(
+    //     "C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
+    //     None,
+    // )
+    // .unwrap()
+    // .to_string();
+    // let song1 = filename_to_uri("C:\\shared_files\\Music\\emoisdead\\Peu Etre - Langue Et Civilisation Hardcore (199x)\\Peu Etre-17-Track 17.mp3", None).unwrap().to_string();
+    // let song2 = filename_to_uri("C:\\shared_files\\Music\\emoisdead\\Peu Etre - Langue Et Civilisation Hardcore (199x)\\Peu Etre-18-Track 18.mp3", None).unwrap().to_string();
+    // let song1 = "file:///home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-17-Track 17.mp3"
+    //     .to_owned();
+    // let song2 = "file:///home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-18-Track 18.mp3"
+    //     .to_owned();
 
     queue_tx
         .send(QueueCommand::SetQueue {
@@ -225,13 +273,13 @@ async fn main() {
         .unwrap();
 
     //player_tx.send(PlayerCommand::Play { id: 0 }).await.unwrap();
-    // player_tx
-    //     .send(PlayerCommand::Seek {
-    //         id: 0,
-    //         position: (60 * 10 + 50) * 1e9 as u64,
-    //     })
-    //     .await
-    //     .unwrap();
+    player_tx
+        .send(PlayerCommand::Seek {
+            id: 0,
+            position: (10 * 60 + 57) * 1e9 as u64,
+        })
+        .await
+        .unwrap();
 
     main_loop.run();
 }

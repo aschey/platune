@@ -8,8 +8,9 @@ use gstreamer::{
     ClockTime, State,
 };
 use gstreamer_player::PlayerState;
+use log::info;
 
-use crate::player_backend::{FnMediaInfo, FnPlayerState, PlayerBackend};
+use crate::player_backend::{FnMediaInfo, FnPlayerInfo, PlayerBackend};
 
 #[derive(Clone)]
 pub struct DummyPlayer<'a> {
@@ -28,14 +29,14 @@ impl<'a> PlayerBackend for DummyPlayer<'a> {
         &self.actions.lock().unwrap().push(PlayerAction::Played {
             uri: self.current_uri.to_owned(),
         });
-        println!("play");
+        info!("play");
     }
 
     fn pause(&self) {
         &self.actions.lock().unwrap().push(PlayerAction::Paused {
             uri: self.current_uri.to_owned(),
         });
-        println!("pause");
+        info!("pause");
     }
 
     fn set_uri(&mut self, uri: &str) {
@@ -44,7 +45,7 @@ impl<'a> PlayerBackend for DummyPlayer<'a> {
         });
 
         self.current_uri = uri.to_owned();
-        println!("set uri");
+        info!("set uri");
     }
 
     fn get_position(&self) -> ClockTime {
@@ -61,7 +62,15 @@ impl<'a> PlayerBackend for DummyPlayer<'a> {
         SignalHandlerId::from_glib(1)
     }
 
-    fn connect_state_changed(&self, f: FnPlayerState) -> SignalHandlerId {
+    fn connect_state_changed(&self, f: FnPlayerInfo) -> SignalHandlerId {
         SignalHandlerId::from_glib(1)
     }
+
+    // fn connect_about_to_finish(&self, f: FnPlayerInfo) -> SignalHandlerId {
+    //     todo!()
+    // }
+
+    // fn schedule_play(&self, when: ClockTime) {
+    //     todo!()
+    // }
 }

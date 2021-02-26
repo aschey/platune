@@ -1,33 +1,31 @@
+use crate::SYSTEM_CLOCK;
 use gstreamer::{prelude::Cast, Clock, ClockExt, ClockTime, GstObjectExt, SystemClock};
 use gstreamer_player::{
     Player, PlayerGMainContextSignalDispatcher, PlayerSignalDispatcher, PlayerState,
 };
+use log::info;
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::{player_actor::PlayerCommand, song_start_actor::SongStartCommand};
 
 pub struct StateChangedActor {
-    pub clock: Clock,
     subscriber: Sender<SongStartCommand>,
 }
 
 impl StateChangedActor {
     pub fn new(subscriber: Sender<SongStartCommand>) -> StateChangedActor {
-        StateChangedActor {
-            clock: SystemClock::obtain(),
-            subscriber,
-        }
+        StateChangedActor { subscriber }
     }
 
     pub async fn handle(&mut self, msg: StateChanged) -> () {
         if msg.state == PlayerState::Playing {
             //let position = msg.player.get_position().nseconds().unwrap();
-            println!("playing {:?}", msg.player_id);
-            let time = self.clock.get_time();
+            info!("playing {:?}", msg.player_id);
+            let time = SYSTEM_CLOCK.get_time();
             let nseconds = time.nseconds().unwrap() as i64;
             // Need to use signed values here because nseconds - msg.position could be negative
-            let new_time = nseconds - msg.position + msg.song_duration;
-            println!(
+            let new_time = -msg.position + msg.song_duration as i64;
+            info!(
                 "new_time {:?} nseconds {:?} position {:?} duration {:?}",
                 new_time, nseconds, msg.position, msg.song_duration
             );

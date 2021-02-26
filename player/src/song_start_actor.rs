@@ -1,5 +1,7 @@
+use async_timer::{new_timer, timed, Timed};
 use gstreamer::{Clock, ClockExt, ClockExtManual, ClockId, ClockTime, SystemClock};
-use std::{thread, time::Duration};
+use log::info;
+use std::{pin::Pin, thread, time::Duration};
 use tokio::sync::mpsc::Sender;
 
 use crate::{player_actor::PlayerCommand, song_queue_actor::QueueItem};
@@ -39,7 +41,7 @@ impl SongStartActor {
             .unwrap();
 
         let subscriber = self.subscriber.clone();
-        println!("{:?}", player_id);
+        info!("{:?}", player_id);
 
         thread::sleep(Duration::from_millis(50));
         subscriber
@@ -49,17 +51,22 @@ impl SongStartActor {
             })
             .unwrap();
 
-        clock_id
-            .wait_async(move |_, _, _| {
-                println!(
-                    "wait event triggered {:?}",
-                    SystemClock::obtain().get_time()
-                );
-                subscriber
-                    .try_send(PlayerCommand::Play { id: player_id })
-                    .unwrap();
-            })
+        let t = new_timer(Duration::from_nanos(nseconds as u64));
+        t.await;
+
+        subscriber
+            .send(PlayerCommand::Play { id: player_id })
+            .await
             .unwrap();
+
+        // clock_id
+        //     .wait_async(move |_, _, _| {
+        //         info!("wait event triggered");
+        //         subscriber
+        //             .try_send(PlayerCommand::Play { id: player_id })
+        //             .unwrap();
+        //     })
+        //     .unwrap();
 
         self.clock_id = Some(clock_id);
     }

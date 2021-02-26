@@ -19,15 +19,17 @@ use servo_media_audio::{
     buffer_source_node::{AudioBuffer, AudioBufferSourceNodeMessage},
     node::OnEndedCallback,
 };
-use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::{env, time::Duration};
 use std::{thread, time};
 use tokio::sync::mpsc;
 
 async fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filename: &str) {
+    let duration = get_duration(filename).await;
+    println!("{:?}", duration);
     let options = <RealTimeAudioContextOptions>::default();
     let sample_rate = options.sample_rate;
     let context = context.lock().unwrap();
@@ -101,7 +103,11 @@ async fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filena
     //     AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Stop()),
     // );
     receiver2.recv().await.unwrap();
-    println!("{:?}", decoded_audio.lock().unwrap()[0][0]);
+    println!(
+        "{:?}",
+        decoded_audio.lock().unwrap()[0].len() as f64 / 44100.0
+    );
+
     context.message_node(
         buffer_source,
         AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetBuffer(Some(
@@ -117,7 +123,7 @@ async fn get_duration(filename: &str) -> ClockTime {
     bin.set_property("audio-sink", &fakesink).unwrap();
     let bus = bin.get_bus().unwrap();
     bus.add_signal_watch();
-    let (sender, mut receiver) = mpsc::channel(1);
+    let (sender, mut receiver) = mpsc::channel(100);
     let bin_weak = bin.downgrade();
     let handler_id = bus
         .connect("message", false, move |_| {
@@ -132,6 +138,7 @@ async fn get_duration(filename: &str) -> ClockTime {
 
     bin.set_property("uri", &filename_to_uri(filename, None).unwrap())
         .unwrap();
+    //println!("here");
     bin.set_state(State::Playing).unwrap();
     let duration = receiver.recv().await.unwrap();
     bus.disconnect(handler_id);
@@ -139,8 +146,13 @@ async fn get_duration(filename: &str) -> ClockTime {
     return duration;
 }
 
-fn main() {
-    let main_loop = glib::MainLoop::new(None, false);
+#[tokio::main]
+async fn main() {
+    thread::spawn(|| {
+        let main_loop = glib::MainLoop::new(None, false);
+        main_loop.run();
+    });
+
     ServoMedia::init::<servo_media_auto::Backend>();
     if let Ok(servo_media) = ServoMedia::get() {
         let options = <RealTimeAudioContextOptions>::default();
@@ -154,15 +166,17 @@ fn main() {
             &context,
             0.0,
             "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
-        );
+        )
+        .await;
         run_example(
             &context,
             54.729433106 - 0.04498866213151927,
             "C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
-        );
+        )
+        .await;
         let context = context.lock().unwrap();
         let _ = context.resume();
-        main_loop.run();
+        thread::sleep(Duration::from_secs(100000));
         let _ = context.close();
     } else {
         unreachable!()
