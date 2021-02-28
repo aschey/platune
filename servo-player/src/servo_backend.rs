@@ -1,5 +1,6 @@
 use crate::context::CONTEXT;
 use servo_media_audio::{
+    buffer_source_node::AudioBufferSourceNodeMessage,
     graph::NodeId,
     node::{AudioNodeMessage, AudioScheduledSourceNodeMessage},
     param::{ParamType, UserAutomationEvent},
@@ -27,6 +28,17 @@ impl PlayerBackend for ServoBackend {
         CONTEXT.lock().unwrap().message_node(
             node_id,
             AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Stop(0.)),
+        );
+    }
+
+    fn seek(&self, node_id: NodeId, time: f64) {
+        CONTEXT.lock().unwrap().message_node(
+            node_id,
+            AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetStartParams(
+                0.,
+                Some(time),
+                None,
+            )),
         );
     }
 

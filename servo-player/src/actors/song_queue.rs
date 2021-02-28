@@ -21,11 +21,16 @@ impl<T: PlayerBackend + Send + 'static> SongQueue<T> {
 
     pub async fn set_queue(&mut self, queue: Vec<String>) {
         self.songs = queue;
-        call!(self.player.load(self.songs.get(0).unwrap().to_owned()))
-            .await
-            .unwrap();
-        call!(self.player.load(self.songs.get(1).unwrap().to_owned()))
-            .await
-            .unwrap();
+        call!(self
+            .player
+            .load(self.songs.get(0).unwrap().to_owned(), None))
+        .await
+        .unwrap();
+        //call!(self.player.seek(30.)).await.unwrap();
+        call!(self
+            .player
+            .load(self.songs.get(1).unwrap().to_owned(), None))
+        .await
+        .unwrap();
     }
 }

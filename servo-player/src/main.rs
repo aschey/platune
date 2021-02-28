@@ -2,20 +2,19 @@ mod actors;
 mod context;
 mod player_backend;
 mod servo_backend;
-use act_zero::{call, Addr};
+use act_zero::{call, runtimes::default::spawn_actor};
 use actors::{decoder::Decoder, player::Player, song_queue::SongQueue};
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
-use futures::{executor::LocalPool, task::Spawn};
 use gstreamer::glib;
 use servo_backend::ServoBackend;
 use std::thread;
 use yansi::{Color, Style};
 
-async fn run(spawner: &impl Spawn) {
-    let decoder_addr = Addr::new(spawner, Decoder).unwrap();
+async fn run() {
+    let decoder_addr = spawn_actor(Decoder);
     let backend = ServoBackend {};
-    let player_addr = Addr::new(spawner, Player::new(backend, decoder_addr)).unwrap();
-    let queue_addr = Addr::new(spawner, SongQueue::new(player_addr)).unwrap();
+    let player_addr = spawn_actor(Player::new(backend, decoder_addr));
+    let queue_addr = spawn_actor(SongQueue::new(player_addr));
 
     call!(queue_addr.set_queue(vec![
         "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
@@ -57,9 +56,6 @@ async fn main() {
         .start()
         .unwrap();
 
-    let mut pool = LocalPool::new();
-    let spawner = pool.spawner();
-
-    pool.run_until(run(&spawner));
+    run().await;
     handle.join().unwrap();
 }

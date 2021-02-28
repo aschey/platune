@@ -34,16 +34,24 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
     //         .play(self.sources[0].buffer_source, start_time);
     // }
 
-    pub async fn pause(&self) {
+    pub async fn pause(&mut self) {
         self.player_backend.pause();
     }
 
-    pub async fn stop(&self) {
+    pub async fn stop(&mut self) {
         self.player_backend.stop(self.sources[0].buffer_source);
     }
 
-    pub async fn load(&mut self, file: String) {
-        let file_info = call!(self.decoder.decode(file)).await.unwrap();
+    pub async fn seek(&mut self, time: f64) {
+        self.stop().await;
+
+        let source = self.sources[0].file.to_owned();
+        self.sources = vec![];
+        self.load(source, Some(time)).await;
+    }
+
+    pub async fn load(&mut self, file: String, start_time: Option<f64>) {
+        let file_info = call!(self.decoder.decode(file.to_owned())).await.unwrap();
 
         let context = CONTEXT.lock().unwrap();
 
@@ -88,6 +96,10 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
 
         if self.sources.len() == 0 {
             drop(context);
+            if let Some(start) = start_time {
+                self.player_backend.seek(buffer_source, start);
+            }
+
             self.player_backend.play(buffer_source, 0.);
         } else {
             let prev = self.sources.last().unwrap();
@@ -100,6 +112,7 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
         }
 
         self.sources.push(ScheduledSource {
+            file,
             start_gap: file_info.start_gap,
             end_gap: file_info.end_gap,
             duration: file_info.duration,
@@ -111,6 +124,7 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
 }
 
 struct ScheduledSource {
+    file: String,
     start_gap: f64,
     end_gap: f64,
     duration: ClockTime,
