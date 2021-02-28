@@ -1,6 +1,10 @@
-mod audio_node_wrapper;
-mod media_element_node;
+mod actors;
+mod context;
+mod player_backend;
 mod servo_backend;
+use act_zero::{call, Addr};
+use actors::decoder::Decoder;
+use futures::{executor::LocalPool, task::Spawn};
 use gstreamer::{
     glib::{self, filename_to_uri},
     prelude::ObjectExt,
@@ -9,7 +13,7 @@ use gstreamer::{
 use gstreamer::{ElementExtManual, State};
 use log::info;
 use servo_media::{ClientContextId, ServoMedia};
-use servo_media_audio::decoder::AudioDecoderCallbacks;
+use servo_media_audio::decoder::{self, AudioDecoderCallbacks};
 use servo_media_audio::node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage};
 use servo_media_audio::{
     buffer_source_node::AudioBufferSourceNodeOptions,
@@ -107,19 +111,45 @@ async fn run_example(context: &Arc<Mutex<AudioContext>>, start_time: f64, filena
         "{:?}",
         decoded_audio.lock().unwrap()[0].len() as f64 / 44100.0
     );
-
+    let buffer = decoded_audio.lock().unwrap();
+    let l = &buffer[0];
+    let r = &buffer[1];
+    println!("parsed start {}", find_start_gap(&l, &r, 44100.));
+    println!("parsed end {}", find_end_gap(&l, &r, 44100.));
     context.message_node(
         buffer_source,
         AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetBuffer(Some(
-            AudioBuffer::from_buffers(decoded_audio.lock().unwrap().to_vec(), sample_rate),
+            AudioBuffer::from_buffers(buffer.to_vec(), sample_rate),
         ))),
     );
+}
+
+fn find_start_gap(l: &Vec<f32>, r: &Vec<f32>, sample_rate: f32) -> f32 {
+    let duration = l.len();
+    for i in 0..duration {
+        if l[i] > 0. || r[i] > 0. {
+            return i as f32 / sample_rate;
+        }
+    }
+
+    return duration as f32;
+}
+
+fn find_end_gap(l: &Vec<f32>, r: &Vec<f32>, sample_rate: f32) -> f32 {
+    let duration = l.len();
+    for i in (0..duration).rev() {
+        if l[i] > 0. || r[i] > 0. {
+            return (duration - i) as f32 / sample_rate;
+        }
+    }
+
+    return duration as f32;
 }
 
 async fn get_duration(filename: &str) -> ClockTime {
     let fakesink = ElementFactory::make("fakesink", None).unwrap();
     let bin = ElementFactory::make("playbin", None).unwrap();
-    bin.set_property("video-sink", &fakesink).unwrap();
+    //bin.set_property("video-sink", &fakesink).unwrap();
     bin.set_property("audio-sink", &fakesink).unwrap();
     let bus = bin.get_bus().unwrap();
     bus.add_signal_watch();
@@ -146,39 +176,25 @@ async fn get_duration(filename: &str) -> ClockTime {
     return duration;
 }
 
+async fn run(spawner: &impl Spawn) {
+    let addr = Addr::new(spawner, Decoder).unwrap();
+    let res =
+        call!(addr.decode("C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned()))
+            .await
+            .unwrap();
+    println!("{:#?}", res.start_gap);
+}
+
 #[tokio::main]
 async fn main() {
-    thread::spawn(|| {
+    let handle = thread::spawn(|| {
         let main_loop = glib::MainLoop::new(None, false);
         main_loop.run();
     });
 
-    ServoMedia::init::<servo_media_auto::Backend>();
-    if let Ok(servo_media) = ServoMedia::get() {
-        let options = <RealTimeAudioContextOptions>::default();
+    let mut pool = LocalPool::new();
+    let spawner = pool.spawner();
 
-        let context = servo_media.create_audio_context(
-            &ClientContextId::build(1, 1),
-            AudioContextOptions::RealTimeAudioContext(options),
-        );
-
-        run_example(
-            &context,
-            0.0,
-            "C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a",
-        )
-        .await;
-        run_example(
-            &context,
-            54.729433106 - 0.04498866213151927,
-            "C:\\shared_files\\Music\\4 Strings\\Believe\\02 Take Me Away (Into The Night).m4a",
-        )
-        .await;
-        let context = context.lock().unwrap();
-        let _ = context.resume();
-        thread::sleep(Duration::from_secs(100000));
-        let _ = context.close();
-    } else {
-        unreachable!()
-    }
+    pool.run_until(run(&spawner));
+    handle.join().unwrap();
 }
