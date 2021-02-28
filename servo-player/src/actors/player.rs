@@ -3,7 +3,9 @@ use act_zero::*;
 use gstreamer::ClockTime;
 use log::info;
 use servo_media_audio::{
+    block::Block,
     buffer_source_node::{AudioBuffer, AudioBufferSourceNodeMessage},
+    gain_node::GainNodeOptions,
     graph::NodeId,
     node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage, OnEndedCallback},
 };
@@ -50,8 +52,22 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
             Default::default(),
         );
 
+        let gain = context.create_node(
+            AudioNodeInit::GainNode(GainNodeOptions { gain: 0.2 }),
+            Default::default(),
+        );
+
+        let analyser = context.create_node(
+            AudioNodeInit::AnalyserNode(Box::new(move |block| {})),
+            Default::default(),
+        );
+
         let dest = context.dest_node();
-        context.connect_ports(buffer_source.output(0), dest.input(0));
+
+        context.connect_ports(buffer_source.output(0), analyser.input(0));
+        context.connect_ports(buffer_source.output(0), gain.input(0));
+        context.connect_ports(gain.output(0), dest.input(0));
+        context.connect_ports(analyser.output(0), dest.input(0));
         let callback = OnEndedCallback::new(|| {
             info!("Playback ended");
         });
@@ -69,14 +85,17 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
                 AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(callback),
             ),
         );
-        drop(context);
 
         if self.sources.len() == 0 {
+            drop(context);
             self.player_backend.play(buffer_source, 0.);
         } else {
             let prev = self.sources.last().unwrap();
-            let start_time =
-                prev.duration.nseconds().unwrap() as f64 / 1e9 - prev.end_gap - file_info.start_gap;
+            let start_time = prev.duration.nseconds().unwrap() as f64 / 1e9
+                - prev.end_gap
+                - file_info.start_gap
+                - context.current_time() / 1000.;
+            drop(context);
             self.player_backend.play(buffer_source, start_time);
         }
 
@@ -85,6 +104,8 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
             end_gap: file_info.end_gap,
             duration: file_info.duration,
             buffer_source,
+            gain,
+            analyser,
         });
     }
 }
@@ -94,4 +115,6 @@ struct ScheduledSource {
     end_gap: f64,
     duration: ClockTime,
     buffer_source: NodeId,
+    gain: NodeId,
+    analyser: NodeId,
 }
