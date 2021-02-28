@@ -12,6 +12,7 @@ use gstreamer::{
     glib::filename_to_uri, prelude::ObjectExt, Clock, ClockTime, ElementExt, ElementExtManual,
     ElementFactory, State,
 };
+use log::{error, info};
 use servo_media_audio::{context::RealTimeAudioContextOptions, decoder::AudioDecoderCallbacks};
 
 pub struct Decoder;
@@ -34,14 +35,13 @@ impl Decoder {
                 sender.try_send(()).unwrap();
             })
             .error(|e| {
-                eprintln!("Error decoding audio {:?}", e);
+                error!("Error decoding audio {:?}", e);
             })
             .progress(move |buffer, channel| {
                 let mut decoded_audio = decoded_audio_.lock().unwrap();
                 decoded_audio[(channel - 1) as usize].extend_from_slice((*buffer).as_ref());
             })
             .ready(move |channels| {
-                println!("There are {:?} audio channels", channels);
                 decoded_audio__
                     .lock()
                     .unwrap()
@@ -72,6 +72,7 @@ impl Decoder {
             start_gap,
             end_gap,
             duration,
+            sample_rate,
         })
     }
 
@@ -135,4 +136,5 @@ pub struct FileInfo {
     pub start_gap: f32,
     pub end_gap: f32,
     pub duration: ClockTime,
+    pub sample_rate: f32,
 }
