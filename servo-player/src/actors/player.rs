@@ -10,7 +10,7 @@ use servo_media_audio::{
 
 use crate::player_backend::PlayerBackend;
 
-use super::decoder::{Decoder, FileInfo};
+use super::decoder::Decoder;
 pub struct Player<T: PlayerBackend + Send + 'static> {
     player_backend: T,
     decoder: Addr<Decoder>,
@@ -27,10 +27,10 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
             sources: vec![],
         }
     }
-    pub async fn play(&self, start_time: f64) {
-        self.player_backend
-            .play(self.sources[0].buffer_source, start_time);
-    }
+    // fn play(&self, start_time: f64) {
+    //     self.player_backend
+    //         .play(self.sources[0].buffer_source, start_time);
+    // }
 
     pub async fn pause(&self) {
         self.player_backend.pause();
@@ -59,7 +59,7 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
         context.message_node(
             buffer_source,
             AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetBuffer(Some(
-                AudioBuffer::from_buffers(file_info.data, file_info.sample_rate),
+                AudioBuffer::from_buffers(file_info.data, file_info.sample_rate as f32),
             ))),
         );
 
@@ -69,6 +69,16 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
                 AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(callback),
             ),
         );
+        drop(context);
+
+        if self.sources.len() == 0 {
+            self.player_backend.play(buffer_source, 0.);
+        } else {
+            let prev = self.sources.last().unwrap();
+            let start_time =
+                prev.duration.nseconds().unwrap() as f64 / 1e9 - prev.end_gap - file_info.start_gap;
+            self.player_backend.play(buffer_source, start_time);
+        }
 
         self.sources.push(ScheduledSource {
             start_gap: file_info.start_gap,
@@ -80,8 +90,8 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
 }
 
 struct ScheduledSource {
-    start_gap: f32,
-    end_gap: f32,
+    start_gap: f64,
+    end_gap: f64,
     duration: ClockTime,
     buffer_source: NodeId,
 }

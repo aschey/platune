@@ -1,5 +1,4 @@
 use std::{
-    convert::TryInto,
     fs::File,
     io::Read,
     sync::{Arc, Mutex},
@@ -9,10 +8,10 @@ use crate::context::CONTEXT;
 use act_zero::*;
 use futures::{channel::mpsc, future::join, StreamExt};
 use gstreamer::{
-    glib::filename_to_uri, prelude::ObjectExt, Clock, ClockTime, ElementExt, ElementExtManual,
+    glib::filename_to_uri, prelude::ObjectExt, ClockTime, ElementExt, ElementExtManual,
     ElementFactory, State,
 };
-use log::{error, info};
+use log::error;
 use servo_media_audio::{context::RealTimeAudioContextOptions, decoder::AudioDecoderCallbacks};
 
 pub struct Decoder;
@@ -59,6 +58,7 @@ impl Decoder {
             sample_rate,
             latency_hint: _,
         } = RealTimeAudioContextOptions::default();
+        let sample_rate = sample_rate as f64;
         //let sample_rate = options.sample_rate;
         let data = decoded_audio.lock().unwrap();
         let l = &data[0];
@@ -107,34 +107,34 @@ impl Decoder {
         return duration;
     }
 
-    fn find_start_gap(&self, l: &Vec<f32>, r: &Vec<f32>, sample_rate: f32) -> f32 {
+    fn find_start_gap(&self, l: &Vec<f32>, r: &Vec<f32>, sample_rate: f64) -> f64 {
         let duration = l.len();
         for i in 0..duration {
             if l[i] > 0. || r[i] > 0. {
-                return i as f32 / sample_rate;
+                return i as f64 / sample_rate;
             }
         }
 
-        return duration as f32;
+        return duration as f64;
     }
 
-    fn find_end_gap(&self, l: &Vec<f32>, r: &Vec<f32>, sample_rate: f32) -> f32 {
+    fn find_end_gap(&self, l: &Vec<f32>, r: &Vec<f32>, sample_rate: f64) -> f64 {
         let duration = l.len();
         for i in (0..duration).rev() {
             if l[i] > 0. || r[i] > 0. {
-                return (duration - i) as f32 / sample_rate;
+                return (duration - i) as f64 / sample_rate;
             }
         }
 
-        return duration as f32;
+        return duration as f64;
     }
 }
 
 #[derive(Debug)]
 pub struct FileInfo {
     pub data: Vec<Vec<f32>>,
-    pub start_gap: f32,
-    pub end_gap: f32,
+    pub start_gap: f64,
+    pub end_gap: f64,
     pub duration: ClockTime,
-    pub sample_rate: f32,
+    pub sample_rate: f64,
 }

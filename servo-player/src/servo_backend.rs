@@ -1,11 +1,8 @@
 use crate::context::CONTEXT;
-use servo_media::{ClientContextId, ServoMedia};
 use servo_media_audio::{
-    context::{AudioContext, AudioContextOptions, RealTimeAudioContextOptions},
     graph::NodeId,
     node::{AudioNodeMessage, AudioScheduledSourceNodeMessage},
 };
-use std::sync::{Arc, Mutex};
 
 use crate::player_backend::PlayerBackend;
 
