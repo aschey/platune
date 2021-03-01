@@ -1,4 +1,4 @@
-use crate::context::CONTEXT;
+use crate::{context::CONTEXT, player_backend::PlayerBackend};
 use act_zero::*;
 use gstreamer::ClockTime;
 use log::info;
@@ -10,19 +10,19 @@ use servo_media_audio::{
     node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage, OnEndedCallback},
 };
 
-use crate::player_backend::PlayerBackend;
+use crate::player_backend::PlayerBackendImpl;
 
 use super::decoder::Decoder;
-pub struct Player<T: PlayerBackend + Send + 'static> {
-    player_backend: T,
+pub struct Player {
+    player_backend: Box<PlayerBackend>,
     decoder: Addr<Decoder>,
     sources: Vec<ScheduledSource>,
 }
 
-impl<T: PlayerBackend + Send + 'static> Actor for Player<T> {}
+impl Actor for Player {}
 
-impl<T: PlayerBackend + Send + 'static> Player<T> {
-    pub fn new(player_backend: T, decoder: Addr<Decoder>) -> Player<T> {
+impl Player {
+    pub fn new(player_backend: Box<PlayerBackend>, decoder: Addr<Decoder>) -> Player {
         Player {
             player_backend,
             decoder,
@@ -69,7 +69,7 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
             AudioNodeInit::AnalyserNode(Box::new(move |mut block| {
                 let data = block.data_mut();
                 let json = serde_json::to_string(data).unwrap();
-                println!("{:?}", json);
+                //println!("{:?}", json);
             })),
             Default::default(),
         );

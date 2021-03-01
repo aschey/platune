@@ -11,3 +11,4 @@ tokio = {version="1.2.0", features=["full"]}
 flexi_logger = "0.17.1"
 yansi = "0.5.0"
 platune-libplayer = {path = "../libplayer", features=["runtime-tokio"]}
+log = "0.4.14"

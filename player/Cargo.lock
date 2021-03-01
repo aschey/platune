@@ -1085,6 +1085,7 @@ dependencies = [
  "servo-media",
  "servo-media-audio",
  "servo-media-auto",
+ "tokio",
 ]
 
 [[package]]
@@ -1092,6 +1093,7 @@ name = "player"
 version = "0.1.0"
 dependencies = [
  "flexi_logger",
+ "log",
  "platune-libplayer",
  "tokio",
  "yansi",

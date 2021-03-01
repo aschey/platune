@@ -1,17 +1,16 @@
 use act_zero::*;
-
-use crate::player_backend::PlayerBackend;
+use log::info;
 
 use super::player::Player;
-pub struct SongQueue<T: PlayerBackend + Send + 'static> {
+pub struct SongQueue {
     songs: Vec<String>,
     position: usize,
-    player: Addr<Player<T>>,
+    player: Addr<Player>,
 }
-impl<T: PlayerBackend + Send + 'static> Actor for SongQueue<T> {}
+impl Actor for SongQueue {}
 
-impl<T: PlayerBackend + Send + 'static> SongQueue<T> {
-    pub fn new(player: Addr<Player<T>>) -> SongQueue<T> {
+impl SongQueue {
+    pub fn new(player: Addr<Player>) -> SongQueue {
         SongQueue {
             songs: vec![],
             position: 0,
@@ -21,11 +20,13 @@ impl<T: PlayerBackend + Send + 'static> SongQueue<T> {
 
     pub async fn set_queue(&mut self, queue: Vec<String>) {
         self.songs = queue;
+
         call!(self
             .player
             .load(self.songs.get(0).unwrap().to_owned(), None))
         .await
         .unwrap();
+
         //call!(self.player.seek(30.)).await.unwrap();
         call!(self
             .player

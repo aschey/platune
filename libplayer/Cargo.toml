@@ -10,8 +10,9 @@ path="src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-runtime-tokio = ["act-zero/default-tokio"]
-runtime-async-std = ["act-zero/default-async-std"]
+default = ["runtime-tokio"]
+runtime-tokio = ["act-zero/default-tokio", "tokio"]
+runtime-async-std = ["act-zero/default-async-std", "async-std"]
 
 
 [dependencies]
@@ -25,4 +26,6 @@ gstreamer-audio = "0.15"
 futures = "0.3.13"
 act-zero = { version="0.4.0" }
 serde_json = "1.0.64"
+tokio = {version = "1.2.0", features = ["full"], optional = true }
+async-std = {version = "1.9.0", optional = true }
 

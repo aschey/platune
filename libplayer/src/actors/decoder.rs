@@ -11,7 +11,7 @@ use gstreamer::{
     glib::filename_to_uri, prelude::ObjectExt, ClockTime, ElementExt, ElementExtManual,
     ElementFactory, State,
 };
-use log::error;
+use log::{error, info};
 use servo_media_audio::{context::RealTimeAudioContextOptions, decoder::AudioDecoderCallbacks};
 
 pub struct Decoder;
@@ -28,9 +28,10 @@ impl Decoder {
         let decoded_audio_ = decoded_audio.clone();
         let decoded_audio__ = decoded_audio.clone();
         let (mut sender, mut receiver) = mpsc::channel(32);
-
+        let filename_ = filename.clone();
         let callbacks = AudioDecoderCallbacks::new()
             .eos(move || {
+                info!("EOS");
                 sender.try_send(()).unwrap();
             })
             .error(|e| {
@@ -41,6 +42,7 @@ impl Decoder {
                 decoded_audio[(channel - 1) as usize].extend_from_slice((*buffer).as_ref());
             })
             .ready(move |channels| {
+                info!("Decoding {}", filename_);
                 decoded_audio__
                     .lock()
                     .unwrap()
@@ -79,11 +81,11 @@ impl Decoder {
     async fn get_duration(&self, filename: &str) -> ClockTime {
         let fakesink = ElementFactory::make("fakesink", None).unwrap();
         let bin = ElementFactory::make("playbin", None).unwrap();
-        //bin.set_property("video-sink", &fakesink).unwrap();
+
         bin.set_property("audio-sink", &fakesink).unwrap();
         let bus = bin.get_bus().unwrap();
         bus.add_signal_watch();
-        let (sender, mut receiver) = mpsc::channel(1);
+        let (sender, mut receiver) = mpsc::channel(32);
         let sender_mut = Mutex::new(sender);
         let bin_weak = bin.downgrade();
         let handler_id = bus

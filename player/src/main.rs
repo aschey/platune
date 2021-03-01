@@ -1,5 +1,6 @@
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
-use platune_libplayer::libplayer::run;
+use log::info;
+use platune_libplayer::libplayer::PlatunePlayer;
 use yansi::{Color, Style};
 
 #[tokio::main]
@@ -11,7 +12,13 @@ async fn main() {
         .start()
         .unwrap();
 
-    run().await;
+    let mut main = PlatunePlayer::new().await;
+    main.set_queue(vec![
+            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
+            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
+                .to_owned()
+        ]).await;
+    main.join();
 }
 
 pub fn colored(

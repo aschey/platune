@@ -6,11 +6,11 @@ use servo_media_audio::{
     param::{ParamType, UserAutomationEvent},
 };
 
-use crate::player_backend::PlayerBackend;
+use crate::player_backend::PlayerBackendImpl;
 
 pub struct ServoBackend {}
 
-impl PlayerBackend for ServoBackend {
+impl PlayerBackendImpl for ServoBackend {
     fn play(&self, node_id: NodeId, start_time: f64) {
         CONTEXT.lock().unwrap().message_node(
             node_id,
