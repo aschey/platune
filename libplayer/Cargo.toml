@@ -1,0 +1,28 @@
+[package]
+name = "platune-libplayer"
+version = "0.1.0"
+authors = ["aschey <aschey13@gmail.com>"]
+edition = "2018"
+
+[lib]
+name="platune_libplayer"
+path="src/lib.rs"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+runtime-tokio = ["act-zero/default-tokio"]
+runtime-async-std = ["act-zero/default-async-std"]
+
+
+[dependencies]
+servo-media = { git = "https://github.com/aschey/media", rev = "488dfb2" }
+servo-media-audio = { git = "https://github.com/aschey/media", rev = "488dfb2" }
+servo-media-auto = { git = "https://github.com/aschey/media", rev = "488dfb2" }
+lazy_static = "1.4.0"
+log = "0.4.14"
+gstreamer = "0.15"
+gstreamer-audio = "0.15"
+futures = "0.3.13"
+act-zero = { version="0.4.0" }
+serde_json = "1.0.64"
+

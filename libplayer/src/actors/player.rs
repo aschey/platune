@@ -61,12 +61,16 @@ impl<T: PlayerBackend + Send + 'static> Player<T> {
         );
 
         let gain = context.create_node(
-            AudioNodeInit::GainNode(GainNodeOptions { gain: 0.2 }),
+            AudioNodeInit::GainNode(GainNodeOptions { gain: 1. }),
             Default::default(),
         );
 
         let analyser = context.create_node(
-            AudioNodeInit::AnalyserNode(Box::new(move |block| {})),
+            AudioNodeInit::AnalyserNode(Box::new(move |mut block| {
+                let data = block.data_mut();
+                let json = serde_json::to_string(data).unwrap();
+                println!("{:?}", json);
+            })),
             Default::default(),
         );
 
