@@ -11,17 +11,21 @@ use crate::player_backend::PlayerBackendImpl;
 pub struct ServoBackend {}
 
 impl PlayerBackendImpl for ServoBackend {
-    fn play(&self, node_id: NodeId, start_time: f64) {
+    fn play(&self, node_id: NodeId, start_seconds: f64) {
         CONTEXT.lock().unwrap().message_node(
             node_id,
             AudioNodeMessage::AudioScheduledSourceNode(AudioScheduledSourceNodeMessage::Start(
-                start_time,
+                start_seconds,
             )),
         );
     }
 
     fn pause(&self) {
         CONTEXT.lock().unwrap().suspend().unwrap();
+    }
+
+    fn resume(&self) {
+        CONTEXT.lock().unwrap().resume().unwrap();
     }
 
     fn stop(&self, node_id: NodeId) {
@@ -31,12 +35,12 @@ impl PlayerBackendImpl for ServoBackend {
         );
     }
 
-    fn seek(&self, node_id: NodeId, time: f64) {
+    fn seek(&self, node_id: NodeId, seconds: f64) {
         CONTEXT.lock().unwrap().message_node(
             node_id,
             AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetStartParams(
                 0.,
-                Some(time),
+                Some(seconds),
                 None,
             )),
         );

@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
 use log::info;
 use platune_libplayer::libplayer::PlatunePlayer;
@@ -18,6 +20,13 @@ async fn main() {
             "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
                 .to_owned()
         ]).await;
+    thread::sleep(Duration::from_secs(2));
+    player.pause().await;
+    thread::sleep(Duration::from_secs(2));
+    player.resume().await;
+    //player.set_volume(1.).await;
+    player.seek(50.).await;
+    thread::sleep(Duration::from_secs(5000));
     player.join();
 }
 

@@ -21,17 +21,19 @@ impl SongQueue {
     pub async fn set_queue(&mut self, queue: Vec<String>) {
         self.songs = queue;
 
-        call!(self
-            .player
-            .load(self.songs.get(0).unwrap().to_owned(), None))
-        .await
-        .unwrap();
-
-        //call!(self.player.seek(30.)).await.unwrap();
-        call!(self
-            .player
-            .load(self.songs.get(1).unwrap().to_owned(), None))
-        .await
-        .unwrap();
+        if self.songs.len() > 0 {
+            call!(self
+                .player
+                .load(self.songs.get(0).unwrap().to_owned(), None))
+            .await
+            .unwrap();
+        }
+        if self.songs.len() > 1 {
+            call!(self
+                .player
+                .load(self.songs.get(1).unwrap().to_owned(), None))
+            .await
+            .unwrap();
+        }
     }
 }

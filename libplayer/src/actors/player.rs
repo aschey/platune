@@ -1,6 +1,6 @@
+use crate::util::get_filename_from_path;
 use crate::{context::CONTEXT, player_backend::PlayerBackend};
 use act_zero::*;
-use gstreamer::ClockTime;
 use log::info;
 use servo_media_audio::{
     block::Block,
@@ -10,13 +10,12 @@ use servo_media_audio::{
     node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage, OnEndedCallback},
 };
 
-use crate::player_backend::PlayerBackendImpl;
-
 use super::decoder::Decoder;
 pub struct Player {
     player_backend: Box<PlayerBackend>,
     decoder: Addr<Decoder>,
     sources: Vec<ScheduledSource>,
+    volume: f32,
 }
 
 impl Actor for Player {}
@@ -27,6 +26,7 @@ impl Player {
             player_backend,
             decoder,
             sources: vec![],
+            volume: 0.5,
         }
     }
     // fn play(&self, start_time: f64) {
@@ -38,20 +38,44 @@ impl Player {
         self.player_backend.pause();
     }
 
+    pub async fn resume(&mut self) {
+        self.player_backend.resume();
+    }
+
     pub async fn stop(&mut self) {
         self.player_backend.stop(self.sources[0].buffer_source);
     }
 
-    pub async fn seek(&mut self, time: f64) {
+    pub async fn seek(&mut self, seconds: f64) {
         self.stop().await;
 
-        let source = self.sources[0].file.to_owned();
+        let queued_songs = self
+            .sources
+            .iter()
+            .map(|s| s.path.to_owned())
+            .collect::<Vec<_>>();
+
+        self.disconnect_all();
         self.sources = vec![];
-        self.load(source, Some(time)).await;
+        self.load(queued_songs.get(0).unwrap().to_owned(), Some(seconds))
+            .await;
+        if queued_songs.len() > 1 {
+            self.load(queued_songs.get(1).unwrap().to_owned(), None)
+                .await;
+        }
     }
 
-    pub async fn load(&mut self, file: String, start_time: Option<f64>) {
-        let file_info = call!(self.decoder.decode(file.to_owned())).await.unwrap();
+    pub async fn set_volume(&mut self, volume: f32) {
+        self.volume = volume;
+        for source in &self.sources {
+            self.player_backend.set_volume(source.gain, volume);
+        }
+    }
+
+    pub async fn load(&mut self, path: String, start_seconds: Option<f64>) {
+        let file = get_filename_from_path(&path);
+        info!("Loading {}", file);
+        let file_info = call!(self.decoder.decode(path.to_owned())).await.unwrap();
 
         let context = CONTEXT.lock().unwrap();
 
@@ -61,7 +85,7 @@ impl Player {
         );
 
         let gain = context.create_node(
-            AudioNodeInit::GainNode(GainNodeOptions { gain: 1. }),
+            AudioNodeInit::GainNode(GainNodeOptions { gain: self.volume }),
             Default::default(),
         );
 
@@ -80,6 +104,7 @@ impl Player {
         context.connect_ports(buffer_source.output(0), gain.input(0));
         context.connect_ports(gain.output(0), dest.input(0));
         context.connect_ports(analyser.output(0), dest.input(0));
+
         let callback = OnEndedCallback::new(|| {
             info!("Playback ended");
         });
@@ -97,41 +122,63 @@ impl Player {
                 AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(callback),
             ),
         );
-
+        let start_time = context.current_time();
         if self.sources.len() == 0 {
             drop(context);
-            if let Some(start) = start_time {
-                self.player_backend.seek(buffer_source, start);
+            if let Some(seconds) = start_seconds {
+                info!("Seeking to {}", seconds);
+                self.player_backend.seek(buffer_source, seconds);
             }
-
+            info!("Starting immediately");
             self.player_backend.play(buffer_source, 0.);
         } else {
             let prev = self.sources.last().unwrap();
-            let start_time = prev.duration.nseconds().unwrap() as f64 / 1e9
-                - prev.end_gap
-                - file_info.start_gap
-                - context.current_time() / 1000.;
+            let seconds = prev.start_time + (prev.duration - prev.end_gap - file_info.start_gap);
             drop(context);
-            self.player_backend.play(buffer_source, start_time);
+            info!("Starting at {}", seconds);
+            self.player_backend.play(buffer_source, seconds);
         }
 
-        self.sources.push(ScheduledSource {
+        let gap = start_seconds.unwrap_or_default();
+        let duration = file_info.duration.nseconds().unwrap() as f64 / 1e9;
+        info!(
+            "Adding {} start time: {} start gap: {} end gap: {} duration: {} gap: {} computed duration: {}",
             file,
+            start_time,
+            file_info.start_gap,
+            file_info.end_gap,
+            duration,
+            gap,
+            duration - gap
+        );
+        self.sources.push(ScheduledSource {
+            path,
+            start_time,
             start_gap: file_info.start_gap,
             end_gap: file_info.end_gap,
-            duration: file_info.duration,
+            duration: duration - gap,
             buffer_source,
             gain,
             analyser,
         });
     }
+
+    fn disconnect_all(&mut self) {
+        let context = CONTEXT.lock().unwrap();
+        for source in &self.sources {
+            context.disconnect_all_from(source.buffer_source);
+            context.disconnect_all_from(source.gain);
+            context.disconnect_all_from(source.analyser);
+        }
+    }
 }
 
 struct ScheduledSource {
-    file: String,
+    path: String,
+    start_time: f64,
     start_gap: f64,
     end_gap: f64,
-    duration: ClockTime,
+    duration: f64,
     buffer_source: NodeId,
     gain: NodeId,
     analyser: NodeId,
