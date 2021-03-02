@@ -4,9 +4,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use crate::channels::mpsc::*;
 use crate::context::CONTEXT;
 use act_zero::*;
-use futures::{channel::mpsc, future::join, StreamExt};
+use futures::future::join;
 use gstreamer::{
     glib::filename_to_uri, prelude::ObjectExt, ClockTime, ElementExt, ElementExtManual,
     ElementFactory, State,
@@ -27,7 +28,7 @@ impl Decoder {
         let decoded_audio: Arc<Mutex<Vec<Vec<f32>>>> = Arc::new(Mutex::new(Vec::new()));
         let decoded_audio_ = decoded_audio.clone();
         let decoded_audio__ = decoded_audio.clone();
-        let (mut sender, mut receiver) = mpsc::channel(32);
+        let (mut sender, mut receiver) = async_channel(32);
         let filename_ = filename.clone();
         let callbacks = AudioDecoderCallbacks::new()
             .eos(move || {
@@ -54,7 +55,7 @@ impl Decoder {
             .unwrap()
             .decode_audio_data(bytes.to_vec(), callbacks);
 
-        let (_, duration) = join(receiver.next(), self.get_duration(&filename)).await;
+        let (_, duration) = join(receiver.recv(), self.get_duration(&filename)).await;
 
         let RealTimeAudioContextOptions {
             sample_rate,
@@ -85,7 +86,7 @@ impl Decoder {
         bin.set_property("audio-sink", &fakesink).unwrap();
         let bus = bin.get_bus().unwrap();
         bus.add_signal_watch();
-        let (sender, mut receiver) = mpsc::channel(32);
+        let (sender, mut receiver) = async_channel(32);
         let sender_mut = Mutex::new(sender);
         let bin_weak = bin.downgrade();
         let handler_id = bus
@@ -103,7 +104,7 @@ impl Decoder {
             .unwrap();
         //println!("here");
         bin.set_state(State::Playing).unwrap();
-        let duration = receiver.next().await.unwrap();
+        let duration = receiver.recv().await.unwrap();
         bus.disconnect(handler_id);
         bin.set_state(State::Null).unwrap();
         return duration;

@@ -1,8 +1,12 @@
-use std::{thread, time::Duration};
-
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
+use jsonrpc_core::{
+    futures::{self, lock::Mutex, FutureExt},
+    BoxFuture, IoHandler, Value,
+};
+use jsonrpc_derive::rpc;
 use log::info;
 use platune_libplayer::libplayer::PlatunePlayer;
+use std::{thread, time::Duration};
 use yansi::{Color, Style};
 
 #[tokio::main]
@@ -13,21 +17,38 @@ async fn main() {
         .set_palette("196;190;-;-;-".to_owned())
         .start()
         .unwrap();
-
-    let mut player = PlatunePlayer::new().await;
+    let player = PlatunePlayer::new().await;
     player.set_queue(vec![
-            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
-            "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
-                .to_owned()
-        ]).await;
-    thread::sleep(Duration::from_secs(2));
-    player.pause().await;
-    thread::sleep(Duration::from_secs(2));
-    player.resume().await;
+                // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
+                // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
+                //     .to_owned()
+                "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned(),
+                "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned()
+            ]).await;
+    // let p = Mutex::new(player);
+    let mut io = IoHandler::<()>::default();
+    // io.add_method("set_queue", |_params| async {
+    //     player.set_queue(vec![
+    //         // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
+    //         // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
+    //         //     .to_owned()
+    //         "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned(),
+    //         "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned()
+    //     ]).await;
+    //     Ok(Value::String("hello".to_string()))
+    // });
+    // let _server = jsonrpc_ipc_server::ServerBuilder::new(io)
+    //     .start("/tmp/parity-example.ipc")
+    //     .expect("Server should start ok");
+
+    //thread::sleep(Duration::from_secs(2));
+    //player.pause().await;
+    //thread::sleep(Duration::from_secs(2));
+    //player.resume().await;
     //player.set_volume(1.).await;
-    player.seek(50.).await;
+    player.seek(60. * 10. + 55.).await;
     thread::sleep(Duration::from_secs(5000));
-    player.join();
+    //player.join();
 }
 
 pub fn colored(

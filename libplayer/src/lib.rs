@@ -1,26 +1,25 @@
 mod actors;
+mod channels;
 mod context;
 mod player_backend;
 mod servo_backend;
 mod util;
-
 #[cfg(all(feature = "runtime-tokio", feature = "runtime-async-std"))]
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
 
 pub mod libplayer {
-
-    use crate::actors::{
-        decoder::Decoder,
-        player::Player,
-        request_handler::{Command, RequestHandler},
-        song_queue::SongQueue,
-    };
     use crate::servo_backend::ServoBackend;
-    use act_zero::{call, runtimes::default::spawn_actor};
-    use futures::{
-        channel::mpsc::{self, Sender},
-        SinkExt,
+    use crate::{
+        actors::{
+            decoder::Decoder,
+            player::Player,
+            request_handler::{Command, RequestHandler},
+            song_queue::SongQueue,
+        },
+        channels::mpsc::*,
     };
+    use act_zero::{call, runtimes::default::spawn_actor};
+
     use gstreamer::glib::{self, MainLoop};
     use std::thread::{self, JoinHandle};
 
@@ -32,7 +31,7 @@ pub mod libplayer {
 
     impl PlatunePlayer {
         pub async fn new() -> PlatunePlayer {
-            let (tx, rx) = mpsc::channel(32);
+            let (tx, rx) = async_channel(32);
             let decoder_addr = spawn_actor(Decoder);
             let backend = Box::new(ServoBackend {});
             let player_addr = spawn_actor(Player::new(backend, decoder_addr));
@@ -62,29 +61,29 @@ pub mod libplayer {
             }
         }
 
-        pub async fn set_queue(&mut self, queue: Vec<String>) {
+        pub async fn set_queue(&self, queue: Vec<String>) {
             self.cmd_sender
                 .send(Command::SetQueue(queue))
                 .await
                 .unwrap();
         }
 
-        pub async fn seek(&mut self, seconds: f64) {
+        pub async fn seek(&self, seconds: f64) {
             self.cmd_sender.send(Command::Seek(seconds)).await.unwrap();
         }
 
-        pub async fn set_volume(&mut self, volume: f32) {
+        pub async fn set_volume(&self, volume: f32) {
             self.cmd_sender
                 .send(Command::SetVolume(volume))
                 .await
                 .unwrap();
         }
 
-        pub async fn pause(&mut self) {
+        pub async fn pause(&self) {
             self.cmd_sender.send(Command::Pause).await.unwrap();
         }
 
-        pub async fn resume(&mut self) {
+        pub async fn resume(&self) {
             self.cmd_sender.send(Command::Resume).await.unwrap();
         }
 

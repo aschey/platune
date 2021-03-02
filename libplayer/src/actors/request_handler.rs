@@ -1,5 +1,5 @@
+use crate::channels::mpsc::*;
 use act_zero::{call, Actor, Addr};
-use futures::{channel::mpsc::Receiver, StreamExt};
 use log::info;
 
 use super::{player::Player, song_queue::SongQueue};
@@ -25,7 +25,7 @@ impl RequestHandler {
         }
     }
     pub async fn run(&mut self) {
-        while let Some(next_command) = self.request_queue.next().await {
+        while let Ok(next_command) = recv(&mut self.request_queue).await {
             info!("Got command {:#?}", next_command);
             match next_command {
                 Command::SetQueue(queue) => {
