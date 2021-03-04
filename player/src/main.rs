@@ -1,11 +1,8 @@
-use async_once::AsyncOnce;
-use core::future;
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
-use lazy_static::lazy_static;
 use log::info;
 use platune_libplayer::libplayer::PlatunePlayer;
 use player_rpc::player_server::{Player, PlayerServer};
-use player_rpc::QueueRequest;
+use player_rpc::{QueueRequest, SeekRequest, SetVolumeRequest};
 use std::{
     borrow::BorrowMut,
     fs::read,
@@ -34,6 +31,26 @@ impl Player for PlayerImpl {
         self.player.set_queue(request.into_inner().queue).await;
         Ok(Response::new(()))
     }
+
+    async fn pause(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        self.player.pause().await;
+        Ok(Response::new(()))
+    }
+
+    async fn resume(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        self.player.resume().await;
+        Ok(Response::new(()))
+    }
+
+    async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<()>, Status> {
+        self.player.seek(request.into_inner().time as f64).await;
+        Ok(Response::new(()))
+    }
+
+    async fn set_volume(&self, request: Request<SetVolumeRequest>) -> Result<Response<()>, Status> {
+        self.player.set_volume(request.into_inner().volume).await;
+        Ok(Response::new(()))
+    }
 }
 
 #[tokio::main]
@@ -50,8 +67,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .unwrap();
     let addr = "[::1]:50051".parse().unwrap();
-    let p = PlatunePlayer::new().await;
-    let player = PlayerImpl { player: p };
+    let platune = PlatunePlayer::new().await;
+    let player = PlayerImpl { player: platune };
     Server::builder()
         .add_service(service)
         .add_service(PlayerServer::new(player))

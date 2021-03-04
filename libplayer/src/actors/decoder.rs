@@ -12,7 +12,7 @@ use gstreamer::{
     glib::filename_to_uri, prelude::ObjectExt, ClockTime, ElementExt, ElementExtManual,
     ElementFactory, State,
 };
-use log::{error, info};
+use log::{error, info, warn};
 use servo_media_audio::{context::RealTimeAudioContextOptions, decoder::AudioDecoderCallbacks};
 
 pub struct Decoder;
@@ -93,7 +93,9 @@ impl Decoder {
             .connect("message", false, move |_| {
                 let bin = bin_weak.upgrade().unwrap();
                 if let Some(duration) = bin.query_duration::<ClockTime>() {
-                    sender_mut.lock().unwrap().try_send(duration).unwrap();
+                    if let Err(msg) = sender_mut.lock().unwrap().try_send(duration) {
+                        warn!("{:?}", msg);
+                    }
                 }
 
                 None
