@@ -46,6 +46,7 @@ impl RequestHandler {
             }
             info!("Completed command");
         }
+        info!("Request loop completed");
     }
 }
 #[derive(Debug)]

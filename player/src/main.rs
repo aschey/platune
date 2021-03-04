@@ -1,61 +1,79 @@
+use async_once::AsyncOnce;
+use core::future;
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
-use jsonrpc_core::{
-    futures::{self, lock::Mutex, FutureExt},
-    BoxFuture, IoHandler, Value,
-};
-use jsonrpc_derive::rpc;
+use lazy_static::lazy_static;
 use log::info;
 use platune_libplayer::libplayer::PlatunePlayer;
-use std::{thread, time::Duration};
+use player_rpc::player_server::{Player, PlayerServer};
+use player_rpc::QueueRequest;
+use std::{
+    borrow::BorrowMut,
+    fs::read,
+    path::Path,
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
+use tonic::{transport::Server, Request, Response, Status};
 use yansi::{Color, Style};
 
+pub mod player_rpc {
+    tonic::include_proto!("player_rpc");
+
+    pub(crate) const FILE_DESCRIPTOR_SET: &'static [u8] =
+        tonic::include_file_descriptor_set!("player_rpc_descriptor");
+}
+
+pub struct PlayerImpl {
+    player: PlatunePlayer,
+}
+
+#[tonic::async_trait]
+impl Player for PlayerImpl {
+    async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
+        self.player.set_queue(request.into_inner().queue).await;
+        Ok(Response::new(()))
+    }
+}
+
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Logger::with_str("info")
         .format_for_stdout(colored)
         .log_target(LogTarget::StdOut)
         .set_palette("196;190;-;-;-".to_owned())
         .start()
         .unwrap();
-    let player = PlatunePlayer::new().await;
-    player.set_queue(vec![
-                // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
-                // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
-                //     .to_owned()
-                "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned(),
-                "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned()
-            ]).await;
-    // let p = Mutex::new(player);
-    let mut io = IoHandler::<()>::default();
-    // io.add_method("set_queue", |_params| async {
-    //     player.set_queue(vec![
-    //         // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
-    //         // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
-    //         //     .to_owned()
-    //         "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned(),
-    //         "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned()
-    //     ]).await;
-    //     Ok(Value::String("hello".to_string()))
-    // });
-    // let _server = jsonrpc_ipc_server::ServerBuilder::new(io)
-    //     .start("/tmp/parity-example.ipc")
-    //     .expect("Server should start ok");
 
-    //thread::sleep(Duration::from_secs(2));
-    //player.pause().await;
-    //thread::sleep(Duration::from_secs(2));
-    //player.resume().await;
-    //player.set_volume(1.).await;
-    player.seek(60. * 10. + 55.).await;
-    thread::sleep(Duration::from_secs(5000));
-    //player.join();
+    let service = tonic_reflection::server::Builder::configure()
+        .register_encoded_file_descriptor_set(player_rpc::FILE_DESCRIPTOR_SET)
+        .build()
+        .unwrap();
+    let addr = "[::1]:50051".parse().unwrap();
+    let p = PlatunePlayer::new().await;
+    let player = PlayerImpl { player: p };
+    Server::builder()
+        .add_service(service)
+        .add_service(PlayerServer::new(player))
+        .serve(addr)
+        .await?;
+
+    // client.set_queue(vec![
+    //     // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
+    //     // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
+    //     //     .to_owned()
+    //     "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned(),
+    //     "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/05 Ants of the Sky.m4a".to_owned()
+    // ]).await.unwrap();
+
+    Ok(())
 }
 
 pub fn colored(
     w: &mut dyn std::io::Write,
     now: &mut DeferredNow,
     record: &Record,
-) -> Result<(), std::io::Error> {
+) -> core::result::Result<(), std::io::Error> {
     let level = record.level();
     write!(
         w,
