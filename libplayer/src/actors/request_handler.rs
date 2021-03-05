@@ -1,6 +1,6 @@
-use crate::channels::mpsc::*;
 use act_zero::{call, Actor, Addr};
 use log::info;
+use postage::{mpsc::Receiver, prelude::Stream};
 
 use super::{player::Player, song_queue::SongQueue};
 
@@ -25,7 +25,7 @@ impl RequestHandler {
         }
     }
     pub async fn run(&mut self) {
-        while let Ok(next_command) = recv(&mut self.request_queue).await {
+        while let Some(next_command) = self.request_queue.recv().await {
             info!("Got command {:#?}", next_command);
             match next_command {
                 Command::SetQueue(queue) => {
@@ -49,7 +49,7 @@ impl RequestHandler {
         info!("Request loop completed");
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Command {
     SetQueue(Vec<String>),
     Seek(f64),

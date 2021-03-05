@@ -4,7 +4,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::channels::mpsc::*;
 use crate::context::CONTEXT;
 use act_zero::*;
 use futures::future::join;
@@ -13,6 +12,7 @@ use gstreamer::{
     ElementFactory, State,
 };
 use log::{error, info, warn};
+use postage::{mpsc, prelude::Stream, sink::Sink};
 use servo_media_audio::{context::RealTimeAudioContextOptions, decoder::AudioDecoderCallbacks};
 
 pub struct Decoder;
@@ -28,7 +28,7 @@ impl Decoder {
         let decoded_audio: Arc<Mutex<Vec<Vec<f32>>>> = Arc::new(Mutex::new(Vec::new()));
         let decoded_audio_ = decoded_audio.clone();
         let decoded_audio__ = decoded_audio.clone();
-        let (mut sender, mut receiver) = async_channel(32);
+        let (mut sender, mut receiver) = mpsc::channel(32);
         let filename_ = filename.clone();
         let callbacks = AudioDecoderCallbacks::new()
             .eos(move || {
@@ -56,6 +56,7 @@ impl Decoder {
             .decode_audio_data(bytes.to_vec(), callbacks);
 
         let (_, duration) = join(receiver.recv(), self.get_duration(&filename)).await;
+        info!("Finished decoding");
 
         let RealTimeAudioContextOptions {
             sample_rate,
@@ -80,13 +81,14 @@ impl Decoder {
     }
 
     async fn get_duration(&self, filename: &str) -> ClockTime {
+        info!("Reading duration");
         let fakesink = ElementFactory::make("fakesink", None).unwrap();
         let bin = ElementFactory::make("playbin", None).unwrap();
 
         bin.set_property("audio-sink", &fakesink).unwrap();
         let bus = bin.get_bus().unwrap();
         bus.add_signal_watch();
-        let (sender, mut receiver) = async_channel(32);
+        let (sender, mut receiver) = mpsc::channel(32);
         let sender_mut = Mutex::new(sender);
         let bin_weak = bin.downgrade();
         let handler_id = bus
@@ -104,9 +106,10 @@ impl Decoder {
 
         bin.set_property("uri", &filename_to_uri(filename, None).unwrap())
             .unwrap();
-        //println!("here");
+
         bin.set_state(State::Playing).unwrap();
         let duration = receiver.recv().await.unwrap();
+        info!("Got duration {:?}", duration);
         bus.disconnect(handler_id);
         bin.set_state(State::Null).unwrap();
         return duration;

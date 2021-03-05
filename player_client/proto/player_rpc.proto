@@ -13,8 +13,11 @@ service Player {
   rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc Seek(SeekRequest) returns (google.protobuf.Empty) {}
   rpc SetVolume(SetVolumeRequest) returns (google.protobuf.Empty) {}
+  rpc SubscribeOnEnded(google.protobuf.Empty) returns (stream OnEndedResponse) {
+  }
 }
 
 message QueueRequest { repeated string queue = 1; }
 message SeekRequest { float time = 1; }
 message SetVolumeRequest { float volume = 1; }
+message OnEndedResponse { string file = 1; }

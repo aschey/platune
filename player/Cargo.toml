@@ -15,5 +15,7 @@ log = "0.4.14"
 tonic = { git = "https://github.com/hyperium/tonic", rev="61555ff" }
 tonic-reflection = { git = "https://github.com/hyperium/tonic", rev="61555ff" }
 prost = "0.7.0"
+tokio-stream = {version = "0.1.3", features=["net"] }
+futures = "0.3.13"
 [build-dependencies]
 tonic-build = { git = "https://github.com/hyperium/tonic", rev="61555ff", features=["prost"] }

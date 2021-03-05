@@ -8,33 +8,33 @@ mod util;
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
 
 pub mod libplayer {
-    use crate::servo_backend::ServoBackend;
-    use crate::{
-        actors::{
-            decoder::Decoder,
-            player::Player,
-            request_handler::{Command, RequestHandler},
-            song_queue::SongQueue,
-        },
-        channels::mpsc::*,
+    use crate::actors::{
+        decoder::Decoder,
+        player::Player,
+        request_handler::{Command, RequestHandler},
+        song_queue::SongQueue,
     };
+    use crate::servo_backend::ServoBackend;
     use act_zero::{call, runtimes::default::spawn_actor};
+    pub use postage::*;
 
     use gstreamer::glib::{self, MainLoop};
+    pub use postage::{sink::Sink, stream::Stream};
+    //use postage::{broadcast::Sender, mpsc, sink::Sink};
     use std::thread::{self, JoinHandle};
 
     pub struct PlatunePlayer {
         glib_main_loop: MainLoop,
         glib_handle: Option<JoinHandle<()>>,
-        cmd_sender: Sender<Command>,
+        cmd_sender: mpsc::Sender<Command>,
     }
 
     impl PlatunePlayer {
-        pub async fn new() -> PlatunePlayer {
-            let (tx, rx) = async_channel(32);
+        pub fn new(ended_tx: broadcast::Sender<String>) -> PlatunePlayer {
+            let (tx, rx) = mpsc::channel(32);
             let decoder_addr = spawn_actor(Decoder);
             let backend = Box::new(ServoBackend {});
-            let player_addr = spawn_actor(Player::new(backend, decoder_addr));
+            let player_addr = spawn_actor(Player::new(backend, decoder_addr, ended_tx));
             let player_addr_ = player_addr.clone();
             let queue_addr = spawn_actor(SongQueue::new(player_addr));
             let handler_addr = spawn_actor(RequestHandler::new(rx, queue_addr, player_addr_));
@@ -61,30 +61,26 @@ pub mod libplayer {
             }
         }
 
-        pub async fn set_queue(&self, queue: Vec<String>) {
+        pub fn set_queue(&mut self, queue: Vec<String>) {
+            self.cmd_sender.try_send(Command::SetQueue(queue)).unwrap();
+        }
+
+        pub fn seek(&mut self, seconds: f64) {
+            self.cmd_sender.try_send(Command::Seek(seconds)).unwrap();
+        }
+
+        pub fn set_volume(&mut self, volume: f32) {
             self.cmd_sender
-                .send(Command::SetQueue(queue))
-                .await
+                .try_send(Command::SetVolume(volume))
                 .unwrap();
         }
 
-        pub async fn seek(&self, seconds: f64) {
-            self.cmd_sender.send(Command::Seek(seconds)).await.unwrap();
+        pub fn pause(&mut self) {
+            self.cmd_sender.try_send(Command::Pause).unwrap();
         }
 
-        pub async fn set_volume(&self, volume: f32) {
-            self.cmd_sender
-                .send(Command::SetVolume(volume))
-                .await
-                .unwrap();
-        }
-
-        pub async fn pause(&self) {
-            self.cmd_sender.send(Command::Pause).await.unwrap();
-        }
-
-        pub async fn resume(&self) {
-            self.cmd_sender.send(Command::Resume).await.unwrap();
+        pub fn resume(&mut self) {
+            self.cmd_sender.try_send(Command::Resume).unwrap();
         }
 
         pub fn join(&mut self) {

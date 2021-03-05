@@ -2,6 +2,7 @@ use crate::util::get_filename_from_path;
 use crate::{context::CONTEXT, player_backend::PlayerBackend};
 use act_zero::*;
 use log::info;
+use postage::broadcast::Sender;
 use servo_media_audio::{
     block::Block,
     buffer_source_node::{AudioBuffer, AudioBufferSourceNodeMessage},
@@ -16,17 +17,23 @@ pub struct Player {
     decoder: Addr<Decoder>,
     sources: Vec<ScheduledSource>,
     volume: f32,
+    ended_tx: Sender<String>,
 }
 
 impl Actor for Player {}
 
 impl Player {
-    pub fn new(player_backend: Box<PlayerBackend>, decoder: Addr<Decoder>) -> Player {
+    pub fn new(
+        player_backend: Box<PlayerBackend>,
+        decoder: Addr<Decoder>,
+        ended_tx: Sender<String>,
+    ) -> Player {
         Player {
             player_backend,
             decoder,
             sources: vec![],
             volume: 0.5,
+            ended_tx,
         }
     }
     // fn play(&self, start_time: f64) {
@@ -35,15 +42,19 @@ impl Player {
     // }
 
     pub async fn pause(&mut self) {
-        self.player_backend.pause();
+        let context = CONTEXT.lock().unwrap();
+        self.player_backend.pause(&context);
     }
 
     pub async fn resume(&mut self) {
-        self.player_backend.resume();
+        let context = CONTEXT.lock().unwrap();
+        self.player_backend.resume(&context);
     }
 
     pub async fn stop(&mut self) {
-        self.player_backend.stop(self.sources[0].buffer_source);
+        let context = CONTEXT.lock().unwrap();
+        self.player_backend
+            .stop(&context, self.sources[0].buffer_source);
     }
 
     pub async fn seek(&mut self, seconds: f64) {
@@ -67,8 +78,10 @@ impl Player {
 
     pub async fn set_volume(&mut self, volume: f32) {
         self.volume = volume;
+        let context = CONTEXT.lock().unwrap();
         for source in &self.sources {
-            self.player_backend.set_volume(source.gain, volume);
+            self.player_backend
+                .set_volume(&context, source.gain, volume);
         }
     }
 
@@ -105,9 +118,9 @@ impl Player {
         context.connect_ports(gain.output(0), dest.input(0));
         context.connect_ports(analyser.output(0), dest.input(0));
 
-        let callback = OnEndedCallback::new(|| {
-            info!("Playback ended");
-        });
+        // let callback = OnEndedCallback::new(|| {
+        //     info!("Playback ended");
+        // });
 
         context.message_node(
             buffer_source,
@@ -116,27 +129,35 @@ impl Player {
             ))),
         );
 
-        context.message_node(
-            buffer_source,
-            AudioNodeMessage::AudioScheduledSourceNode(
-                AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(callback),
-            ),
-        );
         let start_time = context.current_time();
+
+        self.player_backend.subscribe_onended(
+            &context,
+            buffer_source,
+            file.to_owned(),
+            self.ended_tx.clone(),
+        );
+
+        // context.message_node(
+        //     buffer_source,
+        //     AudioNodeMessage::AudioScheduledSourceNode(
+        //         AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(callback),
+        //     ),
+        // );
+
         if self.sources.len() == 0 {
-            drop(context);
             if let Some(seconds) = start_seconds {
                 info!("Seeking to {}", seconds);
-                self.player_backend.seek(buffer_source, seconds);
+                self.player_backend.seek(&context, buffer_source, seconds);
             }
             info!("Starting immediately");
-            self.player_backend.play(buffer_source, 0.);
+            self.player_backend.play(&context, buffer_source, 0.);
         } else {
             let prev = self.sources.last().unwrap();
             let seconds = prev.start_time + (prev.duration - prev.end_gap - file_info.start_gap);
-            drop(context);
+
             info!("Starting at {}", seconds);
-            self.player_backend.play(buffer_source, seconds);
+            self.player_backend.play(&context, buffer_source, seconds);
         }
 
         let gap = start_seconds.unwrap_or_default();
