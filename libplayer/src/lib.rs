@@ -1,5 +1,4 @@
 mod actors;
-mod channels;
 mod context;
 mod player_backend;
 mod servo_backend;
