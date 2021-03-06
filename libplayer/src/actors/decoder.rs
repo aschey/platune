@@ -1,3 +1,4 @@
+use crate::util::clocktime_to_seconds;
 use std::{
     fs::File,
     io::Read,
@@ -80,7 +81,7 @@ impl Decoder {
         })
     }
 
-    async fn get_duration(&self, filename: &str) -> ClockTime {
+    async fn get_duration(&self, filename: &str) -> f64 {
         info!("Reading duration");
         let fakesink = ElementFactory::make("fakesink", None).unwrap();
         let bin = ElementFactory::make("playbin", None).unwrap();
@@ -109,10 +110,11 @@ impl Decoder {
 
         bin.set_state(State::Playing).unwrap();
         let duration = receiver.recv().await.unwrap();
-        info!("Got duration {:?}", duration);
+        let duration_seconds = clocktime_to_seconds(duration);
+        info!("Got duration {:?}", duration_seconds);
         bus.disconnect(handler_id);
         bin.set_state(State::Null).unwrap();
-        return duration;
+        return duration_seconds;
     }
 
     fn find_start_gap(&self, l: &Vec<f32>, r: &Vec<f32>, sample_rate: f64) -> f64 {
@@ -143,6 +145,6 @@ pub struct FileInfo {
     pub data: Vec<Vec<f32>>,
     pub start_gap: f64,
     pub end_gap: f64,
-    pub duration: ClockTime,
+    pub duration: f64,
     pub sample_rate: f64,
 }

@@ -1,4 +1,5 @@
 use crate::context::CONTEXT;
+use log::{info, warn};
 use postage::{broadcast::Sender, sink::Sink};
 use servo_media_audio::{
     buffer_source_node::AudioBufferSourceNodeMessage,
@@ -67,7 +68,10 @@ impl PlayerBackendImpl for ServoBackend {
             AudioNodeMessage::AudioScheduledSourceNode(
                 AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(OnEndedCallback::new(
                     move || {
-                        sender.try_send(file).unwrap();
+                        info!("{:?} ended", file);
+                        if let Err(res) = sender.try_send(file) {
+                            warn!("{:?}", res);
+                        }
                     },
                 )),
             ),

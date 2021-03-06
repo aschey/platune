@@ -129,7 +129,7 @@ impl Player {
             ))),
         );
 
-        let start_time = context.current_time();
+        let start_time: f64;
 
         self.player_backend.subscribe_onended(
             &context,
@@ -150,34 +150,38 @@ impl Player {
                 info!("Seeking to {}", seconds);
                 self.player_backend.seek(&context, buffer_source, seconds);
             }
-            info!("Starting immediately");
-            self.player_backend.play(&context, buffer_source, 0.);
+
+            start_time = context.current_time();
+            self.player_backend
+                .play(&context, buffer_source, start_time);
+            info!("Starting at {}", start_time);
         } else {
             let prev = self.sources.last().unwrap();
-            let seconds = prev.start_time + (prev.duration - prev.end_gap - file_info.start_gap);
-
+            let seconds =
+                prev.start_time + (prev.duration - prev.end_gap - file_info.start_gap) - 0.03;
+            start_time = seconds;
             info!("Starting at {}", seconds);
             self.player_backend.play(&context, buffer_source, seconds);
         }
 
         let gap = start_seconds.unwrap_or_default();
-        let duration = file_info.duration.nseconds().unwrap() as f64 / 1e9;
+
         info!(
             "Adding {} start time: {} start gap: {} end gap: {} duration: {} gap: {} computed duration: {}",
             file,
             start_time,
             file_info.start_gap,
             file_info.end_gap,
-            duration,
+            file_info.duration,
             gap,
-            duration - gap
+            file_info.duration - gap
         );
         self.sources.push(ScheduledSource {
             path,
             start_time,
             start_gap: file_info.start_gap,
             end_gap: file_info.end_gap,
-            duration: duration - gap,
+            duration: file_info.duration - gap,
             buffer_source,
             gain,
             analyser,
