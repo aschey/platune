@@ -38,6 +38,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
     // /home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-17-Track 17.mp3
     // /home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-18-Track 18.mp3
+    // C:\\shared_files\Music\emoisdead\Peu Etre - Langue Et Civilisation Hardcore (199x)\Peu Etre-17-Track 17.mp3
+    // C:\\shared_files\Music\emoisdead\Peu Etre - Langue Et Civilisation Hardcore (199x)\Peu Etre-18-Track 18.mp3
     // client.set_queue(vec![
     //     // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
     //     // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
@@ -59,7 +61,7 @@ pub fn colored(
         w,
         "[{} {}] {} [{}:{}] {}",
         Style::new(Color::Cyan).paint(now.now().format("%Y-%m-%d %H:%M:%S%.6f")),
-        Style::new(Color::Cyan).paint(now.now().timestamp_nanos() as f64 / 1e9),
+        Style::new(Color::RGB(119, 102, 204)).paint(now.now().timestamp_nanos() as f64 / 1e9),
         style(level, level),
         Style::new(Color::Green).paint(record.file().unwrap_or("<unnamed>")),
         Style::new(Color::Green).paint(record.line().unwrap_or(0)),

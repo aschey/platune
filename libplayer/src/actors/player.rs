@@ -2,8 +2,13 @@ use crate::util::get_filename_from_path;
 use crate::{context::CONTEXT, player_backend::PlayerBackend};
 use act_zero::*;
 use log::info;
-use postage::broadcast::Sender;
+use postage::{
+    broadcast::{self},
+    mpsc,
+    sink::Sink,
+};
 use servo_media_audio::{
+    analyser_node::AnalysisEngine,
     block::Block,
     buffer_source_node::{AudioBuffer, AudioBufferSourceNodeMessage},
     gain_node::GainNodeOptions,
@@ -17,7 +22,8 @@ pub struct Player {
     decoder: Addr<Decoder>,
     sources: Vec<ScheduledSource>,
     volume: f32,
-    ended_tx: Sender<String>,
+    ended_tx: broadcast::Sender<String>,
+    analysis_tx: mpsc::Sender<Block>,
 }
 
 impl Actor for Player {}
@@ -26,7 +32,8 @@ impl Player {
     pub fn new(
         player_backend: Box<PlayerBackend>,
         decoder: Addr<Decoder>,
-        ended_tx: Sender<String>,
+        ended_tx: broadcast::Sender<String>,
+        analysis_tx: mpsc::Sender<Block>,
     ) -> Player {
         Player {
             player_backend,
@@ -34,6 +41,7 @@ impl Player {
             sources: vec![],
             volume: 0.5,
             ended_tx,
+            analysis_tx,
         }
     }
     // fn play(&self, start_time: f64) {
@@ -102,11 +110,10 @@ impl Player {
             Default::default(),
         );
 
+        let mut tx = self.analysis_tx.clone();
         let analyser = context.create_node(
-            AudioNodeInit::AnalyserNode(Box::new(move |mut block| {
-                let data = block.data_mut();
-                let json = serde_json::to_string(data).unwrap();
-                //println!("{:?}", json);
+            AudioNodeInit::AnalyserNode(Box::new(move |block| {
+                tx.try_send(block);
             })),
             Default::default(),
         );
@@ -137,13 +144,6 @@ impl Player {
             file.to_owned(),
             self.ended_tx.clone(),
         );
-
-        // context.message_node(
-        //     buffer_source,
-        //     AudioNodeMessage::AudioScheduledSourceNode(
-        //         AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(callback),
-        //     ),
-        // );
 
         if self.sources.len() == 0 {
             if let Some(seconds) = start_seconds {

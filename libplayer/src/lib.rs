@@ -8,6 +8,7 @@ compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually ex
 
 pub mod libplayer {
     use crate::actors::{
+        analyser::Analyser,
         decoder::Decoder,
         player::Player,
         request_handler::{Command, RequestHandler},
@@ -31,22 +32,35 @@ pub mod libplayer {
     impl PlatunePlayer {
         pub fn new(ended_tx: broadcast::Sender<String>) -> PlatunePlayer {
             let (tx, rx) = mpsc::channel(32);
+            let (analysis_tx, analysis_rx) = mpsc::channel(32);
             let decoder_addr = spawn_actor(Decoder);
             let backend = Box::new(ServoBackend {});
-            let player_addr = spawn_actor(Player::new(backend, decoder_addr, ended_tx));
+            let player_addr =
+                spawn_actor(Player::new(backend, decoder_addr, ended_tx, analysis_tx));
             let player_addr_ = player_addr.clone();
             let queue_addr = spawn_actor(SongQueue::new(player_addr));
             let handler_addr = spawn_actor(RequestHandler::new(rx, queue_addr, player_addr_));
+            let analyser_addr = spawn_actor(Analyser::new(analysis_rx));
 
             let handler_task = async move {
                 call!(handler_addr.run()).await.unwrap();
             };
 
+            let analyser_task = async move {
+                call!(analyser_addr.run()).await.unwrap();
+            };
+
             #[cfg(feature = "runtime-tokio")]
-            tokio::spawn(handler_task);
+            {
+                tokio::spawn(handler_task);
+                tokio::spawn(analyser_task);
+            }
 
             #[cfg(feature = "runtime-async-std")]
-            async_std::task::spawn(handler_task);
+            {
+                async_std::task::spawn(handler_task);
+                async_std::task::spawn(analyser_task);
+            }
 
             let main_loop = glib::MainLoop::new(None, false);
             let main_loop_ = main_loop.clone();
