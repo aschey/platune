@@ -29,3 +29,4 @@ serde_json = "1.0.64"
 tokio = {version = "1.2.0", features = ["full"], optional = true }
 async-std = {version = "1.9.0", optional = true }
 postage = "0.4.1"
+strum_macros = "0.20.1"

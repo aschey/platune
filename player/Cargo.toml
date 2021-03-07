@@ -17,5 +17,7 @@ tonic-reflection = { git = "https://github.com/hyperium/tonic", rev="61555ff" }
 prost = "0.7.0"
 tokio-stream = {version = "0.1.3", features=["net"] }
 futures = "0.3.13"
+
 [build-dependencies]
-tonic-build = { git = "https://github.com/hyperium/tonic", rev="61555ff", features=["prost"] }
+tonic-build = { git = "https://github.com/grippy/tonic", rev="da029464", features=["prost"] }
+

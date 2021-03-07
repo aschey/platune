@@ -1,4 +1,6 @@
 use crate::context::CONTEXT;
+use crate::player_backend::FnStatic;
+use act_zero::call;
 use log::{info, warn};
 use postage::{broadcast::Sender, sink::Sink};
 use servo_media_audio::{
@@ -11,7 +13,7 @@ use servo_media_audio::{
 
 use crate::player_backend::PlayerBackendImpl;
 
-pub struct ServoBackend {}
+pub struct ServoBackend;
 
 impl PlayerBackendImpl for ServoBackend {
     fn play(&self, context: &AudioContext, node_id: NodeId, start_seconds: f64) {
@@ -56,23 +58,12 @@ impl PlayerBackendImpl for ServoBackend {
         );
     }
 
-    fn subscribe_onended(
-        &self,
-        context: &AudioContext,
-        node_id: NodeId,
-        file: String,
-        mut sender: Sender<String>,
-    ) {
+    fn subscribe_onended(&self, context: &AudioContext, node_id: NodeId, callback: Box<FnStatic>) {
         context.message_node(
             node_id,
             AudioNodeMessage::AudioScheduledSourceNode(
                 AudioScheduledSourceNodeMessage::RegisterOnEndedCallback(OnEndedCallback::new(
-                    move || {
-                        info!("{:?} ended", file);
-                        if let Err(res) = sender.try_send(file) {
-                            warn!("{:?}", res);
-                        }
-                    },
+                    callback,
                 )),
             ),
         );

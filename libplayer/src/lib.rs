@@ -17,11 +17,15 @@ pub mod libplayer {
     use crate::servo_backend::ServoBackend;
     use act_zero::{call, runtimes::default::spawn_actor};
     pub use postage::*;
+    use strum_macros::Display;
 
     use gstreamer::glib::{self, MainLoop};
     pub use postage::{sink::Sink, stream::Stream};
     //use postage::{broadcast::Sender, mpsc, sink::Sink};
-    use std::thread::{self, JoinHandle};
+    use std::{
+        fmt,
+        thread::{self, JoinHandle},
+    };
 
     pub struct PlatunePlayer {
         glib_main_loop: MainLoop,
@@ -30,11 +34,11 @@ pub mod libplayer {
     }
 
     impl PlatunePlayer {
-        pub fn new(ended_tx: broadcast::Sender<String>) -> PlatunePlayer {
+        pub fn new(ended_tx: broadcast::Sender<PlayerEvent>) -> PlatunePlayer {
             let (tx, rx) = mpsc::channel(32);
             let (analysis_tx, analysis_rx) = mpsc::channel(32);
             let decoder_addr = spawn_actor(Decoder);
-            let backend = Box::new(ServoBackend {});
+            let backend = Box::new(ServoBackend);
             let player_addr =
                 spawn_actor(Player::new(backend, decoder_addr, ended_tx, analysis_tx));
             let player_addr_ = player_addr.clone();
@@ -100,5 +104,16 @@ pub mod libplayer {
             self.glib_main_loop.quit();
             self.glib_handle.take().unwrap().join().unwrap();
         }
+    }
+
+    #[derive(Clone, Debug)]
+    pub enum PlayerEvent {
+        Pause { file: String },
+        Play { file: String },
+        Stop { file: String },
+        Resume { file: String },
+        Ended { file: String },
+        SetVolume { file: String, volume: f32 },
+        Seek { file: String, time: f64 },
     }
 }

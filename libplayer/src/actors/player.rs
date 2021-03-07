@@ -1,9 +1,10 @@
+use crate::libplayer::PlayerEvent;
 use crate::util::get_filename_from_path;
 use crate::{context::CONTEXT, player_backend::PlayerBackend};
 use act_zero::*;
-use log::info;
+use log::{info, warn};
 use postage::{
-    broadcast::{self},
+    broadcast::{self, Sender},
     mpsc,
     sink::Sink,
 };
@@ -15,6 +16,7 @@ use servo_media_audio::{
     graph::NodeId,
     node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage, OnEndedCallback},
 };
+use std::fmt::Debug;
 
 use super::decoder::Decoder;
 pub struct Player {
@@ -22,7 +24,7 @@ pub struct Player {
     decoder: Addr<Decoder>,
     sources: Vec<ScheduledSource>,
     volume: f32,
-    ended_tx: broadcast::Sender<String>,
+    event_tx: broadcast::Sender<PlayerEvent>,
     analysis_tx: mpsc::Sender<Block>,
 }
 
@@ -32,7 +34,7 @@ impl Player {
     pub fn new(
         player_backend: Box<PlayerBackend>,
         decoder: Addr<Decoder>,
-        ended_tx: broadcast::Sender<String>,
+        event_tx: broadcast::Sender<PlayerEvent>,
         analysis_tx: mpsc::Sender<Block>,
     ) -> Player {
         Player {
@@ -40,7 +42,7 @@ impl Player {
             decoder,
             sources: vec![],
             volume: 0.5,
-            ended_tx,
+            event_tx,
             analysis_tx,
         }
     }
@@ -52,17 +54,26 @@ impl Player {
     pub async fn pause(&mut self) {
         let context = CONTEXT.lock().unwrap();
         self.player_backend.pause(&context);
+        self.event_tx.publish(PlayerEvent::Pause {
+            file: self.current_file(),
+        });
     }
 
     pub async fn resume(&mut self) {
         let context = CONTEXT.lock().unwrap();
         self.player_backend.resume(&context);
+        self.event_tx.publish(PlayerEvent::Resume {
+            file: self.current_file(),
+        });
     }
 
     pub async fn stop(&mut self) {
         let context = CONTEXT.lock().unwrap();
         self.player_backend
             .stop(&context, self.sources[0].buffer_source);
+        self.event_tx.publish(PlayerEvent::Stop {
+            file: self.current_file(),
+        });
     }
 
     pub async fn seek(&mut self, seconds: f64) {
@@ -82,6 +93,10 @@ impl Player {
             self.load(queued_songs.get(1).unwrap().to_owned(), None)
                 .await;
         }
+        self.event_tx.publish(PlayerEvent::Seek {
+            file: self.current_file().to_owned(),
+            time: seconds,
+        });
     }
 
     pub async fn set_volume(&mut self, volume: f32) {
@@ -91,6 +106,10 @@ impl Player {
             self.player_backend
                 .set_volume(&context, source.gain, volume);
         }
+        self.event_tx.publish(PlayerEvent::SetVolume {
+            file: self.current_file(),
+            volume,
+        });
     }
 
     pub async fn load(&mut self, path: String, start_seconds: Option<f64>) {
@@ -113,7 +132,7 @@ impl Player {
         let mut tx = self.analysis_tx.clone();
         let analyser = context.create_node(
             AudioNodeInit::AnalyserNode(Box::new(move |block| {
-                tx.try_send(block);
+                tx.try_send(block).unwrap_or_default();
             })),
             Default::default(),
         );
@@ -125,10 +144,6 @@ impl Player {
         context.connect_ports(gain.output(0), dest.input(0));
         context.connect_ports(analyser.output(0), dest.input(0));
 
-        // let callback = OnEndedCallback::new(|| {
-        //     info!("Playback ended");
-        // });
-
         context.message_node(
             buffer_source,
             AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetBuffer(Some(
@@ -137,12 +152,15 @@ impl Player {
         );
 
         let start_time: f64;
-
+        let mut sender = self.event_tx.clone();
+        let file_ = file.clone();
         self.player_backend.subscribe_onended(
             &context,
             buffer_source,
-            file.to_owned(),
-            self.ended_tx.clone(),
+            Box::new(move || {
+                info!("{:?} ended", file_);
+                sender.publish(PlayerEvent::Ended { file: file_ });
+            }),
         );
 
         if self.sources.len() == 0 {
@@ -196,6 +214,13 @@ impl Player {
             context.disconnect_all_from(source.analyser);
         }
     }
+
+    fn current_file(&self) -> String {
+        if let Some(source) = self.sources.first() {
+            return source.path.to_owned();
+        }
+        return "".to_owned();
+    }
 }
 
 struct ScheduledSource {
@@ -207,4 +232,19 @@ struct ScheduledSource {
     buffer_source: NodeId,
     gain: NodeId,
     analyser: NodeId,
+}
+
+pub trait SenderExt<T> {
+    fn publish(&mut self, value: T);
+}
+
+impl<T> SenderExt<T> for Sender<T>
+where
+    T: Clone + Debug,
+{
+    fn publish(&mut self, value: T) {
+        if let Err(res) = self.try_send(value) {
+            warn!("Unable to send: {:?}", res);
+        }
+    }
 }

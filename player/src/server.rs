@@ -1,12 +1,13 @@
-use crate::{OnEndedResponse, Player, QueueRequest, SeekRequest, SetVolumeRequest};
+use crate::player_rpc::*;
+use crate::player_server::Player;
 use std::{pin::Pin, sync::Mutex};
 
-use platune_libplayer::libplayer::{broadcast, PlatunePlayer, Stream};
+use platune_libplayer::libplayer::*;
 use tonic::{Request, Response, Status};
 
 pub struct PlayerImpl {
     player: Mutex<PlatunePlayer>,
-    ended_tx: broadcast::Sender<String>,
+    ended_tx: broadcast::Sender<PlayerEvent>,
 }
 
 impl PlayerImpl {
@@ -59,19 +60,51 @@ impl Player for PlayerImpl {
         Ok(Response::new(()))
     }
 
-    type SubscribeOnEndedStream = Pin<
-        Box<dyn futures::Stream<Item = Result<OnEndedResponse, Status>> + Send + Sync + 'static>,
-    >;
+    type SubscribeEventsStream =
+        Pin<Box<dyn futures::Stream<Item = Result<EventResponse, Status>> + Send + Sync + 'static>>;
 
-    async fn subscribe_on_ended(
+    async fn subscribe_events(
         &self,
         _: tonic::Request<()>,
-    ) -> Result<Response<Self::SubscribeOnEndedStream>, Status> {
+    ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut ended_rx = self.ended_tx.subscribe();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
             while let Some(msg) = ended_rx.recv().await {
-                tx.send(Ok(OnEndedResponse { file: msg })).await.unwrap();
+                match &msg {
+                    PlayerEvent::Play { file }
+                    | PlayerEvent::Pause { file }
+                    | PlayerEvent::Stop { file }
+                    | PlayerEvent::Resume { file }
+                    | PlayerEvent::Ended { file } => tx
+                        .send(Ok(EventResponse {
+                            file: file.to_owned(),
+                            event: msg.to_string(),
+                            time: None,
+                            volume: None,
+                        }))
+                        .await
+                        .unwrap_or_default(),
+
+                    PlayerEvent::SetVolume { file, volume } => tx
+                        .send(Ok(EventResponse {
+                            file: file.to_owned(),
+                            event: msg.to_string(),
+                            time: None,
+                            volume: Some(*volume),
+                        }))
+                        .await
+                        .unwrap_or_default(),
+                    PlayerEvent::Seek { file, time } => tx
+                        .send(Ok(EventResponse {
+                            file: file.to_owned(),
+                            event: msg.to_string(),
+                            time: Some(*time),
+                            volume: None,
+                        }))
+                        .await
+                        .unwrap_or_default(),
+                }
             }
         });
         Ok(Response::new(Box::pin(

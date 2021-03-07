@@ -1,8 +1,8 @@
 mod server;
+use crate::player_server::PlayerServer;
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
 use log::info;
-use player_rpc::player_server::{Player, PlayerServer};
-use player_rpc::{OnEndedResponse, QueueRequest, SeekRequest, SetVolumeRequest};
+use player_rpc::*;
 use server::PlayerImpl;
 
 use tonic::transport::Server;

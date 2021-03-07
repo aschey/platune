@@ -651,7 +651,7 @@ dependencies = [
 [[package]]
 name = "tonic-build"
 version = "0.4.0"
-source = "git+https://github.com/hyperium/tonic?rev=61555ff#61555ff2b5b76e4e3172717354aed1e6f31d6611"
+source = "git+https://github.com/grippy/tonic?rev=da029464#da029464d3be5533e1d87dedcc968aab404dbc80"
 dependencies = [
  "proc-macro2",
  "prost-build",
