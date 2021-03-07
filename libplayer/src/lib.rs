@@ -34,16 +34,23 @@ pub mod libplayer {
     }
 
     impl PlatunePlayer {
-        pub fn new(ended_tx: broadcast::Sender<PlayerEvent>) -> PlatunePlayer {
+        pub fn new_with_events() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
+            let (event_tx, event_rx) = broadcast::channel(32);
             let (tx, rx) = mpsc::channel(32);
             let (analysis_tx, analysis_rx) = mpsc::channel(32);
             let decoder_addr = spawn_actor(Decoder);
             let backend = Box::new(ServoBackend);
-            let player_addr =
-                spawn_actor(Player::new(backend, decoder_addr, ended_tx, analysis_tx));
+            let player_addr = spawn_actor(Player::new(
+                backend,
+                decoder_addr,
+                event_tx,
+                analysis_tx,
+                tx.clone(),
+            ));
             let player_addr_ = player_addr.clone();
             let queue_addr = spawn_actor(SongQueue::new(player_addr));
-            let handler_addr = spawn_actor(RequestHandler::new(rx, queue_addr, player_addr_));
+            let handler_addr =
+                spawn_actor(RequestHandler::new(rx, queue_addr.clone(), player_addr_));
             let analyser_addr = spawn_actor(Analyser::new(analysis_rx));
 
             let handler_task = async move {
@@ -71,11 +78,14 @@ pub mod libplayer {
             let glib_handle = thread::spawn(move || {
                 main_loop_.run();
             });
-            PlatunePlayer {
-                glib_main_loop: main_loop,
-                glib_handle: Some(glib_handle),
-                cmd_sender: tx,
-            }
+            (
+                PlatunePlayer {
+                    glib_main_loop: main_loop,
+                    glib_handle: Some(glib_handle),
+                    cmd_sender: tx,
+                },
+                event_rx,
+            )
         }
 
         pub fn set_queue(&mut self, queue: Vec<String>) {
@@ -84,6 +94,10 @@ pub mod libplayer {
 
         pub fn seek(&mut self, seconds: f64) {
             self.cmd_sender.try_send(Command::Seek(seconds)).unwrap();
+        }
+
+        pub fn stop(&mut self) {
+            self.cmd_sender.try_send(Command::Stop).unwrap();
         }
 
         pub fn set_volume(&mut self, volume: f32) {
@@ -106,7 +120,7 @@ pub mod libplayer {
         }
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, Display)]
     pub enum PlayerEvent {
         Pause { file: String },
         Play { file: String },

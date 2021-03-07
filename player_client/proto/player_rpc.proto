@@ -10,19 +10,19 @@ package player_rpc;
 service Player {
   rpc SetQueue(QueueRequest) returns (google.protobuf.Empty) {}
   rpc Pause(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc Seek(SeekRequest) returns (google.protobuf.Empty) {}
   rpc SetVolume(SetVolumeRequest) returns (google.protobuf.Empty) {}
-  rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse) {
-  }
+  rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse) {}
 }
 
 message QueueRequest { repeated string queue = 1; }
 message SeekRequest { float time = 1; }
 message SetVolumeRequest { float volume = 1; }
-message EventResponse { 
-  string file = 1; 
+message EventResponse {
+  string file = 1;
   string event = 2;
-  optional double time = 3; 
-  optional float volume = 4; 
+  optional double time = 3;
+  optional float volume = 4;
 }

@@ -12,4 +12,4 @@ pub trait PlayerBackendImpl {
     fn subscribe_onended(&self, context: &AudioContext, node_id: NodeId, callback: Box<FnStatic>);
 }
 
-pub type PlayerBackend = dyn PlayerBackendImpl + Send + 'static;
+pub type PlayerBackend = dyn PlayerBackendImpl + Send + Sync + 'static;

@@ -43,6 +43,12 @@ impl RequestHandler {
                 Command::Resume => {
                     call!(self.player_addr.resume()).await.unwrap();
                 }
+                Command::Stop => {
+                    call!(self.player_addr.stop()).await.unwrap();
+                }
+                Command::Ended => {
+                    call!(self.queue_addr.on_ended()).await.unwrap();
+                }
             }
             info!("Completed command");
         }
@@ -56,4 +62,6 @@ pub enum Command {
     SetVolume(f32),
     Pause,
     Resume,
+    Stop,
+    Ended,
 }

@@ -2,21 +2,21 @@ use crate::player_rpc::*;
 use crate::player_server::Player;
 use std::{pin::Pin, sync::Mutex};
 
+use futures::channel::mpsc::Receiver;
 use platune_libplayer::libplayer::*;
 use tonic::{Request, Response, Status};
 
 pub struct PlayerImpl {
     player: Mutex<PlatunePlayer>,
-    ended_tx: broadcast::Sender<PlayerEvent>,
+    event_rx: broadcast::Receiver<PlayerEvent>,
 }
 
 impl PlayerImpl {
     pub fn new() -> PlayerImpl {
-        let (tx, _) = broadcast::channel(32);
-        let platune = PlatunePlayer::new(tx.clone());
+        let (platune, event_rx) = PlatunePlayer::new_with_events();
         PlayerImpl {
             player: Mutex::new(platune),
-            ended_tx: tx,
+            event_rx,
         }
     }
 }
@@ -34,6 +34,11 @@ impl Player for PlayerImpl {
 
     async fn pause(&self, _: Request<()>) -> Result<Response<()>, Status> {
         self.player.lock().unwrap().pause();
+        Ok(Response::new(()))
+    }
+
+    async fn stop(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        self.player.lock().unwrap().stop();
         Ok(Response::new(()))
     }
 
@@ -67,7 +72,7 @@ impl Player for PlayerImpl {
         &self,
         _: tonic::Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
-        let mut ended_rx = self.ended_tx.subscribe();
+        let mut ended_rx = self.event_rx.clone();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
             while let Some(msg) = ended_rx.recv().await {

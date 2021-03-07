@@ -2,7 +2,7 @@ use crate::libplayer::PlayerEvent;
 use crate::util::get_filename_from_path;
 use crate::{context::CONTEXT, player_backend::PlayerBackend};
 use act_zero::*;
-use log::{info, warn};
+use log::{error, info, warn};
 use postage::{
     broadcast::{self, Sender},
     mpsc,
@@ -12,20 +12,23 @@ use servo_media_audio::{
     analyser_node::AnalysisEngine,
     block::Block,
     buffer_source_node::{AudioBuffer, AudioBufferSourceNodeMessage},
+    context::AudioContext,
     gain_node::GainNodeOptions,
     graph::NodeId,
     node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage, OnEndedCallback},
 };
-use std::fmt::Debug;
+use std::{collections::VecDeque, fmt::Debug, sync::Arc};
 
-use super::decoder::Decoder;
+use super::{decoder::Decoder, request_handler::Command};
 pub struct Player {
     player_backend: Box<PlayerBackend>,
     decoder: Addr<Decoder>,
-    sources: Vec<ScheduledSource>,
+    sources: VecDeque<ScheduledSource>,
     volume: f32,
     event_tx: broadcast::Sender<PlayerEvent>,
     analysis_tx: mpsc::Sender<Block>,
+    request_queue: mpsc::Sender<Command>,
+    should_load_next: bool,
 }
 
 impl Actor for Player {}
@@ -36,14 +39,17 @@ impl Player {
         decoder: Addr<Decoder>,
         event_tx: broadcast::Sender<PlayerEvent>,
         analysis_tx: mpsc::Sender<Block>,
+        request_queue: mpsc::Sender<Command>,
     ) -> Player {
         Player {
             player_backend,
             decoder,
-            sources: vec![],
-            volume: 0.5,
+            sources: VecDeque::new(),
+            volume: -0.5,
             event_tx,
             analysis_tx,
+            request_queue,
+            should_load_next: true,
         }
     }
     // fn play(&self, start_time: f64) {
@@ -67,36 +73,55 @@ impl Player {
         });
     }
 
-    pub async fn stop(&mut self) {
+    fn reset(&mut self) {
         let context = CONTEXT.lock().unwrap();
         self.player_backend
             .stop(&context, self.sources[0].buffer_source);
+        self.disconnect_all(&context);
+        self.sources = VecDeque::new();
+    }
+
+    pub async fn stop(&mut self) {
+        self.reset();
+
         self.event_tx.publish(PlayerEvent::Stop {
             file: self.current_file(),
         });
+        self.should_load_next = false;
+    }
+
+    pub async fn should_load_next(&self) -> ActorResult<bool> {
+        Produces::ok(self.should_load_next)
     }
 
     pub async fn seek(&mut self, seconds: f64) {
-        self.stop().await;
-
         let queued_songs = self
             .sources
             .iter()
             .map(|s| s.path.to_owned())
             .collect::<Vec<_>>();
 
-        self.disconnect_all();
-        self.sources = vec![];
-        self.load(queued_songs.get(0).unwrap().to_owned(), Some(seconds))
-            .await;
-        if queued_songs.len() > 1 {
-            self.load(queued_songs.get(1).unwrap().to_owned(), None)
-                .await;
+        self.reset();
+
+        if let Some(first) = queued_songs.first() {
+            self.load(first.to_owned(), Some(seconds)).await;
         }
+        if let Some(next) = queued_songs.get(1) {
+            self.load(next.to_owned(), None).await;
+        }
+
         self.event_tx.publish(PlayerEvent::Seek {
             file: self.current_file().to_owned(),
             time: seconds,
         });
+    }
+
+    pub async fn on_ended(&mut self) {
+        self.sources.drain(0..1);
+        info!(
+            "Player event: ended. Scheduled song count: {}",
+            self.sources.len()
+        );
     }
 
     pub async fn set_volume(&mut self, volume: f32) {
@@ -113,8 +138,13 @@ impl Player {
     }
 
     pub async fn load(&mut self, path: String, start_seconds: Option<f64>) {
+        self.should_load_next = true;
         let file = get_filename_from_path(&path);
-        info!("Loading {}", file);
+        info!(
+            "Loading {}. Scheduled song count: {}",
+            file,
+            self.sources.len()
+        );
         let file_info = call!(self.decoder.decode(path.to_owned())).await.unwrap();
 
         let context = CONTEXT.lock().unwrap();
@@ -153,12 +183,15 @@ impl Player {
 
         let start_time: f64;
         let mut sender = self.event_tx.clone();
+        let mut request_queue = self.request_queue.clone();
         let file_ = file.clone();
+
         self.player_backend.subscribe_onended(
             &context,
             buffer_source,
             Box::new(move || {
                 info!("{:?} ended", file_);
+                request_queue.try_send(Command::Ended).unwrap();
                 sender.publish(PlayerEvent::Ended { file: file_ });
             }),
         );
@@ -174,7 +207,7 @@ impl Player {
                 .play(&context, buffer_source, start_time);
             info!("Starting at {}", start_time);
         } else {
-            let prev = self.sources.last().unwrap();
+            let prev = self.sources.back().unwrap();
             let seconds =
                 prev.start_time + (prev.duration - prev.end_gap - file_info.start_gap) - 0.03;
             start_time = seconds;
@@ -194,10 +227,9 @@ impl Player {
             gap,
             file_info.duration - gap
         );
-        self.sources.push(ScheduledSource {
+        self.sources.push_back(ScheduledSource {
             path,
             start_time,
-            start_gap: file_info.start_gap,
             end_gap: file_info.end_gap,
             duration: file_info.duration - gap,
             buffer_source,
@@ -206,8 +238,7 @@ impl Player {
         });
     }
 
-    fn disconnect_all(&mut self) {
-        let context = CONTEXT.lock().unwrap();
+    fn disconnect_all(&mut self, context: &AudioContext) {
         for source in &self.sources {
             context.disconnect_all_from(source.buffer_source);
             context.disconnect_all_from(source.gain);
@@ -216,7 +247,7 @@ impl Player {
     }
 
     fn current_file(&self) -> String {
-        if let Some(source) = self.sources.first() {
+        if let Some(source) = self.sources.front() {
             return source.path.to_owned();
         }
         return "".to_owned();
@@ -226,7 +257,6 @@ impl Player {
 struct ScheduledSource {
     path: String,
     start_time: f64,
-    start_gap: f64,
     end_gap: f64,
     duration: f64,
     buffer_source: NodeId,
