@@ -71,11 +71,11 @@ export const Controls: React.FC<ControlProps> = ({ onPlay, onPrevious, playingSo
             x += sliceWidth;
           }
           canvasCtx.stroke();
-          visualizerTimeout.current = setTimeout(visualizer, 50);
+          visualizerTimeout.current = setTimeout(visualizer, 100);
         });
       }
     } else {
-      visualizerTimeout.current = setTimeout(visualizer, 50);
+      visualizerTimeout.current = setTimeout(visualizer, 100);
     }
   }, [canvasRef, playbackState]);
 
