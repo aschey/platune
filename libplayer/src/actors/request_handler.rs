@@ -49,6 +49,12 @@ impl RequestHandler {
                 Command::Ended => {
                     call!(self.queue_addr.on_ended()).await.unwrap();
                 }
+                Command::Next => {
+                    call!(self.queue_addr.next()).await.unwrap();
+                }
+                Command::Previous => {
+                    call!(self.queue_addr.previous()).await.unwrap();
+                }
             }
             info!("Completed command");
         }
@@ -64,4 +70,6 @@ pub enum Command {
     Resume,
     Stop,
     Ended,
+    Next,
+    Previous,
 }

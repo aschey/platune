@@ -43,12 +43,12 @@ pub mod libplayer {
             let player_addr = spawn_actor(Player::new(
                 backend,
                 decoder_addr,
-                event_tx,
+                event_tx.clone(),
                 analysis_tx,
                 tx.clone(),
             ));
             let player_addr_ = player_addr.clone();
-            let queue_addr = spawn_actor(SongQueue::new(player_addr));
+            let queue_addr = spawn_actor(SongQueue::new(player_addr, event_tx));
             let handler_addr =
                 spawn_actor(RequestHandler::new(rx, queue_addr.clone(), player_addr_));
             let analyser_addr = spawn_actor(Analyser::new(analysis_rx));
@@ -114,6 +114,14 @@ pub mod libplayer {
             self.cmd_sender.try_send(Command::Resume).unwrap();
         }
 
+        pub fn next(&mut self) {
+            self.cmd_sender.try_send(Command::Next).unwrap();
+        }
+
+        pub fn previous(&mut self) {
+            self.cmd_sender.try_send(Command::Previous).unwrap();
+        }
+
         pub fn join(&mut self) {
             self.glib_main_loop.quit();
             self.glib_handle.take().unwrap().join().unwrap();
@@ -127,6 +135,8 @@ pub mod libplayer {
         Stop { file: String },
         Resume { file: String },
         Ended { file: String },
+        Next { file: String },
+        Previous { file: String },
         SetVolume { file: String, volume: f32 },
         Seek { file: String, time: f64 },
     }

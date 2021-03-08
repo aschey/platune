@@ -65,29 +65,36 @@ impl Player {
         });
     }
 
-    pub async fn resume(&mut self) {
+    pub async fn ensure_resumed(&self) {
         let context = CONTEXT.lock().unwrap();
         self.player_backend.resume(&context);
+    }
+
+    pub async fn resume(&mut self) {
+        self.ensure_resumed().await;
         self.event_tx.publish(PlayerEvent::Resume {
             file: self.current_file(),
         });
     }
 
-    fn reset(&mut self) {
+    pub async fn reset(&mut self) {
         let context = CONTEXT.lock().unwrap();
-        self.player_backend
-            .stop(&context, self.sources[0].buffer_source);
+        if let Some(current_source) = self.sources.get(0) {
+            self.player_backend
+                .stop(&context, current_source.buffer_source);
+        }
+
         self.disconnect_all(&context);
         self.sources = VecDeque::new();
+        self.should_load_next = false;
     }
 
     pub async fn stop(&mut self) {
-        self.reset();
+        self.reset().await;
 
         self.event_tx.publish(PlayerEvent::Stop {
             file: self.current_file(),
         });
-        self.should_load_next = false;
     }
 
     pub async fn should_load_next(&self) -> ActorResult<bool> {
@@ -101,7 +108,7 @@ impl Player {
             .map(|s| s.path.to_owned())
             .collect::<Vec<_>>();
 
-        self.reset();
+        self.reset().await;
 
         if let Some(first) = queued_songs.first() {
             self.load(first.to_owned(), Some(seconds)).await;

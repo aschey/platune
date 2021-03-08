@@ -14,6 +14,8 @@ service Player {
   rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc Seek(SeekRequest) returns (google.protobuf.Empty) {}
   rpc SetVolume(SetVolumeRequest) returns (google.protobuf.Empty) {}
+  rpc Next(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc Previous(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse) {}
 }
 

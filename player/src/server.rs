@@ -48,6 +48,18 @@ impl Player for PlayerImpl {
         Ok(Response::new(()))
     }
 
+    async fn next(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        self.player.lock().unwrap().next();
+
+        Ok(Response::new(()))
+    }
+
+    async fn previous(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        self.player.lock().unwrap().previous();
+
+        Ok(Response::new(()))
+    }
+
     async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<()>, Status> {
         self.player
             .lock()
@@ -81,6 +93,8 @@ impl Player for PlayerImpl {
                     | PlayerEvent::Pause { file }
                     | PlayerEvent::Stop { file }
                     | PlayerEvent::Resume { file }
+                    | PlayerEvent::Next { file }
+                    | PlayerEvent::Previous { file }
                     | PlayerEvent::Ended { file } => tx
                         .send(Ok(EventResponse {
                             file: file.to_owned(),

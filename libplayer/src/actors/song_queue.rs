@@ -1,23 +1,25 @@
 use act_zero::*;
 use log::info;
-use postage::{broadcast::Receiver, prelude::Stream};
+use postage::broadcast;
 
 use crate::libplayer::PlayerEvent;
 
-use super::player::Player;
+use super::player::{Player, SenderExt};
 pub struct SongQueue {
     songs: Vec<String>,
     position: usize,
     player: Addr<Player>,
+    event_tx: broadcast::Sender<PlayerEvent>,
 }
 impl Actor for SongQueue {}
 
 impl SongQueue {
-    pub fn new(player: Addr<Player>) -> SongQueue {
+    pub fn new(player: Addr<Player>, event_tx: broadcast::Sender<PlayerEvent>) -> SongQueue {
         SongQueue {
             songs: vec![],
             position: 0,
             player,
+            event_tx,
         }
     }
 
@@ -32,14 +34,36 @@ impl SongQueue {
         }
     }
 
+    pub async fn next(&mut self) {
+        if self.position == self.songs.len() - 1 {
+            info!("Cannot load next. Already at end of queue");
+            return;
+        }
+        self.position += 1;
+        self.prime().await;
+
+        self.event_tx.publish(PlayerEvent::Next {
+            file: self.songs[self.position].to_owned(),
+        })
+    }
+
+    pub async fn previous(&mut self) {
+        if self.position == 0 {
+            info!("Cannot load previous. Already at beginning of queue");
+            return;
+        }
+        self.position -= 1;
+        self.prime().await;
+
+        self.event_tx.publish(PlayerEvent::Previous {
+            file: self.songs[self.position].to_owned(),
+        })
+    }
+
     async fn load_next(&mut self) {
         self.position += 1;
         call!(self.player.on_ended()).await.unwrap();
-        if let Some(song) = self.songs.get(self.position + 1) {
-            call!(self.player.load(song.to_owned(), None))
-                .await
-                .unwrap();
-        }
+        self.load_if_exists(self.position + 1).await;
     }
 
     pub async fn set_queue(&mut self, queue: Vec<String>) {
@@ -47,19 +71,21 @@ impl SongQueue {
         self.position = 0;
         self.songs = queue;
 
-        if self.songs.len() > 0 {
-            call!(self
-                .player
-                .load(self.songs.get(0).unwrap().to_owned(), None))
-            .await
-            .unwrap();
-        }
-        if self.songs.len() > 1 {
-            call!(self
-                .player
-                .load(self.songs.get(1).unwrap().to_owned(), None))
-            .await
-            .unwrap();
+        self.prime().await;
+    }
+
+    async fn prime(&mut self) {
+        call!(self.player.reset()).await.unwrap();
+        call!(self.player.ensure_resumed()).await.unwrap();
+        self.load_if_exists(self.position).await;
+        self.load_if_exists(self.position + 1).await;
+    }
+
+    async fn load_if_exists(&mut self, position: usize) {
+        if let Some(song) = self.songs.get(position) {
+            call!(self.player.load(song.to_owned(), None))
+                .await
+                .unwrap();
         }
     }
 }
