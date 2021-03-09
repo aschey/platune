@@ -213,6 +213,8 @@ impl Player {
             self.player_backend
                 .play(&context, buffer_source, start_time);
             info!("Starting at {}", start_time);
+            self.event_tx
+                .publish(PlayerEvent::Play { file: file.clone() });
         } else {
             let prev = self.sources.back().unwrap();
             let seconds =
