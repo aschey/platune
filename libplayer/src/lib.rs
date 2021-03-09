@@ -2,6 +2,8 @@ mod actors;
 mod context;
 mod player_backend;
 mod servo_backend;
+#[cfg(test)]
+mod test;
 mod util;
 #[cfg(all(feature = "runtime-tokio", feature = "runtime-async-std"))]
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
