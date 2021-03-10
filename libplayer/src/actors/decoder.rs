@@ -39,12 +39,15 @@ impl Decoder {
             .error(|e| {
                 error!("Error decoding audio {:?}", e);
             })
-            .progress(move |buffer, channel| {
+            .progress(move |buffer, mut channel| {
+                if channel == 0 {
+                    channel = 1;
+                }
                 let mut decoded_audio = decoded_audio_.lock().unwrap();
                 decoded_audio[(channel - 1) as usize].extend_from_slice((*buffer).as_ref());
             })
             .ready(move |channels| {
-                info!("Decoding {}", filename_);
+                info!("Decoding {}, channels: {}", filename_, channels);
                 decoded_audio__
                     .lock()
                     .unwrap()
@@ -67,7 +70,7 @@ impl Decoder {
         //let sample_rate = options.sample_rate;
         let data = decoded_audio.lock().unwrap();
         let l = &data[0];
-        let r = &data[1];
+        let r = if data.len() > 1 { &data[1] } else { &data[0] };
 
         let start_gap = self.find_start_gap(l, r, sample_rate);
         let end_gap = self.find_end_gap(l, r, sample_rate);
