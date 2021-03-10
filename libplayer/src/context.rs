@@ -6,6 +6,9 @@ use servo_media_audio::context::{AudioContext, AudioContextOptions, RealTimeAudi
 
 lazy_static! {
     pub static ref CONTEXT: Arc<Mutex<AudioContext>> = {
+        #[cfg(test)]
+        ServoMedia::init::<servo_media_auto::DummyBackend>();
+        #[cfg(not(test))]
         ServoMedia::init::<servo_media_auto::Backend>();
         let servo_media = ServoMedia::get().unwrap();
         let context = servo_media.create_audio_context(

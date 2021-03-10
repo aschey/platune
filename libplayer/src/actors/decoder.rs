@@ -67,7 +67,6 @@ impl Decoder {
             latency_hint: _,
         } = RealTimeAudioContextOptions::default();
         let sample_rate = sample_rate as f64;
-        //let sample_rate = options.sample_rate;
         let data = decoded_audio.lock().unwrap();
         let l = &data[0];
         let r = if data.len() > 1 { &data[1] } else { &data[0] };
