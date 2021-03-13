@@ -2,7 +2,6 @@ use crate::player_rpc::*;
 use crate::player_server::Player;
 use std::{pin::Pin, sync::Mutex};
 
-use futures::channel::mpsc::Receiver;
 use platune_libplayer::libplayer::*;
 use tonic::{Request, Response, Status};
 

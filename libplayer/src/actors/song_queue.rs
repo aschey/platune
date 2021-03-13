@@ -2,7 +2,7 @@ use act_zero::*;
 use log::info;
 use postage::broadcast;
 
-use crate::libplayer::PlayerEvent;
+use crate::{libplayer::PlayerEvent, util::get_filename_from_path};
 
 use super::player::{Player, SenderExt};
 pub struct SongQueue {
@@ -43,7 +43,7 @@ impl SongQueue {
         self.prime().await;
 
         self.event_tx.publish(PlayerEvent::Next {
-            file: self.songs[self.position].to_owned(),
+            file: self.current_file_name(),
         })
     }
 
@@ -56,7 +56,7 @@ impl SongQueue {
         self.prime().await;
 
         self.event_tx.publish(PlayerEvent::Previous {
-            file: self.songs[self.position].to_owned(),
+            file: self.current_file_name(),
         })
     }
 
@@ -87,5 +87,9 @@ impl SongQueue {
                 .await
                 .unwrap();
         }
+    }
+
+    fn current_file_name(&self) -> String {
+        get_filename_from_path(&self.songs[self.position])
     }
 }

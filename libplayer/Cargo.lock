@@ -1387,6 +1387,7 @@ dependencies = [
  "act-zero",
  "assert_matches",
  "async-std",
+ "ctor",
  "flexi_logger",
  "futures",
  "gstreamer",
@@ -1638,7 +1639,7 @@ dependencies = [
 [[package]]
 name = "servo-media"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "servo-media-audio",
  "servo-media-player",
@@ -1650,7 +1651,7 @@ dependencies = [
 [[package]]
 name = "servo-media-audio"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "boxfnonce",
  "byte-slice-cast",
@@ -1672,7 +1673,7 @@ dependencies = [
 [[package]]
 name = "servo-media-auto"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "servo-media-dummy",
  "servo-media-gstreamer",
@@ -1681,7 +1682,7 @@ dependencies = [
 [[package]]
 name = "servo-media-dummy"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "boxfnonce",
  "ipc-channel",
@@ -1696,7 +1697,7 @@ dependencies = [
 [[package]]
 name = "servo-media-gstreamer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "boxfnonce",
  "byte-slice-cast",
@@ -1732,7 +1733,7 @@ dependencies = [
 [[package]]
 name = "servo-media-gstreamer-render"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "gstreamer",
  "gstreamer-video",
@@ -1742,7 +1743,7 @@ dependencies = [
 [[package]]
 name = "servo-media-gstreamer-render-android"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "glib",
  "gstreamer",
@@ -1755,7 +1756,7 @@ dependencies = [
 [[package]]
 name = "servo-media-gstreamer-render-unix"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "glib",
  "gstreamer",
@@ -1768,7 +1769,7 @@ dependencies = [
 [[package]]
 name = "servo-media-player"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "ipc-channel",
  "serde",
@@ -1780,7 +1781,7 @@ dependencies = [
 [[package]]
 name = "servo-media-streams"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "lazy_static",
  "uuid",
@@ -1789,12 +1790,12 @@ dependencies = [
 [[package]]
 name = "servo-media-traits"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 
 [[package]]
 name = "servo-media-webrtc"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "boxfnonce",
  "lazy_static",
@@ -1806,7 +1807,7 @@ dependencies = [
 [[package]]
 name = "servo_media_derive"
 version = "0.1.0"
-source = "git+https://github.com/aschey/media?rev=010f402d#010f402d4452be76225f459431b1020484ca1bc5"
+source = "git+https://github.com/aschey/media?rev=30434fd#30434fd7afa48d264718359dd7576e022c0ca1bd"
 dependencies = [
  "proc-macro2",
  "quote",

@@ -61,7 +61,7 @@ impl Player {
         let context = CONTEXT.lock().unwrap();
         self.player_backend.pause(&context);
         self.event_tx.publish(PlayerEvent::Pause {
-            file: self.current_file(),
+            file: self.current_file_name(),
         });
     }
 
@@ -73,7 +73,7 @@ impl Player {
     pub async fn resume(&mut self) {
         self.ensure_resumed().await;
         self.event_tx.publish(PlayerEvent::Resume {
-            file: self.current_file(),
+            file: self.current_file_name(),
         });
     }
 
@@ -93,7 +93,7 @@ impl Player {
         self.reset().await;
 
         self.event_tx.publish(PlayerEvent::Stop {
-            file: self.current_file(),
+            file: self.current_file_name(),
         });
     }
 
@@ -118,7 +118,7 @@ impl Player {
         }
 
         self.event_tx.publish(PlayerEvent::Seek {
-            file: self.current_file().to_owned(),
+            file: self.current_file_name(),
             time: seconds,
         });
     }
@@ -139,7 +139,7 @@ impl Player {
                 .set_volume(&context, source.gain, volume);
         }
         self.event_tx.publish(PlayerEvent::SetVolume {
-            file: self.current_file(),
+            file: self.current_file_name(),
             volume,
         });
     }
@@ -255,11 +255,15 @@ impl Player {
         }
     }
 
-    fn current_file(&self) -> String {
+    fn current_file_path(&self) -> String {
         if let Some(source) = self.sources.front() {
             return source.path.to_owned();
         }
         return "".to_owned();
+    }
+
+    fn current_file_name(&self) -> String {
+        get_filename_from_path(&self.current_file_path())
     }
 }
 

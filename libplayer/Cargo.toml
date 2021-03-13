@@ -16,9 +16,9 @@ runtime-async-std = ["act-zero/default-async-std", "async-std"]
 
 
 [dependencies]
-servo-media = { git = "https://github.com/aschey/media", rev = "010f402d" }
-servo-media-audio = { git = "https://github.com/aschey/media", rev = "010f402d" }
-servo-media-auto = { git = "https://github.com/aschey/media", rev = "010f402d" }
+servo-media = { git = "https://github.com/aschey/media", rev = "30434fd" }
+servo-media-audio = { git = "https://github.com/aschey/media", rev = "30434fd" }
+servo-media-auto = { git = "https://github.com/aschey/media", rev = "30434fd" }
 lazy_static = "1.4.0"
 log = "0.4.14"
 gstreamer = "0.15"
@@ -33,5 +33,6 @@ strum_macros = "0.20.1"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
+ctor = "0.1.19"
 flexi_logger = "0.17.1"
 
