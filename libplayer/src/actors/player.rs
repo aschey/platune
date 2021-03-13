@@ -17,7 +17,7 @@ use servo_media_audio::{
     graph::NodeId,
     node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage, OnEndedCallback},
 };
-use std::{collections::VecDeque, fmt::Debug, sync::Arc};
+use std::{cmp::max, collections::VecDeque, fmt::Debug, sync::Arc};
 
 use super::{decoder::Decoder, request_handler::Command};
 pub struct Player {
@@ -116,11 +116,6 @@ impl Player {
         if let Some(next) = queued_songs.get(1) {
             self.load(next.to_owned(), None).await;
         }
-
-        self.event_tx.publish(PlayerEvent::Seek {
-            file: self.current_file_name(),
-            time: seconds,
-        });
     }
 
     pub async fn on_ended(&mut self) {
@@ -202,7 +197,7 @@ impl Player {
                 sender.publish(PlayerEvent::Ended { file: file_ });
             }),
         );
-
+        let seek_start = start_seconds.unwrap_or_default();
         if self.sources.len() == 0 {
             if let Some(seconds) = start_seconds {
                 info!("Seeking to {}", seconds);
@@ -213,8 +208,15 @@ impl Player {
             self.player_backend
                 .play(&context, buffer_source, start_time);
             info!("Starting at {}", start_time);
-            self.event_tx
-                .publish(PlayerEvent::Play { file: file.clone() });
+            if seek_start == 0. {
+                self.event_tx
+                    .publish(PlayerEvent::Play { file: file.clone() });
+            } else {
+                self.event_tx.publish(PlayerEvent::Seek {
+                    file: file.clone(),
+                    time: seek_start,
+                });
+            }
         } else {
             let prev = self.sources.back().unwrap();
             let seconds =
@@ -224,23 +226,24 @@ impl Player {
             self.player_backend.play(&context, buffer_source, seconds);
         }
 
-        let gap = start_seconds.unwrap_or_default();
+        let seek_start = start_seconds.unwrap_or_default();
+        let computed_duration = f64::max(file_info.duration - seek_start, 0.);
 
         info!(
-            "Adding {} start time: {} start gap: {} end gap: {} duration: {} gap: {} computed duration: {}",
+            "Adding {} start time: {} start gap: {} end gap: {} duration: {} seek_start: {} computed duration: {}",
             file,
             start_time,
             file_info.start_gap,
             file_info.end_gap,
             file_info.duration,
-            gap,
-            file_info.duration - gap
+            seek_start,
+            computed_duration
         );
         self.sources.push_back(ScheduledSource {
             path,
             start_time,
             end_gap: file_info.end_gap,
-            duration: file_info.duration - gap,
+            duration: computed_duration,
             buffer_source,
             gain,
             analyser,
@@ -286,6 +289,7 @@ where
     T: Clone + Debug,
 {
     fn publish(&mut self, value: T) {
+        info!("Publishing {:?}", value);
         if let Err(res) = self.try_send(value) {
             warn!("Unable to send: {:?}", res);
         }

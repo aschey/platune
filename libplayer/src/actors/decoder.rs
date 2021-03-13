@@ -1,4 +1,6 @@
 use crate::util::clocktime_to_seconds;
+use gstreamer::subclass::error::FlowError::Error;
+
 use std::{
     fs::File,
     io::Read,
@@ -34,7 +36,9 @@ impl Decoder {
         let callbacks = AudioDecoderCallbacks::new()
             .eos(move || {
                 info!("EOS");
-                sender.try_send(()).unwrap();
+                if let Err(err) = sender.try_send(()) {
+                    warn!("Error sending EOS: {}", err);
+                }
             })
             .error(|e| {
                 error!("Error decoding audio {:?}", e);
