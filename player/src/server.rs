@@ -12,7 +12,7 @@ pub struct PlayerImpl {
 
 impl PlayerImpl {
     pub fn new() -> PlayerImpl {
-        let (platune, event_rx) = PlatunePlayer::new_with_events();
+        let (platune, event_rx) = PlatunePlayer::create();
         PlayerImpl {
             player: Mutex::new(platune),
             event_rx,
@@ -96,7 +96,7 @@ impl Player for PlayerImpl {
                     | PlayerEvent::Previous { file }
                     | PlayerEvent::Ended { file } => tx
                         .send(Ok(EventResponse {
-                            file: file.to_owned(),
+                            file: Some(file.to_owned()),
                             event: msg.to_string(),
                             time: None,
                             volume: None,
@@ -106,7 +106,7 @@ impl Player for PlayerImpl {
 
                     PlayerEvent::SetVolume { file, volume } => tx
                         .send(Ok(EventResponse {
-                            file: file.to_owned(),
+                            file: Some(file.to_owned()),
                             event: msg.to_string(),
                             time: None,
                             volume: Some(*volume),
@@ -115,9 +115,18 @@ impl Player for PlayerImpl {
                         .unwrap_or_default(),
                     PlayerEvent::Seek { file, time } => tx
                         .send(Ok(EventResponse {
-                            file: file.to_owned(),
+                            file: Some(file.to_owned()),
                             event: msg.to_string(),
                             time: Some(*time),
+                            volume: None,
+                        }))
+                        .await
+                        .unwrap_or_default(),
+                    PlayerEvent::QueueEnded => tx
+                        .send(Ok(EventResponse {
+                            file: None,
+                            event: msg.to_string(),
+                            time: None,
                             volume: None,
                         }))
                         .await

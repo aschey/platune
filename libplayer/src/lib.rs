@@ -1,7 +1,5 @@
 mod actors;
 mod context;
-mod player_backend;
-mod servo_backend;
 mod util;
 #[cfg(all(feature = "runtime-tokio", feature = "runtime-async-std"))]
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
@@ -10,13 +8,16 @@ pub mod libplayer {
     use crate::actors::{
         analyser::Analyser,
         decoder::Decoder,
+        gstreamer_context::GStreamerContext,
         player::Player,
         request_handler::{Command, RequestHandler},
         song_queue::SongQueue,
     };
-    use crate::servo_backend::ServoBackend;
+
     use act_zero::{call, runtimes::default::spawn_actor};
+    use log::info;
     pub use postage::*;
+    use servo_media::BackendInit;
     use strum_macros::Display;
 
     use gstreamer::glib::{self, MainLoop};
@@ -34,15 +35,24 @@ pub mod libplayer {
     }
 
     impl PlatunePlayer {
-        pub fn new_with_events() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
+        pub fn create() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
+            PlatunePlayer::create_backend::<servo_media_auto::Backend>()
+        }
+
+        pub fn create_dummy() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
+            PlatunePlayer::create_backend::<servo_media_auto::DummyBackend>()
+        }
+
+        fn create_backend<T: BackendInit>() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
             let (event_tx, event_rx) = broadcast::channel(32);
             let (tx, rx) = mpsc::channel(32);
             let (analysis_tx, analysis_rx) = mpsc::channel(32);
-            let decoder_addr = spawn_actor(Decoder);
-            let backend = Box::new(ServoBackend);
+            let context_addr = spawn_actor(GStreamerContext::new::<T>());
+            let decoder_addr = spawn_actor(Decoder::new(context_addr.clone()));
+            //let backend = Box::new(ServoBackend);
             let player_addr = spawn_actor(Player::new(
-                backend,
                 decoder_addr,
+                context_addr,
                 event_tx.clone(),
                 analysis_tx,
                 tx.clone(),
@@ -123,6 +133,7 @@ pub mod libplayer {
         }
 
         pub fn join(&mut self) {
+            self.cmd_sender.try_send(Command::Shutdown).unwrap();
             self.glib_main_loop.quit();
             self.glib_handle.take().unwrap().join().unwrap();
         }

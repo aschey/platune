@@ -41,7 +41,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // C:\\shared_files\Music\emoisdead\Peu Etre - Langue Et Civilisation Hardcore (199x)\Peu Etre-17-Track 17.mp3
     // C:\\shared_files\Music\emoisdead\Peu Etre - Langue Et Civilisation Hardcore (199x)\Peu Etre-18-Track 18.mp3
     // client.set_queue(vec![
-    //     // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),//"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
+    //     // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/01 Intro.m4a".to_owned(),
+    //"C:\\shared_files\\Music\\4 Strings\\Believe\\01 Intro.m4a".to_owned(),
     //     // "/home/aschey/windows/shared_files/Music/4 Strings/Believe/02 Take Me Away (Into The Night).m4a"
     //     //     .to_owned()
     //     "/home/aschey/windows/shared_files/Music/Between the Buried and Me/Colors/04 Sun of Nothing.m4a".to_owned(),

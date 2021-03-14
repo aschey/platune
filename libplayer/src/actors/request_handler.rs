@@ -26,7 +26,7 @@ impl RequestHandler {
     }
     pub async fn run(&mut self) {
         while let Some(next_command) = self.request_queue.recv().await {
-            info!("Got command {:#?}", next_command);
+            info!("Got command {:?}", next_command);
             match next_command {
                 Command::SetQueue(queue) => {
                     call!(self.queue_addr.set_queue(queue)).await.unwrap();
@@ -55,6 +55,9 @@ impl RequestHandler {
                 Command::Previous => {
                     call!(self.queue_addr.previous()).await.unwrap();
                 }
+                Command::Shutdown => {
+                    call!(self.player_addr.shutdown()).await.unwrap();
+                }
             }
             info!("Completed command");
         }
@@ -72,4 +75,5 @@ pub enum Command {
     Ended,
     Next,
     Previous,
+    Shutdown,
 }

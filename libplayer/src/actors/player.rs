@@ -1,6 +1,5 @@
 use crate::libplayer::PlayerEvent;
 use crate::util::get_filename_from_path;
-use crate::{context::CONTEXT, player_backend::PlayerBackend};
 use act_zero::*;
 use log::{error, info, warn};
 use postage::{
@@ -8,21 +7,31 @@ use postage::{
     mpsc,
     sink::Sink,
 };
+use servo_media::{ClientContextId, ServoMedia};
 use servo_media_audio::{
     analyser_node::AnalysisEngine,
     block::Block,
     buffer_source_node::{AudioBuffer, AudioBufferSourceNodeMessage},
-    context::AudioContext,
+    context::{AudioContext, AudioContextOptions, RealTimeAudioContextOptions},
     gain_node::GainNodeOptions,
     graph::NodeId,
     node::{AudioNodeInit, AudioNodeMessage, AudioScheduledSourceNodeMessage, OnEndedCallback},
 };
-use std::{cmp::max, collections::VecDeque, fmt::Debug, sync::Arc};
+use std::{
+    cmp::max,
+    collections::VecDeque,
+    fmt::Debug,
+    sync::{Arc, Mutex},
+};
 
-use super::{decoder::Decoder, request_handler::Command};
+use super::{
+    decoder::Decoder,
+    gstreamer_context::{GStreamerContext, NodeGroup},
+    request_handler::Command,
+};
 pub struct Player {
-    player_backend: Box<PlayerBackend>,
     decoder: Addr<Decoder>,
+    context: Addr<GStreamerContext>,
     sources: VecDeque<ScheduledSource>,
     volume: f32,
     event_tx: broadcast::Sender<PlayerEvent>,
@@ -35,15 +44,15 @@ impl Actor for Player {}
 
 impl Player {
     pub fn new(
-        player_backend: Box<PlayerBackend>,
         decoder: Addr<Decoder>,
+        context: Addr<GStreamerContext>,
         event_tx: broadcast::Sender<PlayerEvent>,
         analysis_tx: mpsc::Sender<Block>,
         request_queue: mpsc::Sender<Command>,
     ) -> Player {
         Player {
-            player_backend,
             decoder,
+            context,
             sources: VecDeque::new(),
             volume: -0.5,
             event_tx,
@@ -58,16 +67,14 @@ impl Player {
     // }
 
     pub async fn pause(&mut self) {
-        let context = CONTEXT.lock().unwrap();
-        self.player_backend.pause(&context);
+        call!(self.context.pause()).await.unwrap();
         self.event_tx.publish(PlayerEvent::Pause {
             file: self.current_file_name(),
         });
     }
 
     pub async fn ensure_resumed(&self) {
-        let context = CONTEXT.lock().unwrap();
-        self.player_backend.resume(&context);
+        call!(self.context.resume()).await.unwrap();
     }
 
     pub async fn resume(&mut self) {
@@ -78,13 +85,11 @@ impl Player {
     }
 
     pub async fn reset(&mut self) {
-        let context = CONTEXT.lock().unwrap();
+        self.disconnect_all().await;
         if let Some(current_source) = self.sources.get(0) {
-            self.player_backend
-                .stop(&context, current_source.buffer_source);
+            call!(self.context.stop(current_source.nodes.buffer_source));
         }
 
-        self.disconnect_all(&context);
         self.sources = VecDeque::new();
         self.should_load_next = false;
     }
@@ -97,7 +102,11 @@ impl Player {
         });
     }
 
-    pub async fn should_load_next(&self) -> ActorResult<bool> {
+    pub async fn shutdown(&self) {
+        call!(self.context.close()).await.unwrap();
+    }
+
+    pub async fn should_load_next(&mut self) -> ActorResult<bool> {
         Produces::ok(self.should_load_next)
     }
 
@@ -128,11 +137,10 @@ impl Player {
 
     pub async fn set_volume(&mut self, volume: f32) {
         self.volume = volume;
-        let context = CONTEXT.lock().unwrap();
-        for source in &self.sources {
-            self.player_backend
-                .set_volume(&context, source.gain, volume);
-        }
+
+        let gains = self.sources.iter().map(|s| s.nodes.gain).collect();
+        call!(self.context.set_volume(gains, volume)).await.unwrap();
+
         self.event_tx.publish(PlayerEvent::SetVolume {
             file: self.current_file_name(),
             volume,
@@ -149,66 +157,57 @@ impl Player {
         );
         let file_info = call!(self.decoder.decode(path.to_owned())).await.unwrap();
 
-        let context = CONTEXT.lock().unwrap();
-
-        let buffer_source = context.create_node(
-            AudioNodeInit::AudioBufferSourceNode(Default::default()),
-            Default::default(),
-        );
-
-        let gain = context.create_node(
-            AudioNodeInit::GainNode(GainNodeOptions { gain: self.volume }),
-            Default::default(),
-        );
-
+        let buffer_source_init = AudioNodeInit::AudioBufferSourceNode(Default::default());
+        let gain_init = AudioNodeInit::GainNode(GainNodeOptions { gain: self.volume });
         let mut tx = self.analysis_tx.clone();
-        let analyser = context.create_node(
-            AudioNodeInit::AnalyserNode(Box::new(move |block| {
-                tx.try_send(block).unwrap_or_default();
-            })),
-            Default::default(),
-        );
+        let analyser_init = AudioNodeInit::AnalyserNode(Box::new(move |block| {
+            tx.try_send(block).unwrap_or_default();
+        }));
 
-        let dest = context.dest_node();
-
-        context.connect_ports(buffer_source.output(0), analyser.input(0));
-        context.connect_ports(buffer_source.output(0), gain.input(0));
-        context.connect_ports(gain.output(0), dest.input(0));
-        context.connect_ports(analyser.output(0), dest.input(0));
-
-        context.message_node(
-            buffer_source,
+        let set_buffer =
             AudioNodeMessage::AudioBufferSourceNode(AudioBufferSourceNodeMessage::SetBuffer(Some(
                 AudioBuffer::from_buffers(file_info.data, file_info.sample_rate as f32),
-            ))),
-        );
+            )));
+
+        let nodes = call!(self.context.create_nodes(
+            buffer_source_init,
+            gain_init,
+            analyser_init,
+            set_buffer
+        ))
+        .await
+        .unwrap();
+
+        let buffer_source = nodes.buffer_source;
 
         let start_time: f64;
         let mut sender = self.event_tx.clone();
         let mut request_queue = self.request_queue.clone();
         let file_ = file.clone();
 
-        self.player_backend.subscribe_onended(
-            &context,
+        call!(self.context.subscribe_onended(
             buffer_source,
             Box::new(move || {
                 info!("{:?} ended", file_);
-                request_queue.try_send(Command::Ended).unwrap();
                 sender.publish(PlayerEvent::Ended { file: file_ });
-            }),
-        );
+                request_queue.try_send(Command::Ended).unwrap();
+            })
+        ));
         let seek_start = start_seconds.unwrap_or_default();
         if self.sources.len() == 0 {
             if let Some(seconds) = start_seconds {
                 info!("Seeking to {}", seconds);
-                self.player_backend.seek(&context, buffer_source, seconds);
+                call!(self.context.seek(buffer_source, seconds))
+                    .await
+                    .unwrap();
             }
 
-            start_time = context.current_time();
-            self.player_backend
-                .play(&context, buffer_source, start_time);
+            start_time = call!(self.context.current_time()).await.unwrap();
+            call!(self.context.play(buffer_source, start_time))
+                .await
+                .unwrap();
             info!("Starting at {}", start_time);
-            if seek_start == 0. {
+            if start_seconds == None {
                 self.event_tx
                     .publish(PlayerEvent::Play { file: file.clone() });
             } else {
@@ -223,7 +222,9 @@ impl Player {
                 prev.start_time + (prev.duration - prev.end_gap - file_info.start_gap) - 0.03;
             start_time = seconds;
             info!("Starting at {}", seconds);
-            self.player_backend.play(&context, buffer_source, seconds);
+            call!(self.context.play(buffer_source, seconds))
+                .await
+                .unwrap();
         }
 
         let seek_start = start_seconds.unwrap_or_default();
@@ -244,18 +245,18 @@ impl Player {
             start_time,
             end_gap: file_info.end_gap,
             duration: computed_duration,
-            buffer_source,
-            gain,
-            analyser,
+            nodes,
         });
     }
 
-    fn disconnect_all(&mut self, context: &AudioContext) {
-        for source in &self.sources {
-            context.disconnect_all_from(source.buffer_source);
-            context.disconnect_all_from(source.gain);
-            context.disconnect_all_from(source.analyser);
-        }
+    async fn disconnect_all(&mut self) {
+        let all_nodes = self
+            .sources
+            .iter()
+            .map(|s| s.nodes.to_vec())
+            .flatten()
+            .collect();
+        call!(self.context.disconnect_all(all_nodes)).await.unwrap();
     }
 
     fn current_file_path(&self) -> String {
@@ -275,9 +276,7 @@ struct ScheduledSource {
     start_time: f64,
     end_gap: f64,
     duration: f64,
-    buffer_source: NodeId,
-    gain: NodeId,
-    analyser: NodeId,
+    nodes: NodeGroup,
 }
 
 pub trait SenderExt<T> {

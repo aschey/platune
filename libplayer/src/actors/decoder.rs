@@ -7,7 +7,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::context::CONTEXT;
+//use crate::context::CONTEXT;
 use act_zero::*;
 use futures::future::join;
 use gstreamer::{
@@ -16,13 +16,23 @@ use gstreamer::{
 };
 use log::{error, info, warn};
 use postage::{mpsc, prelude::Stream, sink::Sink};
-use servo_media_audio::{context::RealTimeAudioContextOptions, decoder::AudioDecoderCallbacks};
+use servo_media_audio::{
+    context::{AudioContext, RealTimeAudioContextOptions},
+    decoder::AudioDecoderCallbacks,
+};
 
-pub struct Decoder;
+use super::gstreamer_context::GStreamerContext;
+
+pub struct Decoder {
+    context_addr: Addr<GStreamerContext>,
+}
 
 impl Actor for Decoder {}
 
 impl Decoder {
+    pub fn new(context_addr: Addr<GStreamerContext>) -> Decoder {
+        Decoder { context_addr }
+    }
     pub async fn decode(&self, filename: String) -> ActorResult<FileInfo> {
         let mut file = File::open(filename.to_owned()).unwrap();
         let mut bytes = vec![];
@@ -58,10 +68,13 @@ impl Decoder {
                     .resize(channels as usize, Vec::new());
             })
             .build();
-        CONTEXT
-            .lock()
-            .unwrap()
-            .decode_audio_data(bytes.to_vec(), callbacks);
+        call!(self.context_addr.decode_audio_data(bytes, callbacks))
+            .await
+            .unwrap();
+        // context
+        //     .lock()
+        //     .unwrap()
+        //     .decode_audio_data(bytes.to_vec(), callbacks);
 
         let (_, duration) = join(receiver.recv(), self.get_duration(&filename)).await;
         info!("Finished decoding");

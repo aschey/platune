@@ -27,7 +27,8 @@ impl SongQueue {
         let should_load_next = call!(self.player.should_load_next()).await.unwrap();
         if should_load_next {
             info!("Queue event: ended. Loading next.");
-            let has_next = self.load_next().await;
+            self.load_next().await;
+
             if self.position == self.songs.len() {
                 self.event_tx.publish(PlayerEvent::QueueEnded);
             }
