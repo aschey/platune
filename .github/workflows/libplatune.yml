@@ -10,6 +10,5 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: test
-        run: docker-compose build && docker-compose run test
-          working-directory: libplatune/player
-
+        run: docker-compose build && docker-compose up 
+        working-directory: libplatune/player
