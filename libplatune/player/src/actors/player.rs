@@ -68,9 +68,7 @@ impl Player {
 
     pub async fn pause(&mut self) {
         call!(self.context.pause()).await.unwrap();
-        self.event_tx.publish(PlayerEvent::Pause {
-            file: self.current_file_name(),
-        });
+        self.event_tx.publish(PlayerEvent::Pause);
     }
 
     pub async fn ensure_resumed(&self) {
@@ -79,9 +77,7 @@ impl Player {
 
     pub async fn resume(&mut self) {
         self.ensure_resumed().await;
-        self.event_tx.publish(PlayerEvent::Resume {
-            file: self.current_file_name(),
-        });
+        self.event_tx.publish(PlayerEvent::Resume);
     }
 
     pub async fn reset(&mut self) {
@@ -97,9 +93,7 @@ impl Player {
     pub async fn stop(&mut self) {
         self.reset().await;
 
-        self.event_tx.publish(PlayerEvent::Stop {
-            file: self.current_file_name(),
-        });
+        self.event_tx.publish(PlayerEvent::Stop);
     }
 
     pub async fn shutdown(&self) {
@@ -141,10 +135,7 @@ impl Player {
         let gains = self.sources.iter().map(|s| s.nodes.gain).collect();
         call!(self.context.set_volume(gains, volume)).await.unwrap();
 
-        self.event_tx.publish(PlayerEvent::SetVolume {
-            file: self.current_file_name(),
-            volume,
-        });
+        self.event_tx.publish(PlayerEvent::SetVolume { volume });
     }
 
     pub async fn load(&mut self, path: String, start_seconds: Option<f64>) {
@@ -189,7 +180,7 @@ impl Player {
             buffer_source,
             Box::new(move || {
                 info!("{:?} ended", file_);
-                sender.publish(PlayerEvent::Ended { file: file_ });
+                sender.publish(PlayerEvent::Ended);
                 request_queue.try_send(Command::Ended).unwrap();
             })
         ));
@@ -208,13 +199,9 @@ impl Player {
                 .unwrap();
             info!("Starting at {}", start_time);
             if start_seconds == None {
-                self.event_tx
-                    .publish(PlayerEvent::Play { file: file.clone() });
             } else {
-                self.event_tx.publish(PlayerEvent::Seek {
-                    file: file.clone(),
-                    time: seek_start,
-                });
+                self.event_tx
+                    .publish(PlayerEvent::Seek { time: seek_start });
             }
         } else {
             let prev = self.sources.back().unwrap();

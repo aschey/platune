@@ -24,7 +24,7 @@ message SeekRequest { float time = 1; }
 message SetVolumeRequest { float volume = 1; }
 message EventResponse {
   string event = 1;
-  optional string file = 2;
+  repeated string queue = 2;
   optional double time = 3;
   optional float volume = 4;
 }

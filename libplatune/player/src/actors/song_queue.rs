@@ -46,9 +46,7 @@ impl SongQueue {
         self.position += 1;
         self.prime().await;
 
-        self.event_tx.publish(PlayerEvent::Next {
-            file: self.current_file_name(),
-        })
+        self.event_tx.publish(PlayerEvent::Next)
     }
 
     pub async fn previous(&mut self) {
@@ -59,9 +57,7 @@ impl SongQueue {
         self.position -= 1;
         self.prime().await;
 
-        self.event_tx.publish(PlayerEvent::Previous {
-            file: self.current_file_name(),
-        })
+        self.event_tx.publish(PlayerEvent::Previous);
     }
 
     async fn load_next(&mut self) {
@@ -73,9 +69,10 @@ impl SongQueue {
     pub async fn set_queue(&mut self, queue: Vec<String>) {
         info!("Priming queue");
         self.position = 0;
-        self.songs = queue;
+        self.songs = queue.clone();
 
         self.prime().await;
+        self.event_tx.publish(PlayerEvent::StartQueue { queue });
     }
 
     async fn prime(&mut self) {

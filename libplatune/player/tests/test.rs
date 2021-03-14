@@ -102,21 +102,22 @@ async fn init_play(num_songs: usize) -> (PlatunePlayer, Receiver<PlayerEvent>, V
     let (mut player, mut receiver) = PlatunePlayer::create_dummy();
 
     let songs = get_test_files(num_songs);
-    player.set_queue(songs.get_paths());
-    let first = &songs[0];
+    let song_queue = songs.get_paths();
+    player.set_queue(song_queue.clone());
 
-    assert_matches!(receiver.recv().await, Some(PlayerEvent::Play { file }) if file == first.name);
+    assert_matches!(
+        receiver.recv().await,
+        Some(PlayerEvent::StartQueue { queue }) if queue == song_queue
+    );
     (player, receiver, songs)
 }
 
 #[rstest(num_songs, case(1), case(2), case(3))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 async fn test_basic(num_songs: usize) {
-    info!("here");
     let (mut player, mut receiver, songs) = init_play(num_songs).await;
-    info!("here2");
-    for song in songs {
-        assert_matches!( receiver.recv().await, Some(PlayerEvent::Ended { file }) if file == song.name);
+    for _ in songs {
+        assert_matches!(receiver.recv().await, Some(PlayerEvent::Ended));
     }
 
     assert_matches!(receiver.recv().await, Some(PlayerEvent::QueueEnded));
@@ -137,14 +138,14 @@ async fn test_basic(num_songs: usize) {
 async fn test_pause(num_songs: usize, pause_index: usize) {
     let (mut player, mut receiver, songs) = init_play(num_songs).await;
 
-    for (i, song) in songs.iter().enumerate() {
+    for (i, _) in songs.iter().enumerate() {
         if i == pause_index {
             player.pause();
-            assert_matches!(receiver.recv().await, Some(PlayerEvent::Pause { file }) if file == song.name);
+            assert_matches!(receiver.recv().await, Some(PlayerEvent::Pause));
             player.resume();
-            assert_matches!(receiver.recv().await, Some(PlayerEvent::Resume { file }) if file == song.name);
+            assert_matches!(receiver.recv().await, Some(PlayerEvent::Resume));
         }
-        assert_matches!( receiver.recv().await, Some(PlayerEvent::Ended { file }) if file == song.name);
+        assert_matches!(receiver.recv().await, Some(PlayerEvent::Ended));
     }
     assert_matches!(receiver.recv().await, Some(PlayerEvent::QueueEnded));
     player.join();
@@ -166,13 +167,13 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     // let seek_index = 0;
     let (mut player, mut receiver, songs) = init_play(num_songs).await;
     let seek_time = 0.1;
-    for (i, song) in songs.iter().enumerate() {
+    for (i, _) in songs.iter().enumerate() {
         if i == seek_index {
             thread::sleep(Duration::from_millis(1000));
             player.seek(seek_time);
-            assert_matches!(receiver.recv().await, Some(PlayerEvent::Seek { file, time }) if file == song.name && time == seek_time);
+            assert_matches!(receiver.recv().await, Some(PlayerEvent::Seek { time }) if time == seek_time);
         }
-        assert_matches!( receiver.recv().await, Some(PlayerEvent::Ended { file }) if file == song.name);
+        assert_matches!(receiver.recv().await, Some(PlayerEvent::Ended));
     }
 
     assert_matches!(receiver.recv().await, Some(PlayerEvent::QueueEnded));

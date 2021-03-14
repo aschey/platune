@@ -141,15 +141,15 @@ pub mod libplayer {
 
     #[derive(Clone, Debug, Display)]
     pub enum PlayerEvent {
-        Pause { file: String },
-        Play { file: String },
-        Stop { file: String },
-        Resume { file: String },
-        Ended { file: String },
-        Next { file: String },
-        Previous { file: String },
-        SetVolume { file: String, volume: f32 },
-        Seek { file: String, time: f64 },
+        StartQueue { queue: Vec<String> },
+        Stop,
+        Pause,
+        Resume,
+        Ended,
+        Next,
+        Previous,
+        SetVolume { volume: f32 },
+        Seek { time: f64 },
         QueueEnded,
     }
 }
