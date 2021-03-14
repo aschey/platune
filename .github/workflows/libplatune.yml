@@ -1,0 +1,15 @@
+on: [push]
+
+name: CI
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: test
+        run: docker-compose build && docker-compose run test
+          working-directory: libplatune/player
+

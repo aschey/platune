@@ -1062,6 +1062,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
 
 [[package]]
+name = "libplatune-player"
+version = "0.1.0"
+dependencies = [
+ "act-zero",
+ "assert_matches",
+ "async-std",
+ "ctor",
+ "flexi_logger",
+ "futures",
+ "gstreamer",
+ "gstreamer-audio",
+ "lazy_static",
+ "log",
+ "postage",
+ "rstest",
+ "serde_json",
+ "servo-media",
+ "servo-media-audio",
+ "servo-media-auto",
+ "strum_macros",
+ "tokio",
+ "yansi",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1381,32 +1406,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
-name = "platune-libplayer"
-version = "0.1.0"
-dependencies = [
- "act-zero",
- "assert_matches",
- "async-std",
- "ctor",
- "flexi_logger",
- "futures",
- "gstreamer",
- "gstreamer-audio",
- "lazy_static",
- "log",
- "postage",
- "rstest",
- "serde_json",
- "serial_test",
- "servo-media",
- "servo-media-audio",
- "servo-media-auto",
- "strum_macros",
- "tokio",
- "yansi",
-]
-
-[[package]]
 name = "podio"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1674,28 +1673,6 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
-]
-
-[[package]]
-name = "serial_test"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0bccbcf40c8938196944a3da0e133e031a33f4d6b72db3bda3cc556e361905d"
-dependencies = [
- "lazy_static",
- "parking_lot",
- "serial_test_derive",
-]
-
-[[package]]
-name = "serial_test_derive"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2acd6defeddb41eb60bb468f8825d0cfd0c2a76bc03bfd235b6a1dc4f6a1ad5"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

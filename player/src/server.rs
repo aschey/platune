@@ -2,7 +2,7 @@ use crate::player_rpc::*;
 use crate::player_server::Player;
 use std::{pin::Pin, sync::Mutex};
 
-use platune_libplayer::libplayer::*;
+use libplatune_player::libplayer::*;
 use tonic::{Request, Response, Status};
 
 pub struct PlayerImpl {

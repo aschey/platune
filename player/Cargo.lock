@@ -975,6 +975,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
 
 [[package]]
+name = "libplatune-player"
+version = "0.1.0"
+dependencies = [
+ "act-zero",
+ "futures",
+ "gstreamer",
+ "gstreamer-audio",
+ "lazy_static",
+ "log",
+ "postage",
+ "serde_json",
+ "servo-media",
+ "servo-media-audio",
+ "servo-media-auto",
+ "strum_macros",
+ "tokio",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1293,32 +1312,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
-name = "platune-libplayer"
-version = "0.1.0"
-dependencies = [
- "act-zero",
- "futures",
- "gstreamer",
- "gstreamer-audio",
- "lazy_static",
- "log",
- "postage",
- "serde_json",
- "servo-media",
- "servo-media-audio",
- "servo-media-auto",
- "strum_macros",
- "tokio",
-]
-
-[[package]]
 name = "player"
 version = "0.1.0"
 dependencies = [
  "flexi_logger",
  "futures",
+ "libplatune-player",
  "log",
- "platune-libplayer",
  "prost",
  "tokio",
  "tokio-stream",

@@ -10,8 +10,8 @@ use std::{
 use yansi::{Color, Style};
 
 use assert_matches::*;
-use platune_libplayer::libplayer::PlatunePlayer;
-use platune_libplayer::libplayer::PlayerEvent;
+use libplatune_player::libplayer::PlatunePlayer;
+use libplatune_player::libplayer::PlayerEvent;
 use postage::{broadcast::Receiver, prelude::Stream};
 
 #[cfg(not(target_os = "windows"))]
