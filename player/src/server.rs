@@ -88,43 +88,36 @@ impl Player for PlayerImpl {
         tokio::spawn(async move {
             while let Some(msg) = ended_rx.recv().await {
                 match &msg {
-                    PlayerEvent::Play { file }
-                    | PlayerEvent::Pause { file }
-                    | PlayerEvent::Stop { file }
-                    | PlayerEvent::Resume { file }
-                    | PlayerEvent::Next { file }
-                    | PlayerEvent::Previous { file }
-                    | PlayerEvent::Ended { file } => tx
+                    PlayerEvent::SetVolume { volume } => tx
                         .send(Ok(EventResponse {
-                            file: Some(file.to_owned()),
-                            event: msg.to_string(),
-                            time: None,
-                            volume: None,
-                        }))
-                        .await
-                        .unwrap_or_default(),
-
-                    PlayerEvent::SetVolume { file, volume } => tx
-                        .send(Ok(EventResponse {
-                            file: Some(file.to_owned()),
+                            queue: vec![],
                             event: msg.to_string(),
                             time: None,
                             volume: Some(*volume),
                         }))
                         .await
                         .unwrap_or_default(),
-                    PlayerEvent::Seek { file, time } => tx
+                    PlayerEvent::Seek { time } => tx
                         .send(Ok(EventResponse {
-                            file: Some(file.to_owned()),
+                            queue: vec![],
                             event: msg.to_string(),
                             time: Some(*time),
                             volume: None,
                         }))
                         .await
                         .unwrap_or_default(),
-                    PlayerEvent::QueueEnded => tx
+                    PlayerEvent::StartQueue { queue } => tx
                         .send(Ok(EventResponse {
-                            file: None,
+                            queue: queue.clone(),
+                            event: msg.to_string(),
+                            time: None,
+                            volume: None,
+                        }))
+                        .await
+                        .unwrap_or_default(),
+                    _ => tx
+                        .send(Ok(EventResponse {
+                            queue: vec![],
                             event: msg.to_string(),
                             time: None,
                             volume: None,
