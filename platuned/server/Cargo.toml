@@ -10,7 +10,7 @@ edition = "2018"
 tokio = {version="1.2", features=["full"]}
 flexi_logger = "0.17.1"
 yansi = "0.5.0"
-libplatune-player = {path = "../libplatune/player", features=["runtime-tokio"]}
+libplatune-player = {path = "../../libplatune/player", features=["runtime-tokio"]}
 log = "0.4.14"
 tonic = { git = "https://github.com/hyperium/tonic", rev="61555ff" }
 tonic-reflection = { git = "https://github.com/hyperium/tonic", rev="61555ff" }
