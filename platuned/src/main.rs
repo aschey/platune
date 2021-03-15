@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .register_encoded_file_descriptor_set(player_rpc::FILE_DESCRIPTOR_SET)
         .build()
         .unwrap();
-    let addr = "[::1]:50051".parse().unwrap();
+    let addr = "0.0.0.0:50051".parse().unwrap();
 
     let player = PlayerImpl::new();
     Server::builder()

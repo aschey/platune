@@ -9,6 +9,5 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: test
+      - name: Test
         run: docker build . -t libplatune-test && docker run --rm libplatune-test
-        working-directory: libplatune/player

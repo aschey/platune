@@ -1,5 +1,5 @@
 [package]
-name = "player"
+name = "platuned"
 version = "0.1.0"
 authors = ["aschey <aschey13@gmail.com>"]
 edition = "2018"
