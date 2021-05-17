@@ -83,17 +83,18 @@ impl SinkActor {
         }
         if let Some(file) = self.get_next() {
             self.append_file(file);
-            self.signal_finish();
+            let receiver = self.sink.get_current_receiver().unwrap();
+            self.finish_tx.send(receiver).unwrap();
         }
     }
 
     fn signal_finish(&mut self) {
         let receiver = self.sink.get_current_receiver().unwrap();
-
         self.finish_tx.send(receiver).unwrap();
     }
 
     pub fn set_queue(&mut self, queue: Vec<String>) {
+        self.stop();
         self.queue = queue;
     }
 
@@ -111,16 +112,16 @@ impl SinkActor {
 
     pub fn go_next(&mut self) {
         if self.position < self.queue.len() - 1 {
-            self.reset();
             self.position += 1;
+            self.reset();
             self.start();
         }
     }
 
     pub fn go_previous(&mut self) {
         if self.position > 0 {
-            self.reset();
             self.position -= 1;
+            self.reset();
             self.start();
         }
     }
