@@ -47,10 +47,10 @@ pub fn start_loop(receiver: Receiver<Command>, finish_rx: Sender<Receiver<()>>) 
                 queue.on_ended();
             }
             Command::Next => {
-                //call!(self.queue_addr.next()).await.unwrap();
+                queue.go_next();
             }
             Command::Previous => {
-                // call!(self.queue_addr.previous()).await.unwrap();
+                queue.go_previous();
             }
             Command::Shutdown => {
                 // call!(self.player_addr.shutdown()).await.unwrap();

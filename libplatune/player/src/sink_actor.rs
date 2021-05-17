@@ -41,8 +41,6 @@ impl SinkActor {
     }
 
     pub fn start(&mut self) {
-        // let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
-        // self.sink = rodio::Sink::try_new(&handle).unwrap();
         if let Some(path) = self.get_current() {
             self.append_file(path);
             self.signal_finish();
@@ -51,7 +49,6 @@ impl SinkActor {
             self.append_file(path);
             self.signal_finish();
         }
-        // self.sink.sleep_until_end();
     }
 
     pub fn play(&self) {
@@ -71,13 +68,19 @@ impl SinkActor {
     }
 
     pub fn stop(&mut self) {
-        self.sink.stop();
+        self.reset();
         self.position = 0;
+    }
+
+    fn reset(&mut self) {
+        self.sink.stop();
         self.sink = rodio::Sink::try_new(&self.handle).unwrap();
     }
 
     pub fn on_ended(&mut self) {
-        self.go_next();
+        if self.position < self.queue.len() - 1 {
+            self.position += 1;
+        }
         if let Some(file) = self.get_next() {
             self.append_file(file);
             self.signal_finish();
@@ -108,13 +111,17 @@ impl SinkActor {
 
     pub fn go_next(&mut self) {
         if self.position < self.queue.len() - 1 {
+            self.reset();
             self.position += 1;
+            self.start();
         }
     }
 
     pub fn go_previous(&mut self) {
         if self.position > 0 {
+            self.reset();
             self.position -= 1;
+            self.start();
         }
     }
 }
