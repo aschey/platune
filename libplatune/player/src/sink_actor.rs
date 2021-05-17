@@ -9,6 +9,7 @@ use std::{
 };
 
 use act_zero::*;
+use log::info;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink as RodioSink};
 
 use crate::event_loop::Command;
@@ -19,6 +20,8 @@ pub struct SinkActor {
     position: usize,
     finish_tx: Sender<Receiver<()>>,
     handle: OutputStreamHandle,
+    ignore_count: usize,
+    queued_count: usize,
 }
 
 impl SinkActor {
@@ -31,13 +34,16 @@ impl SinkActor {
             position: 0,
             finish_tx,
             handle,
+            ignore_count: 0,
+            queued_count: 0,
         }
     }
 
-    fn append_file(&self, path: String) {
+    fn append_file(&mut self, path: String) {
         let file = File::open(path).unwrap();
         let decoder = Decoder::new(BufReader::new(file)).unwrap();
         self.sink.append(decoder);
+        self.queued_count += 1;
     }
 
     pub fn start(&mut self) {
@@ -72,12 +78,26 @@ impl SinkActor {
         self.position = 0;
     }
 
+    fn ignore_ended(&mut self) {
+        self.ignore_count = self.queued_count;
+    }
+
     fn reset(&mut self) {
+        self.ignore_ended();
         self.sink.stop();
         self.sink = rodio::Sink::try_new(&self.handle).unwrap();
     }
 
     pub fn on_ended(&mut self) {
+        info!("ended");
+        self.queued_count -= 1;
+        if self.ignore_count > 0 {
+            info!("ignoring");
+            self.ignore_count -= 1;
+            return;
+        } else {
+            info!("not ignoring");
+        }
         if self.position < self.queue.len() - 1 {
             self.position += 1;
         }
