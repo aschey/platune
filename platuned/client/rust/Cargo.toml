@@ -1,0 +1,17 @@
+[package]
+name = "platuned-client"
+version = "0.1.0"
+authors = ["aschey <aschey13@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name="platuned_client"
+path="src/lib.rs"
+
+[dependencies]
+prost = "0.7.0"
+tonic = { git = "https://github.com/hyperium/tonic", rev="61555ff" }
+
+[build-dependencies]
+tonic-build = { git = "https://github.com/grippy/tonic", rev="da029464", features=["prost"] }

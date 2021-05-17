@@ -1,141 +1,102 @@
-mod actors;
-mod context;
-mod util;
 #[cfg(all(feature = "runtime-tokio", feature = "runtime-async-std"))]
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
 
+mod event_loop;
+mod sink_actor;
 pub mod libplayer {
-    use crate::actors::{
-        analyser::Analyser,
-        decoder::Decoder,
-        gstreamer_context::GStreamerContext,
-        player::Player,
-        request_handler::{Command, RequestHandler},
-        song_queue::SongQueue,
-    };
-
-    use act_zero::{call, runtimes::default::spawn_actor};
+    use crate::event_loop::{ended_loop, start_loop, Command};
+    use act_zero::{call, runtimes::default::spawn_actor, Addr};
     use log::info;
     pub use postage::*;
-    use servo_media::BackendInit;
+
     use strum_macros::Display;
 
-    use gstreamer::glib::{self, MainLoop};
     pub use postage::{sink::Sink, stream::Stream};
     //use postage::{broadcast::Sender, mpsc, sink::Sink};
     use std::{
         fmt,
+        io::BufReader,
         thread::{self, JoinHandle},
+        time::Duration,
     };
 
     pub struct PlatunePlayer {
-        glib_main_loop: MainLoop,
-        glib_handle: Option<JoinHandle<()>>,
-        cmd_sender: mpsc::Sender<Command>,
+        cmd_sender: std::sync::mpsc::Sender<Command>,
     }
 
     impl PlatunePlayer {
-        pub fn create() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
-            PlatunePlayer::create_backend::<servo_media_auto::Backend>()
-        }
-
-        pub fn create_dummy() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
-            PlatunePlayer::create_backend::<servo_media_auto::DummyBackend>()
-        }
-
-        fn create_backend<T: BackendInit>() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
+        pub fn new() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
             let (event_tx, event_rx) = broadcast::channel(32);
-            let (tx, rx) = mpsc::channel(32);
-            let (analysis_tx, analysis_rx) = mpsc::channel(32);
-            let context_addr = spawn_actor(GStreamerContext::new::<T>());
-            let decoder_addr = spawn_actor(Decoder::new(context_addr.clone()));
-            //let backend = Box::new(ServoBackend);
-            let player_addr = spawn_actor(Player::new(
-                decoder_addr,
-                context_addr,
-                event_tx.clone(),
-                analysis_tx,
-                tx.clone(),
-            ));
-            let player_addr_ = player_addr.clone();
-            let queue_addr = spawn_actor(SongQueue::new(player_addr, event_tx));
-            let handler_addr =
-                spawn_actor(RequestHandler::new(rx, queue_addr.clone(), player_addr_));
-            let analyser_addr = spawn_actor(Analyser::new(analysis_rx));
+            let (tx, rx) = std::sync::mpsc::channel();
 
-            let handler_task = async move {
-                call!(handler_addr.run()).await.unwrap();
-            };
+            // let queue_addr = spawn_actor(QueueActor::new());
+            // let sink_addr = spawn_actor(SinkActor::new(queue_addr.clone(), tx.clone()));
+            // let loop_addr = spawn_actor(MainLoopActor::new(rx, queue_addr, sink_addr));
 
-            let analyser_task = async move {
-                call!(analyser_addr.run()).await.unwrap();
-            };
-
+            // let loop_task = async move {
+            //     call!(loop_addr.run()).await.unwrap();
+            // };
+            let (finish_tx, finish_rx) = std::sync::mpsc::channel();
+            let finish_tx_ = finish_tx.clone();
+            let finish_tx__ = finish_tx.clone();
             #[cfg(feature = "runtime-tokio")]
             {
-                tokio::spawn(handler_task);
-                tokio::spawn(analyser_task);
+                let tx = tx.clone();
+                tokio::task::spawn_blocking(|| start_loop(finish_tx_, finish_rx, tx));
+                tokio::task::spawn_blocking(|| ended_loop(rx, finish_tx));
             }
 
             #[cfg(feature = "runtime-async-std")]
             {
-                async_std::task::spawn(handler_task);
-                async_std::task::spawn(analyser_task);
+                async_std::task::spawn(loop_task);
             }
 
-            let main_loop = glib::MainLoop::new(None, false);
-            let main_loop_ = main_loop.clone();
-            let glib_handle = thread::spawn(move || {
-                main_loop_.run();
-            });
             (
                 PlatunePlayer {
-                    glib_main_loop: main_loop,
-                    glib_handle: Some(glib_handle),
-                    cmd_sender: tx,
+                    cmd_sender: finish_tx__,
                 },
                 event_rx,
             )
         }
 
         pub fn set_queue(&mut self, queue: Vec<String>) {
-            self.cmd_sender.try_send(Command::SetQueue(queue)).unwrap();
+            self.cmd_sender.send(Command::SetQueue(queue)).unwrap();
         }
 
-        pub fn seek(&mut self, seconds: f64) {
-            self.cmd_sender.try_send(Command::Seek(seconds)).unwrap();
+        pub fn seek(&mut self, millis: u64) {
+            self.cmd_sender.send(Command::Seek(millis)).unwrap();
+        }
+
+        pub fn start(&mut self) {
+            self.cmd_sender.send(Command::Start).unwrap();
         }
 
         pub fn stop(&mut self) {
-            self.cmd_sender.try_send(Command::Stop).unwrap();
+            self.cmd_sender.send(Command::Stop).unwrap();
         }
 
         pub fn set_volume(&mut self, volume: f32) {
-            self.cmd_sender
-                .try_send(Command::SetVolume(volume))
-                .unwrap();
+            self.cmd_sender.send(Command::SetVolume(volume)).unwrap();
         }
 
         pub fn pause(&mut self) {
-            self.cmd_sender.try_send(Command::Pause).unwrap();
+            self.cmd_sender.send(Command::Pause).unwrap();
         }
 
         pub fn resume(&mut self) {
-            self.cmd_sender.try_send(Command::Resume).unwrap();
+            self.cmd_sender.send(Command::Resume).unwrap();
         }
 
         pub fn next(&mut self) {
-            self.cmd_sender.try_send(Command::Next).unwrap();
+            self.cmd_sender.send(Command::Next).unwrap();
         }
 
         pub fn previous(&mut self) {
-            self.cmd_sender.try_send(Command::Previous).unwrap();
+            self.cmd_sender.send(Command::Previous).unwrap();
         }
 
         pub fn join(&mut self) {
-            self.cmd_sender.try_send(Command::Shutdown).unwrap();
-            self.glib_main_loop.quit();
-            self.glib_handle.take().unwrap().join().unwrap();
+            self.cmd_sender.send(Command::Shutdown).unwrap();
         }
     }
 
@@ -149,7 +110,7 @@ pub mod libplayer {
         Next,
         Previous,
         SetVolume { volume: f32 },
-        Seek { time: f64 },
+        Seek { millis: u64 },
         QueueEnded,
     }
 }

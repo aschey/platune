@@ -1,2 +1,2 @@
 [workspace]
-members=["libplatune/player","platuned/server", "platuned/client"]
+members = ["platuned/server", "platuned/client/rust", "libplatune/player"]

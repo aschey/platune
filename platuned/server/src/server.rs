@@ -12,7 +12,8 @@ pub struct PlayerImpl {
 
 impl PlayerImpl {
     pub fn new() -> PlayerImpl {
-        let (platune, event_rx) = PlatunePlayer::create();
+        let (platune, event_rx) = PlatunePlayer::new();
+
         PlayerImpl {
             player: Mutex::new(platune),
             event_rx,
@@ -23,10 +24,9 @@ impl PlayerImpl {
 #[tonic::async_trait]
 impl Player for PlayerImpl {
     async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
-        self.player
-            .lock()
-            .unwrap()
-            .set_queue(request.into_inner().queue);
+        let mut player = self.player.lock().unwrap();
+        player.set_queue(request.into_inner().queue);
+        player.start();
 
         Ok(Response::new(()))
     }
@@ -63,7 +63,7 @@ impl Player for PlayerImpl {
         self.player
             .lock()
             .unwrap()
-            .seek(request.into_inner().time as f64);
+            .seek(request.into_inner().millis);
 
         Ok(Response::new(()))
     }
@@ -92,16 +92,16 @@ impl Player for PlayerImpl {
                         .send(Ok(EventResponse {
                             queue: vec![],
                             event: msg.to_string(),
-                            time: None,
+                            millis: None,
                             volume: Some(*volume),
                         }))
                         .await
                         .unwrap_or_default(),
-                    PlayerEvent::Seek { time } => tx
+                    PlayerEvent::Seek { millis } => tx
                         .send(Ok(EventResponse {
                             queue: vec![],
                             event: msg.to_string(),
-                            time: Some(*time),
+                            millis: Some(*millis),
                             volume: None,
                         }))
                         .await
@@ -110,7 +110,7 @@ impl Player for PlayerImpl {
                         .send(Ok(EventResponse {
                             queue: queue.clone(),
                             event: msg.to_string(),
-                            time: None,
+                            millis: None,
                             volume: None,
                         }))
                         .await
@@ -119,7 +119,7 @@ impl Player for PlayerImpl {
                         .send(Ok(EventResponse {
                             queue: vec![],
                             event: msg.to_string(),
-                            time: None,
+                            millis: None,
                             volume: None,
                         }))
                         .await

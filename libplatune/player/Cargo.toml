@@ -1,41 +1,40 @@
 [package]
+authors = ["aschey <aschey13@gmail.com>"]
 name = "libplatune-player"
 version = "0.1.0"
-authors = ["aschey <aschey13@gmail.com>"]
+
 edition = "2018"
 
 [lib]
-name="libplatune_player"
-path="src/lib.rs"
+
+name = "libplatune_player"
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
 default = ["runtime-tokio"]
-runtime-tokio = ["act-zero/default-tokio", "tokio"]
 runtime-async-std = ["act-zero/default-async-std", "async-std"]
-
+runtime-tokio = ["act-zero/default-tokio", "tokio"]
 
 [dependencies]
-servo-media = { git = "https://github.com/aschey/media", rev = "30434fd" }
-servo-media-audio = { git = "https://github.com/aschey/media", rev = "30434fd" }
-servo-media-auto = { git = "https://github.com/aschey/media", rev = "30434fd" }
+act-zero = {version = "0.4.0"}
+async-std = {version = "1.9.0", optional = true}
 lazy_static = "1.4.0"
 log = "0.4.14"
-gstreamer = "0.15"
-gstreamer-audio = "0.15"
-futures = "0.3.13"
-act-zero = { version="0.4.0" }
-serde_json = "1.0.64"
-tokio = {version = "1.2.0", features = ["full"], optional = true }
-async-std = {version = "1.9.0", optional = true }
 postage = "0.4.1"
+rodio = {git = "https://github.com/aschey/rodio", rev = "0ddb286"}
 strum_macros = "0.20.1"
-rustfft = "5.0.1"
+tokio = {version = "1.6.0", optional = true}
 
 [dev-dependencies]
 assert_matches = "1.5.0"
+async-trait = "0.1.50"
 ctor = "0.1.19"
 flexi_logger = "0.17.1"
+futures = "0.3.15"
 rstest = "0.6.4"
 yansi = "0.5.0"
-
