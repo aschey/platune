@@ -37,12 +37,12 @@ pub mod libplayer {
             //     call!(loop_addr.run()).await.unwrap();
             // };
             let (finish_tx, finish_rx) = std::sync::mpsc::channel();
-            let finish_tx_ = finish_tx.clone();
-            let finish_tx__ = finish_tx.clone();
+
             #[cfg(feature = "runtime-tokio")]
             {
+                let finish_tx = finish_tx.clone();
                 let tx = tx.clone();
-                tokio::task::spawn_blocking(|| start_loop(finish_tx_, finish_rx, tx));
+                tokio::task::spawn_blocking(|| start_loop(finish_rx, tx));
                 tokio::task::spawn_blocking(|| ended_loop(rx, finish_tx));
             }
 
@@ -53,7 +53,7 @@ pub mod libplayer {
 
             (
                 PlatunePlayer {
-                    cmd_sender: finish_tx__,
+                    cmd_sender: finish_tx,
                 },
                 event_rx,
             )

@@ -9,7 +9,7 @@ use std::{
 };
 
 use act_zero::*;
-use rodio::{Decoder, OutputStream, Sink as RodioSink};
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink as RodioSink};
 
 use crate::event_loop::Command;
 
@@ -18,28 +18,19 @@ pub struct SinkActor {
     queue: Vec<String>,
     position: usize,
     finish_tx: Sender<Receiver<()>>,
+    handle: OutputStreamHandle,
 }
 
 impl SinkActor {
-    pub fn new(
-        mut request_tx: Sender<Command>,
-        finish_tx: Sender<Receiver<()>>,
-        sink: RodioSink,
-    ) -> Self {
-        // let (_stream, handle) = OutputStream::try_default().unwrap();
-        // let sink = RodioSink::try_new(&handle).unwrap();
+    pub fn new(finish_tx: Sender<Receiver<()>>, handle: OutputStreamHandle) -> Self {
+        let sink = rodio::Sink::try_new(&handle).unwrap();
 
-        // tokio::task::spawn_blocking(move || async move {
-        //     while let Some(receiver) = rx.recv().await {
-        //         receiver.recv().unwrap();
-        //         request_tx.send(Command::Ended).await.unwrap();
-        //     }
-        // });
         Self {
             sink,
             queue: vec![],
             position: 0,
             finish_tx,
+            handle,
         }
     }
 
@@ -71,12 +62,18 @@ impl SinkActor {
         self.sink.pause();
     }
 
-    pub fn seek(&self, time: Duration) {
-        self.sink.seek(time);
+    pub fn set_volume(&self, volume: f32) {
+        self.sink.set_volume(volume);
     }
 
-    pub fn stop(&self) {
+    pub fn seek(&self, seconds: u64) {
+        self.sink.seek(Duration::from_secs(seconds));
+    }
+
+    pub fn stop(&mut self) {
         self.sink.stop();
+        self.position = 0;
+        self.sink = rodio::Sink::try_new(&self.handle).unwrap();
     }
 
     pub fn on_ended(&mut self) {

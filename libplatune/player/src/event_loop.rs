@@ -10,19 +10,15 @@ use crate::sink_actor::SinkActor;
 
 pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
     while let Ok(receiver) = receiver.recv() {
-        receiver.recv().unwrap();
-        request_tx.send(Command::Ended).unwrap();
+        if receiver.recv().is_ok() {
+            request_tx.send(Command::Ended).unwrap();
+        }
     }
 }
 
-pub fn start_loop(
-    sender: Sender<Command>,
-    receiver: Receiver<Command>,
-    finish_rx: Sender<Receiver<()>>,
-) {
+pub fn start_loop(receiver: Receiver<Command>, finish_rx: Sender<Receiver<()>>) {
     let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
-    let sink = rodio::Sink::try_new(&handle).unwrap();
-    let mut queue = SinkActor::new(sender, finish_rx, sink);
+    let mut queue = SinkActor::new(finish_rx, handle);
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);
         match next_command {
@@ -30,22 +26,22 @@ pub fn start_loop(
                 queue.set_queue(songs);
             }
             Command::Seek(seconds) => {
-                //call!(self.queue_addr.seek(seconds)).await.unwrap();
+                queue.seek(seconds);
             }
             Command::SetVolume(volume) => {
-                //call!(self.player_addr.set_volume(volume)).await.unwrap();
+                queue.set_volume(volume);
             }
             Command::Pause => {
-                //call!(self.player_addr.pause()).await.unwrap();
+                queue.pause();
             }
             Command::Start => {
                 queue.start();
             }
             Command::Resume => {
-                //call!(self.player_addr.resume()).await.unwrap();
+                queue.play();
             }
             Command::Stop => {
-                //call!(self.player_addr.stop()).await.unwrap();
+                queue.stop();
             }
             Command::Ended => {
                 queue.on_ended();
