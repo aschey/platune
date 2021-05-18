@@ -1168,7 +1168,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tonic",
- "tonic-build 0.4.0 (git+https://github.com/grippy/tonic?rev=da029464)",
+ "tonic-build",
  "tonic-reflection",
  "yansi",
 ]
@@ -1179,7 +1179,7 @@ version = "0.1.0"
 dependencies = [
  "prost",
  "tonic",
- "tonic-build 0.4.0 (git+https://github.com/grippy/tonic?rev=da029464)",
+ "tonic-build",
 ]
 
 [[package]]
@@ -1831,8 +1831,9 @@ dependencies = [
 
 [[package]]
 name = "tonic"
-version = "0.4.0"
-source = "git+https://github.com/hyperium/tonic?rev=61555ff#61555ff2b5b76e4e3172717354aed1e6f31d6611"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ac42cd97ac6bd2339af5bcabf105540e21e45636ec6fa6aae5e85d44db31be0"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -1859,19 +1860,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-build"
-version = "0.4.0"
-source = "git+https://github.com/hyperium/tonic?rev=61555ff#61555ff2b5b76e4e3172717354aed1e6f31d6611"
-dependencies = [
- "proc-macro2",
- "prost-build",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "tonic-build"
-version = "0.4.0"
-source = "git+https://github.com/grippy/tonic?rev=da029464#da029464d3be5533e1d87dedcc968aab404dbc80"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c695de27302f4697191dda1c7178131a8cb805463dda02864acb80fe1322fdcf"
 dependencies = [
  "proc-macro2",
  "prost-build",
@@ -1882,7 +1873,8 @@ dependencies = [
 [[package]]
 name = "tonic-reflection"
 version = "0.1.0"
-source = "git+https://github.com/hyperium/tonic?rev=61555ff#61555ff2b5b76e4e3172717354aed1e6f31d6611"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56498d20188550337ea6c48ecf59d11646382dbfcd61051fb98c1093cfae3c21"
 dependencies = [
  "bytes",
  "prost",
@@ -1890,7 +1882,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tonic",
- "tonic-build 0.4.0 (git+https://github.com/hyperium/tonic?rev=61555ff)",
+ "tonic-build",
 ]
 
 [[package]]
