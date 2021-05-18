@@ -9,5 +9,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Test
-        run: docker build . -t libplatune-test && docker run --rm libplatune-test
+      - name: Update apt
+        run: sudo apt update
+      - name: Install alsa
+        run: sudo apt-get install libasound2-dev
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features=dummy

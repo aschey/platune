@@ -9,6 +9,9 @@ edition = "2018"
 name = "libplatune_player"
 path = "src/lib.rs"
 
+[features]
+dummy = ["rodio/dummy"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

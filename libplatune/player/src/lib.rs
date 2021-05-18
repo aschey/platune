@@ -21,7 +21,6 @@ pub mod libplayer {
 
     pub struct PlatunePlayer {
         cmd_sender: std::sync::mpsc::Sender<Command>,
-        pool: rayon::ThreadPool,
     }
 
     impl PlatunePlayer {
@@ -44,7 +43,6 @@ pub mod libplayer {
             (
                 PlatunePlayer {
                     cmd_sender: finish_tx,
-                    pool,
                 },
                 event_rx,
             )

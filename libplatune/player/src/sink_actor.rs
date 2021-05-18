@@ -134,7 +134,8 @@ impl SinkActor {
     }
 
     pub fn set_queue(&mut self, queue: Vec<String>) {
-        self.stop();
+        self.reset();
+        self.position = 0;
         self.queue = queue;
     }
 

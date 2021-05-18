@@ -124,6 +124,7 @@ async fn init_play(num_songs: usize) -> (PlatunePlayer, Receiver<PlayerEvent>, V
     let songs = get_test_files(num_songs);
     let song_queue = songs.get_paths();
     player.set_queue(song_queue.clone());
+    player.start();
 
     assert_matches!(
         receiver.timed_recv().await,
@@ -157,7 +158,7 @@ async fn test_basic(num_songs: usize) {
     case(3, 1),
     case(3, 2)
 )]
-#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
+#[tokio::test]
 async fn test_pause(num_songs: usize, pause_index: usize) {
     let (mut player, mut receiver, songs) = init_play(num_songs).await;
 
@@ -184,7 +185,7 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
     case(3, 1),
     case(3, 2)
 )]
-#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
+#[tokio::test]
 async fn test_seek(num_songs: usize, seek_index: usize) {
     // let num_songs = 1;
     // let seek_index = 0;
@@ -192,7 +193,6 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     let seek_time = 100;
     for (i, _) in songs.iter().enumerate() {
         if i == seek_index {
-            thread::sleep(Duration::from_millis(1000));
             player.seek(seek_time);
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek { millis }) if millis == seek_time);
         }
