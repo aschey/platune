@@ -9,7 +9,7 @@ version = "0.1.0"
 [dependencies]
 flexi_logger = "0.17.1"
 futures = "0.3.13"
-libplatune-player = {path = "../../libplatune/player", features = ["runtime-tokio"]}
+libplatune-player = {path = "../../libplatune/player"}
 log = "0.4.14"
 prost = "0.7.0"
 tokio = {version = "1.2", features = ["full"]}

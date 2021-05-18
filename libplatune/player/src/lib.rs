@@ -21,6 +21,7 @@ pub mod libplayer {
 
     pub struct PlatunePlayer {
         cmd_sender: std::sync::mpsc::Sender<Command>,
+        pool: rayon::ThreadPool,
     }
 
     impl PlatunePlayer {
@@ -33,22 +34,17 @@ pub mod libplayer {
 
             let main_loop = || start_loop(finish_rx, tx_, event_tx);
             let ended = || ended_loop(rx, finish_tx_);
-
-            #[cfg(feature = "runtime-tokio")]
-            {
-                tokio::task::spawn_blocking(main_loop);
-                tokio::task::spawn_blocking(ended);
-            }
-
-            #[cfg(feature = "runtime-async-std")]
-            {
-                async_std::task::spawn_blocking(main_loop);
-                async_std::task::spawn_blocking(ended);
-            }
+            let pool = rayon::ThreadPoolBuilder::new()
+                .num_threads(2)
+                .build()
+                .unwrap();
+            pool.spawn(main_loop);
+            pool.spawn(ended);
 
             (
                 PlatunePlayer {
                     cmd_sender: finish_tx,
+                    pool,
                 },
                 event_rx,
             )
