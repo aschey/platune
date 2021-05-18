@@ -6,7 +6,7 @@ use std::{
 use log::info;
 use rodio::Sink;
 
-use crate::sink_actor::SinkActor;
+use crate::{libplayer::PlayerEvent, sink_actor::SinkActor};
 
 pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
     while let Ok(receiver) = receiver.recv() {
@@ -16,17 +16,21 @@ pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>)
     }
 }
 
-pub fn start_loop(receiver: Receiver<Command>, finish_rx: Sender<Receiver<()>>) {
+pub fn start_loop(
+    receiver: Receiver<Command>,
+    finish_rx: Sender<Receiver<()>>,
+    event_tx: postage::broadcast::Sender<PlayerEvent>,
+) {
     let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
-    let mut queue = SinkActor::new(finish_rx, handle);
+    let mut queue = SinkActor::new(finish_rx, event_tx, handle);
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {
                 queue.set_queue(songs);
             }
-            Command::Seek(seconds) => {
-                queue.seek(seconds);
+            Command::Seek(millis) => {
+                queue.seek(millis);
             }
             Command::SetVolume(volume) => {
                 queue.set_volume(volume);

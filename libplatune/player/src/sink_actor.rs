@@ -10,13 +10,15 @@ use std::{
 
 use act_zero::*;
 use log::info;
+use postage::sink::Sink;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink as RodioSink};
 
-use crate::event_loop::Command;
+use crate::{event_loop::Command, libplayer::PlayerEvent};
 
 pub struct SinkActor {
     sink: RodioSink,
     queue: Vec<String>,
+    event_tx: postage::broadcast::Sender<PlayerEvent>,
     position: usize,
     finish_tx: Sender<Receiver<()>>,
     handle: OutputStreamHandle,
@@ -25,12 +27,17 @@ pub struct SinkActor {
 }
 
 impl SinkActor {
-    pub fn new(finish_tx: Sender<Receiver<()>>, handle: OutputStreamHandle) -> Self {
+    pub fn new(
+        finish_tx: Sender<Receiver<()>>,
+        event_tx: postage::broadcast::Sender<PlayerEvent>,
+        handle: OutputStreamHandle,
+    ) -> Self {
         let sink = rodio::Sink::try_new(&handle).unwrap();
 
         Self {
             sink,
             queue: vec![],
+            event_tx,
             position: 0,
             finish_tx,
             handle,
@@ -55,27 +62,38 @@ impl SinkActor {
             self.append_file(path);
             self.signal_finish();
         }
+        self.event_tx
+            .try_send(PlayerEvent::StartQueue {
+                queue: self.queue.clone(),
+            })
+            .unwrap();
     }
 
-    pub fn play(&self) {
+    pub fn play(&mut self) {
         self.sink.play();
+        self.event_tx.try_send(PlayerEvent::Resume).unwrap();
     }
 
-    pub fn pause(&self) {
+    pub fn pause(&mut self) {
         self.sink.pause();
+        self.event_tx.try_send(PlayerEvent::Pause).unwrap();
     }
 
     pub fn set_volume(&self, volume: f32) {
         self.sink.set_volume(volume);
     }
 
-    pub fn seek(&self, seconds: u64) {
-        self.sink.seek(Duration::from_secs(seconds));
+    pub fn seek(&mut self, millis: u64) {
+        self.sink.seek(Duration::from_millis(millis));
+        self.event_tx
+            .try_send(PlayerEvent::Seek { millis })
+            .unwrap();
     }
 
     pub fn stop(&mut self) {
         self.reset();
         self.position = 0;
+        self.event_tx.try_send(PlayerEvent::Stop).unwrap();
     }
 
     fn ignore_ended(&mut self) {
@@ -98,8 +116,11 @@ impl SinkActor {
         } else {
             info!("not ignoring");
         }
+        self.event_tx.try_send(PlayerEvent::Ended).unwrap();
         if self.position < self.queue.len() - 1 {
             self.position += 1;
+        } else {
+            self.event_tx.try_send(PlayerEvent::QueueEnded).unwrap();
         }
         if let Some(file) = self.get_next() {
             self.append_file(file);
@@ -136,6 +157,7 @@ impl SinkActor {
             self.reset();
             self.start();
         }
+        self.event_tx.try_send(PlayerEvent::Next).unwrap();
     }
 
     pub fn go_previous(&mut self) {
@@ -144,5 +166,6 @@ impl SinkActor {
             self.reset();
             self.start();
         }
+        self.event_tx.try_send(PlayerEvent::Previous).unwrap();
     }
 }

@@ -10,9 +10,6 @@ edition = "2018"
 name = "libplatune_player"
 path = "src/lib.rs"
 
-[[bin]]
-name = "main"
-path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]

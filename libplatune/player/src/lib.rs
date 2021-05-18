@@ -29,20 +29,13 @@ pub mod libplayer {
             let (event_tx, event_rx) = broadcast::channel(32);
             let (tx, rx) = std::sync::mpsc::channel();
 
-            // let queue_addr = spawn_actor(QueueActor::new());
-            // let sink_addr = spawn_actor(SinkActor::new(queue_addr.clone(), tx.clone()));
-            // let loop_addr = spawn_actor(MainLoopActor::new(rx, queue_addr, sink_addr));
-
-            // let loop_task = async move {
-            //     call!(loop_addr.run()).await.unwrap();
-            // };
             let (finish_tx, finish_rx) = std::sync::mpsc::channel();
 
             #[cfg(feature = "runtime-tokio")]
             {
                 let finish_tx = finish_tx.clone();
                 let tx = tx.clone();
-                tokio::task::spawn_blocking(|| start_loop(finish_rx, tx));
+                tokio::task::spawn_blocking(|| start_loop(finish_rx, tx, event_tx));
                 tokio::task::spawn_blocking(|| ended_loop(rx, finish_tx));
             }
 
