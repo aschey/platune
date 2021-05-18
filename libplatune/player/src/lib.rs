@@ -5,7 +5,6 @@ mod event_loop;
 mod sink_actor;
 pub mod libplayer {
     use crate::event_loop::{ended_loop, start_loop, Command};
-    use act_zero::{call, runtimes::default::spawn_actor, Addr};
     use log::info;
     pub use postage::*;
 
@@ -28,20 +27,23 @@ pub mod libplayer {
         pub fn new() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
             let (event_tx, event_rx) = broadcast::channel(32);
             let (tx, rx) = std::sync::mpsc::channel();
-
+            let tx_ = tx.clone();
             let (finish_tx, finish_rx) = std::sync::mpsc::channel();
+            let finish_tx_ = finish_tx.clone();
+
+            let main_loop = || start_loop(finish_rx, tx_, event_tx);
+            let ended = || ended_loop(rx, finish_tx_);
 
             #[cfg(feature = "runtime-tokio")]
             {
-                let finish_tx = finish_tx.clone();
-                let tx = tx.clone();
-                tokio::task::spawn_blocking(|| start_loop(finish_rx, tx, event_tx));
-                tokio::task::spawn_blocking(|| ended_loop(rx, finish_tx));
+                tokio::task::spawn_blocking(main_loop);
+                tokio::task::spawn_blocking(ended);
             }
 
             #[cfg(feature = "runtime-async-std")]
             {
-                async_std::task::spawn(loop_task);
+                async_std::task::spawn_blocking(main_loop);
+                async_std::task::spawn_blocking(ended);
             }
 
             (

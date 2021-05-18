@@ -14,18 +14,16 @@ path = "src/lib.rs"
 
 [features]
 default = ["runtime-tokio"]
-runtime-async-std = ["act-zero/default-async-std", "async-std"]
-runtime-tokio = ["act-zero/default-tokio", "tokio"]
+runtime-async-std = ["async-std"]
+runtime-tokio = ["tokio"]
 
 [dependencies]
-act-zero = {version = "0.4.0"}
-async-std = {version = "1.9.0", optional = true}
-lazy_static = "1.4.0"
+async-std = {version = "1.9.0", optional = true, features = ["unstable"]}
 log = "0.4.14"
 postage = "0.4.1"
 rodio = {git = "https://github.com/aschey/rodio", rev = "0ddb286"}
 strum_macros = "0.20.1"
-tokio = {version = "1.6.0", optional = true}
+tokio = {version = "1.6.0", optional = true, features = ["rt"]}
 
 [dev-dependencies]
 assert_matches = "1.5.0"
