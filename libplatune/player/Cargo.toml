@@ -22,7 +22,7 @@ futures-util = "0.3.15"
 log = "0.4.14"
 postage = "0.4.1"
 reqwest = {version = "0.11.3", features = ["stream"]}
-rodio = {git = "https://github.com/aschey/rodio", rev = "bc38e3d"}
+rodio = {git = "https://github.com/aschey/rodio", rev = "49187b8"}
 strum_macros = "0.20.1"
 tokio = {version = "1.6.0", features = ["full"], optional = true}
 
