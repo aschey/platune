@@ -158,7 +158,7 @@ async fn test_basic(num_songs: usize) {
     case(3, 1),
     case(3, 2)
 )]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 async fn test_pause(num_songs: usize, pause_index: usize) {
     let (mut player, mut receiver, songs) = init_play(num_songs).await;
 
@@ -185,7 +185,7 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
     case(3, 1),
     case(3, 2)
 )]
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 async fn test_seek(num_songs: usize, seek_index: usize) {
     // let num_songs = 1;
     // let seek_index = 0;

@@ -1,2 +1,3 @@
 [workspace]
 members = ["platuned/server", "platuned/client/rust", "libplatune/player"]
+resolver = "2"

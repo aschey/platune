@@ -58,7 +58,7 @@ pub fn start_loop(
                 queue.go_previous();
             }
             Command::Shutdown => {
-                // call!(self.player_addr.shutdown()).await.unwrap();
+                return;
             }
         }
         info!("Completed command");

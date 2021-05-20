@@ -96,6 +96,12 @@ pub mod libplayer {
         }
     }
 
+    impl Drop for PlatunePlayer {
+        fn drop(&mut self) {
+            self.cmd_sender.send(Command::Shutdown).unwrap();
+        }
+    }
+
     #[derive(Clone, Debug, Display)]
     pub enum PlayerEvent {
         StartQueue { queue: Vec<String> },
