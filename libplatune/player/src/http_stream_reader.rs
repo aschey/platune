@@ -6,10 +6,13 @@ use std::{
         atomic::{AtomicBool, AtomicU32, Ordering},
         mpsc, Arc,
     },
+    thread,
+    time::Duration,
 };
 
 use bytes::Bytes;
 use futures_util::StreamExt;
+use log::info;
 use reqwest::Error;
 
 pub struct HttpStreamReader {
@@ -30,6 +33,16 @@ impl HttpStreamReader {
         tokio::spawn(async move {
             println!("starting download...");
             let client = reqwest::Client::new();
+            let res = client.head(&url).send().await.unwrap();
+            let length = res
+                .headers()
+                .get(reqwest::header::CONTENT_LENGTH)
+                .ok_or("response doesn't include the content length")
+                .unwrap();
+            let length = u64::from_str(length.to_str().unwrap())
+                .map_err(|_| "invalid Content-Length header")
+                .unwrap();
+            info!("File length={}", length);
             let mut output_file = File::create("download.bin").unwrap();
             let mut stream = client.get(&url).send().await.unwrap().bytes_stream();
 
@@ -37,10 +50,10 @@ impl HttpStreamReader {
                 let item = item.unwrap();
                 let len = item.len();
                 std::io::copy(&mut item.take(len as u64), &mut output_file).unwrap();
-                bytes_written_.store(
-                    bytes_written_.load(Ordering::SeqCst) + len as u32,
-                    Ordering::SeqCst,
-                );
+                // bytes_written_.store(
+                //     bytes_written_.load(Ordering::SeqCst) + len as u32,
+                //     Ordering::SeqCst,
+                // );
             };
 
             if let Some(item) = stream.next().await {
@@ -56,6 +69,7 @@ impl HttpStreamReader {
             println!("Finished with success!");
         });
         rx.recv().unwrap();
+        //thread::sleep(Duration::from_secs(2));
 
         let output_file = File::open("download.bin").unwrap();
         let output_reader = BufReader::new(output_file);
