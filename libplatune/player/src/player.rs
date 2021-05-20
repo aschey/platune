@@ -1,6 +1,6 @@
 use std::{
     fs::File,
-    io::BufReader,
+    io::{BufReader, Read},
     sync::{
         mpsc::{self, Receiver, Sender},
         Arc, Mutex,
@@ -12,9 +12,11 @@ use log::info;
 use postage::sink::Sink;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink as RodioSink};
 
+#[cfg(feature = "runtime-tokio")]
+use crate::http_stream_reader::HttpStreamReader;
 use crate::{event_loop::Command, libplayer::PlayerEvent};
 
-pub struct SinkActor {
+pub struct Player {
     sink: RodioSink,
     queue: Vec<String>,
     event_tx: postage::broadcast::Sender<PlayerEvent>,
@@ -25,7 +27,7 @@ pub struct SinkActor {
     queued_count: usize,
 }
 
-impl SinkActor {
+impl Player {
     pub fn new(
         finish_tx: Sender<Receiver<()>>,
         event_tx: postage::broadcast::Sender<PlayerEvent>,
@@ -46,9 +48,20 @@ impl SinkActor {
     }
 
     fn append_file(&mut self, path: String) {
-        let file = File::open(path).unwrap();
-        let decoder = Decoder::new(BufReader::new(file)).unwrap();
-        self.sink.append(decoder);
+        if path.starts_with("http") {
+            #[cfg(feature = "runtime-tokio")]
+            {
+                let reader = BufReader::new(HttpStreamReader::new(path));
+                let decoder = Decoder::new(reader).unwrap();
+                self.sink.append(decoder);
+            }
+        } else {
+            let file = File::open(path).unwrap();
+            let reader = BufReader::new(file);
+            let decoder = Decoder::new(reader).unwrap();
+            self.sink.append(decoder);
+        }
+
         self.queued_count += 1;
     }
 

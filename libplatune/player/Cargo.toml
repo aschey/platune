@@ -10,16 +10,21 @@ name = "libplatune_player"
 path = "src/lib.rs"
 
 [features]
+default = ["runtime-tokio"]
 dummy = ["rodio/dummy"]
+runtime-tokio = ["tokio"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytes = "1.0.1"
+futures-util = "0.3.15"
 log = "0.4.14"
 postage = "0.4.1"
-rayon = "1.5.0"
+reqwest = {version = "0.11.3", features = ["stream"]}
 rodio = {git = "https://github.com/aschey/rodio", rev = "40d8a73"}
 strum_macros = "0.20.1"
+tokio = {version = "1.6.0", features = ["full"], optional = true}
 
 [dev-dependencies]
 assert_matches = "1.5.0"

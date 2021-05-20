@@ -1,12 +1,13 @@
 use std::{
     io::BufReader,
     sync::mpsc::{Receiver, Sender},
+    time::Duration,
 };
 
 use log::info;
 use rodio::Sink;
 
-use crate::{libplayer::PlayerEvent, sink_actor::SinkActor};
+use crate::{libplayer::PlayerEvent, player::Player};
 
 pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
     while let Ok(receiver) = receiver.recv() {
@@ -22,7 +23,7 @@ pub fn start_loop(
     event_tx: postage::broadcast::Sender<PlayerEvent>,
 ) {
     let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
-    let mut queue = SinkActor::new(finish_rx, event_tx, handle);
+    let mut queue = Player::new(finish_rx, event_tx, handle);
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);
         match next_command {

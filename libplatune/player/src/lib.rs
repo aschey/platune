@@ -2,7 +2,9 @@
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
 
 mod event_loop;
-mod sink_actor;
+#[cfg(feature = "runtime-tokio")]
+mod http_stream_reader;
+mod player;
 pub mod libplayer {
     use crate::event_loop::{ended_loop, start_loop, Command};
     use log::info;
@@ -33,12 +35,17 @@ pub mod libplayer {
 
             let main_loop = || start_loop(finish_rx, tx_, event_tx);
             let ended = || ended_loop(rx, finish_tx_);
-            let pool = rayon::ThreadPoolBuilder::new()
-                .num_threads(2)
-                .build()
-                .unwrap();
-            pool.spawn(main_loop);
-            pool.spawn(ended);
+            #[cfg(feature = "runtime-tokio")]
+            {
+                tokio::task::spawn_blocking(main_loop);
+                tokio::task::spawn_blocking(ended);
+            }
+
+            #[cfg(not(feature = "runtime-tokio"))]
+            {
+                thread::spawn(main_loop);
+                thread::spawn(ended);
+            }
 
             (
                 PlatunePlayer {
