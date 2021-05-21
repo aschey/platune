@@ -822,7 +822,6 @@ version = "0.1.0"
 dependencies = [
  "assert_matches",
  "async-trait",
- "bytes",
  "ctor",
  "flexi_logger",
  "futures",
@@ -833,6 +832,7 @@ dependencies = [
  "rodio",
  "rstest",
  "strum_macros",
+ "tempfile",
  "tokio",
  "yansi",
 ]

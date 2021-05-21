@@ -16,6 +16,7 @@ pub mod libplayer {
     //use postage::{broadcast::Sender, mpsc, sink::Sink};
     use std::{
         fmt,
+        fs::remove_file,
         io::BufReader,
         thread::{self, JoinHandle},
         time::Duration,
@@ -27,6 +28,21 @@ pub mod libplayer {
 
     impl PlatunePlayer {
         pub fn new() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
+            for entry in std::env::temp_dir()
+                .read_dir()
+                .expect("read_dir call failed")
+            {
+                if let Ok(entry) = entry {
+                    if entry
+                        .file_name()
+                        .to_str()
+                        .unwrap()
+                        .starts_with("platunecache")
+                    {
+                        remove_file(entry.path()).unwrap();
+                    }
+                }
+            }
             let (event_tx, event_rx) = broadcast::channel(32);
             let (tx, rx) = std::sync::mpsc::channel();
             let tx_ = tx.clone();
