@@ -113,9 +113,7 @@ impl Player {
     }
 
     fn ignore_ended(&mut self) {
-        if self.queued_count > 0 {
-            self.ignore_count = 1;
-        }
+        self.ignore_count = self.queued_count;
 
         info!("Ignore count {}", self.ignore_count);
     }
@@ -123,14 +121,14 @@ impl Player {
     fn reset(&mut self) {
         self.ignore_ended();
         self.sink.stop();
-        self.queued_count = 0;
         self.sink = rodio::Sink::try_new(&self.handle).unwrap();
         self.sink.set_volume(self.volume);
     }
 
     pub fn on_ended(&mut self) {
         info!("Received ended event");
-
+        self.queued_count -= 1;
+        info!("Queued count {}", self.queued_count);
         if self.ignore_count > 0 {
             info!("Ignoring ended event");
             self.ignore_count -= 1;
@@ -145,10 +143,6 @@ impl Player {
             info!("Incrementing position. New position: {}", self.position);
         } else {
             self.event_tx.try_send(PlayerEvent::QueueEnded).unwrap();
-        }
-        if self.queued_count > 0 {
-            self.queued_count -= 1;
-            info!("Queued count {}", self.queued_count);
         }
 
         if let Some(file) = self.get_next() {

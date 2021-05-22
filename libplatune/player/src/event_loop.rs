@@ -11,14 +11,11 @@ use crate::{libplayer::PlayerEvent, player::Player};
 
 pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
     while let Ok(receiver) = receiver.recv() {
-        match receiver.recv() {
-            Ok(_) => {
-                request_tx.send(Command::Ended).unwrap();
-            }
-            Err(_) => {
-                info!("Ended receiver disconnected");
-            }
-        }
+        // Strange platform-specific behavior here
+        // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
+        // after the first event if the queue is stopped
+        receiver.recv().unwrap_or_default();
+        request_tx.send(Command::Ended).unwrap();
     }
 }
 
