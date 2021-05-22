@@ -25,6 +25,7 @@ pub struct Player {
     handle: OutputStreamHandle,
     ignore_count: usize,
     queued_count: usize,
+    volume: f32,
 }
 
 impl Player {
@@ -44,6 +45,7 @@ impl Player {
             handle,
             ignore_count: 0,
             queued_count: 0,
+            volume: 0.5,
         }
     }
 
@@ -63,6 +65,7 @@ impl Player {
         }
 
         self.queued_count += 1;
+        info!("Queued count {}", self.queued_count);
     }
 
     pub fn start(&mut self) {
@@ -91,8 +94,9 @@ impl Player {
         self.event_tx.try_send(PlayerEvent::Pause).unwrap();
     }
 
-    pub fn set_volume(&self, volume: f32) {
+    pub fn set_volume(&mut self, volume: f32) {
         self.sink.set_volume(volume);
+        self.volume = volume;
     }
 
     pub fn seek(&mut self, millis: u64) {
@@ -109,31 +113,44 @@ impl Player {
     }
 
     fn ignore_ended(&mut self) {
-        self.ignore_count = self.queued_count;
+        if self.queued_count > 0 {
+            self.ignore_count = 1;
+        }
+
+        info!("Ignore count {}", self.ignore_count);
     }
 
     fn reset(&mut self) {
         self.ignore_ended();
         self.sink.stop();
+        self.queued_count = 0;
         self.sink = rodio::Sink::try_new(&self.handle).unwrap();
+        self.sink.set_volume(self.volume);
     }
 
     pub fn on_ended(&mut self) {
-        info!("ended");
-        self.queued_count -= 1;
+        info!("Received ended event");
+
         if self.ignore_count > 0 {
-            info!("ignoring");
+            info!("Ignoring ended event");
             self.ignore_count -= 1;
+            info!("Ignore count {}", self.ignore_count);
             return;
         } else {
-            info!("not ignoring");
+            info!("Not ignoring ended event");
         }
         self.event_tx.try_send(PlayerEvent::Ended).unwrap();
         if self.position < self.queue.len() - 1 {
             self.position += 1;
+            info!("Incrementing position. New position: {}", self.position);
         } else {
             self.event_tx.try_send(PlayerEvent::QueueEnded).unwrap();
         }
+        if self.queued_count > 0 {
+            self.queued_count -= 1;
+            info!("Queued count {}", self.queued_count);
+        }
+
         if let Some(file) = self.get_next() {
             self.append_file(file);
             let receiver = self.sink.get_current_receiver().unwrap();
@@ -142,6 +159,7 @@ impl Player {
     }
 
     fn signal_finish(&mut self) {
+        info!("Sending finish receiver");
         let receiver = self.sink.get_current_receiver().unwrap();
         self.finish_tx.send(receiver).unwrap();
     }
@@ -166,19 +184,31 @@ impl Player {
 
     pub fn go_next(&mut self) {
         if self.position < self.queue.len() - 1 {
+            info!(
+                "Current position: {}, Going to previous track.",
+                self.position
+            );
             self.position += 1;
             self.reset();
             self.start();
+            self.event_tx.try_send(PlayerEvent::Next).unwrap();
+        } else {
+            info!("Already at beginning. Not going to previous track.");
         }
-        self.event_tx.try_send(PlayerEvent::Next).unwrap();
     }
 
     pub fn go_previous(&mut self) {
         if self.position > 0 {
+            info!("Current position: {}, Going to next track.", self.position);
             self.position -= 1;
             self.reset();
             self.start();
+            self.event_tx.try_send(PlayerEvent::Previous).unwrap();
+        } else {
+            info!(
+                "Current position: {}. Already at end. Not going to next track.",
+                self.position
+            );
         }
-        self.event_tx.try_send(PlayerEvent::Previous).unwrap();
     }
 }

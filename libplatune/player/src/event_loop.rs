@@ -11,8 +11,13 @@ use crate::{libplayer::PlayerEvent, player::Player};
 
 pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
     while let Ok(receiver) = receiver.recv() {
-        if receiver.recv().is_ok() {
-            request_tx.send(Command::Ended).unwrap();
+        match receiver.recv() {
+            Ok(_) => {
+                request_tx.send(Command::Ended).unwrap();
+            }
+            Err(_) => {
+                info!("Ended receiver disconnected");
+            }
         }
     }
 }

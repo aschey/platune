@@ -1879,7 +1879,7 @@ dependencies = [
 [[package]]
 name = "rodio"
 version = "0.13.1"
-source = "git+https://github.com/aschey/rodio?rev=49187b8#49187b8ffbe44f0078e58ce6f4eb9f70a3a04028"
+source = "git+https://github.com/aschey/rodio?rev=da446e5#da446e565e0b1c570e954a516c6f6c3ddc1f4ca8"
 dependencies = [
  "cpal",
  "hound",
