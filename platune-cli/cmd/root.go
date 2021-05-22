@@ -1,45 +1,108 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/aschey/platune/cli/v2/utils"
+	platune "github.com/aschey/platune/client"
 	prompt "github.com/c-bata/go-prompt"
-	"github.com/spf13/cobra"
-
+	"github.com/c-bata/go-prompt/completer"
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
 
 var cfgFile string
 
-var LivePrefixState struct {
-	LivePrefix string
-	IsEnable   bool
+type rootState struct {
+	livePrefix     string
+	isEnabled      bool
+	isSetQueueMode bool
+	currentQueue   []string
+	platuneClient  platune.PlayerClient
 }
 
-func changeLivePrefix() (string, bool) {
-	return LivePrefixState.LivePrefix, LivePrefixState.IsEnable
-}
-
-func executor(in string) {
-	fmt.Println("Your input: " + in)
-	if in == "" {
-		LivePrefixState.IsEnable = false
-		LivePrefixState.LivePrefix = in
-		return
+func newRootState() rootState {
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:50051", opts...)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	LivePrefixState.LivePrefix = in + "> "
-	LivePrefixState.IsEnable = true
+	client := platune.NewPlayerClient(conn)
+
+	return rootState{livePrefix: "", isEnabled: false, isSetQueueMode: false, currentQueue: []string{}, platuneClient: client}
 }
-func completer(in prompt.Document) []prompt.Suggest {
+
+var state = newRootState()
+
+func (state *rootState) changeLivePrefix() (string, bool) {
+	return state.livePrefix, state.isEnabled
+}
+
+func (state *rootState) executor(in string) {
+	if in == "set-queue" {
+		fmt.Println("Enter file paths or http urls to add to the queue.")
+		fmt.Println("Enter a blank line when done.")
+		state.isSetQueueMode = true
+		state.livePrefix = in + "> "
+		state.isEnabled = true
+	} else if state.isSetQueueMode {
+		if strings.Trim(in, " ") == "" {
+			fmt.Println("Queue set")
+			ctx, _ := context.WithTimeout(context.Background(), 1000*time.Second)
+			_, err := state.platuneClient.SetQueue(ctx, &platune.QueueRequest{Queue: state.currentQueue})
+			if err != nil {
+				fmt.Println(err)
+			}
+			state.isSetQueueMode = false
+			state.currentQueue = []string{}
+		} else {
+			state.currentQueue = append(state.currentQueue, in)
+			var formattedQueue = []string{}
+			for i := 0; i < len(state.currentQueue); i++ {
+				formattedQueue = append(formattedQueue, fmt.Sprintf("%d. %s", i+1, state.currentQueue[i]))
+			}
+			fmt.Println(strings.Join(formattedQueue, "\n"))
+		}
+
+	} else {
+		fmt.Println("Your input: " + in)
+
+	}
+
+}
+func (state *rootState) completer(in prompt.Document) []prompt.Suggest {
+	if state.isSetQueueMode {
+		return filePathCompleter.Complete(in)
+	}
+	before := strings.Split(in.TextBeforeCursor(), " ")
+	first := ""
+	if len(before) > 0 {
+		first = before[0]
+	}
+	switch first {
+	case "set-queue":
+		return []prompt.Suggest{}
+	}
+
 	s := []prompt.Suggest{
-		{Text: "users", Description: "Store the username and age"},
+		{Text: "set-queue", Description: "Sets the queue"},
 		{Text: "articles", Description: "Store the article text posted by user"},
 		{Text: "comments", Description: "Store the text commented to articles"},
 		{Text: "groups", Description: "Combine users with specific rules"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
+}
+
+var filePathCompleter = utils.FilePathCompleter{
+	IgnoreCase: true,
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -56,11 +119,12 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		p := prompt.New(
-			executor,
-			completer,
+			state.executor,
+			state.completer,
 			prompt.OptionPrefix(">>> "),
-			prompt.OptionLivePrefix(changeLivePrefix),
+			prompt.OptionLivePrefix(state.changeLivePrefix),
 			prompt.OptionTitle("live-prefix-example"),
+			prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
 		)
 		p.Run()
 	},
