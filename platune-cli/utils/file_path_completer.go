@@ -17,7 +17,7 @@ type FilePathCompleter struct {
 	fileListCache map[string][]prompt.Suggest
 }
 
-func cleanFilePath(path string) (dir, base string, err error) {
+func CleanFilePath(path string) (dir, base string, err error) {
 	if path == "" {
 		return ".", "", nil
 	}
@@ -53,7 +53,7 @@ func (c *FilePathCompleter) Complete(d prompt.Document) []prompt.Suggest {
 
 	path := d.TextBeforeCursor()
 	//fmt.Println("path " + path)
-	dir, base, err := cleanFilePath(path)
+	dir, base, err := CleanFilePath(path)
 	if err != nil {
 		fmt.Println("completer: cannot get current user:" + err.Error())
 		return nil

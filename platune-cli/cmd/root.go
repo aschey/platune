@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"time"
 
 	"github.com/aschey/platune/cli/v2/utils"
-	"github.com/aschey/platune/client"
+	platune "github.com/aschey/platune/client"
 	"github.com/c-bata/go-prompt"
 	"github.com/c-bata/go-prompt/completer"
 	"github.com/mitchellh/go-homedir"
@@ -50,10 +51,12 @@ func (state *rootState) changeLivePrefix() (string, bool) {
 func (state *rootState) runCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := cmdFunc(state.platuneClient, ctx)
+	cancel()
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
-	cancel()
+
 	fmt.Println(successMsg)
 
 }
@@ -95,7 +98,26 @@ func (state *rootState) executor(in string) {
 			})
 			state.isSetQueueMode = false
 			state.currentQueue = []string{}
+			state.isEnabled = false
 		} else {
+			if !strings.HasPrefix(in, "http") {
+				dir, base, err := utils.CleanFilePath(in)
+
+				if err != nil {
+					fmt.Println(err)
+				}
+				full := path.Join(dir, base)
+				stat, err := os.Stat(full)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				if stat.Mode().IsDir() {
+					fmt.Println("Cannot add a directory")
+					return
+				}
+				in = full
+			}
 			state.currentQueue = append(state.currentQueue, in)
 			var formattedQueue = []string{}
 			for i := 0; i < len(state.currentQueue); i++ {
