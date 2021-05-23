@@ -1,15 +1,13 @@
-use std::{
-    io::BufReader,
-    sync::mpsc::{Receiver, Sender},
-    time::Duration,
-};
+use std::sync::mpsc::{Receiver, Sender};
 
 use log::info;
-use rodio::Sink;
 
-use crate::{libplayer::PlayerEvent, player::Player};
+use crate::{
+    enums::{Command, PlayerEvent},
+    player::Player,
+};
 
-pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
+pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
     while let Ok(receiver) = receiver.recv() {
         // Strange platform-specific behavior here
         // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
@@ -19,7 +17,7 @@ pub fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>)
     }
 }
 
-pub fn start_loop(
+pub(crate) fn main_loop(
     receiver: Receiver<Command>,
     finish_rx: Sender<Receiver<()>>,
     event_tx: postage::broadcast::Sender<PlayerEvent>,
@@ -66,19 +64,4 @@ pub fn start_loop(
         info!("Completed command");
     }
     info!("Request loop completed");
-}
-
-#[derive(Debug, Clone)]
-pub enum Command {
-    SetQueue(Vec<String>),
-    Seek(u64),
-    SetVolume(f32),
-    Pause,
-    Resume,
-    Start,
-    Stop,
-    Ended,
-    Next,
-    Previous,
-    Shutdown,
 }

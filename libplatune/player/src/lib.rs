@@ -1,26 +1,19 @@
 #[cfg(all(feature = "runtime-tokio", feature = "runtime-async-std"))]
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
 
+mod enums;
 mod event_loop;
 #[cfg(feature = "runtime-tokio")]
 mod http_stream_reader;
 mod player;
 pub mod libplayer {
-    use crate::event_loop::{ended_loop, start_loop, Command};
-    use log::info;
+    pub use crate::enums::{Command, PlayerEvent};
+    use crate::event_loop::{ended_loop, main_loop};
     pub use postage::*;
-
-    use strum_macros::Display;
 
     pub use postage::{sink::Sink, stream::Stream};
     //use postage::{broadcast::Sender, mpsc, sink::Sink};
-    use std::{
-        fmt,
-        fs::remove_file,
-        io::BufReader,
-        thread::{self, JoinHandle},
-        time::Duration,
-    };
+    use std::fs::remove_file;
 
     pub struct PlatunePlayer {
         cmd_sender: std::sync::mpsc::Sender<Command>,
@@ -49,18 +42,12 @@ pub mod libplayer {
             let (finish_tx, finish_rx) = std::sync::mpsc::channel();
             let finish_tx_ = finish_tx.clone();
 
-            let main_loop = || start_loop(finish_rx, tx_, event_tx);
-            let ended = || ended_loop(rx, finish_tx_);
+            let main_loop_fn = || main_loop(finish_rx, tx_, event_tx);
+            let ended_loop_fn = || ended_loop(rx, finish_tx_);
             #[cfg(feature = "runtime-tokio")]
             {
-                tokio::task::spawn_blocking(main_loop);
-                tokio::task::spawn_blocking(ended);
-            }
-
-            #[cfg(not(feature = "runtime-tokio"))]
-            {
-                thread::spawn(main_loop);
-                thread::spawn(ended);
+                tokio::task::spawn_blocking(main_loop_fn);
+                tokio::task::spawn_blocking(ended_loop_fn);
             }
 
             (
@@ -116,19 +103,5 @@ pub mod libplayer {
         fn drop(&mut self) {
             self.cmd_sender.send(Command::Shutdown).unwrap();
         }
-    }
-
-    #[derive(Clone, Debug, Display)]
-    pub enum PlayerEvent {
-        StartQueue { queue: Vec<String> },
-        Stop,
-        Pause,
-        Resume,
-        Ended,
-        Next,
-        Previous,
-        SetVolume { volume: f32 },
-        Seek { millis: u64 },
-        QueueEnded,
     }
 }

@@ -1,23 +1,18 @@
 use std::{
-    env::temp_dir,
-    fs::File,
     io::{BufReader, Read, Seek, SeekFrom},
     str::FromStr,
     sync::{
-        atomic::{AtomicBool, AtomicU32, Ordering},
+        atomic::{AtomicU32, Ordering},
         mpsc::{self, Receiver, Sender},
         Arc,
     },
-    thread,
-    time::Duration,
 };
-use tempfile::{tempfile, Builder, NamedTempFile};
+use tempfile::{Builder, NamedTempFile};
 
 use futures_util::StreamExt;
 use log::info;
-use reqwest::Error;
 
-pub struct HttpStreamReader {
+pub(crate) struct HttpStreamReader {
     output_reader: BufReader<NamedTempFile>,
     bytes_written: Arc<AtomicU32>,
     bytes_read: u32,
@@ -29,13 +24,14 @@ pub struct HttpStreamReader {
 impl HttpStreamReader {
     pub fn new(url: String) -> Self {
         let bytes_written = Arc::new(AtomicU32::new(0));
-        let done = Arc::new(AtomicBool::new(false));
         let bytes_written_ = bytes_written.clone();
-        let done_ = done.clone();
+
         let (ready_tx, ready_rx) = mpsc::channel();
         let (wait_written_tx, wait_written_rx) = mpsc::channel();
+
         let tempfile_ = Builder::new().prefix("platunecache").tempfile().unwrap();
         let mut tempfile = tempfile_.reopen().unwrap();
+
         tokio::spawn(async move {
             println!("starting download...");
             let client = reqwest::Client::new();
@@ -59,6 +55,7 @@ impl HttpStreamReader {
                 std::io::copy(&mut item.take(len as u64), &mut tempfile).unwrap();
                 let new_len = bytes_written_.load(Ordering::SeqCst) + len as u32;
                 bytes_written_.store(new_len, Ordering::SeqCst);
+
                 if let Ok(new_target) = wait_written_rx.try_recv() {
                     info!("write target={}", new_target);
                     target = new_target;
@@ -71,8 +68,7 @@ impl HttpStreamReader {
                 }
             }
 
-            done_.store(true, Ordering::SeqCst);
-            println!("Finished with success!");
+            info!("Finished downloading file");
         });
         let file_len = ready_rx.recv().unwrap();
 

@@ -1,20 +1,17 @@
 use std::{
     fs::File,
-    io::{BufReader, Read},
-    sync::{
-        mpsc::{self, Receiver, Sender},
-        Arc, Mutex,
-    },
+    io::BufReader,
+    sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
 
 use log::info;
 use postage::sink::Sink;
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink as RodioSink};
+use rodio::{Decoder, OutputStreamHandle, Sink as RodioSink};
 
+use crate::enums::PlayerEvent;
 #[cfg(feature = "runtime-tokio")]
 use crate::http_stream_reader::HttpStreamReader;
-use crate::{event_loop::Command, libplayer::PlayerEvent};
 
 pub struct Player {
     sink: RodioSink,
