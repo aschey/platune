@@ -26,8 +26,15 @@ impl Player for PlayerImpl {
     async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
         let mut player = self.player.lock().unwrap();
         player.set_queue(request.into_inner().queue);
-        player.start();
+        Ok(Response::new(()))
+    }
 
+    async fn add_to_queue(
+        &self,
+        request: Request<AddToQueueRequest>,
+    ) -> Result<Response<()>, Status> {
+        let mut player = self.player.lock().unwrap();
+        player.add_to_queue(request.into_inner().song);
         Ok(Response::new(()))
     }
 
@@ -88,7 +95,7 @@ impl Player for PlayerImpl {
         tokio::spawn(async move {
             while let Some(msg) = ended_rx.recv().await {
                 match &msg {
-                    PlayerEvent::SetVolume { volume } => tx
+                    PlayerEvent::SetVolume(volume) => tx
                         .send(Ok(EventResponse {
                             queue: vec![],
                             event: msg.to_string(),
@@ -97,7 +104,7 @@ impl Player for PlayerImpl {
                         }))
                         .await
                         .unwrap_or_default(),
-                    PlayerEvent::Seek { millis } => tx
+                    PlayerEvent::Seek(millis) => tx
                         .send(Ok(EventResponse {
                             queue: vec![],
                             event: msg.to_string(),
@@ -106,7 +113,7 @@ impl Player for PlayerImpl {
                         }))
                         .await
                         .unwrap_or_default(),
-                    PlayerEvent::StartQueue { queue } => tx
+                    PlayerEvent::StartQueue(queue) => tx
                         .send(Ok(EventResponse {
                             queue: queue.clone(),
                             event: msg.to_string(),

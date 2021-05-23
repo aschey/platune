@@ -75,9 +75,7 @@ impl Player {
             self.signal_finish();
         }
         self.event_tx
-            .try_send(PlayerEvent::StartQueue {
-                queue: self.queue.clone(),
-            })
+            .try_send(PlayerEvent::StartQueue(self.queue.clone()))
             .unwrap();
     }
 
@@ -98,9 +96,7 @@ impl Player {
 
     pub fn seek(&mut self, millis: u64) {
         self.sink.seek(Duration::from_millis(millis));
-        self.event_tx
-            .try_send(PlayerEvent::Seek { millis })
-            .unwrap();
+        self.event_tx.try_send(PlayerEvent::Seek(millis)).unwrap();
     }
 
     pub fn stop(&mut self) {
@@ -159,6 +155,18 @@ impl Player {
         self.reset();
         self.position = 0;
         self.queue = queue;
+        self.start();
+    }
+
+    pub fn add_to_queue(&mut self, song: String) {
+        if self.queued_count == 0 {
+            self.set_queue(vec![song]);
+        } else {
+            self.queue.push(song);
+            self.event_tx
+                .try_send(PlayerEvent::QueueUpdated(self.queue.clone()))
+                .unwrap();
+        }
     }
 
     pub fn get_current(&self) -> Option<String> {

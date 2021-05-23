@@ -10,6 +10,7 @@ package player_rpc;
 
 service Player {
   rpc SetQueue(QueueRequest) returns (google.protobuf.Empty) {}
+  rpc AddToQueue(AddToQueueRequest) returns (google.protobuf.Empty) {}
   rpc Pause(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty) {}
@@ -21,6 +22,7 @@ service Player {
 }
 
 message QueueRequest { repeated string queue = 1; }
+message AddToQueueRequest { string song = 1; }
 message SeekRequest { uint64 millis = 1; }
 message SetVolumeRequest { float volume = 1; }
 message EventResponse {

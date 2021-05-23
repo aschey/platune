@@ -62,6 +62,10 @@ pub mod libplayer {
             self.cmd_sender.send(Command::SetQueue(queue)).unwrap();
         }
 
+        pub fn add_to_queue(&mut self, song: String) {
+            self.cmd_sender.send(Command::AddToQueue(song)).unwrap();
+        }
+
         pub fn seek(&mut self, millis: u64) {
             self.cmd_sender.send(Command::Seek(millis)).unwrap();
         }

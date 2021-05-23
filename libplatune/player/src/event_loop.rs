@@ -30,6 +30,9 @@ pub(crate) fn main_loop(
             Command::SetQueue(songs) => {
                 queue.set_queue(songs);
             }
+            Command::AddToQueue(song) => {
+                queue.add_to_queue(song);
+            }
             Command::Seek(millis) => {
                 queue.seek(millis);
             }

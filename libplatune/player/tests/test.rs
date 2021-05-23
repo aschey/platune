@@ -124,11 +124,10 @@ async fn init_play(num_songs: usize) -> (PlatunePlayer, Receiver<PlayerEvent>, V
     let songs = get_test_files(num_songs);
     let song_queue = songs.get_paths();
     player.set_queue(song_queue.clone());
-    player.start();
 
     assert_matches!(
         receiver.timed_recv().await,
-        Some(PlayerEvent::StartQueue { queue }) if queue == song_queue
+        Some(PlayerEvent::StartQueue(queue)) if queue == song_queue
     );
     (player, receiver, songs)
 }
@@ -194,7 +193,7 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     for (i, _) in songs.iter().enumerate() {
         if i == seek_index {
             player.seek(seek_time);
-            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek { millis }) if millis == seek_time);
+            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(millis)) if millis == seek_time);
         }
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended));
     }
