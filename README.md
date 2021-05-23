@@ -1,7 +1,7 @@
 ![Platune](res/platune-title.png)
 
 [![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/master/LICENSE)
-![Total Lines](https://img.shields.io/tokei/lines/github/aschey/platune?color=brightgreen)
+[![CI](https://github.com/aschey/Platune/actions/workflows/test.yml/badge.svg)](https://github.com/aschey/Platune/actions/workflows/test.yml)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)
 
 Created with
