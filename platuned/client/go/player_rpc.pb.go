@@ -68,6 +68,53 @@ func (x *QueueRequest) GetQueue() []string {
 	return nil
 }
 
+type AddToQueueRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Song string `protobuf:"bytes,1,opt,name=song,proto3" json:"song,omitempty"`
+}
+
+func (x *AddToQueueRequest) Reset() {
+	*x = AddToQueueRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_player_rpc_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *AddToQueueRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AddToQueueRequest) ProtoMessage() {}
+
+func (x *AddToQueueRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_player_rpc_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AddToQueueRequest.ProtoReflect.Descriptor instead.
+func (*AddToQueueRequest) Descriptor() ([]byte, []int) {
+	return file_player_rpc_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AddToQueueRequest) GetSong() string {
+	if x != nil {
+		return x.Song
+	}
+	return ""
+}
+
 type SeekRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -79,7 +126,7 @@ type SeekRequest struct {
 func (x *SeekRequest) Reset() {
 	*x = SeekRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_player_rpc_proto_msgTypes[1]
+		mi := &file_player_rpc_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -92,7 +139,7 @@ func (x *SeekRequest) String() string {
 func (*SeekRequest) ProtoMessage() {}
 
 func (x *SeekRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[1]
+	mi := &file_player_rpc_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -105,7 +152,7 @@ func (x *SeekRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeekRequest.ProtoReflect.Descriptor instead.
 func (*SeekRequest) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{1}
+	return file_player_rpc_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SeekRequest) GetMillis() uint64 {
@@ -126,7 +173,7 @@ type SetVolumeRequest struct {
 func (x *SetVolumeRequest) Reset() {
 	*x = SetVolumeRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_player_rpc_proto_msgTypes[2]
+		mi := &file_player_rpc_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -139,7 +186,7 @@ func (x *SetVolumeRequest) String() string {
 func (*SetVolumeRequest) ProtoMessage() {}
 
 func (x *SetVolumeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[2]
+	mi := &file_player_rpc_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -152,7 +199,7 @@ func (x *SetVolumeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetVolumeRequest.ProtoReflect.Descriptor instead.
 func (*SetVolumeRequest) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{2}
+	return file_player_rpc_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SetVolumeRequest) GetVolume() float32 {
@@ -176,7 +223,7 @@ type EventResponse struct {
 func (x *EventResponse) Reset() {
 	*x = EventResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_player_rpc_proto_msgTypes[3]
+		mi := &file_player_rpc_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -189,7 +236,7 @@ func (x *EventResponse) String() string {
 func (*EventResponse) ProtoMessage() {}
 
 func (x *EventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[3]
+	mi := &file_player_rpc_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -202,7 +249,7 @@ func (x *EventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventResponse.ProtoReflect.Descriptor instead.
 func (*EventResponse) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{3}
+	return file_player_rpc_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *EventResponse) GetQueue() []string {
@@ -242,23 +289,30 @@ var file_player_rpc_proto_rawDesc = []byte{
 	0x65, 0x6d, 0x70, 0x74, 0x79, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x22, 0x24, 0x0a, 0x0c, 0x51,
 	0x75, 0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x71,
 	0x75, 0x65, 0x75, 0x65, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x71, 0x75, 0x65, 0x75,
-	0x65, 0x22, 0x25, 0x0a, 0x0b, 0x53, 0x65, 0x65, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x12, 0x16, 0x0a, 0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04,
-	0x52, 0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x22, 0x2a, 0x0a, 0x10, 0x53, 0x65, 0x74, 0x56,
-	0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06,
-	0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x02, 0x52, 0x06, 0x76, 0x6f,
-	0x6c, 0x75, 0x6d, 0x65, 0x22, 0x8b, 0x01, 0x0a, 0x0d, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x18,
-	0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x12, 0x14, 0x0a, 0x05,
-	0x65, 0x76, 0x65, 0x6e, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x76, 0x65,
-	0x6e, 0x74, 0x12, 0x1b, 0x0a, 0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x18, 0x03, 0x20, 0x01,
-	0x28, 0x04, 0x48, 0x00, 0x52, 0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x88, 0x01, 0x01, 0x12,
-	0x1b, 0x0a, 0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x02, 0x48,
-	0x01, 0x52, 0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x88, 0x01, 0x01, 0x42, 0x09, 0x0a, 0x07,
-	0x5f, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x76, 0x6f, 0x6c, 0x75,
-	0x6d, 0x65, 0x32, 0xbb, 0x04, 0x0a, 0x06, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x12, 0x3e, 0x0a,
-	0x08, 0x53, 0x65, 0x74, 0x51, 0x75, 0x65, 0x75, 0x65, 0x12, 0x18, 0x2e, 0x70, 0x6c, 0x61, 0x79,
-	0x65, 0x72, 0x5f, 0x72, 0x70, 0x63, 0x2e, 0x51, 0x75, 0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x75,
+	0x65, 0x22, 0x27, 0x0a, 0x11, 0x41, 0x64, 0x64, 0x54, 0x6f, 0x51, 0x75, 0x65, 0x75, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x73, 0x6f, 0x6e, 0x67, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x73, 0x6f, 0x6e, 0x67, 0x22, 0x25, 0x0a, 0x0b, 0x53, 0x65,
+	0x65, 0x6b, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x6d, 0x69, 0x6c,
+	0x6c, 0x69, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69,
+	0x73, 0x22, 0x2a, 0x0a, 0x10, 0x53, 0x65, 0x74, 0x56, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x02, 0x52, 0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x22, 0x8b, 0x01,
+	0x0a, 0x0d, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x14, 0x0a, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05,
+	0x71, 0x75, 0x65, 0x75, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x1b, 0x0a, 0x06, 0x6d,
+	0x69, 0x6c, 0x6c, 0x69, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x48, 0x00, 0x52, 0x06, 0x6d,
+	0x69, 0x6c, 0x6c, 0x69, 0x73, 0x88, 0x01, 0x01, 0x12, 0x1b, 0x0a, 0x06, 0x76, 0x6f, 0x6c, 0x75,
+	0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x02, 0x48, 0x01, 0x52, 0x06, 0x76, 0x6f, 0x6c, 0x75,
+	0x6d, 0x65, 0x88, 0x01, 0x01, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73,
+	0x42, 0x09, 0x0a, 0x07, 0x5f, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x32, 0x82, 0x05, 0x0a, 0x06,
+	0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x12, 0x3e, 0x0a, 0x08, 0x53, 0x65, 0x74, 0x51, 0x75, 0x65,
+	0x75, 0x65, 0x12, 0x18, 0x2e, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f, 0x72, 0x70, 0x63, 0x2e,
+	0x51, 0x75, 0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67,
+	0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45,
+	0x6d, 0x70, 0x74, 0x79, 0x22, 0x00, 0x12, 0x45, 0x0a, 0x0a, 0x41, 0x64, 0x64, 0x54, 0x6f, 0x51,
+	0x75, 0x65, 0x75, 0x65, 0x12, 0x1d, 0x2e, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f, 0x72, 0x70,
+	0x63, 0x2e, 0x41, 0x64, 0x64, 0x54, 0x6f, 0x51, 0x75, 0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x00, 0x12, 0x39, 0x0a,
 	0x05, 0x50, 0x61, 0x75, 0x73, 0x65, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
@@ -310,38 +364,41 @@ func file_player_rpc_proto_rawDescGZIP() []byte {
 	return file_player_rpc_proto_rawDescData
 }
 
-var file_player_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_player_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_player_rpc_proto_goTypes = []interface{}{
-	(*QueueRequest)(nil),     // 0: player_rpc.QueueRequest
-	(*SeekRequest)(nil),      // 1: player_rpc.SeekRequest
-	(*SetVolumeRequest)(nil), // 2: player_rpc.SetVolumeRequest
-	(*EventResponse)(nil),    // 3: player_rpc.EventResponse
-	(*emptypb.Empty)(nil),    // 4: google.protobuf.Empty
+	(*QueueRequest)(nil),      // 0: player_rpc.QueueRequest
+	(*AddToQueueRequest)(nil), // 1: player_rpc.AddToQueueRequest
+	(*SeekRequest)(nil),       // 2: player_rpc.SeekRequest
+	(*SetVolumeRequest)(nil),  // 3: player_rpc.SetVolumeRequest
+	(*EventResponse)(nil),     // 4: player_rpc.EventResponse
+	(*emptypb.Empty)(nil),     // 5: google.protobuf.Empty
 }
 var file_player_rpc_proto_depIdxs = []int32{
-	0, // 0: player_rpc.Player.SetQueue:input_type -> player_rpc.QueueRequest
-	4, // 1: player_rpc.Player.Pause:input_type -> google.protobuf.Empty
-	4, // 2: player_rpc.Player.Stop:input_type -> google.protobuf.Empty
-	4, // 3: player_rpc.Player.Resume:input_type -> google.protobuf.Empty
-	1, // 4: player_rpc.Player.Seek:input_type -> player_rpc.SeekRequest
-	2, // 5: player_rpc.Player.SetVolume:input_type -> player_rpc.SetVolumeRequest
-	4, // 6: player_rpc.Player.Next:input_type -> google.protobuf.Empty
-	4, // 7: player_rpc.Player.Previous:input_type -> google.protobuf.Empty
-	4, // 8: player_rpc.Player.SubscribeEvents:input_type -> google.protobuf.Empty
-	4, // 9: player_rpc.Player.SetQueue:output_type -> google.protobuf.Empty
-	4, // 10: player_rpc.Player.Pause:output_type -> google.protobuf.Empty
-	4, // 11: player_rpc.Player.Stop:output_type -> google.protobuf.Empty
-	4, // 12: player_rpc.Player.Resume:output_type -> google.protobuf.Empty
-	4, // 13: player_rpc.Player.Seek:output_type -> google.protobuf.Empty
-	4, // 14: player_rpc.Player.SetVolume:output_type -> google.protobuf.Empty
-	4, // 15: player_rpc.Player.Next:output_type -> google.protobuf.Empty
-	4, // 16: player_rpc.Player.Previous:output_type -> google.protobuf.Empty
-	3, // 17: player_rpc.Player.SubscribeEvents:output_type -> player_rpc.EventResponse
-	9, // [9:18] is the sub-list for method output_type
-	0, // [0:9] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0,  // 0: player_rpc.Player.SetQueue:input_type -> player_rpc.QueueRequest
+	1,  // 1: player_rpc.Player.AddToQueue:input_type -> player_rpc.AddToQueueRequest
+	5,  // 2: player_rpc.Player.Pause:input_type -> google.protobuf.Empty
+	5,  // 3: player_rpc.Player.Stop:input_type -> google.protobuf.Empty
+	5,  // 4: player_rpc.Player.Resume:input_type -> google.protobuf.Empty
+	2,  // 5: player_rpc.Player.Seek:input_type -> player_rpc.SeekRequest
+	3,  // 6: player_rpc.Player.SetVolume:input_type -> player_rpc.SetVolumeRequest
+	5,  // 7: player_rpc.Player.Next:input_type -> google.protobuf.Empty
+	5,  // 8: player_rpc.Player.Previous:input_type -> google.protobuf.Empty
+	5,  // 9: player_rpc.Player.SubscribeEvents:input_type -> google.protobuf.Empty
+	5,  // 10: player_rpc.Player.SetQueue:output_type -> google.protobuf.Empty
+	5,  // 11: player_rpc.Player.AddToQueue:output_type -> google.protobuf.Empty
+	5,  // 12: player_rpc.Player.Pause:output_type -> google.protobuf.Empty
+	5,  // 13: player_rpc.Player.Stop:output_type -> google.protobuf.Empty
+	5,  // 14: player_rpc.Player.Resume:output_type -> google.protobuf.Empty
+	5,  // 15: player_rpc.Player.Seek:output_type -> google.protobuf.Empty
+	5,  // 16: player_rpc.Player.SetVolume:output_type -> google.protobuf.Empty
+	5,  // 17: player_rpc.Player.Next:output_type -> google.protobuf.Empty
+	5,  // 18: player_rpc.Player.Previous:output_type -> google.protobuf.Empty
+	4,  // 19: player_rpc.Player.SubscribeEvents:output_type -> player_rpc.EventResponse
+	10, // [10:20] is the sub-list for method output_type
+	0,  // [0:10] is the sub-list for method input_type
+	0,  // [0:0] is the sub-list for extension type_name
+	0,  // [0:0] is the sub-list for extension extendee
+	0,  // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_player_rpc_proto_init() }
@@ -363,7 +420,7 @@ func file_player_rpc_proto_init() {
 			}
 		}
 		file_player_rpc_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SeekRequest); i {
+			switch v := v.(*AddToQueueRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -375,7 +432,7 @@ func file_player_rpc_proto_init() {
 			}
 		}
 		file_player_rpc_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SetVolumeRequest); i {
+			switch v := v.(*SeekRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -387,6 +444,18 @@ func file_player_rpc_proto_init() {
 			}
 		}
 		file_player_rpc_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SetVolumeRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_player_rpc_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*EventResponse); i {
 			case 0:
 				return &v.state
@@ -399,14 +468,14 @@ func file_player_rpc_proto_init() {
 			}
 		}
 	}
-	file_player_rpc_proto_msgTypes[3].OneofWrappers = []interface{}{}
+	file_player_rpc_proto_msgTypes[4].OneofWrappers = []interface{}{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_player_rpc_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

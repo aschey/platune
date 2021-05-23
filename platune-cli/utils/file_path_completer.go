@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/c-bata/go-prompt"
 )
@@ -46,13 +47,15 @@ func CleanFilePath(path string) (dir, base string, err error) {
 }
 
 // Complete returns suggestions from your local file system.
-func (c *FilePathCompleter) Complete(d prompt.Document) []prompt.Suggest {
+func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt.Suggest {
 	if c.fileListCache == nil {
 		c.fileListCache = make(map[string][]prompt.Suggest, 4)
 	}
 
 	path := d.TextBeforeCursor()
-	//fmt.Println("path " + path)
+	if skipFirst {
+		path = strings.SplitN(path, " ", 2)[1]
+	}
 	dir, base, err := CleanFilePath(path)
 	if err != nil {
 		fmt.Println("completer: cannot get current user:" + err.Error())

@@ -29,6 +29,29 @@ type rootState struct {
 	platuneClient  platune.PlayerClient
 }
 
+func expandPath(song string) (string, error) {
+	if strings.HasPrefix(song, "http") {
+		return song, nil
+	}
+
+	dir, base, err := utils.CleanFilePath(song)
+
+	if err != nil {
+		return "", err
+	}
+	full := path.Join(dir, base)
+	stat, err := os.Stat(full)
+	if err != nil {
+
+		return "", err
+	}
+	if stat.Mode().IsDir() {
+		return "", fmt.Errorf("cannot add a directory")
+	}
+	return full, nil
+
+}
+
 func newRootState() rootState {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
@@ -62,14 +85,32 @@ func (state *rootState) runCommand(successMsg string, cmdFunc func(platune.Playe
 }
 
 func (state *rootState) executor(in string) {
-	switch in {
+	cmds := strings.SplitN(in, " ", 2)
+	if len(cmds) == 0 {
+		return
+	}
+
+	switch cmds[0] {
 	case "set-queue":
-		fmt.Println("Enter file paths or http urls to add to the queue.")
+		fmt.Println("Enter file paths or urls to add to the queue.")
 		fmt.Println("Enter a blank line when done.")
 		state.isSetQueueMode = true
 		state.livePrefix = in + "> "
 		state.isEnabled = true
 		return
+	case "add-queue":
+		if len(cmds) < 2 {
+			fmt.Println("Usage: add-queue <path or url>")
+			return
+		}
+		full, err := expandPath(cmds[1])
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		state.runCommand("Added", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+			return state.platuneClient.AddToQueue(ctx, &platune.AddToQueueRequest{Song: full})
+		})
 	case "pause":
 		state.runCommand("Paused", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
 			return state.platuneClient.Pause(ctx, &emptypb.Empty{})
@@ -100,24 +141,12 @@ func (state *rootState) executor(in string) {
 			state.currentQueue = []string{}
 			state.isEnabled = false
 		} else {
-			if !strings.HasPrefix(in, "http") {
-				dir, base, err := utils.CleanFilePath(in)
-
-				if err != nil {
-					fmt.Println(err)
-				}
-				full := path.Join(dir, base)
-				stat, err := os.Stat(full)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				if stat.Mode().IsDir() {
-					fmt.Println("Cannot add a directory")
-					return
-				}
-				in = full
+			in, err := expandPath(in)
+			if err != nil {
+				fmt.Println(err)
+				return
 			}
+
 			state.currentQueue = append(state.currentQueue, in)
 			var formattedQueue = []string{}
 			for i := 0; i < len(state.currentQueue); i++ {
@@ -125,21 +154,24 @@ func (state *rootState) executor(in string) {
 			}
 			fmt.Println(strings.Join(formattedQueue, "\n"))
 		}
-
 	}
-
 }
+
 func (state *rootState) completer(in prompt.Document) []prompt.Suggest {
-	if state.isSetQueueMode {
-		return filePathCompleter.Complete(in)
-	}
 	before := strings.Split(in.TextBeforeCursor(), " ")
+	if state.isSetQueueMode {
+		return filePathCompleter.Complete(in, false)
+	}
 	if len(before) > 1 {
+		if before[0] == "add-queue" {
+			return filePathCompleter.Complete(in, true)
+		}
 		return []prompt.Suggest{}
 	}
 
 	s := []prompt.Suggest{
 		{Text: "set-queue", Description: "Sets the queue and starts playback. Resets the queue if playback has already started."},
+		{Text: "add-queue", Description: "Adds a song to the end of the queue"},
 		{Text: "pause", Description: "Pauses the queue"},
 		{Text: "resume", Description: "Resumes the queue. No effect if already playing."},
 		{Text: "next", Description: "Skips to the next track"},

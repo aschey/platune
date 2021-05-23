@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PlayerClient interface {
 	SetQueue(ctx context.Context, in *QueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	AddToQueue(ctx context.Context, in *AddToQueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Pause(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Resume(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -41,6 +42,15 @@ func NewPlayerClient(cc grpc.ClientConnInterface) PlayerClient {
 func (c *playerClient) SetQueue(ctx context.Context, in *QueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/player_rpc.Player/SetQueue", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *playerClient) AddToQueue(ctx context.Context, in *AddToQueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/player_rpc.Player/AddToQueue", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +157,7 @@ func (x *playerSubscribeEventsClient) Recv() (*EventResponse, error) {
 // for forward compatibility
 type PlayerServer interface {
 	SetQueue(context.Context, *QueueRequest) (*emptypb.Empty, error)
+	AddToQueue(context.Context, *AddToQueueRequest) (*emptypb.Empty, error)
 	Pause(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Resume(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
@@ -164,6 +175,9 @@ type UnimplementedPlayerServer struct {
 
 func (UnimplementedPlayerServer) SetQueue(context.Context, *QueueRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetQueue not implemented")
+}
+func (UnimplementedPlayerServer) AddToQueue(context.Context, *AddToQueueRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddToQueue not implemented")
 }
 func (UnimplementedPlayerServer) Pause(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Pause not implemented")
@@ -216,6 +230,24 @@ func _Player_SetQueue_Handler(srv interface{}, ctx context.Context, dec func(int
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(PlayerServer).SetQueue(ctx, req.(*QueueRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Player_AddToQueue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddToQueueRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlayerServer).AddToQueue(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/player_rpc.Player/AddToQueue",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlayerServer).AddToQueue(ctx, req.(*AddToQueueRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -377,6 +409,10 @@ var Player_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetQueue",
 			Handler:    _Player_SetQueue_Handler,
+		},
+		{
+			MethodName: "AddToQueue",
+			Handler:    _Player_AddToQueue_Handler,
 		},
 		{
 			MethodName: "Pause",
