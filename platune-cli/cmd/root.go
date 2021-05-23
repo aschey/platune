@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -111,6 +113,24 @@ func (state *rootState) executor(in string) {
 		state.runCommand("Added", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
 			return state.platuneClient.AddToQueue(ctx, &platune.AddToQueueRequest{Song: full})
 		})
+	case "seek":
+		if len(cmds) < 2 {
+			fmt.Println("Usage: seek [hh]:[mm]:ss")
+			return
+		}
+		timeParts := strings.Split(cmds[1], ":")
+		totalMillis := uint64(0)
+		for i := 0; i < len(timeParts); i++ {
+			intVal, err := strconv.ParseUint(timeParts[i], 10, 64)
+			if err != nil {
+				fmt.Println(timeParts[i] + " is not a valid integer")
+			}
+			pos := float64(len(timeParts) - 1 - i)
+			totalMillis += uint64(math.Pow(60, pos)) * intVal * 1000
+		}
+		state.runCommand("Seeked to "+cmds[1], func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+			return state.platuneClient.Seek(ctx, &platune.SeekRequest{Millis: totalMillis})
+		})
 	case "pause":
 		state.runCommand("Paused", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
 			return state.platuneClient.Pause(ctx, &emptypb.Empty{})
@@ -174,6 +194,7 @@ func (state *rootState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "add-queue", Description: "Adds a song to the end of the queue"},
 		{Text: "pause", Description: "Pauses the queue"},
 		{Text: "resume", Description: "Resumes the queue. No effect if already playing."},
+		{Text: "seek", Description: "Seek to a specific time. Input should be formatted like [hh]:[mm]:ss"},
 		{Text: "next", Description: "Skips to the next track"},
 		{Text: "previous", Description: "Skips to the previous track"},
 		{Text: "stop", Description: "Stops playback"},
@@ -203,7 +224,7 @@ to quickly create a Cobra application.`,
 			state.completer,
 			prompt.OptionPrefix(">>> "),
 			prompt.OptionLivePrefix(state.changeLivePrefix),
-			prompt.OptionTitle("live-prefix-example"),
+			prompt.OptionTitle("Platune CLI"),
 			prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
 		)
 		p.Run()

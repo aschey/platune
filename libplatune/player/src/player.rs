@@ -159,10 +159,18 @@ impl Player {
     }
 
     pub fn add_to_queue(&mut self, song: String) {
+        // Queue as not currently running, need to start it
         if self.queued_count == 0 {
             self.set_queue(vec![song]);
         } else {
-            self.queue.push(song);
+            self.queue.push(song.clone());
+            // Special case: if we started with only one song, then the new song will never get triggered by the ended event
+            // so we need to add it here explicitly
+            if self.queued_count == 1 {
+                self.append_file(song);
+                self.signal_finish();
+            }
+
             self.event_tx
                 .try_send(PlayerEvent::QueueUpdated(self.queue.clone()))
                 .unwrap();

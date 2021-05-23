@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/c-bata/go-prompt"
@@ -28,7 +27,7 @@ func CleanFilePath(path string) (dir, base string, err error) {
 		endsWithSeparator = true
 	}
 
-	if runtime.GOOS != "windows" && len(path) >= 2 && path[0:2] == "~/" {
+	if len(path) >= 2 && path[0:2] == "~"+string(os.PathSeparator) {
 		me, err := user.Current()
 		if err != nil {
 			return "", "", err

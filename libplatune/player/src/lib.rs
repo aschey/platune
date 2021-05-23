@@ -12,7 +12,6 @@ pub mod libplayer {
     pub use postage::*;
 
     pub use postage::{sink::Sink, stream::Stream};
-    //use postage::{broadcast::Sender, mpsc, sink::Sink};
     use std::fs::remove_file;
 
     pub struct PlatunePlayer {
