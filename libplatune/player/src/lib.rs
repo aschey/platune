@@ -15,7 +15,7 @@ pub mod libplayer {
     use std::fs::remove_file;
 
     pub struct PlatunePlayer {
-        cmd_sender: std::sync::mpsc::Sender<Command>,
+        cmd_sender: std::sync::mpsc::SyncSender<Command>,
     }
 
     impl PlatunePlayer {
@@ -38,7 +38,7 @@ pub mod libplayer {
             let (event_tx, event_rx) = broadcast::channel(32);
             let (tx, rx) = std::sync::mpsc::channel();
             let tx_ = tx.clone();
-            let (finish_tx, finish_rx) = std::sync::mpsc::channel();
+            let (finish_tx, finish_rx) = std::sync::mpsc::sync_channel(32);
             let finish_tx_ = finish_tx.clone();
 
             let main_loop_fn = || main_loop(finish_rx, tx_, event_tx);
@@ -57,47 +57,47 @@ pub mod libplayer {
             )
         }
 
-        pub fn set_queue(&mut self, queue: Vec<String>) {
+        pub fn set_queue(&self, queue: Vec<String>) {
             self.cmd_sender.send(Command::SetQueue(queue)).unwrap();
         }
 
-        pub fn add_to_queue(&mut self, song: String) {
+        pub fn add_to_queue(&self, song: String) {
             self.cmd_sender.send(Command::AddToQueue(song)).unwrap();
         }
 
-        pub fn seek(&mut self, millis: u64) {
+        pub fn seek(&self, millis: u64) {
             self.cmd_sender.send(Command::Seek(millis)).unwrap();
         }
 
-        pub fn start(&mut self) {
+        pub fn start(&self) {
             self.cmd_sender.send(Command::Start).unwrap();
         }
 
-        pub fn stop(&mut self) {
+        pub fn stop(&self) {
             self.cmd_sender.send(Command::Stop).unwrap();
         }
 
-        pub fn set_volume(&mut self, volume: f32) {
+        pub fn set_volume(&self, volume: f32) {
             self.cmd_sender.send(Command::SetVolume(volume)).unwrap();
         }
 
-        pub fn pause(&mut self) {
+        pub fn pause(&self) {
             self.cmd_sender.send(Command::Pause).unwrap();
         }
 
-        pub fn resume(&mut self) {
+        pub fn resume(&self) {
             self.cmd_sender.send(Command::Resume).unwrap();
         }
 
-        pub fn next(&mut self) {
+        pub fn next(&self) {
             self.cmd_sender.send(Command::Next).unwrap();
         }
 
-        pub fn previous(&mut self) {
+        pub fn previous(&self) {
             self.cmd_sender.send(Command::Previous).unwrap();
         }
 
-        pub fn join(&mut self) {
+        pub fn join(&self) {
             self.cmd_sender.send(Command::Shutdown).unwrap();
         }
     }

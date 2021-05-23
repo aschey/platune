@@ -1,4 +1,4 @@
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender, SyncSender};
 
 use log::info;
 
@@ -7,7 +7,7 @@ use crate::{
     player::Player,
 };
 
-pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: Sender<Command>) {
+pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSender<Command>) {
     while let Ok(receiver) = receiver.recv() {
         // Strange platform-specific behavior here
         // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err

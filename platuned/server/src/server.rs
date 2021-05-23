@@ -6,7 +6,7 @@ use libplatune_player::libplayer::*;
 use tonic::{Request, Response, Status};
 
 pub struct PlayerImpl {
-    player: Mutex<PlatunePlayer>,
+    player: PlatunePlayer,
     event_rx: broadcast::Receiver<PlayerEvent>,
 }
 
@@ -15,7 +15,7 @@ impl PlayerImpl {
         let (platune, event_rx) = PlatunePlayer::new();
 
         PlayerImpl {
-            player: Mutex::new(platune),
+            player: platune,
             event_rx,
         }
     }
@@ -24,8 +24,7 @@ impl PlayerImpl {
 #[tonic::async_trait]
 impl Player for PlayerImpl {
     async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
-        let mut player = self.player.lock().unwrap();
-        player.set_queue(request.into_inner().queue);
+        self.player.set_queue(request.into_inner().queue);
         Ok(Response::new(()))
     }
 
@@ -33,53 +32,46 @@ impl Player for PlayerImpl {
         &self,
         request: Request<AddToQueueRequest>,
     ) -> Result<Response<()>, Status> {
-        let mut player = self.player.lock().unwrap();
-        player.add_to_queue(request.into_inner().song);
+        self.player.add_to_queue(request.into_inner().song);
         Ok(Response::new(()))
     }
 
     async fn pause(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        self.player.lock().unwrap().pause();
+        self.player.pause();
         Ok(Response::new(()))
     }
 
     async fn stop(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        self.player.lock().unwrap().stop();
+        self.player.stop();
         Ok(Response::new(()))
     }
 
     async fn resume(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        self.player.lock().unwrap().resume();
+        self.player.resume();
 
         Ok(Response::new(()))
     }
 
     async fn next(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        self.player.lock().unwrap().next();
+        self.player.next();
 
         Ok(Response::new(()))
     }
 
     async fn previous(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        self.player.lock().unwrap().previous();
+        self.player.previous();
 
         Ok(Response::new(()))
     }
 
     async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<()>, Status> {
-        self.player
-            .lock()
-            .unwrap()
-            .seek(request.into_inner().millis);
+        self.player.seek(request.into_inner().millis);
 
         Ok(Response::new(()))
     }
 
     async fn set_volume(&self, request: Request<SetVolumeRequest>) -> Result<Response<()>, Status> {
-        self.player
-            .lock()
-            .unwrap()
-            .set_volume(request.into_inner().volume);
+        self.player.set_volume(request.into_inner().volume);
         Ok(Response::new(()))
     }
 
