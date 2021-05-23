@@ -8,13 +8,14 @@ import (
 	"time"
 
 	"github.com/aschey/platune/cli/v2/utils"
-	platune "github.com/aschey/platune/client"
-	prompt "github.com/c-bata/go-prompt"
+	"github.com/aschey/platune/client"
+	"github.com/c-bata/go-prompt"
 	"github.com/c-bata/go-prompt/completer"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var cfgFile string
@@ -46,21 +47,52 @@ func (state *rootState) changeLivePrefix() (string, bool) {
 	return state.livePrefix, state.isEnabled
 }
 
+func (state *rootState) runCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, err := cmdFunc(state.platuneClient, ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
+	cancel()
+	fmt.Println(successMsg)
+
+}
+
 func (state *rootState) executor(in string) {
-	if in == "set-queue" {
+	switch in {
+	case "set-queue":
 		fmt.Println("Enter file paths or http urls to add to the queue.")
 		fmt.Println("Enter a blank line when done.")
 		state.isSetQueueMode = true
 		state.livePrefix = in + "> "
 		state.isEnabled = true
-	} else if state.isSetQueueMode {
+		return
+	case "pause":
+		state.runCommand("Paused", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+			return state.platuneClient.Pause(ctx, &emptypb.Empty{})
+		})
+	case "resume":
+		state.runCommand("Resumed", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+			return state.platuneClient.Resume(ctx, &emptypb.Empty{})
+		})
+	case "stop":
+		state.runCommand("Stopped", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+			return state.platuneClient.Stop(ctx, &emptypb.Empty{})
+		})
+	case "next":
+		state.runCommand("Next", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+			return state.platuneClient.Next(ctx, &emptypb.Empty{})
+		})
+	case "previous":
+		state.runCommand("Previous", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+			return state.platuneClient.Previous(ctx, &emptypb.Empty{})
+		})
+	}
+	if state.isSetQueueMode {
 		if strings.Trim(in, " ") == "" {
-			fmt.Println("Queue set")
-			ctx, _ := context.WithTimeout(context.Background(), 1000*time.Second)
-			_, err := state.platuneClient.SetQueue(ctx, &platune.QueueRequest{Queue: state.currentQueue})
-			if err != nil {
-				fmt.Println(err)
-			}
+			state.runCommand("Queue set", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+				return state.platuneClient.SetQueue(ctx, &platune.QueueRequest{Queue: state.currentQueue})
+			})
 			state.isSetQueueMode = false
 			state.currentQueue = []string{}
 		} else {
@@ -72,9 +104,6 @@ func (state *rootState) executor(in string) {
 			fmt.Println(strings.Join(formattedQueue, "\n"))
 		}
 
-	} else {
-		fmt.Println("Your input: " + in)
-
 	}
 
 }
@@ -83,20 +112,17 @@ func (state *rootState) completer(in prompt.Document) []prompt.Suggest {
 		return filePathCompleter.Complete(in)
 	}
 	before := strings.Split(in.TextBeforeCursor(), " ")
-	first := ""
-	if len(before) > 0 {
-		first = before[0]
-	}
-	switch first {
-	case "set-queue":
+	if len(before) > 1 {
 		return []prompt.Suggest{}
 	}
 
 	s := []prompt.Suggest{
-		{Text: "set-queue", Description: "Sets the queue"},
-		{Text: "articles", Description: "Store the article text posted by user"},
-		{Text: "comments", Description: "Store the text commented to articles"},
-		{Text: "groups", Description: "Combine users with specific rules"},
+		{Text: "set-queue", Description: "Sets the queue and starts playback. Resets the queue if playback has already started."},
+		{Text: "pause", Description: "Pauses the queue"},
+		{Text: "resume", Description: "Resumes the queue. No effect if already playing."},
+		{Text: "next", Description: "Skips to the next track"},
+		{Text: "previous", Description: "Skips to the previous track"},
+		{Text: "stop", Description: "Stops playback"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
