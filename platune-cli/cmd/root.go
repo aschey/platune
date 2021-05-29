@@ -14,6 +14,7 @@ import (
 	platune "github.com/aschey/platune/client"
 	"github.com/c-bata/go-prompt"
 	"github.com/c-bata/go-prompt/completer"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -206,28 +207,51 @@ var filePathCompleter = utils.FilePathCompleter{
 	IgnoreCase: true,
 }
 
+var title = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(lipgloss.Color("9")).
+	BorderStyle(lipgloss.RoundedBorder()).
+	BorderForeground(lipgloss.Color("6")).
+	PaddingLeft(1).
+	PaddingRight(1).
+	Render("Platune CLI")
+
+var subtitle = lipgloss.NewStyle().
+	Foreground(lipgloss.Color("9")).
+	Render("Simple CLI for the Platune server")
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "platune",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	//Use:   "platune",
+	Short: subtitle,
+	Long:  lipgloss.JoinVertical(lipgloss.Left, title, subtitle),
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
-		p := prompt.New(
-			state.executor,
-			state.completer,
-			prompt.OptionPrefix(">>> "),
-			prompt.OptionLivePrefix(state.changeLivePrefix),
-			prompt.OptionTitle("Platune CLI"),
-			prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
-		)
-		p.Run()
+		interactive, err := cmd.Flags().GetBool("interactive")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if interactive {
+			p := prompt.New(
+				state.executor,
+				state.completer,
+				prompt.OptionPrefix(">>> "),
+				prompt.OptionLivePrefix(state.changeLivePrefix),
+				prompt.OptionTitle("Platune CLI"),
+				prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
+			)
+			p.Run()
+		} else {
+			err := cmd.Help()
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+
 	},
 }
 
@@ -243,12 +267,19 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
+	// rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 
+	// 	//fmt.Printf("%s\n\n%s\n", cyan(c.Short), cyan(c.Subc)
+	// 	f := c.LocalFlags().Lookup("help")
+	// 	c.Help()
+	// 	fmt.Println(strings.Replace(c.LocalFlags().FlagUsages(), f.Usage, aurora.Cyan(f.Usage).String(), 1))
+
+	// })
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.platune.yaml)")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().BoolP("interactive", "i", false, "Run in interactive mode")
 }
 
 // initConfig reads in config file and ENV variables if set.
