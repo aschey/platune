@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path"
@@ -262,15 +261,8 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-func captureStdErr(outputFunc func()) string {
-	rescueStderr := os.Stderr
-	r, w, _ := os.Pipe()
-	os.Stderr = w
-	outputFunc()
-	w.Close()
-	out, _ := ioutil.ReadAll(r)
-	os.Stdout = rescueStderr
-	return string(out)
+func addColor(replaceStr string, searchStr string, style lipgloss.Style) string {
+	return strings.Replace(replaceStr, searchStr, style.Render(searchStr), 1)
 }
 
 func init() {
@@ -284,11 +276,16 @@ func init() {
 		//f := c.LocalFlags().Lookup("help")
 		//fmt.Println(c.LocalFlags().FlagUsages())
 		fmt.Printf("%s\n\n", c.Long)
-		outStr := captureStdErr(func() { c.Usage() })
+		outStr := c.UsageString()
 
-		gray := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-		outStr = strings.Replace(outStr, "[flags]", gray.Render("[flags]"), 1)
-		outStr = strings.Replace(outStr, "[command]", gray.Render("[command]"), 1)
+		subtext := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+		title := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+
+		outStr = addColor(outStr, "Usage:", title)
+		outStr = addColor(outStr, "Available Commands:", title)
+		outStr = addColor(outStr, "Flags:", title)
+		outStr = addColor(outStr, "[flags]", subtext)
+		outStr = addColor(outStr, "[command]", subtext)
 		fmt.Println(outStr)
 	})
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.platune.yaml)")
