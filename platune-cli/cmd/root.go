@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -214,11 +215,12 @@ var title = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("6")).
 	PaddingLeft(1).
 	PaddingRight(1).
-	Render("Platune CLI")
+	Render(`█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █
+█▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █`)
 
 var subtitle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("9")).
-	Render("Simple CLI for the Platune server")
+	Render(" A simple CLI to manage your Platune server")
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -272,20 +274,25 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-
-		//f := c.LocalFlags().Lookup("help")
-		//fmt.Println(c.LocalFlags().FlagUsages())
 		fmt.Printf("%s\n\n", c.Long)
-		outStr := c.UsageString()
 
 		subtext := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
 		title := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+
+		outStr := c.UsageString()
 
 		outStr = addColor(outStr, "Usage:", title)
 		outStr = addColor(outStr, "Available Commands:", title)
 		outStr = addColor(outStr, "Flags:", title)
 		outStr = addColor(outStr, "[flags]", subtext)
 		outStr = addColor(outStr, "[command]", subtext)
+
+		c.Flags().VisitAll(func(flag *pflag.Flag) { outStr = addColor(outStr, flag.Usage, subtext) })
+
+		for _, c := range c.Commands() {
+			outStr = addColor(outStr, c.Short, subtext)
+		}
+
 		fmt.Println(outStr)
 	})
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.platune.yaml)")
