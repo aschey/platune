@@ -209,12 +209,12 @@ var filePathCompleter = utils.FilePathCompleter{
 }
 
 var title = lipgloss.NewStyle().
-	Bold(true).
 	Foreground(lipgloss.Color("9")).
 	BorderStyle(lipgloss.RoundedBorder()).
 	BorderForeground(lipgloss.Color("6")).
 	PaddingLeft(1).
 	PaddingRight(1).
+	// This says "Platune CLI" but I can't find a way to make gofmt make it legible
 	Render(`█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █
 █▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █`)
 
@@ -264,7 +264,7 @@ func Execute() {
 }
 
 func addColor(replaceStr string, searchStr string, style lipgloss.Style) string {
-	return strings.Replace(replaceStr, searchStr, style.Render(searchStr), 1)
+	return strings.Replace(replaceStr, searchStr, style.Render(searchStr), -1)
 }
 
 func init() {
@@ -274,12 +274,12 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		fmt.Printf("%s\n\n", c.Long)
-
-		subtext := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
-		title := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
+		subtext := lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
+		defaultText := lipgloss.NewStyle().Foreground(lipgloss.Color("246"))
+		title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
 
 		outStr := c.UsageString()
+		outStr = fmt.Sprintf("%s\n\n%s", c.Long, c.UsageString())
 
 		outStr = addColor(outStr, "Usage:", title)
 		outStr = addColor(outStr, "Available Commands:", title)
@@ -287,7 +287,10 @@ func init() {
 		outStr = addColor(outStr, "[flags]", subtext)
 		outStr = addColor(outStr, "[command]", subtext)
 
-		c.Flags().VisitAll(func(flag *pflag.Flag) { outStr = addColor(outStr, flag.Usage, subtext) })
+		c.Flags().VisitAll(func(flag *pflag.Flag) {
+			outStr = addColor(outStr, flag.Usage, subtext)
+			outStr = addColor(outStr, flag.Value.Type(), defaultText)
+		})
 
 		for _, c := range c.Commands() {
 			outStr = addColor(outStr, c.Short, subtext)
