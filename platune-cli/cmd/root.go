@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"path"
@@ -222,7 +223,7 @@ var subtitle = lipgloss.NewStyle().
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	//Use:   "platune",
+	Use:   "platune-cli",
 	Short: subtitle,
 	Long:  lipgloss.JoinVertical(lipgloss.Left, title, subtitle),
 
@@ -261,20 +262,35 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
+func captureStdErr(outputFunc func()) string {
+	rescueStderr := os.Stderr
+	r, w, _ := os.Pipe()
+	os.Stderr = w
+	outputFunc()
+	w.Close()
+	out, _ := ioutil.ReadAll(r)
+	os.Stdout = rescueStderr
+	return string(out)
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	// rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
+	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 
-	// 	//fmt.Printf("%s\n\n%s\n", cyan(c.Short), cyan(c.Subc)
-	// 	f := c.LocalFlags().Lookup("help")
-	// 	c.Help()
-	// 	fmt.Println(strings.Replace(c.LocalFlags().FlagUsages(), f.Usage, aurora.Cyan(f.Usage).String(), 1))
+		//f := c.LocalFlags().Lookup("help")
+		//fmt.Println(c.LocalFlags().FlagUsages())
+		fmt.Printf("%s\n\n", c.Long)
+		outStr := captureStdErr(func() { c.Usage() })
 
-	// })
+		gray := lipgloss.NewStyle().Foreground(lipgloss.Color("245"))
+		outStr = strings.Replace(outStr, "[flags]", gray.Render("[flags]"), 1)
+		outStr = strings.Replace(outStr, "[command]", gray.Render("[command]"), 1)
+		fmt.Println(outStr)
+	})
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.platune.yaml)")
 
 	// Cobra also supports local flags, which will only run
