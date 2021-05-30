@@ -6,7 +6,7 @@ import (
 )
 
 const SetQueueDescription = "Sets the queue and starts playback. Resets the queue if playback has already started."
-const setQueueExampleText = "fileOrUrl1 fileOrUrl2 fileOrUrl3..."
+const setQueueExampleText = "fileOrUrl1 fileOrUrl2 fileOrUrl3 ..."
 
 var setQueueCmd = &cobra.Command{
 	Use:   "setQueue " + setQueueExampleText,
@@ -20,7 +20,7 @@ var setQueueCmd = &cobra.Command{
 }
 
 func init() {
-	usageFunc := addQueueCmd.UsageFunc()
+	usageFunc := setQueueCmd.UsageFunc()
 	setQueueCmd.SetUsageFunc(func(c *cobra.Command) error {
 		utils.FormatUsage(c, usageFunc, setQueueExampleText)
 		return nil

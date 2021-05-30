@@ -41,10 +41,6 @@ func colorUsage(c *cobra.Command, usage string, exampleText string) string {
 	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
 
 	outStr := usage
-	// if includeHeader {
-	// 	outStr = fmt.Sprintf("%s\n\n%s", c.Long, outStr)
-	// }
-
 	outStr = addColor(outStr, "Usage:", title)
 	outStr = addColor(outStr, "Available Commands:", title)
 	outStr = addColor(outStr, "Global Flags:", title)

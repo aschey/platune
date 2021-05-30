@@ -78,7 +78,8 @@ func (p *PlatuneClient) Seek(time string) {
 	for i := 0; i < len(timeParts); i++ {
 		intVal, err := strconv.ParseUint(timeParts[i], 10, 64)
 		if err != nil {
-			fmt.Println(timeParts[i] + " is not a valid integer")
+			fmt.Printf("Error: %s is not a valid integer\n", timeParts[i])
+			return
 		}
 		pos := float64(len(timeParts) - 1 - i)
 		totalMillis += uint64(math.Pow(60, pos)) * intVal * 1000
