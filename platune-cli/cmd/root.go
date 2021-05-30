@@ -1,26 +1,18 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
-	"math"
 	"os"
 	"path"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aschey/platune/cli/v2/utils"
-	platune "github.com/aschey/platune/client"
 	"github.com/c-bata/go-prompt"
 	"github.com/c-bata/go-prompt/completer"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var cfgFile string
@@ -30,7 +22,7 @@ type rootState struct {
 	isEnabled      bool
 	isSetQueueMode bool
 	currentQueue   []string
-	platuneClient  platune.PlayerClient
+	platuneClient  utils.PlatuneClient
 }
 
 func expandPath(song string) (string, error) {
@@ -57,14 +49,8 @@ func expandPath(song string) (string, error) {
 }
 
 func newRootState() rootState {
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
-	conn, err := grpc.Dial("localhost:50051", opts...)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	client := platune.NewPlayerClient(conn)
+
+	client := utils.NewPlatuneClient()
 
 	return rootState{livePrefix: "", isEnabled: false, isSetQueueMode: false, currentQueue: []string{}, platuneClient: client}
 }
@@ -73,19 +59,6 @@ var state = newRootState()
 
 func (state *rootState) changeLivePrefix() (string, bool) {
 	return state.livePrefix, state.isEnabled
-}
-
-func (state *rootState) runCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	_, err := cmdFunc(state.platuneClient, ctx)
-	cancel()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println(successMsg)
-
 }
 
 func (state *rootState) executor(in string) {
@@ -112,53 +85,30 @@ func (state *rootState) executor(in string) {
 			fmt.Println(err)
 			return
 		}
-		state.runCommand("Added", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-			return state.platuneClient.AddToQueue(ctx, &platune.AddToQueueRequest{Song: full})
-		})
+		state.platuneClient.AddToQueue(full)
 	case "seek":
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
 			return
 		}
-		timeParts := strings.Split(cmds[1], ":")
-		totalMillis := uint64(0)
-		for i := 0; i < len(timeParts); i++ {
-			intVal, err := strconv.ParseUint(timeParts[i], 10, 64)
-			if err != nil {
-				fmt.Println(timeParts[i] + " is not a valid integer")
-			}
-			pos := float64(len(timeParts) - 1 - i)
-			totalMillis += uint64(math.Pow(60, pos)) * intVal * 1000
-		}
-		state.runCommand("Seeked to "+cmds[1], func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-			return state.platuneClient.Seek(ctx, &platune.SeekRequest{Millis: totalMillis})
-		})
+		state.platuneClient.Seek(cmds[1])
 	case "pause":
-		state.runCommand("Paused", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-			return state.platuneClient.Pause(ctx, &emptypb.Empty{})
-		})
+		state.platuneClient.Pause()
 	case "resume":
-		state.runCommand("Resumed", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-			return state.platuneClient.Resume(ctx, &emptypb.Empty{})
-		})
+		state.platuneClient.Resume()
 	case "stop":
-		state.runCommand("Stopped", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-			return state.platuneClient.Stop(ctx, &emptypb.Empty{})
-		})
+		state.platuneClient.Stop()
 	case "next":
-		state.runCommand("Next", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-			return state.platuneClient.Next(ctx, &emptypb.Empty{})
-		})
+		state.platuneClient.Next()
 	case "previous":
-		state.runCommand("Previous", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-			return state.platuneClient.Previous(ctx, &emptypb.Empty{})
-		})
+		state.platuneClient.Previous()
+	case "q":
+		fmt.Println("Exiting...")
+		os.Exit(0)
 	}
 	if state.isSetQueueMode {
 		if strings.Trim(in, " ") == "" {
-			state.runCommand("Queue set", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-				return state.platuneClient.SetQueue(ctx, &platune.QueueRequest{Queue: state.currentQueue})
-			})
+			state.platuneClient.SetQueue(state.currentQueue)
 			state.isSetQueueMode = false
 			state.currentQueue = []string{}
 			state.isEnabled = false
@@ -200,6 +150,7 @@ func (state *rootState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "next", Description: "Skips to the next track"},
 		{Text: "previous", Description: "Skips to the previous track"},
 		{Text: "stop", Description: "Stops playback"},
+		{Text: "q", Description: "Quit interactive prompt"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
@@ -263,41 +214,21 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-func addColor(replaceStr string, searchStr string, style lipgloss.Style) string {
-	return strings.Replace(replaceStr, searchStr, style.Render(searchStr), -1)
-}
-
 func init() {
 	cobra.OnInitialize(initConfig)
+	usageFunc := rootCmd.UsageFunc()
+	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
+		utils.FormatUsage(c, usageFunc)
+		return nil
+	})
 
+	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
+		utils.FormatHelp(c)
+	})
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		subtext := lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
-		defaultText := lipgloss.NewStyle().Foreground(lipgloss.Color("246"))
-		title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
 
-		outStr := c.UsageString()
-		outStr = fmt.Sprintf("%s\n\n%s", c.Long, c.UsageString())
-
-		outStr = addColor(outStr, "Usage:", title)
-		outStr = addColor(outStr, "Available Commands:", title)
-		outStr = addColor(outStr, "Flags:", title)
-		outStr = addColor(outStr, "[flags]", subtext)
-		outStr = addColor(outStr, "[command]", subtext)
-
-		c.Flags().VisitAll(func(flag *pflag.Flag) {
-			outStr = addColor(outStr, flag.Usage, subtext)
-			outStr = addColor(outStr, flag.Value.Type(), defaultText)
-		})
-
-		for _, c := range c.Commands() {
-			outStr = addColor(outStr, c.Short, subtext)
-		}
-
-		fmt.Println(outStr)
-	})
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.platune.yaml)")
 
 	// Cobra also supports local flags, which will only run

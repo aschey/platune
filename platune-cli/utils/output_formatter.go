@@ -1,0 +1,65 @@
+package utils
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+)
+
+func addColor(replaceStr string, searchStr string, style lipgloss.Style) string {
+	return strings.Replace(replaceStr, searchStr, style.Render(searchStr), -1)
+}
+
+func FormatHelp(c *cobra.Command) {
+	fmt.Printf("%s\n\n", c.Long)
+	c.Usage()
+}
+
+func FormatUsage(c *cobra.Command, usageFunc func(c *cobra.Command) error) {
+	rescueStdout := os.Stdout
+	rOut, wOut, _ := os.Pipe()
+	c.SetOut(wOut)
+
+	usageFunc(c)
+	wOut.Close()
+
+	var out, _ = ioutil.ReadAll(rOut)
+	c.SetOut(rescueStdout)
+
+	fmt.Println(colorUsage(c, string(out)))
+
+}
+
+func colorUsage(c *cobra.Command, usage string) string {
+	subtext := lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
+	defaultText := lipgloss.NewStyle().Foreground(lipgloss.Color("246"))
+	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
+
+	outStr := usage
+	// if includeHeader {
+	// 	outStr = fmt.Sprintf("%s\n\n%s", c.Long, outStr)
+	// }
+
+	outStr = addColor(outStr, "Usage:", title)
+	outStr = addColor(outStr, "Available Commands:", title)
+	outStr = addColor(outStr, "Global Flags:", title)
+	outStr = addColor(outStr, "Flags:", title)
+	outStr = addColor(outStr, "[flags]", subtext)
+	outStr = addColor(outStr, "[command]", subtext)
+
+	c.Flags().VisitAll(func(flag *pflag.Flag) {
+		outStr = addColor(outStr, flag.Usage, subtext)
+		outStr = addColor(outStr, flag.Value.Type(), defaultText)
+	})
+
+	for _, c := range c.Commands() {
+		outStr = addColor(outStr, c.Short, subtext)
+	}
+
+	return outStr
+}
