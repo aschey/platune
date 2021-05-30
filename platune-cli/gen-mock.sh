@@ -1,0 +1,1 @@
+mockgen -package=test -source=../platuned/client/go/player_rpc_grpc.pb.go > test/client_mock.go

@@ -30,6 +30,10 @@ func NewPlatuneClient() PlatuneClient {
 	return PlatuneClient{client: client}
 }
 
+func NewTestClient(client platune.PlayerClient) PlatuneClient {
+	return PlatuneClient{client: client}
+}
+
 func (p *PlatuneClient) AddToQueue(song string) {
 	p.runCommand("Added", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
 		return p.client.AddToQueue(ctx, &platune.AddToQueueRequest{Song: song})
