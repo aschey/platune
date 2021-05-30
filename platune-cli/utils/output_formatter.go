@@ -20,7 +20,7 @@ func FormatHelp(c *cobra.Command) {
 	c.Usage()
 }
 
-func FormatUsage(c *cobra.Command, usageFunc func(c *cobra.Command) error) {
+func FormatUsage(c *cobra.Command, usageFunc func(c *cobra.Command) error, exampleText string) {
 	rescueStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
 	c.SetOut(wOut)
@@ -31,11 +31,11 @@ func FormatUsage(c *cobra.Command, usageFunc func(c *cobra.Command) error) {
 	var out, _ = ioutil.ReadAll(rOut)
 	c.SetOut(rescueStdout)
 
-	fmt.Println(colorUsage(c, string(out)))
+	fmt.Println(colorUsage(c, string(out), exampleText))
 
 }
 
-func colorUsage(c *cobra.Command, usage string) string {
+func colorUsage(c *cobra.Command, usage string, exampleText string) string {
 	subtext := lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
 	defaultText := lipgloss.NewStyle().Foreground(lipgloss.Color("246"))
 	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
@@ -51,6 +51,9 @@ func colorUsage(c *cobra.Command, usage string) string {
 	outStr = addColor(outStr, "Flags:", title)
 	outStr = addColor(outStr, "[flags]", subtext)
 	outStr = addColor(outStr, "[command]", subtext)
+	if len(exampleText) > 0 {
+		outStr = addColor(outStr, exampleText, defaultText)
+	}
 
 	c.Flags().VisitAll(func(flag *pflag.Flag) {
 		outStr = addColor(outStr, flag.Usage, subtext)

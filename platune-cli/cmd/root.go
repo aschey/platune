@@ -22,7 +22,6 @@ type cmdState struct {
 	isEnabled      bool
 	isSetQueueMode bool
 	currentQueue   []string
-	platuneClient  utils.PlatuneClient
 }
 
 func expandPath(song string) (string, error) {
@@ -49,10 +48,7 @@ func expandPath(song string) (string, error) {
 }
 
 func newCmdState() cmdState {
-
-	client := utils.NewPlatuneClient()
-
-	return cmdState{livePrefix: "", isEnabled: false, isSetQueueMode: false, currentQueue: []string{}, platuneClient: client}
+	return cmdState{livePrefix: "", isEnabled: false, isSetQueueMode: false, currentQueue: []string{}}
 }
 
 var state = newCmdState()
@@ -85,30 +81,30 @@ func (state *cmdState) executor(in string) {
 			fmt.Println(err)
 			return
 		}
-		state.platuneClient.AddToQueue(full)
+		utils.Client.AddToQueue(full)
 	case "seek":
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
 			return
 		}
-		state.platuneClient.Seek(cmds[1])
+		utils.Client.Seek(cmds[1])
 	case "pause":
-		state.platuneClient.Pause()
+		utils.Client.Pause()
 	case "resume":
-		state.platuneClient.Resume()
+		utils.Client.Resume()
 	case "stop":
-		state.platuneClient.Stop()
+		utils.Client.Stop()
 	case "next":
-		state.platuneClient.Next()
+		utils.Client.Next()
 	case "previous":
-		state.platuneClient.Previous()
+		utils.Client.Previous()
 	case "q":
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
 	if state.isSetQueueMode {
 		if strings.Trim(in, " ") == "" {
-			state.platuneClient.SetQueue(state.currentQueue)
+			utils.Client.SetQueue(state.currentQueue)
 			state.isSetQueueMode = false
 			state.currentQueue = []string{}
 			state.isEnabled = false
@@ -143,13 +139,13 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 
 	s := []prompt.Suggest{
 		{Text: "set-queue", Description: SetQueueDescription},
-		{Text: "add-queue", Description: "Adds a song to the end of the queue"},
+		{Text: "add-queue", Description: AddQueueDescription},
 		{Text: "pause", Description: "Pauses the queue"},
 		{Text: "resume", Description: "Resumes the queue. No effect if already playing."},
 		{Text: "seek", Description: "Seek to a specific time. Input should be formatted like [hh]:[mm]:ss"},
 		{Text: "next", Description: "Skips to the next track"},
 		{Text: "previous", Description: "Skips to the previous track"},
-		{Text: "stop", Description: "Stops playback"},
+		{Text: "stop", Description: StopDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
@@ -218,7 +214,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	usageFunc := rootCmd.UsageFunc()
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
-		utils.FormatUsage(c, usageFunc)
+		utils.FormatUsage(c, usageFunc, "")
 		return nil
 	})
 

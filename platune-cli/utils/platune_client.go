@@ -99,3 +99,5 @@ func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(platune.Playe
 
 	fmt.Println(successMsg)
 }
+
+var Client = NewPlatuneClient()
