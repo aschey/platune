@@ -17,7 +17,7 @@ import (
 
 var cfgFile string
 
-type rootState struct {
+type cmdState struct {
 	livePrefix     string
 	isEnabled      bool
 	isSetQueueMode bool
@@ -48,20 +48,20 @@ func expandPath(song string) (string, error) {
 
 }
 
-func newRootState() rootState {
+func newCmdState() cmdState {
 
 	client := utils.NewPlatuneClient()
 
-	return rootState{livePrefix: "", isEnabled: false, isSetQueueMode: false, currentQueue: []string{}, platuneClient: client}
+	return cmdState{livePrefix: "", isEnabled: false, isSetQueueMode: false, currentQueue: []string{}, platuneClient: client}
 }
 
-var state = newRootState()
+var state = newCmdState()
 
-func (state *rootState) changeLivePrefix() (string, bool) {
+func (state *cmdState) changeLivePrefix() (string, bool) {
 	return state.livePrefix, state.isEnabled
 }
 
-func (state *rootState) executor(in string) {
+func (state *cmdState) executor(in string) {
 	cmds := strings.SplitN(in, " ", 2)
 	if len(cmds) == 0 {
 		return
@@ -129,7 +129,7 @@ func (state *rootState) executor(in string) {
 	}
 }
 
-func (state *rootState) completer(in prompt.Document) []prompt.Suggest {
+func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 	before := strings.Split(in.TextBeforeCursor(), " ")
 	if state.isSetQueueMode {
 		return filePathCompleter.Complete(in, false)
@@ -142,7 +142,7 @@ func (state *rootState) completer(in prompt.Document) []prompt.Suggest {
 	}
 
 	s := []prompt.Suggest{
-		{Text: "set-queue", Description: "Sets the queue and starts playback. Resets the queue if playback has already started."},
+		{Text: "set-queue", Description: SetQueueDescription},
 		{Text: "add-queue", Description: "Adds a song to the end of the queue"},
 		{Text: "pause", Description: "Pauses the queue"},
 		{Text: "resume", Description: "Resumes the queue. No effect if already playing."},
