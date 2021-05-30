@@ -12,9 +12,9 @@ var stopCmd = &cobra.Command{
 	Short: StopDescription,
 	Long:  StopDescription,
 
-	Args: cobra.ExactArgs(1),
+	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.Client.AddToQueue(args[0])
+		utils.Client.Stop()
 	},
 }
 
