@@ -143,8 +143,8 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "pause", Description: PauseDescription},
 		{Text: "resume", Description: ResumeDescription},
 		{Text: "seek", Description: "Seek to a specific time. Input should be formatted like [hh]:[mm]:ss"},
-		{Text: "next", Description: "Skips to the next track"},
-		{Text: "previous", Description: "Skips to the previous track"},
+		{Text: "next", Description: NextDescription},
+		{Text: "previous", Description: PreviousDescription},
 		{Text: "stop", Description: StopDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
