@@ -141,7 +141,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "set-queue", Description: SetQueueDescription},
 		{Text: "add-queue", Description: AddQueueDescription},
 		{Text: "pause", Description: PauseDescription},
-		{Text: "resume", Description: "Resumes the queue. No effect if already playing."},
+		{Text: "resume", Description: ResumeDescription},
 		{Text: "seek", Description: "Seek to a specific time. Input should be formatted like [hh]:[mm]:ss"},
 		{Text: "next", Description: "Skips to the next track"},
 		{Text: "previous", Description: "Skips to the previous track"},

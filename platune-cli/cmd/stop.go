@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const StopDescription = "Stops the queue"
+const StopDescription = "Stops the queue. No effect if already stopped."
 
 var stopCmd = &cobra.Command{
 	Use:   "stop",
