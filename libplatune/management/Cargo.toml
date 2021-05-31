@@ -4,8 +4,26 @@ edition = "2018"
 name = "libplatune-management"
 version = "0.1.0"
 
+[lib]
+name = "libplatune_management"
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bench]]
+harness = false
+name = "bench"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+audiotags = "0.2.7182"
+postage = "0.4.1"
 sqlx = {version = "0.5.4", features = ["runtime-tokio-rustls"]}
-tokio = "1.6.0"
+tokio = {version = "1.6.0", features = ["fs", "macros"]}
+walkdir = "2.3.2"
+
+[dev-dependencies]
+criterion = {version = "0.3.4", features = ["async_tokio"]}
