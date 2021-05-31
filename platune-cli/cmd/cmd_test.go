@@ -9,6 +9,7 @@ import (
 	"github.com/aschey/platune/cli/v2/test"
 	"github.com/aschey/platune/cli/v2/utils"
 	platune "github.com/aschey/platune/client"
+	"github.com/c-bata/go-prompt"
 	"github.com/golang/mock/gomock"
 )
 
@@ -21,7 +22,7 @@ func runTest(t *testing.T, expected string,
 	mock := test.NewMockPlayerClient(ctrl)
 	expectFunc(mock.EXPECT())
 	utils.Client = utils.NewTestClient(mock)
-	fmt.Println(os.Args)
+
 	os.Args = append(originalArgs, args...)
 	rescueStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
@@ -112,4 +113,35 @@ func TestStop(t *testing.T) {
 	runTest(t, "Stopped\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Stop(gomock.Any(), gomock.Any())
 	}, "stop")
+}
+
+func TestAddQueueCompleter(t *testing.T) {
+	state := newCmdState()
+
+	buf := prompt.NewBuffer()
+	buf.InsertText("add-queue root", false, true)
+	doc := buf.Document()
+
+	results := state.completer(*doc)
+	if len(results) != 1 {
+		t.Error("Should've found one result")
+	}
+	if results[0].Text != "root.go" {
+		t.Error("Result should be root.go")
+	}
+}
+
+func TestSetQueueCompleter(t *testing.T) {
+	state := newCmdState()
+	state.isSetQueueMode = true
+
+	buf := prompt.NewBuffer()
+	buf.InsertText("root", false, true)
+	doc := buf.Document()
+
+	results := state.completer(*doc)
+	if len(results) != 1 {
+		t.Error("Should've found one result")
+	}
+
 }
