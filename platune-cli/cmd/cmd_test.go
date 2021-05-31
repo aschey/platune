@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/aschey/platune/cli/v2/test"
@@ -143,5 +144,30 @@ func TestSetQueueCompleter(t *testing.T) {
 	if len(results) != 1 {
 		t.Error("Should've found one result")
 	}
+}
 
+func TestSetQueueExecutor(t *testing.T) {
+	state := newCmdState()
+	state.executor("set-queue")
+	if state.livePrefix != "set-queue> " {
+		t.Error("Live prefix should be set to set-queue> ")
+	}
+	state.executor("root.go")
+	if len(state.currentQueue) != 1 {
+		t.Error("Should've added an item to the queue")
+	}
+	if !strings.HasSuffix(state.currentQueue[0], "root.go") {
+		t.Error("root.go should've been added to the queue")
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mock := test.NewMockPlayerClient(ctrl)
+	matcher := test.NewMatcher(func(arg interface{}) bool {
+		queue := arg.(*platune.QueueRequest).Queue
+		return strings.HasSuffix(queue[0], "root.go")
+	})
+	mock.EXPECT().SetQueue(gomock.Any(), matcher)
+	utils.Client = utils.NewTestClient(mock)
+	state.executor("")
 }

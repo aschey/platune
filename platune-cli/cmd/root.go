@@ -19,7 +19,6 @@ var cfgFile string
 
 type cmdState struct {
 	livePrefix     string
-	isEnabled      bool
 	isSetQueueMode bool
 	currentQueue   []string
 }
@@ -48,13 +47,13 @@ func expandPath(song string) (string, error) {
 }
 
 func newCmdState() cmdState {
-	return cmdState{livePrefix: "", isEnabled: false, isSetQueueMode: false, currentQueue: []string{}}
+	return cmdState{livePrefix: "", isSetQueueMode: false, currentQueue: []string{}}
 }
 
 var state = newCmdState()
 
 func (state *cmdState) changeLivePrefix() (string, bool) {
-	return state.livePrefix, state.isEnabled
+	return state.livePrefix, len(state.livePrefix) > 0
 }
 
 func (state *cmdState) executor(in string) {
@@ -69,7 +68,6 @@ func (state *cmdState) executor(in string) {
 		fmt.Println("Enter a blank line when done.")
 		state.isSetQueueMode = true
 		state.livePrefix = in + "> "
-		state.isEnabled = true
 		return
 	case "add-queue":
 		if len(cmds) < 2 {
@@ -107,7 +105,7 @@ func (state *cmdState) executor(in string) {
 			utils.Client.SetQueue(state.currentQueue)
 			state.isSetQueueMode = false
 			state.currentQueue = []string{}
-			state.isEnabled = false
+			state.livePrefix = ""
 		} else {
 			in, err := expandPath(in)
 			if err != nil {
