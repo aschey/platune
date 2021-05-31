@@ -20,6 +20,7 @@ name = "bench"
 
 [dependencies]
 audiotags = "0.2.7182"
+num_cpus = "1.13.0"
 postage = "0.4.1"
 sqlx = {version = "0.5.4", features = ["runtime-tokio-rustls"]}
 tokio = {version = "1.6.0", features = ["fs", "macros"]}
