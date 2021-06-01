@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS song (
     duration INTEGER NOT NULL,
     sample_rate INTEGER NOT NULL,
     bit_rate INTEGER NOT NULL,
-    album_art BLOB NULL,
+    album_art_path TEXT NULL,
     FOREIGN KEY(artist_id) REFERENCES artist(artist_id),
     FOREIGN KEY(album_id) REFERENCES album(album_id)
 )

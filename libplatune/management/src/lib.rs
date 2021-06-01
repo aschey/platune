@@ -41,6 +41,7 @@ pub async fn traverse() {
             _ => {}
         }
     }
+    println!("done");
     drop(tx);
     for handle in tasks {
         handle.await.unwrap();

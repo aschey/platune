@@ -1,4 +1,4 @@
-DROP TABLE song_index;
+DROP TABLE search_index;
 DROP TRIGGER after_song_insert;
 DROP TRIGGER after_song_update;
 DROP TRIGGER after_song_delete;
