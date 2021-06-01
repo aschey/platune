@@ -4,6 +4,8 @@ name: CI
 
 jobs:
   rust:
+    env:
+      SQLX_OFFLINE: true
     name: Run Rust tests
     runs-on: ubuntu-latest
     steps:

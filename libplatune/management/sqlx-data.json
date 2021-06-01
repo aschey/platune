@@ -1,0 +1,27 @@
+{
+  "db": "SQLite",
+  "991b80662028975dbd6463408b4620fad6a6042bc5d7d73b4b4c92c177abf1ee": {
+    "query": "select * from artist",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist_id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "artist_name",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  }
+}
