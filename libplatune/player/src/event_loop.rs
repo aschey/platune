@@ -8,11 +8,11 @@ use crate::{
 };
 
 pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSender<Command>) {
-    while let Ok(receiver) = receiver.recv() {
+    while let Ok(ended_receiver) = receiver.recv() {
         // Strange platform-specific behavior here
         // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
         // after the first event if the queue is stopped
-        receiver.recv().unwrap_or_default();
+        ended_receiver.recv().unwrap_or_default();
         request_tx.send(Command::Ended).unwrap();
     }
 }
