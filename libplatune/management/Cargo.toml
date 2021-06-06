@@ -19,9 +19,8 @@ name = "bench"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-audiotags = "0.2.7182"
 dotenv = "0.15.0"
-num_cpus = "1.13.0"
+katatsuki = {git = "https://github.com/aschey/seiri", rev = "041c76dfc9614568a3ad56c7a6b322b3837861a1"}
 postage = "0.4.1"
 sqlx = {version = "0.5.5", features = ["runtime-tokio-rustls", "sqlite", "offline"]}
 tokio = {version = "1.6.0", features = ["fs", "macros"]}

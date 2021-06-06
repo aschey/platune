@@ -1,27 +1,13 @@
 {
   "db": "SQLite",
-  "991b80662028975dbd6463408b4620fad6a6042bc5d7d73b4b4c92c177abf1ee": {
-    "query": "select * from artist",
+  "d1f9ba78e324169a9e679957422dc8f8ba3d4396def6ff3f9ae9a0a87484eea4": {
+    "query": "insert or ignore into artist(artist_name) values(?)",
     "describe": {
-      "columns": [
-        {
-          "name": "artist_id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "artist_name",
-          "ordinal": 1,
-          "type_info": "Text"
-        }
-      ],
+      "columns": [],
       "parameters": {
-        "Right": 0
+        "Right": 1
       },
-      "nullable": [
-        false,
-        false
-      ]
+      "nullable": []
     }
   }
 }

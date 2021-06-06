@@ -22,9 +22,4 @@ async fn main() {
     let mut pool = SqlitePool::connect(&std::env::var("DATABASE_URL").unwrap())
         .await
         .unwrap();
-
-    let res = sqlx::query!("select * from artist")
-        .fetch_all(&pool)
-        .await
-        .unwrap();
 }
