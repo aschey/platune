@@ -18,8 +18,4 @@ async fn main() {
     traverse().await;
 
     println!("{:?}", now.elapsed());
-    dotenv::from_path("./.env").unwrap_or_default();
-    let mut pool = SqlitePool::connect(&std::env::var("DATABASE_URL").unwrap())
-        .await
-        .unwrap();
 }
