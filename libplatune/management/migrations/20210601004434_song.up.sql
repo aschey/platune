@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS song (
     song_id INTEGER PRIMARY KEY NOT NULL,
     song_path TEXT NOT NULL UNIQUE,
-    metadata_modified_date INTEGER NOT NULL,
+    modified_date INTEGER NOT NULL,
+    last_scanned_date INTEGER NOT NULL,
     artist_id INTEGER NOT NULL,
     song_title TEXT NOT NULL,
     album_id INTEGER NOT NULL,

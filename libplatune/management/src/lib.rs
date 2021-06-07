@@ -1,4 +1,5 @@
 use std::{
+    os::windows::prelude::MetadataExt,
     path::PathBuf,
     time::{Duration, Instant, SystemTime},
 };
@@ -125,9 +126,10 @@ fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle
 
                     let _ = sqlx::query!(
                         "
-                        insert or ignore into song(
+                        insert into song(
                             song_path,
-                            metadata_modified_date,
+                            modified_date,
+                            last_scanned_date,
                             artist_id,
                             song_title,
                             album_id,
@@ -144,7 +146,7 @@ fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle
                             )
                             values
                             (
-                                ?, ?,
+                                ?, ?, ?,
                                 (select artist_id from artist where artist_name = ?), 
                                 ?, 
                                 (
@@ -153,9 +155,12 @@ fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle
                                     where a.album_name = ? and aa.album_artist_name = ?
                                 ), 
                                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-                            );
+                            )
+                            on conflict(song_path) do update
+                            set last_scanned_date = ?;
                         ",
                         path,
+                        timestamp,
                         timestamp,
                         artist,
                         title,
@@ -170,7 +175,8 @@ fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle
                         metadata.sample_rate,
                         metadata.bitrate,
                         "",
-                        fingerprint
+                        fingerprint,
+                        timestamp
                     )
                     .execute(&mut tran)
                     .await
@@ -179,7 +185,7 @@ fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle
                     let _ = sqlx::query!(
                         "
                         update song
-                            set metadata_modified_date = $2,
+                            set modified_date = $2,
                             artist_id = (select artist_id from artist where artist_name = $3),
                             song_title = $4,
                             album_id = (select album_id from album where album_name = $5),
@@ -222,6 +228,10 @@ fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle
         }
         println!("committing");
         tran.commit().await.unwrap();
+        sqlx::query!("select * from song where last_scanned_date < ?", timestamp)
+            .fetch_all(&pool)
+            .await
+            .unwrap();
         println!("done");
     })
 }
@@ -242,6 +252,7 @@ fn spawn_task(
                         if dir.file_type().unwrap().is_file() {
                             let file_path = dir.path();
                             let name = file_path.extension().unwrap_or_default();
+                            let size = file_path.metadata().unwrap().file_size();
                             let mut song_metadata: Option<Track> = None;
                             match &name.to_str().unwrap_or_default().to_lowercase()[..] {
                                 "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
