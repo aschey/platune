@@ -1,5 +1,4 @@
 use std::{
-    os::windows::prelude::MetadataExt,
     path::PathBuf,
     time::{Duration, Instant, SystemTime},
 };
@@ -252,7 +251,7 @@ fn spawn_task(
                         if dir.file_type().unwrap().is_file() {
                             let file_path = dir.path();
                             let name = file_path.extension().unwrap_or_default();
-                            let size = file_path.metadata().unwrap().file_size();
+                            let size = file_path.metadata().unwrap().len();
                             let mut song_metadata: Option<Track> = None;
                             match &name.to_str().unwrap_or_default().to_lowercase()[..] {
                                 "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
