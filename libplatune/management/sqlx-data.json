@@ -10,8 +10,18 @@
       "nullable": []
     }
   },
-  "40faf5243ae7a8e11cea8f6fe9242486130b0b22b19616685de36378103db43b": {
-    "query": "\n                        update song\n                            set metadata_modified_date = $2,\n                            artist_id = (select artist_id from artist where artist_name = $3 limit 1),\n                            song_title = $4,\n                            album_id = (select album_id from album where album_name = $5 limit 1),\n                            track_number = $6,\n                            disc_number = $7,\n                            song_year = $8,\n                            song_month = $9,\n                            song_day = $10,\n                            duration = $11,\n                            sample_rate = $12,\n                            bit_rate = $13,\n                            album_art_path = $14,\n                            fingerprint = $15\n                        where song_path = $1 and fingerprint != $15;\n                        ",
+  "68bce3b5dd0dcebb715376d78e1dc4de293a3c20ba2bbe416bca088fcecf4c26": {
+    "query": "\n                            insert or ignore into album(album_name, album_artist_id) \n                            values(?, (select album_artist_id from album_artist where album_artist_name = ?));",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "888ec94147ce21269cc91183ee6bc6fb23d38d06bf2034bfa68ae9640596ac32": {
+    "query": "\n                        update song\n                            set metadata_modified_date = $2,\n                            artist_id = (select artist_id from artist where artist_name = $3),\n                            song_title = $4,\n                            album_id = (select album_id from album where album_name = $5),\n                            track_number = $6,\n                            disc_number = $7,\n                            song_year = $8,\n                            song_month = $9,\n                            song_day = $10,\n                            duration = $11,\n                            sample_rate = $12,\n                            bit_rate = $13,\n                            album_art_path = $14,\n                            fingerprint = $15\n                        where song_path = $1 and fingerprint != $15;\n                        ",
     "describe": {
       "columns": [],
       "parameters": {
@@ -20,12 +30,12 @@
       "nullable": []
     }
   },
-  "8c2c02dbdb900bcbdd52518bbba66950852240ba564c7de39b944439404d3eb1": {
-    "query": "\n                        insert or ignore into song(\n                            song_path,\n                            metadata_modified_date,\n                            artist_id,\n                            song_title,\n                            album_id,\n                            track_number,\n                            disc_number,\n                            song_year,\n                            song_month,\n                            song_day,\n                            duration,\n                            sample_rate,\n                            bit_rate,\n                            album_art_path,\n                            fingerprint\n                            )\n                            values\n                            (\n                                ?, ?,\n                                (select artist_id from artist where artist_name = ? limit 1), \n                                ?, \n                                (select album_id from album where album_name = ? limit 1), \n                                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n                            );\n                        ",
+  "d78847ba46d6182e65c45fe902a7b396ee4908732f7a4e8ba91c8ed7a66f810f": {
+    "query": "\n                        insert or ignore into song(\n                            song_path,\n                            metadata_modified_date,\n                            artist_id,\n                            song_title,\n                            album_id,\n                            track_number,\n                            disc_number,\n                            song_year,\n                            song_month,\n                            song_day,\n                            duration,\n                            sample_rate,\n                            bit_rate,\n                            album_art_path,\n                            fingerprint\n                            )\n                            values\n                            (\n                                ?, ?,\n                                (select artist_id from artist where artist_name = ?), \n                                ?, \n                                (\n                                    select album_id from album a\n                                    inner join album_artist aa on a.album_artist_id = aa.album_artist_id\n                                    where a.album_name = ? and aa.album_artist_name = ?\n                                ), \n                                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n                            );\n                        ",
     "describe": {
       "columns": [],
       "parameters": {
-        "Right": 15
+        "Right": 16
       },
       "nullable": []
     }
@@ -36,26 +46,6 @@
       "columns": [],
       "parameters": {
         "Right": 1
-      },
-      "nullable": []
-    }
-  },
-  "f96d32498b35cdd09668a0992a2adc2ec59cfcc0997a3ca6387d85944d3a28f5": {
-    "query": "insert or ignore into album(album_name) values(?);",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": []
-    }
-  },
-  "ff75aecf20f0b0b97aa742ab2a39ac25653a30b09dd785053186c0716bcee8a6": {
-    "query": "\n                            insert or ignore into album_artist_link(album_artist_id, album_id, song_id)\n                            values(\n                                (select album_artist_id from album_artist where album_artist_name = ? limit 1), \n                                (select album_id from album where album_name = ? limit 1),\n                                (select song_id from song where song_path = ? limit 1)\n                            );",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 3
       },
       "nullable": []
     }
