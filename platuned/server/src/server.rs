@@ -1,3 +1,4 @@
+use crate::management_server::Management;
 use crate::player_rpc::*;
 use crate::player_server::Player;
 use std::{pin::Pin, sync::Mutex};
@@ -18,6 +19,19 @@ impl PlayerImpl {
             player: platune,
             event_rx,
         }
+    }
+}
+
+#[tonic::async_trait]
+impl Management for PlayerImpl {
+    type SyncStream =
+        Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
+
+    async fn sync(
+        &self,
+        request: tonic::Request<()>,
+    ) -> Result<tonic::Response<Self::SyncStream>, tonic::Status> {
+        todo!()
     }
 }
 

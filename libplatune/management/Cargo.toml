@@ -19,6 +19,7 @@ name = "bench"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+directories = "3.0.2"
 dotenv = "0.15.0"
 katatsuki = {git = "https://github.com/aschey/seiri", rev = "041c76dfc9614568a3ad56c7a6b322b3837861a1"}
 postage = "0.4.1"

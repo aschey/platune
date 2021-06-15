@@ -12,13 +12,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Update apt
-        run: sudo apt update
+        run: sudo apt-get update
       - name: Install alsa
-        run: sudo apt-get install libasound2-dev
+        run: sudo apt install -y --no-install-recommends libasound2-dev
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          default: true
+          profile: minimal
+          components: rustfmt, clippy
       - name: Test
         uses: actions-rs/cargo@v1
         with:

@@ -1,1 +1,1 @@
-protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative --proto_path ../../proto --go_opt=Mplayer_rpc.proto=github.com/aschey/platune/protos/player_rpc ../../proto/player_rpc.proto
+protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative --proto_path ../../proto --go_opt=Mplayer_rpc.proto=github.com/aschey/platune/protos/player_rpc ../../proto/player_rpc.proto --go_opt=Mplayer_rpc.proto=github.com/aschey/platune/protos/management_rpc ../../proto/management_rpc.proto

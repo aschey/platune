@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "management.rpc";
+option java_outer_classname = "ManagementProto";
+option go_package = "github.com/aschey/platune";
+
+import "google/protobuf/empty.proto";
+package management_rpc;
+
+service Management {
+  rpc Sync(google.protobuf.Empty) returns (stream Progress) {}
+}
+
+message Progress {
+  float percentage = 1;
+}

@@ -10,9 +10,10 @@ use yansi::{Color, Style};
 
 pub mod player_rpc {
     tonic::include_proto!("player_rpc");
+    tonic::include_proto!("management_rpc");
 
     pub(crate) const FILE_DESCRIPTOR_SET: &'static [u8] =
-        tonic::include_file_descriptor_set!("player_rpc_descriptor");
+        tonic::include_file_descriptor_set!("rpc_descriptor");
 }
 
 #[tokio::main]
