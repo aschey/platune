@@ -22,9 +22,10 @@ name = "bench"
 directories = "3.0.2"
 dotenv = "0.15.0"
 katatsuki = {git = "https://github.com/aschey/seiri", rev = "041c76dfc9614568a3ad56c7a6b322b3837861a1"}
+log = "0.4.14"
 postage = "0.4.1"
 sqlx = {version = "0.5.5", features = ["runtime-tokio-rustls", "sqlite", "offline"]}
-tokio = {version = "1.6.0", features = ["fs", "macros"]}
+tokio = {version = "1.6.0", features = ["fs", "macros", "rt"]}
 walkdir = "2.3.2"
 
 [dev-dependencies]

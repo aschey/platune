@@ -4,20 +4,27 @@ use std::{
 };
 
 use katatsuki::Track;
+use log::LevelFilter;
 use postage::{
     dispatch::{self, Receiver, Sender},
     mpsc,
     prelude::Stream,
     sink::Sink,
 };
-use sqlx::{Execute, Sqlite, SqlitePool};
+use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Execute, Sqlite, SqlitePool};
 use tokio::{task::JoinHandle, time::timeout};
 
-pub async fn traverse() {
-    controller("C:\\shared_files\\Music".to_owned()).await;
+pub fn sync() -> tokio::sync::mpsc::Receiver<()> {
+    let (tx, rx) = tokio::sync::mpsc::channel(32);
+    tokio::task::spawn_blocking(move || {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(controller("C:\\shared_files\\Music".to_owned(), tx));
+    });
+
+    rx
 }
 
-async fn controller(path: String) {
+async fn controller(path: String, tx: tokio::sync::mpsc::Sender<()>) {
     let mut num_tasks = 1;
     let max_tasks = 100;
     let (mut dispatch_tx, _) = dispatch::channel(10000);
@@ -73,18 +80,28 @@ async fn controller(path: String) {
     }
 
     tags_handle.await.unwrap();
+    tx.send(()).await.unwrap();
 }
 
 fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle<()> {
     tokio::spawn(async move {
         dotenv::from_path("./.env").unwrap_or_default();
-        let pool = SqlitePool::connect(&std::env::var("DATABASE_URL").unwrap())
-            .await
-            .unwrap();
+        let opts = SqliteConnectOptions::new()
+            .filename(
+                &std::env::var("DATABASE_URL")
+                    .unwrap()
+                    .replace("sqlite://", ""),
+            )
+            .log_statements(LevelFilter::Debug)
+            .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
+            .to_owned();
+
+        let pool = SqlitePool::connect_with(opts).await.unwrap();
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs() as u32;
+
         let mut tran = pool.begin().await.unwrap();
 
         while let Some(metadata) = tags_rx.recv().await {

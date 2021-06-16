@@ -838,6 +838,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "flexi_logger"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ba2265890613939b533fa11c3728651531419ac549ccf527896201581f23991"
+dependencies = [
+ "atty",
+ "chrono",
+ "glob",
+ "lazy_static 1.4.0",
+ "log",
+ "regex 1.5.4",
+ "thiserror",
+ "yansi",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1406,6 +1422,7 @@ dependencies = [
  "directories",
  "dotenv",
  "katatsuki",
+ "log",
  "postage",
  "sqlx",
  "tokio",
@@ -1419,7 +1436,7 @@ dependencies = [
  "assert_matches",
  "async-trait",
  "ctor",
- "flexi_logger",
+ "flexi_logger 0.17.1",
  "futures",
  "futures-util",
  "log",
@@ -1966,8 +1983,9 @@ dependencies = [
 name = "platuned"
 version = "0.1.0"
 dependencies = [
- "flexi_logger",
+ "flexi_logger 0.18.0",
  "futures",
+ "libplatune-management",
  "libplatune-player",
  "log",
  "prost",

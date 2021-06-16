@@ -1,14 +1,16 @@
-mod server;
+mod management;
+mod player;
+use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
-use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
-use log::info;
-use player_rpc::*;
-use server::PlayerImpl;
+use flexi_logger::{style, DeferredNow, Logger, Record};
+use management::ManagementImpl;
+use player::PlayerImpl;
+use rpc::*;
 
 use tonic::transport::Server;
 use yansi::{Color, Style};
 
-pub mod player_rpc {
+pub mod rpc {
     tonic::include_proto!("player_rpc");
     tonic::include_proto!("management_rpc");
 
@@ -18,23 +20,26 @@ pub mod player_rpc {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    Logger::with_str("info")
+    Logger::try_with_str("info")
+        .unwrap()
         .format_for_stdout(colored)
-        .log_target(LogTarget::StdOut)
+        .log_to_stdout()
         .set_palette("196;190;-;-;-".to_owned())
         .start()
         .unwrap();
 
     let service = tonic_reflection::server::Builder::configure()
-        .register_encoded_file_descriptor_set(player_rpc::FILE_DESCRIPTOR_SET)
+        .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
         .build()
         .unwrap();
     let addr = "0.0.0.0:50051".parse().unwrap();
 
     let player = PlayerImpl::new();
+    let management = ManagementImpl::new();
     Server::builder()
         .add_service(service)
         .add_service(PlayerServer::new(player))
+        .add_service(ManagementServer::new(management))
         .serve(addr)
         .await?;
     // /home/aschey/windows/shared_files/Music/emoisdead/Peu Etre - Langue Et Civilisation Hardcore (199x)/Peu Etre-17-Track 17.mp3
