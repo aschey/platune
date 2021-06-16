@@ -25,8 +25,7 @@ impl Management for ManagementImpl {
     ) -> Result<tonic::Response<Self::SyncStream>, tonic::Status> {
         let rx = libplatune_management::sync();
         Ok(Response::new(Box::pin(
-            tokio_stream::wrappers::ReceiverStream::new(rx)
-                .map(|r| Ok(Progress { percentage: 1. })),
+            tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| Ok(Progress { percentage: r })),
         )))
     }
 }

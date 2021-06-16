@@ -14,7 +14,7 @@ use postage::{
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Execute, Sqlite, SqlitePool};
 use tokio::{task::JoinHandle, time::timeout};
 
-pub fn sync() -> tokio::sync::mpsc::Receiver<()> {
+pub fn sync() -> tokio::sync::mpsc::Receiver<f32> {
     let (tx, rx) = tokio::sync::mpsc::channel(32);
     tokio::task::spawn_blocking(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
@@ -24,7 +24,7 @@ pub fn sync() -> tokio::sync::mpsc::Receiver<()> {
     rx
 }
 
-async fn controller(path: String, tx: tokio::sync::mpsc::Sender<()>) {
+async fn controller(path: String, tx: tokio::sync::mpsc::Sender<f32>) {
     let mut num_tasks = 1;
     let max_tasks = 100;
     let (mut dispatch_tx, _) = dispatch::channel(10000);
@@ -41,18 +41,22 @@ async fn controller(path: String, tx: tokio::sync::mpsc::Sender<()>) {
         ));
     }
     dispatch_tx.send(Some(PathBuf::from(path))).await.unwrap();
-    let mut dirs = 0;
+
+    let mut total_dirs = 0.;
+    let mut dirs_processed = 0.;
     loop {
         match timeout(Duration::from_millis(1), finished_rx.recv()).await {
             Ok(Some(DirRead::Completed)) => {
-                dirs -= 1;
+                dirs_processed += 1.;
+                tx.send(dirs_processed / total_dirs).await.unwrap();
 
-                if dirs == 0 {
+                if total_dirs == dirs_processed {
                     break;
                 }
             }
             Ok(Some(DirRead::Found)) => {
-                dirs += 1;
+                total_dirs += 1.;
+                tx.send(dirs_processed / total_dirs).await.unwrap();
             }
             Ok(None) => {
                 break;
@@ -80,7 +84,6 @@ async fn controller(path: String, tx: tokio::sync::mpsc::Sender<()>) {
     }
 
     tags_handle.await.unwrap();
-    tx.send(()).await.unwrap();
 }
 
 fn tags_task(mut tags_rx: mpsc::Receiver<Option<(Track, String)>>) -> JoinHandle<()> {

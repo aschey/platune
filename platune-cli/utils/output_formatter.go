@@ -32,7 +32,6 @@ func FormatUsage(c *cobra.Command, usageFunc func(c *cobra.Command) error, examp
 	c.SetOut(rescueStdout)
 
 	fmt.Println(colorUsage(c, string(out), exampleText))
-
 }
 
 func colorUsage(c *cobra.Command, usage string, exampleText string) string {

@@ -16,6 +16,7 @@ use sqlx::{Connection, Executor, SqliteConnection, SqlitePool};
 async fn main() {
     let now = Instant::now();
     let mut rx = sync();
-    rx.recv().await.unwrap();
+    while let Some(res) = rx.recv().await {}
+
     println!("{:?}", now.elapsed());
 }

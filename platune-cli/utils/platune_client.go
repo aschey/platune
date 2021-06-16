@@ -95,6 +95,17 @@ func (p *PlatuneClient) Seek(time string) {
 	})
 }
 
+func (p *PlatuneClient) Sync() (platune.Management_SyncClient, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+	sync, err := p.managementClient.Sync(ctx, &emptypb.Empty{})
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, cancel
+	}
+	return sync, cancel
+}
+
 func (p *PlatuneClient) runPlayerCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := cmdFunc(p.playerClient, ctx)

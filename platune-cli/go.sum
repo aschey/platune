@@ -237,6 +237,10 @@ github.com/stretchr/testify v1.5.1 h1:nOGnQDM7FYENwehXlg/kFVnos3rEvtKTjRvOWSzb6H
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
 github.com/subosito/gotenv v1.2.0 h1:Slr1R9HxAlEKefgq5jn9U+DnETlIUa6HfgEzj0g5d7s=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
+github.com/superhawk610/bar v0.0.2 h1:Jf9+rXkpGgzJkpogpx+BGjC4EwkFZc8L7t8QBrmyfqY=
+github.com/superhawk610/bar v0.0.2/go.mod h1:xc6t0MG+8Mbj9wnHBEdvX2TRtNIaqhM5fW3R+dF9vH8=
+github.com/superhawk610/terminal v0.1.0 h1:OpWp0+861M3l5j4ZWprm8q0fgG9Y2xXZp5tkunvCm/M=
+github.com/superhawk610/terminal v0.1.0/go.mod h1:NQ3EEKWSeofexUwENLX3lv4WR2qeGiLlbf/NveZ7ZAQ=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20190109142713-0ad062ec5ee5/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

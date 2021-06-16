@@ -96,6 +96,9 @@ func (state *cmdState) executor(in string) {
 		utils.Client.Next()
 	case "previous":
 		utils.Client.Previous()
+	case "sync":
+		SyncProgress()
+		fmt.Println()
 	case "q":
 		fmt.Println("Exiting...")
 		os.Exit(0)
@@ -144,6 +147,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "next", Description: NextDescription},
 		{Text: "previous", Description: PreviousDescription},
 		{Text: "stop", Description: StopDescription},
+		{Text: "sync", Description: SyncDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
