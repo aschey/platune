@@ -15,7 +15,8 @@ import (
 )
 
 type PlatuneClient struct {
-	client platune.PlayerClient
+	playerClient     platune.PlayerClient
+	managementClient platune.ManagementClient
 }
 
 func NewPlatuneClient() PlatuneClient {
@@ -26,53 +27,54 @@ func NewPlatuneClient() PlatuneClient {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	client := platune.NewPlayerClient(conn)
-	return PlatuneClient{client: client}
+	playerClient := platune.NewPlayerClient(conn)
+	managementClient := platune.NewManagementClient(conn)
+	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
 func NewTestClient(client platune.PlayerClient) PlatuneClient {
-	return PlatuneClient{client: client}
+	return PlatuneClient{playerClient: client}
 }
 
 func (p *PlatuneClient) AddToQueue(song string) {
-	p.runCommand("Added", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.AddToQueue(ctx, &platune.AddToQueueRequest{Song: song})
+	p.runPlayerCommand("Added", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Song: song})
 	})
 }
 
 func (p *PlatuneClient) Pause() {
-	p.runCommand("Paused", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.Pause(ctx, &emptypb.Empty{})
+	p.runPlayerCommand("Paused", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.Pause(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Stop() {
-	p.runCommand("Stopped", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.Stop(ctx, &emptypb.Empty{})
+	p.runPlayerCommand("Stopped", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.Stop(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Next() {
-	p.runCommand("Next", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.Next(ctx, &emptypb.Empty{})
+	p.runPlayerCommand("Next", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.Next(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Previous() {
-	p.runCommand("Previous", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.Previous(ctx, &emptypb.Empty{})
+	p.runPlayerCommand("Previous", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.Previous(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Resume() {
-	p.runCommand("Resumed", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.Resume(ctx, &emptypb.Empty{})
+	p.runPlayerCommand("Resumed", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.Resume(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) SetQueue(queue []string) {
-	p.runCommand("Queue Set", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.SetQueue(ctx, &platune.QueueRequest{Queue: queue})
+	p.runPlayerCommand("Queue Set", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.SetQueue(ctx, &platune.QueueRequest{Queue: queue})
 	})
 }
 
@@ -88,14 +90,14 @@ func (p *PlatuneClient) Seek(time string) {
 		pos := float64(len(timeParts) - 1 - i)
 		totalMillis += uint64(math.Pow(60, pos)) * intVal * 1000
 	}
-	p.runCommand("Seeked to "+time, func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
-		return p.client.Seek(ctx, &platune.SeekRequest{Millis: totalMillis})
+	p.runPlayerCommand("Seeked to "+time, func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.Seek(ctx, &platune.SeekRequest{Millis: totalMillis})
 	})
 }
 
-func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
+func (p *PlatuneClient) runPlayerCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	_, err := cmdFunc(p.client, ctx)
+	_, err := cmdFunc(p.playerClient, ctx)
 	cancel()
 	if err != nil {
 		fmt.Println(err)
