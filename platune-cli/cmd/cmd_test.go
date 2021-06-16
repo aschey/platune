@@ -16,14 +16,29 @@ import (
 
 var originalArgs = os.Args
 
-func runTest(t *testing.T, expected string,
+func runPlayerTest(t *testing.T, expected string,
 	expectFunc func(expect *test.MockPlayerClientMockRecorder), args ...string) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mock := test.NewMockPlayerClient(ctrl)
 	expectFunc(mock.EXPECT())
-	utils.Client = utils.NewTestClient(mock)
+	utils.Client = utils.NewTestClient(mock, nil)
 
+	runTest(t, expected, args...)
+}
+
+func runManagementTest(t *testing.T, expected string,
+	expectFunc func(expect *test.MockManagementClientMockRecorder), args ...string) string {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mock := test.NewMockManagementClient(ctrl)
+	expectFunc(mock.EXPECT())
+	utils.Client = utils.NewTestClient(nil, mock)
+
+	return runTest(t, expected, args...)
+}
+
+func runTest(t *testing.T, expected string, args ...string) string {
 	os.Args = append(originalArgs, args...)
 	rescueStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
@@ -38,14 +53,16 @@ func runTest(t *testing.T, expected string,
 	os.Stdout = rescueStdout
 	var out, _ = ioutil.ReadAll(rOut)
 	outStr := string(out)
-	if outStr != expected {
+	if expected != "" && outStr != expected {
 		t.Errorf("Expected %s, Got %s", expected, outStr)
 	}
+
+	return outStr
 }
 
 func TestAddQueue(t *testing.T) {
 	testSong := "test"
-	runTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
+	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			return arg.(*platune.AddToQueueRequest).Song == testSong
 		})
@@ -56,7 +73,7 @@ func TestAddQueue(t *testing.T) {
 func TestSetQueue(t *testing.T) {
 	testSong1 := "test1"
 	testSong2 := "test2"
-	runTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
+	runPlayerTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			queue := arg.(*platune.QueueRequest).Queue
 			return queue[0] == testSong1 && queue[1] == testSong2
@@ -79,7 +96,7 @@ func TestSeek(t *testing.T) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			return arg.(*platune.SeekRequest).Millis == tc.expected
 		})
-		runTest(t, fmt.Sprintf("Seeked to %s\n", tc.formatStr), func(expect *test.MockPlayerClientMockRecorder) {
+		runPlayerTest(t, fmt.Sprintf("Seeked to %s\n", tc.formatStr), func(expect *test.MockPlayerClientMockRecorder) {
 			expect.Seek(gomock.Any(), matcher)
 		}, "seek", tc.formatStr)
 	}
@@ -87,33 +104,46 @@ func TestSeek(t *testing.T) {
 }
 
 func TestResume(t *testing.T) {
-	runTest(t, "Resumed\n", func(expect *test.MockPlayerClientMockRecorder) {
+	runPlayerTest(t, "Resumed\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Resume(gomock.Any(), gomock.Any())
 	}, "resume")
 }
 
 func TestPause(t *testing.T) {
-	runTest(t, "Paused\n", func(expect *test.MockPlayerClientMockRecorder) {
+	runPlayerTest(t, "Paused\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Pause(gomock.Any(), gomock.Any())
 	}, "pause")
 }
 
 func TestNext(t *testing.T) {
-	runTest(t, "Next\n", func(expect *test.MockPlayerClientMockRecorder) {
+	runPlayerTest(t, "Next\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Next(gomock.Any(), gomock.Any())
 	}, "next")
 }
 
 func TestPrevious(t *testing.T) {
-	runTest(t, "Previous\n", func(expect *test.MockPlayerClientMockRecorder) {
+	runPlayerTest(t, "Previous\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Previous(gomock.Any(), gomock.Any())
 	}, "previous")
 }
 
 func TestStop(t *testing.T) {
-	runTest(t, "Stopped\n", func(expect *test.MockPlayerClientMockRecorder) {
+	runPlayerTest(t, "Stopped\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Stop(gomock.Any(), gomock.Any())
 	}, "stop")
+}
+
+func TestSync(t *testing.T) {
+	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
+		ctrl := gomock.NewController(t)
+		stream := test.NewMockManagement_SyncClient(ctrl)
+		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1}, nil)
+		stream.EXPECT().Recv().Return(nil, fmt.Errorf("error"))
+		expect.Sync(gomock.Any(), gomock.Any()).Return(stream, nil)
+	}, "sync")
+	if len(res) == 0 {
+		t.Errorf("Expected length > 0")
+	}
 }
 
 func TestAddQueueCompleter(t *testing.T) {
@@ -168,6 +198,6 @@ func TestSetQueueExecutor(t *testing.T) {
 		return strings.HasSuffix(queue[0], "root.go")
 	})
 	mock.EXPECT().SetQueue(gomock.Any(), matcher)
-	utils.Client = utils.NewTestClient(mock)
+	utils.Client = utils.NewTestClient(mock, nil)
 	state.executor("")
 }

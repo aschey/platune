@@ -32,8 +32,8 @@ func NewPlatuneClient() PlatuneClient {
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
-func NewTestClient(client platune.PlayerClient) PlatuneClient {
-	return PlatuneClient{playerClient: client}
+func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
+	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
 func (p *PlatuneClient) AddToQueue(song string) {
