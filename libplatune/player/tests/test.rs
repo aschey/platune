@@ -13,8 +13,8 @@ use tokio::time::{error::Elapsed, timeout};
 use yansi::{Color, Style};
 
 use assert_matches::*;
-use libplatune_player::libplayer::PlatunePlayer;
-use libplatune_player::libplayer::PlayerEvent;
+use libplatune_player::platune_player::PlatunePlayer;
+use libplatune_player::platune_player::PlayerEvent;
 use postage::{broadcast::Receiver, prelude::Stream};
 
 #[cfg(not(target_os = "windows"))]

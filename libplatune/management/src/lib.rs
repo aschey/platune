@@ -18,7 +18,10 @@ pub fn sync() -> tokio::sync::mpsc::Receiver<f32> {
     let (tx, rx) = tokio::sync::mpsc::channel(32);
     tokio::task::spawn_blocking(move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(controller("C:\\shared_files\\Music".to_owned(), tx));
+        rt.block_on(controller(
+            "/home/aschey/windows/shared_files/Music".to_owned(),
+            tx,
+        ));
     });
 
     rx
@@ -45,7 +48,7 @@ async fn controller(path: String, tx: tokio::sync::mpsc::Sender<f32>) {
     let mut total_dirs = 0.;
     let mut dirs_processed = 0.;
     loop {
-        match timeout(Duration::from_millis(1), finished_rx.recv()).await {
+        match timeout(Duration::from_nanos(1), finished_rx.recv()).await {
             Ok(Some(DirRead::Completed)) => {
                 dirs_processed += 1.;
                 tx.send(dirs_processed / total_dirs).await.unwrap();

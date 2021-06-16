@@ -6,7 +6,7 @@ mod event_loop;
 #[cfg(feature = "runtime-tokio")]
 mod http_stream_reader;
 mod player;
-pub mod libplayer {
+pub mod platune_player {
     pub use crate::enums::{Command, PlayerEvent};
     use crate::event_loop::{ended_loop, main_loop};
     pub use postage::*;
