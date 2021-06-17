@@ -1982,6 +1982,7 @@ dependencies = [
 name = "platuned"
 version = "0.1.0"
 dependencies = [
+ "dotenv",
  "flexi_logger 0.18.0",
  "futures",
  "libplatune-management",

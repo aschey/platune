@@ -3,7 +3,6 @@ use std::time::Duration;
 use criterion::BenchmarkId;
 use criterion::Criterion;
 use criterion::{criterion_group, criterion_main};
-use libplatune_management::sync;
 
 fn from_elem(c: &mut Criterion) {
     let mut group = c.benchmark_group("default");

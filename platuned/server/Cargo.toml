@@ -7,6 +7,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dotenv = "0.15.0"
 flexi_logger = "0.18.0"
 futures = "0.3.13"
 libplatune-management = {path = "../../libplatune/management"}

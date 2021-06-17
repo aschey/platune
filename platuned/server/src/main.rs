@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "0.0.0.0:50051".parse().unwrap();
 
     let player = PlayerImpl::new();
-    let management = ManagementImpl::new();
+    let management = ManagementImpl::new().await;
     Server::builder()
         .add_service(service)
         .add_service(PlayerServer::new(player))
