@@ -10,6 +10,16 @@
       "nullable": []
     }
   },
+  "48b93f37ed89f2f302e5465207adaafd2066eca6677701dc7783ea6760616459": {
+    "query": "update mount set mount_path = ? where mount_id = ?",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
   "5a20583032ff980bce40477f229fb7792ef76461d2eb0c453bfe90f4d51e06ed": {
     "query": "\n                        insert into song(\n                            song_path,\n                            modified_date,\n                            last_scanned_date,\n                            artist_id,\n                            song_title,\n                            album_id,\n                            track_number,\n                            disc_number,\n                            song_year,\n                            song_month,\n                            song_day,\n                            duration,\n                            sample_rate,\n                            bit_rate,\n                            album_art_path,\n                            fingerprint\n                            )\n                            values\n                            (\n                                ?, ?, ?,\n                                (select artist_id from artist where artist_name = ?), \n                                ?, \n                                (\n                                    select album_id from album a\n                                    inner join album_artist aa on a.album_artist_id = aa.album_artist_id\n                                    where a.album_name = ? and aa.album_artist_name = ?\n                                ), \n                                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n                            )\n                            on conflict(song_path) do update\n                            set last_scanned_date = ?;\n                        ",
     "describe": {

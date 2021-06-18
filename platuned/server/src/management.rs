@@ -30,7 +30,7 @@ impl Management for ManagementImpl {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::SyncStream>, tonic::Status> {
-        let rx = self.db.sync();
+        let rx = self.db.sync().await;
         Ok(Response::new(Box::pin(
             tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| Ok(Progress { percentage: r })),
         )))

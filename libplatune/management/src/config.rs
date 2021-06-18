@@ -41,11 +41,15 @@ impl Config {
     }
 
     pub async fn register_drive(&self, path: &str) {
-        if self.get_drive_id().is_some() {
-            return;
+        match self.get_drive_id() {
+            Some(drive_id) => {
+                self.sql_db.update_mount(&drive_id[..], path).await;
+            }
+            None => {
+                let id = self.sql_db.add_mount(path).await;
+                self.set("platune-server", "os-id", &id.to_string()[..]);
+            }
         }
-        let id = self.sql_db.add_mount(path).await;
-        self.set("platune-server", "os-id", &id.to_string()[..]);
     }
 
     pub fn get_drive_id(&self) -> Option<String> {

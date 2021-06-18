@@ -77,6 +77,17 @@ impl Database {
 
         return res.mount_id.unwrap();
     }
+
+    pub(crate) async fn update_mount(&self, mount_id: &str, path: &str) {
+        sqlx::query!(
+            "update mount set mount_path = ? where mount_id = ?",
+            path,
+            mount_id
+        )
+        .execute(&self.pool)
+        .await
+        .unwrap();
+    }
 }
 
 impl Clone for Database {
