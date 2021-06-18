@@ -11,7 +11,10 @@ use postage::{
     prelude::Stream,
     sink::Sink,
 };
-use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Execute, Pool, Sqlite, SqlitePool};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    ConnectOptions, Execute, Pool, Sqlite, SqlitePool,
+};
 use tokio::{task::JoinHandle, time::timeout};
 
 pub struct Database {
@@ -27,6 +30,10 @@ impl Database {
             .to_owned();
 
         let pool = SqlitePool::connect_with(opts).await.unwrap();
+        Self { pool }
+    }
+
+    pub async fn from_pool(pool: Pool<Sqlite>) -> Self {
         Self { pool }
     }
 
