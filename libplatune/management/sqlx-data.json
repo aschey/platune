@@ -40,6 +40,52 @@
       "nullable": []
     }
   },
+  "9c8b924022197273d0251e9a96ff2e9d864130aa47907f8d5e8d60dc2f2be427": {
+    "query": "insert or ignore into folder(folder_path) values(?)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
+  "a11f8f234b965ff98ac9bf133ff4fb990770c6d79954855d320a82c698995b5a": {
+    "query": "insert into mount(mount_path) values(?) returning mount_id as \"mount_id: i32\"",
+    "describe": {
+      "columns": [
+        {
+          "name": "mount_id: i32",
+          "ordinal": 0,
+          "type_info": "Null"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        null
+      ]
+    }
+  },
+  "a8497639b27ddf1cfe84a38a90c71b1b4fc16f8fcf3c4c3db4fc9b44dc519233": {
+    "query": "select folder_path from folder",
+    "describe": {
+      "columns": [
+        {
+          "name": "folder_path",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "c89efb6afb0db0f3ae61a19639fdb1bd6a96a3a72d8af36c0af3567dbdc68aea": {
     "query": "select * from song where last_scanned_date < ?",
     "describe": {

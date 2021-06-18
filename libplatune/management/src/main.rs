@@ -10,12 +10,10 @@ async fn main() {
         .replace("sqlite://", "");
     let db = Database::connect(path).await;
     let config = Config::new(&db);
-    config.register_drive("test").await;
-
-    println!("{}", config.get_drive_id().unwrap());
+    db.add_folder("C:\\shared_files\\Music").await;
 
     let now = Instant::now();
-    let mut rx = db.sync();
+    let mut rx = db.sync().await;
     while let Some(_) = rx.recv().await {}
 
     println!("{:?}", now.elapsed());

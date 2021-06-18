@@ -37,15 +37,33 @@ impl Database {
             .unwrap();
     }
 
-    pub fn sync(&self) -> tokio::sync::mpsc::Receiver<f32> {
+    pub async fn sync(&self) -> tokio::sync::mpsc::Receiver<f32> {
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         let pool = self.pool.clone();
+        let folders = self.get_all_folders().await;
         tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(controller("C:\\shared_files\\Music".to_owned(), pool, tx));
+            rt.block_on(controller(folders, pool, tx));
         });
 
         rx
+    }
+
+    pub async fn add_folder(&self, path: &str) {
+        sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
+            .execute(&self.pool)
+            .await
+            .unwrap();
+    }
+
+    pub async fn get_all_folders(&self) -> Vec<String> {
+        sqlx::query!("select folder_path from folder")
+            .fetch_all(&self.pool)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|r| r.folder_path)
+            .collect::<Vec<_>>()
     }
 
     pub(crate) async fn add_mount(&self, path: &str) -> i32 {
@@ -56,8 +74,8 @@ impl Database {
         .fetch_one(&self.pool)
         .await
         .unwrap();
-        let m = res.mount_id;
-        return m.unwrap();
+
+        return res.mount_id.unwrap();
     }
 }
 
@@ -69,7 +87,7 @@ impl Clone for Database {
     }
 }
 
-async fn controller(path: String, pool: Pool<Sqlite>, tx: tokio::sync::mpsc::Sender<f32>) {
+async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mpsc::Sender<f32>) {
     let mut num_tasks = 1;
     let max_tasks = 100;
     let (mut dispatch_tx, _) = dispatch::channel(10000);
@@ -85,7 +103,9 @@ async fn controller(path: String, pool: Pool<Sqlite>, tx: tokio::sync::mpsc::Sen
             tags_tx.clone(),
         ));
     }
-    dispatch_tx.send(Some(PathBuf::from(path))).await.unwrap();
+    for path in paths {
+        dispatch_tx.send(Some(PathBuf::from(path))).await.unwrap();
+    }
 
     let mut total_dirs = 0.;
     let mut dirs_processed = 0.;
