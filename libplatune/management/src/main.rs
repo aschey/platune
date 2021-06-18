@@ -1,16 +1,6 @@
-use core::time;
-use std::{
-    fs::{DirEntry, File},
-    io::{self, BufReader, Read},
-    path::PathBuf,
-    sync::mpsc,
-    thread,
-    time::Instant,
-};
+use std::time::Instant;
 
-use libplatune_management::database::Database;
-use postage::{dispatch, prelude::Stream, sink::Sink};
-use sqlx::{Connection, Executor, SqliteConnection, SqlitePool};
+use libplatune_management::{config::Config, database::Database};
 
 #[tokio::main]
 async fn main() {
@@ -19,9 +9,14 @@ async fn main() {
         .unwrap()
         .replace("sqlite://", "");
     let db = Database::connect(path).await;
+    let config = Config::new(&db);
+    config.register_drive("test").await;
+
+    println!("{}", config.get_drive_id().unwrap());
+
     let now = Instant::now();
     let mut rx = db.sync();
-    while let Some(res) = rx.recv().await {}
+    while let Some(_) = rx.recv().await {}
 
     println!("{:?}", now.elapsed());
 }

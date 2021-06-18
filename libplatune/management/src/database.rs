@@ -47,6 +47,26 @@ impl Database {
 
         rx
     }
+
+    pub(crate) async fn add_mount(&self, path: &str) -> i32 {
+        let res = sqlx::query!(
+            r#"insert into mount(mount_path) values(?) returning mount_id as "mount_id: i32""#,
+            path
+        )
+        .fetch_one(&self.pool)
+        .await
+        .unwrap();
+        let m = res.mount_id;
+        return m.unwrap();
+    }
+}
+
+impl Clone for Database {
+    fn clone(&self) -> Self {
+        Self {
+            pool: self.pool.clone(),
+        }
+    }
 }
 
 async fn controller(path: String, pool: Pool<Sqlite>, tx: tokio::sync::mpsc::Sender<f32>) {
