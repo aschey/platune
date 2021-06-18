@@ -11,10 +11,10 @@ async fn main() {
     let db = Database::connect(path).await;
     let config = Config::new(&db);
     config.register_drive("C:\\").await;
-    db.add_folder("C:\\shared_files\\Music").await;
+    config.add_folder("C:\\shared_files\\Music").await;
 
     let now = Instant::now();
-    let mut rx = db.sync().await;
+    let mut rx = config.sync().await;
     while let Some(_) = rx.recv().await {}
 
     println!("{:?}", now.elapsed());

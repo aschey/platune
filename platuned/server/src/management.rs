@@ -4,11 +4,12 @@ use crate::rpc::*;
 use std::pin::Pin;
 
 use futures::StreamExt;
+use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use tonic::{Request, Response, Status};
 
 pub struct ManagementImpl {
-    db: Database,
+    config: Config,
 }
 
 impl ManagementImpl {
@@ -17,7 +18,8 @@ impl ManagementImpl {
         let path = std::env::var("DATABASE_URL").unwrap();
         let db = Database::connect(path).await;
         db.migrate().await;
-        ManagementImpl { db }
+        let config = Config::new(&db);
+        ManagementImpl { config }
     }
 }
 
@@ -30,7 +32,7 @@ impl Management for ManagementImpl {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<Self::SyncStream>, tonic::Status> {
-        let rx = self.db.sync().await;
+        let rx = self.config.sync().await;
         Ok(Response::new(Box::pin(
             tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| Ok(Progress { percentage: r })),
         )))

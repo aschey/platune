@@ -1,5 +1,15 @@
 {
   "db": "SQLite",
+  "07e8ac7262b424e460550c5ceb3f937da0317a36913c51214f4048e7f19734ea": {
+    "query": "update folder set folder_path = ? where folder_path = ?",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
   "1e7c59fff4f29161656240a396dfb7bf282effec1f0d9ce47d2596710cd8015d": {
     "query": "insert or ignore into artist(artist_name) values(?);",
     "describe": {
@@ -58,24 +68,6 @@
         "Right": 1
       },
       "nullable": []
-    }
-  },
-  "a11f8f234b965ff98ac9bf133ff4fb990770c6d79954855d320a82c698995b5a": {
-    "query": "insert into mount(mount_path) values(?) returning mount_id as \"mount_id: i32\"",
-    "describe": {
-      "columns": [
-        {
-          "name": "mount_id: i32",
-          "ordinal": 0,
-          "type_info": "Null"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        null
-      ]
     }
   },
   "a8497639b27ddf1cfe84a38a90c71b1b4fc16f8fcf3c4c3db4fc9b44dc519233": {
@@ -222,6 +214,24 @@
       ]
     }
   },
+  "d83d0f1d9a8844195e3ec90a39e57746d20aefd637f68830f83750594662cc11": {
+    "query": "insert or ignore into mount(mount_path) values(?) returning mount_id as \"mount_id: i32\"",
+    "describe": {
+      "columns": [
+        {
+          "name": "mount_id: i32",
+          "ordinal": 0,
+          "type_info": "Null"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        null
+      ]
+    }
+  },
   "e120e15444f16ed8607451dac5445e990866f061860ff24f94922586081c7147": {
     "query": "insert or ignore into album_artist(album_artist_name) values(?);",
     "describe": {
@@ -230,6 +240,24 @@
         "Right": 1
       },
       "nullable": []
+    }
+  },
+  "e71602afbe17eed877757f091bf1993ae5a9c9876fda0d464b59cdb678f96a1d": {
+    "query": "select mount_path from mount where mount_id = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "mount_path",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false
+      ]
     }
   }
 }

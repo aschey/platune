@@ -37,10 +37,10 @@ impl Database {
             .unwrap();
     }
 
-    pub async fn sync(&self) -> tokio::sync::mpsc::Receiver<f32> {
+    pub(crate) async fn sync(&self, folders: Vec<String>) -> tokio::sync::mpsc::Receiver<f32> {
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         let pool = self.pool.clone();
-        let folders = self.get_all_folders().await;
+
         tokio::task::spawn_blocking(move || {
             let rt = tokio::runtime::Runtime::new().unwrap();
             rt.block_on(controller(folders, pool, tx));
@@ -49,26 +49,45 @@ impl Database {
         rx
     }
 
-    pub async fn add_folder(&self, path: &str) {
+    pub(crate) async fn add_folder(&self, path: String) {
         sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
             .execute(&self.pool)
             .await
             .unwrap();
     }
 
-    pub async fn get_all_folders(&self) -> Vec<String> {
+    pub(crate) async fn update_folder(&self, old_path: String, new_path: String) {
+        sqlx::query!(
+            "update folder set folder_path = ? where folder_path = ?",
+            new_path,
+            old_path
+        )
+        .execute(&self.pool)
+        .await
+        .unwrap();
+    }
+
+    pub(crate) async fn get_all_folders(&self) -> Vec<String> {
         sqlx::query!("select folder_path from folder")
             .fetch_all(&self.pool)
             .await
             .unwrap()
             .into_iter()
             .map(|r| r.folder_path)
-            .collect::<Vec<_>>()
+            .collect()
+    }
+
+    pub(crate) async fn get_mount(&self, mount_id: String) -> String {
+        sqlx::query!("select mount_path from mount where mount_id = ?", mount_id)
+            .fetch_one(&self.pool)
+            .await
+            .unwrap()
+            .mount_path
     }
 
     pub(crate) async fn add_mount(&self, path: &str) -> i32 {
         let res = sqlx::query!(
-            r#"insert into mount(mount_path) values(?) returning mount_id as "mount_id: i32""#,
+            r#"insert or ignore into mount(mount_path) values(?) returning mount_id as "mount_id: i32""#,
             path
         )
         .fetch_one(&self.pool)
@@ -78,7 +97,7 @@ impl Database {
         return res.mount_id.unwrap();
     }
 
-    pub(crate) async fn update_mount(&self, mount_id: &str, path: &str) {
+    pub(crate) async fn update_mount(&self, mount_id: String, path: &str) {
         sqlx::query!(
             "update mount set mount_path = ? where mount_id = ?",
             path,
