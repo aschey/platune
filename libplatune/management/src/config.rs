@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use sled::IVec;
 
 use crate::database::Database;
@@ -9,10 +11,17 @@ pub struct Config {
 
 impl Config {
     pub fn new(db: &Database) -> Self {
-        let base_dirs = directories::BaseDirs::new().unwrap();
-        let sled_file = base_dirs.config_dir().join("platune/sled");
+        let proj_dirs = directories::ProjectDirs::from("", "", "platune").unwrap();
+        let config_dir = proj_dirs.config_dir();
+        let sled_db = sled::open(config_dir).unwrap();
+        Self {
+            sled_db,
+            sql_db: db.clone(),
+        }
+    }
+    pub fn new_from_path<P: AsRef<Path>>(db: &Database, config_dir: P) -> Self {
+        let sled_db = sled::open(config_dir).unwrap();
 
-        let sled_db = sled::open(sled_file).unwrap();
         Self {
             sled_db,
             sql_db: db.clone(),
