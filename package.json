@@ -1,21 +1,7 @@
 {
-  "name": "platune",
-  "version": "1.0.0",
-  "description": "![Platune](res/platune-title.png)",
-  "main": "index.js",
   "workspaces": ["libplatune", "platune-cli"],
   "scripts": {
-    "test": "mono-run test --stream 10 --ui row"
+    "test": "mono-run test"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aschey/platune.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/aschey/platune/issues"
-  },
-  "homepage": "https://github.com/aschey/platune#readme",
   "devDependencies": {"monorepo-run": "https://github.com/Akryum/monorepo-run"}
 }
