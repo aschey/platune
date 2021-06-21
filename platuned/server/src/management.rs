@@ -42,7 +42,17 @@ impl Management for ManagementImpl {
         &self,
         request: tonic::Request<crate::rpc::FoldersMessage>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
-        todo!()
+        self.config
+            .add_folders(
+                request
+                    .into_inner()
+                    .folders
+                    .iter()
+                    .map(|s| &s[..])
+                    .collect(),
+            )
+            .await;
+        Ok(Response::new(()))
     }
 
     async fn get_all_folders(

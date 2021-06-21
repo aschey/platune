@@ -61,11 +61,15 @@ impl Database {
         rx
     }
 
-    pub(crate) async fn add_folder(&self, path: String) {
-        sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
-            .execute(&self.pool)
-            .await
-            .unwrap();
+    pub(crate) async fn add_folders(&self, paths: Vec<String>) {
+        let mut tran = self.pool.begin().await.unwrap();
+        for path in paths {
+            sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
+                .execute(&mut tran)
+                .await
+                .unwrap();
+        }
+        tran.commit().await.unwrap();
     }
 
     pub(crate) async fn update_folder(&self, old_path: String, new_path: String) {

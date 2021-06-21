@@ -67,17 +67,24 @@ impl Config {
     }
 
     pub async fn add_folder(&self, path: &str) {
-        let new_path = match self.get_drive_id() {
+        self.add_folders(vec![path]).await;
+    }
+
+    pub async fn add_folders(&self, paths: Vec<&str>) {
+        let new_paths = match self.get_drive_id() {
             Some(drive_id) => {
                 let mount = self.sql_db.get_mount(drive_id).await;
-                match path.find(&mount[..]) {
-                    Some(0) => path.replacen(&mount[..], "", 1),
-                    _ => path.to_owned(),
-                }
+                paths
+                    .into_iter()
+                    .map(|path| match path.find(&mount[..]) {
+                        Some(0) => path.replacen(&mount[..], "", 1),
+                        _ => path.to_owned(),
+                    })
+                    .collect()
             }
-            None => path.to_owned(),
+            None => paths.into_iter().map(|path| path.to_owned()).collect(),
         };
-        self.sql_db.add_folder(new_path).await;
+        self.sql_db.add_folders(new_paths).await;
     }
 
     pub async fn get_all_folders(&self) -> Vec<String> {
