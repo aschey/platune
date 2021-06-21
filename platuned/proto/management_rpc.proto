@@ -10,8 +10,20 @@ package management_rpc;
 
 service Management {
   rpc Sync(google.protobuf.Empty) returns (stream Progress) {}
+  rpc AddFolders(FoldersMessage) returns (google.protobuf.Empty) {}
+  rpc GetAllFolders(google.protobuf.Empty) returns (FoldersMessage) {}
+  rpc RegisterMount(RegisteredMountMessage) returns (google.protobuf.Empty) {}
+  rpc GetRegisteredMount(google.protobuf.Empty) returns (RegisteredMountMessage) {}
 }
 
 message Progress {
   float percentage = 1;
+}
+
+message FoldersMessage {
+  repeated string folders = 1;
+}
+
+message RegisteredMountMessage {
+  string mount = 1;
 }

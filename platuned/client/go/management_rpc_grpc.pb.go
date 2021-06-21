@@ -20,6 +20,10 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ManagementClient interface {
 	Sync(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Management_SyncClient, error)
+	AddFolders(ctx context.Context, in *FoldersMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*FoldersMessage, error)
+	RegisterMount(ctx context.Context, in *RegisteredMountMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RegisteredMountMessage, error)
 }
 
 type managementClient struct {
@@ -62,11 +66,51 @@ func (x *managementSyncClient) Recv() (*Progress, error) {
 	return m, nil
 }
 
+func (c *managementClient) AddFolders(ctx context.Context, in *FoldersMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/AddFolders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *managementClient) GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*FoldersMessage, error) {
+	out := new(FoldersMessage)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/GetAllFolders", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *managementClient) RegisterMount(ctx context.Context, in *RegisteredMountMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/RegisterMount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *managementClient) GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RegisteredMountMessage, error) {
+	out := new(RegisteredMountMessage)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/GetRegisteredMount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ManagementServer is the server API for Management service.
 // All implementations must embed UnimplementedManagementServer
 // for forward compatibility
 type ManagementServer interface {
 	Sync(*emptypb.Empty, Management_SyncServer) error
+	AddFolders(context.Context, *FoldersMessage) (*emptypb.Empty, error)
+	GetAllFolders(context.Context, *emptypb.Empty) (*FoldersMessage, error)
+	RegisterMount(context.Context, *RegisteredMountMessage) (*emptypb.Empty, error)
+	GetRegisteredMount(context.Context, *emptypb.Empty) (*RegisteredMountMessage, error)
 	mustEmbedUnimplementedManagementServer()
 }
 
@@ -76,6 +120,18 @@ type UnimplementedManagementServer struct {
 
 func (UnimplementedManagementServer) Sync(*emptypb.Empty, Management_SyncServer) error {
 	return status.Errorf(codes.Unimplemented, "method Sync not implemented")
+}
+func (UnimplementedManagementServer) AddFolders(context.Context, *FoldersMessage) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddFolders not implemented")
+}
+func (UnimplementedManagementServer) GetAllFolders(context.Context, *emptypb.Empty) (*FoldersMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAllFolders not implemented")
+}
+func (UnimplementedManagementServer) RegisterMount(context.Context, *RegisteredMountMessage) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterMount not implemented")
+}
+func (UnimplementedManagementServer) GetRegisteredMount(context.Context, *emptypb.Empty) (*RegisteredMountMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRegisteredMount not implemented")
 }
 func (UnimplementedManagementServer) mustEmbedUnimplementedManagementServer() {}
 
@@ -111,13 +167,102 @@ func (x *managementSyncServer) Send(m *Progress) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Management_AddFolders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FoldersMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).AddFolders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/AddFolders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).AddFolders(ctx, req.(*FoldersMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Management_GetAllFolders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).GetAllFolders(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/GetAllFolders",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).GetAllFolders(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Management_RegisterMount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisteredMountMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).RegisterMount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/RegisterMount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).RegisterMount(ctx, req.(*RegisteredMountMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Management_GetRegisteredMount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).GetRegisteredMount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/GetRegisteredMount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).GetRegisteredMount(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Management_ServiceDesc is the grpc.ServiceDesc for Management service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Management_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "management_rpc.Management",
 	HandlerType: (*ManagementServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AddFolders",
+			Handler:    _Management_AddFolders_Handler,
+		},
+		{
+			MethodName: "GetAllFolders",
+			Handler:    _Management_GetAllFolders_Handler,
+		},
+		{
+			MethodName: "RegisterMount",
+			Handler:    _Management_RegisterMount_Handler,
+		},
+		{
+			MethodName: "GetRegisteredMount",
+			Handler:    _Management_GetRegisteredMount_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Sync",

@@ -37,4 +37,32 @@ impl Management for ManagementImpl {
             tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| Ok(Progress { percentage: r })),
         )))
     }
+
+    async fn add_folders(
+        &self,
+        request: tonic::Request<crate::rpc::FoldersMessage>,
+    ) -> Result<tonic::Response<()>, tonic::Status> {
+        todo!()
+    }
+
+    async fn get_all_folders(
+        &self,
+        request: tonic::Request<()>,
+    ) -> Result<tonic::Response<crate::rpc::FoldersMessage>, tonic::Status> {
+        todo!()
+    }
+
+    async fn register_mount(
+        &self,
+        request: tonic::Request<crate::rpc::RegisteredMountMessage>,
+    ) -> Result<tonic::Response<()>, tonic::Status> {
+        todo!()
+    }
+
+    async fn get_registered_mount(
+        &self,
+        request: tonic::Request<()>,
+    ) -> Result<tonic::Response<crate::rpc::RegisteredMountMessage>, tonic::Status> {
+        todo!()
+    }
 }
