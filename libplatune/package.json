@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "test":  "cargo test --features=dummy"
+  }
+}
