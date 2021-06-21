@@ -46,11 +46,11 @@ Platune is a cross-platform music player that uses a client-server architecture 
 ## Project Goals
 
 - Be simple to use with minimal configuration. Don't try support every possible use case.
-- Follow the [Unix Philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) - the core code should be simple and extendable, non-essential functionality should be implemented separately
-- Strive for compatiblity with established tools and protocols where possible
-- Focus on local media playback, not streaming services (integration with streaming services may be added via plugins in the future)
+- Follow the [Unix Philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) - the core code should be simple and extendable, non-essential functionality should be implemented separately.
+- Strive for compatiblity with established tools and protocols where possible.
+- Focus on local media playback, not streaming services (integration with streaming services may be added via plugins in the future).
 - The GUI, TUI, and CLI will support all essential features. Extra functionality may only be available on the GUI.
 
 ### Comparison with MPD
 
-[MPD](https://www.musicpd.org/) is a similar music player app that has been around for a while. Compared to MPD, Platune aims to require less configuration to use and to make it much simpler to create custom clients for. Platune also maintains a set of official clients that take advantage of all available functionality while MPD mainly relies on third-party clients. However, MPD is a much more stable and robust product that supports a variety of complex setups that Platune probably never will.
+[MPD](https://www.musicpd.org/) is a similar music player app that has been around for a while. Compared to MPD, Platune aims to require less configuration to use and to have a simpler process for creating custom clients. Platune also maintains a set of official clients that take advantage of all available functionality while MPD mainly relies on third-party clients. However, MPD is a much more stable and robust product that supports a variety of complex setups that Platune probably never will.
