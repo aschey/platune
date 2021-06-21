@@ -53,4 +53,4 @@ Platune is a cross-platform music player that uses a client-server architecture 
 
 ### Comparison with MPD
 
-[MPD](https://www.musicpd.org/) is a similar music player app that has been around for a while. Compared to MPD, Platune aims to require less configuration to use and to have a simpler process for creating custom clients. Platune also maintains a set of official clients that take advantage of all available functionality while MPD mainly relies on third-party clients. However, MPD is a much more stable and robust product that supports a variety of complex setups that Platune probably never will.
+[MPD](https://www.musicpd.org/) is a similar music player app that has been around for a while. Compared to MPD, Platune aims to require less configuration to use and to have a simpler process for creating custom clients. Platune also maintains a set of official clients that take advantage of all available functionality while MPD mainly relies on third-party clients. However, MPD is a much more stable and robust product that supports a variety of complex setups which will probably never be supported by Platune.
