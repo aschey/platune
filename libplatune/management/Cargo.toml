@@ -31,3 +31,4 @@ walkdir = "2.3.2"
 
 [dev-dependencies]
 criterion = {version = "0.3.4", features = ["async_tokio"]}
+tempfile = "3.2.0"

@@ -1444,6 +1444,7 @@ dependencies = [
  "postage",
  "sled",
  "sqlx",
+ "tempfile",
  "tokio",
  "walkdir",
 ]

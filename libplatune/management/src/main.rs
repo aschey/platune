@@ -8,7 +8,7 @@ async fn main() {
     let path = std::env::var("DATABASE_URL")
         .unwrap()
         .replace("sqlite://", "");
-    let db = Database::connect(path).await;
+    let db = Database::connect(path, true).await;
     let config = Config::new(&db);
     config.register_drive("C:\\").await;
     config.add_folder("C:\\shared_files\\Music").await;

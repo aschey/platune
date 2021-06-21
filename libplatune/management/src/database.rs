@@ -22,9 +22,10 @@ pub struct Database {
 }
 
 impl Database {
-    pub async fn connect(path: impl AsRef<Path>) -> Self {
+    pub async fn connect(path: impl AsRef<Path>, create_if_missing: bool) -> Self {
         let opts = SqliteConnectOptions::new()
             .filename(path.as_ref())
+            .create_if_missing(create_if_missing)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
             .to_owned();
@@ -42,6 +43,10 @@ impl Database {
             .run(&self.pool)
             .await
             .unwrap();
+    }
+
+    pub async fn close(&self) {
+        self.pool.close().await;
     }
 
     pub(crate) async fn sync(&self, folders: Vec<String>) -> tokio::sync::mpsc::Receiver<f32> {
