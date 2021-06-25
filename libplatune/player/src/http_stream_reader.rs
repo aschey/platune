@@ -39,7 +39,7 @@ impl HttpStreamReader {
             let file_len = res
                 .headers()
                 .get(reqwest::header::CONTENT_LENGTH)
-                .ok_or("response doesn't include the content length")
+                .ok_or_else(|| "response doesn't include the content length")
                 .unwrap();
             let file_len = u64::from_str(file_len.to_str().unwrap())
                 .map_err(|_| "invalid Content-Length header")

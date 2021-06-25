@@ -57,22 +57,29 @@ impl Management for ManagementImpl {
 
     async fn get_all_folders(
         &self,
-        request: tonic::Request<()>,
+        _: tonic::Request<()>,
     ) -> Result<tonic::Response<crate::rpc::FoldersMessage>, tonic::Status> {
-        todo!()
+        let folders = self.config.get_all_folders().await;
+        Ok(Response::new(FoldersMessage { folders }))
     }
 
     async fn register_mount(
         &self,
         request: tonic::Request<crate::rpc::RegisteredMountMessage>,
     ) -> Result<tonic::Response<()>, tonic::Status> {
-        todo!()
+        self.config
+            .register_drive(&request.into_inner().mount)
+            .await;
+        Ok(Response::new(()))
     }
 
     async fn get_registered_mount(
         &self,
-        request: tonic::Request<()>,
+        _: tonic::Request<()>,
     ) -> Result<tonic::Response<crate::rpc::RegisteredMountMessage>, tonic::Status> {
-        todo!()
+        let drive_id = self.config.get_drive_id();
+        Ok(Response::new(RegisteredMountMessage {
+            mount: drive_id.unwrap_or_default(),
+        }))
     }
 }

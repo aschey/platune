@@ -61,8 +61,8 @@ fn colored(
         Style::new(Color::Cyan).paint(now.now().format("%Y-%m-%d %H:%M:%S%.6f")),
         Style::new(Color::RGB(119, 102, 204)).paint(now.now().timestamp_nanos() as f64 / 1e9),
         style(level, level),
-        Style::new(Color::Green).paint(record.file().unwrap_or("<unnamed>")),
-        Style::new(Color::Green).paint(record.line().unwrap_or(0)),
+        Style::new(Color::Green).paint(record.file().unwrap_or_else(|| "<unnamed>")),
+        Style::new(Color::Green).paint(record.line().unwrap_or_else(|| 0)),
         style(level, &record.args())
     )
 }
