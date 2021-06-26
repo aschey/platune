@@ -4,6 +4,9 @@ use sled::IVec;
 
 use crate::database::Database;
 
+static CONFIG_NAMESPACE: &str = "platune-server";
+static DRIVE_ID: &str = "drive-id";
+
 pub struct Config {
     sled_db: sled::Db,
     sql_db: Database,
@@ -56,7 +59,7 @@ impl Config {
             }
             None => {
                 let id = self.sql_db.add_mount(path).await;
-                self.set("platune-server", "os-id", &id.to_string()[..]);
+                self.set_drive_id(&id.to_string()[..]);
             }
         };
         let folders = self.sql_db.get_all_folders().await;
@@ -71,17 +74,14 @@ impl Config {
     }
 
     pub async fn add_folders(&self, paths: Vec<&str>) {
-        let new_paths = match self.get_drive_id() {
-            Some(drive_id) => {
-                let mount = self.sql_db.get_mount(drive_id).await;
-                paths
-                    .into_iter()
-                    .map(|path| match path.find(&mount[..]) {
-                        Some(0) => path.replacen(&mount[..], "", 1),
-                        _ => path.to_owned(),
-                    })
-                    .collect()
-            }
+        let new_paths = match self.get_registered_mount().await {
+            Some(mount) => paths
+                .into_iter()
+                .map(|path| match path.find(&mount[..]) {
+                    Some(0) => path.replacen(&mount[..], "", 1),
+                    _ => path.to_owned(),
+                })
+                .collect(),
             None => paths.into_iter().map(|path| path.to_owned()).collect(),
         };
         self.sql_db.add_folders(new_paths).await;
@@ -89,14 +89,11 @@ impl Config {
 
     pub async fn get_all_folders(&self) -> Vec<String> {
         let folders = self.sql_db.get_all_folders().await;
-        match self.get_drive_id() {
-            Some(drive_id) => {
-                let mount = self.sql_db.get_mount(drive_id).await;
-                folders
-                    .into_iter()
-                    .map(|f| format!("{}{}", mount, f))
-                    .collect()
-            }
+        match self.get_registered_mount().await {
+            Some(mount) => folders
+                .into_iter()
+                .map(|f| format!("{}{}", mount, f))
+                .collect(),
             None => folders,
         }
     }
@@ -106,7 +103,21 @@ impl Config {
         self.sql_db.sync(folders).await
     }
 
-    pub fn get_drive_id(&self) -> Option<String> {
-        self.get("platune-server", "os-id")
+    pub async fn get_registered_mount(&self) -> Option<String> {
+        match self.get_drive_id() {
+            Some(drive_id) => {
+                let mount = self.sql_db.get_mount(drive_id).await;
+                Some(mount)
+            }
+            None => None,
+        }
+    }
+
+    fn get_drive_id(&self) -> Option<String> {
+        self.get(CONFIG_NAMESPACE, DRIVE_ID)
+    }
+
+    fn set_drive_id<V: Into<IVec>>(&self, drive_id: V) {
+        self.set(CONFIG_NAMESPACE, DRIVE_ID, drive_id);
     }
 }

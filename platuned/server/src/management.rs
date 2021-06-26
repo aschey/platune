@@ -77,9 +77,9 @@ impl Management for ManagementImpl {
         &self,
         _: tonic::Request<()>,
     ) -> Result<tonic::Response<crate::rpc::RegisteredMountMessage>, tonic::Status> {
-        let drive_id = self.config.get_drive_id();
+        let mount = self.config.get_registered_mount().await;
         Ok(Response::new(RegisteredMountMessage {
-            mount: drive_id.unwrap_or_default(),
+            mount: mount.unwrap_or_default(),
         }))
     }
 }
