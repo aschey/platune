@@ -9,7 +9,6 @@ use crossterm::{
 use std::{
     error::Error,
     io::stdout,
-    process::Stdio,
     sync::mpsc,
     thread,
     time::{Duration, Instant},
@@ -135,7 +134,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             // )
             // .unwrap();
             //}
-            let mut bounds = f.size();
+            let bounds = f.size();
             //println!("{:?}", bounds);
 
             // let top = Rect::new(bounds.x, bounds.y + 1, bounds.width, 7);
@@ -143,7 +142,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             // let middle = Rect::new(bounds.x + 2, bounds.y + 7, bounds.width - 4, 1);
             //let bottom = Rect::new(bounds.x, bounds.y + 110, bounds.width, bounds.height - 110);
 
-            let mut vert_chunks = Layout::default()
+            let vert_chunks = Layout::default()
                 .direction(Direction::Vertical)
                 //.margin(1)
                 .constraints(
@@ -169,18 +168,18 @@ fn main() -> Result<(), Box<dyn Error>> {
                     .as_ref(),
                 )
                 .split(vert_chunks[0]);
-            let mut horiz_chunks2 = Layout::default()
+            let horiz_chunks2 = Layout::default()
                 .direction(Direction::Horizontal)
                 //.margin(1)
                 .constraints([Constraint::Max(50), Constraint::Max(0)].as_ref())
                 .split(vert_chunks[1]);
-            let horiz_chunks3 = Layout::default()
+            let _horiz_chunks3 = Layout::default()
                 .direction(Direction::Horizontal)
                 //.margin(1)
                 .constraints([Constraint::Max(50), Constraint::Max(0)].as_ref())
                 .split(vert_chunks[2]);
 
-            let gauge = Gauge::default()
+            let _gauge = Gauge::default()
                 .block(Block::default())
                 .gauge_style(Style::default().fg(Color::Cyan).bg(Color::DarkGray))
                 .use_unicode(true)
@@ -230,7 +229,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 ])),
                 ListItem::new(Span::from("\n")),
             ];
-            let p2 = List::new(controls).style(Style::default().fg(Color::White));
+            let _p2 = List::new(controls).style(Style::default().fg(Color::White));
             //.start_corner(Corner::TopLeft);
             //.highlight_style(Style::default().add_modifier(Modifier::ITALIC))
             //.highlight_symbol(">>");

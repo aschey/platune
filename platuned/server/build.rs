@@ -1,4 +1,4 @@
-use std::{env, ops::Deref, path::PathBuf};
+use std::{env, path::PathBuf};
 
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());

@@ -1,8 +1,8 @@
 use async_trait::async_trait;
-use core::fmt;
+
 use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
 use futures::Future;
-use log::info;
+
 use rstest::*;
 use std::{
     env::current_dir,
@@ -119,7 +119,7 @@ where
 }
 
 async fn init_play(num_songs: usize) -> (PlatunePlayer, Receiver<PlayerEvent>, Vec<SongInfo>) {
-    let (mut player, mut receiver) = PlatunePlayer::new();
+    let (player, mut receiver) = PlatunePlayer::new();
 
     let songs = get_test_files(num_songs);
     let song_queue = songs.get_paths();
@@ -135,7 +135,7 @@ async fn init_play(num_songs: usize) -> (PlatunePlayer, Receiver<PlayerEvent>, V
 #[rstest(num_songs, case(1), case(2), case(3))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 async fn test_basic(num_songs: usize) {
-    let (mut player, mut receiver, songs) = init_play(num_songs).await;
+    let (player, mut receiver, songs) = init_play(num_songs).await;
     for _ in songs {
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended));
     }
@@ -159,7 +159,7 @@ async fn test_basic(num_songs: usize) {
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 async fn test_pause(num_songs: usize, pause_index: usize) {
-    let (mut player, mut receiver, songs) = init_play(num_songs).await;
+    let (player, mut receiver, songs) = init_play(num_songs).await;
 
     for (i, _) in songs.iter().enumerate() {
         if i == pause_index {
@@ -188,7 +188,7 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
 async fn test_seek(num_songs: usize, seek_index: usize) {
     // let num_songs = 1;
     // let seek_index = 0;
-    let (mut player, mut receiver, songs) = init_play(num_songs).await;
+    let (player, mut receiver, songs) = init_play(num_songs).await;
     let seek_time = 100;
     for (i, _) in songs.iter().enumerate() {
         if i == seek_index {

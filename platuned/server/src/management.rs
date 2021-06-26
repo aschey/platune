@@ -6,7 +6,7 @@ use std::pin::Pin;
 use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
-use tonic::{Request, Response, Status};
+use tonic::{Response, Status};
 
 pub struct ManagementImpl {
     config: Config,

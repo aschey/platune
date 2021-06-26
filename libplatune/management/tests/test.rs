@@ -1,19 +1,13 @@
-use directories::BaseDirs;
+
 use libplatune_management::{config::Config, database::Database};
-use log::LevelFilter;
+
 use sqlx::{
     pool::PoolConnection,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},
     ConnectOptions, Sqlite, SqlitePool,
 };
-use std::{
-    env,
-    fs::{File, OpenOptions},
-    io::Write,
-    path::{Path, PathBuf},
-    time::Duration,
-};
-use tempfile::{tempdir, TempDir};
+
+use tempfile::{TempDir};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 pub async fn test_add_folders() {
