@@ -25,10 +25,9 @@ katatsuki = {git = "https://github.com/aschey/seiri", rev = "041c76dfc9614568a3a
 log = "0.4.14"
 postage = "0.4.1"
 sled = "0.34.6"
-sqlx = {version = "0.5.5", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}
-tokio = {version = "1.6.0", features = ["fs", "macros", "rt"]}
-walkdir = "2.3.2"
+sqlx = { version = "0.5.5", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"] }
+tokio = { version = "1.7.1", features = ["fs", "macros", "rt"] }
 
 [dev-dependencies]
-criterion = {version = "0.3.4", features = ["async_tokio"]}
+criterion = { version = "0.3.4", features = ["async_tokio"] }
 tempfile = "3.2.0"

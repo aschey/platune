@@ -1,14 +1,10 @@
 use async_trait::async_trait;
 
-use flexi_logger::{style, DeferredNow, LogTarget, Logger, Record};
+use flexi_logger::{style, DeferredNow, Logger, Record};
 use futures::Future;
 
 use rstest::*;
-use std::{
-    env::current_dir,
-    thread,
-    time::{Duration, Instant},
-};
+use std::{env::current_dir, time::Duration};
 use tokio::time::{error::Elapsed, timeout};
 use yansi::{Color, Style};
 
@@ -24,8 +20,6 @@ pub static SEPARATOR: &str = "\\";
 
 struct SongInfo {
     path: String,
-    name: String,
-    duration_estimate_millis: u128,
 }
 
 trait SongVec {
@@ -69,9 +63,10 @@ fn colored(
 
 #[ctor::ctor]
 fn init() {
-    Logger::with_str("info")
+    Logger::try_with_str("info")
+        .unwrap()
         .format_for_stdout(colored)
-        .log_target(LogTarget::StdOut)
+        .log_to_stdout()
         .set_palette("196;190;-;-;-".to_owned())
         .start()
         .unwrap();
@@ -84,19 +79,13 @@ fn get_path(song: &str) -> String {
 
 fn get_test_files(num_songs: usize) -> Vec<SongInfo> {
     let song1 = SongInfo {
-        name: "test.mp3".to_owned(),
         path: get_path("test.mp3"),
-        duration_estimate_millis: 444,
     };
     let song2 = SongInfo {
-        name: "test2.mp3".to_owned(),
         path: get_path("test2.mp3"),
-        duration_estimate_millis: 731,
     };
     let song3 = SongInfo {
-        name: "test3.mp3".to_owned(),
         path: get_path("test3.mp3"),
-        duration_estimate_millis: 731,
     };
 
     match num_songs {
@@ -105,10 +94,6 @@ fn get_test_files(num_songs: usize) -> Vec<SongInfo> {
         3 => vec![song1, song2, song3],
         _ => vec![],
     }
-}
-
-fn assert_duration(min: u128, val: u128) {
-    assert!((min - 50) <= val && val < min + 50, "duration={}", val);
 }
 
 async fn timed_await<T>(future: T) -> Result<T::Output, Elapsed>
