@@ -11,7 +11,7 @@ const addQueueExampleText = "fileOrUrl"
 
 // setQueueCmd represents the setQueue command
 var addQueueCmd = &cobra.Command{
-	Use:   "addQueue " + addQueueExampleText,
+	Use:   "add-queue " + addQueueExampleText,
 	Short: AddQueueDescription,
 	Long:  AddQueueDescription,
 

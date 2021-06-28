@@ -9,7 +9,7 @@ const SetQueueDescription = "Sets the queue and starts playback. Resets the queu
 const setQueueExampleText = "fileOrUrl1 fileOrUrl2 fileOrUrl3 ..."
 
 var setQueueCmd = &cobra.Command{
-	Use:   "setQueue " + setQueueExampleText,
+	Use:   "set-queue " + setQueueExampleText,
 	Short: SetQueueDescription,
 	Long:  SetQueueDescription,
 

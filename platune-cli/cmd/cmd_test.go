@@ -67,7 +67,7 @@ func TestAddQueue(t *testing.T) {
 			return arg.(*platune.AddToQueueRequest).Song == testSong
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
-	}, "addQueue", testSong)
+	}, "add-queue", testSong)
 }
 
 func TestSetQueue(t *testing.T) {
@@ -79,7 +79,7 @@ func TestSetQueue(t *testing.T) {
 			return queue[0] == testSong1 && queue[1] == testSong2
 		})
 		expect.SetQueue(gomock.Any(), matcher)
-	}, "setQueue", testSong1, testSong2)
+	}, "set-queue", testSong1, testSong2)
 }
 
 func TestSeek(t *testing.T) {
@@ -143,6 +143,16 @@ func TestSync(t *testing.T) {
 	}, "sync")
 	if len(res) == 0 {
 		t.Errorf("Expected length > 0")
+	}
+}
+
+func TestGetAllFolders(t *testing.T) {
+	response := "C://test"
+	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
+		expect.GetAllFolders(gomock.Any(), gomock.Any()).Return(&platune.FoldersMessage{Folders: []string{response}}, nil)
+	}, "get-all-folders")
+	if !strings.Contains(res, response) {
+		t.Errorf("Response should contain folder")
 	}
 }
 

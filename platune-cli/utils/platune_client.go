@@ -106,6 +106,16 @@ func (p *PlatuneClient) Sync() (platune.Management_SyncClient, context.CancelFun
 	return sync, cancel
 }
 
+func (p *PlatuneClient) GetAllFolders() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	allFolders, err := p.managementClient.GetAllFolders(ctx, &emptypb.Empty{})
+	if err != nil {
+		fmt.Println(err)
+	}
+	cancel()
+	fmt.Println(PrettyPrintList(allFolders.Folders))
+}
+
 func (p *PlatuneClient) runPlayerCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := cmdFunc(p.playerClient, ctx)

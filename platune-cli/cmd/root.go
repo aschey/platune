@@ -99,6 +99,8 @@ func (state *cmdState) executor(in string) {
 	case "sync":
 		SyncProgress()
 		fmt.Println()
+	case "get-all-folders":
+		utils.Client.GetAllFolders()
 	case "q":
 		fmt.Println("Exiting...")
 		os.Exit(0)
@@ -117,11 +119,7 @@ func (state *cmdState) executor(in string) {
 			}
 
 			state.currentQueue = append(state.currentQueue, in)
-			var formattedQueue = []string{}
-			for i := 0; i < len(state.currentQueue); i++ {
-				formattedQueue = append(formattedQueue, fmt.Sprintf("%d. %s", i+1, state.currentQueue[i]))
-			}
-			fmt.Println(strings.Join(formattedQueue, "\n"))
+			fmt.Println(utils.PrettyPrintList(state.currentQueue))
 		}
 	}
 }
@@ -148,6 +146,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "previous", Description: PreviousDescription},
 		{Text: "stop", Description: StopDescription},
 		{Text: "sync", Description: SyncDescription},
+		{Text: "get-all-folders", Description: GetAllFoldersDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
