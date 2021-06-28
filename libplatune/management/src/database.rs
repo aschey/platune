@@ -11,10 +11,7 @@ use postage::{
     prelude::Stream,
     sink::Sink,
 };
-use sqlx::{
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-    ConnectOptions, Execute, Pool, Sqlite, SqlitePool,
-};
+use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use tokio::{task::JoinHandle, time::timeout};
 
 pub struct Database {
