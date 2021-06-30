@@ -37,43 +37,43 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 }
 
 func (p *PlatuneClient) AddToQueue(song string) {
-	p.runPlayerCommand("Added", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Added", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Song: song})
 	})
 }
 
 func (p *PlatuneClient) Pause() {
-	p.runPlayerCommand("Paused", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Paused", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Pause(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Stop() {
-	p.runPlayerCommand("Stopped", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Stopped", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Stop(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Next() {
-	p.runPlayerCommand("Next", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Next", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Next(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Previous() {
-	p.runPlayerCommand("Previous", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Previous", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Previous(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) Resume() {
-	p.runPlayerCommand("Resumed", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Resumed", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Resume(ctx, &emptypb.Empty{})
 	})
 }
 
 func (p *PlatuneClient) SetQueue(queue []string) {
-	p.runPlayerCommand("Queue Set", func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Queue Set", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.SetQueue(ctx, &platune.QueueRequest{Queue: queue})
 	})
 }
@@ -90,7 +90,7 @@ func (p *PlatuneClient) Seek(time string) {
 		pos := float64(len(timeParts) - 1 - i)
 		totalMillis += uint64(math.Pow(60, pos)) * intVal * 1000
 	}
-	p.runPlayerCommand("Seeked to "+time, func(client platune.PlayerClient, ctx context.Context) (*emptypb.Empty, error) {
+	p.runCommand("Seeked to "+time, func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Seek(ctx, &platune.SeekRequest{Millis: totalMillis})
 	})
 }
@@ -116,9 +116,15 @@ func (p *PlatuneClient) GetAllFolders() {
 	fmt.Println(PrettyPrintList(allFolders.Folders))
 }
 
-func (p *PlatuneClient) runPlayerCommand(successMsg string, cmdFunc func(platune.PlayerClient, context.Context) (*emptypb.Empty, error)) {
+func (p *PlatuneClient) AddFolder(folder string) {
+	p.runCommand("Added", func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.managementClient.AddFolders(ctx, &platune.FoldersMessage{Folders: []string{folder}})
+	})
+}
+
+func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	_, err := cmdFunc(p.playerClient, ctx)
+	_, err := cmdFunc(ctx)
 	cancel()
 	if err != nil {
 		fmt.Println(err)

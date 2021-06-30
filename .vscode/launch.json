@@ -7,11 +7,11 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'platune'",
+      "name": "Debug executable 'platuned'",
       "cargo": {
-        "args": ["build", "--bin=platune", "--package=platune"],
+        "args": ["build", "--bin=platuned", "--package=platuned"],
         "filter": {
-          "name": "platune",
+          "name": "platuned",
           "kind": "bin"
         }
       },
@@ -21,11 +21,151 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug unit tests in executable 'platune'",
+      "name": "Debug unit tests in executable 'platuned'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=platune", "--package=platune"],
+        "args": ["test", "--no-run", "--bin=platuned", "--package=platuned"],
         "filter": {
-          "name": "platune",
+          "name": "platuned",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'libplatune_management'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=libplatune-management"],
+        "filter": {
+          "name": "libplatune_management",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'main'",
+      "cargo": {
+        "args": ["build", "--bin=main", "--package=libplatune-management"],
+        "filter": {
+          "name": "main",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'main'",
+      "cargo": {
+        "args": ["test", "--no-run", "--bin=main", "--package=libplatune-management"],
+        "filter": {
+          "name": "main",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'test'",
+      "cargo": {
+        "args": ["test", "--no-run", "--test=test", "--package=libplatune-management"],
+        "filter": {
+          "name": "test",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug benchmark 'bench'",
+      "cargo": {
+        "args": ["test", "--no-run", "--bench=bench", "--package=libplatune-management"],
+        "filter": {
+          "name": "bench",
+          "kind": "bench"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'libplatune_player'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=libplatune-player"],
+        "filter": {
+          "name": "libplatune_player",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug integration test 'test'",
+      "cargo": {
+        "args": ["test", "--no-run", "--test=test", "--package=libplatune-player"],
+        "filter": {
+          "name": "test",
+          "kind": "test"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'platuned_client'",
+      "cargo": {
+        "args": ["test", "--no-run", "--lib", "--package=platuned-client"],
+        "filter": {
+          "name": "platuned_client",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'platune-tui'",
+      "cargo": {
+        "args": ["build", "--bin=platune-tui", "--package=platune-tui"],
+        "filter": {
+          "name": "platune-tui",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'platune-tui'",
+      "cargo": {
+        "args": ["test", "--no-run", "--bin=platune-tui", "--package=platune-tui"],
+        "filter": {
+          "name": "platune-tui",
           "kind": "bin"
         }
       },

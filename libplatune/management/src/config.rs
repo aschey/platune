@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use regex::Regex;
 use sled::IVec;
 
 use crate::database::Database;
@@ -10,7 +11,6 @@ static DRIVE_ID: &str = "drive-id";
 pub struct Config {
     sled_db: sled::Db,
     sql_db: Database,
-    replace_delim: bool,
     delim: &'static str,
 }
 
@@ -27,8 +27,7 @@ impl Config {
         Self {
             sled_db,
             sql_db: db.clone(),
-            replace_delim: cfg!(windows),
-            delim: if cfg!(windows) { "\\" } else { "/" },
+            delim: if cfg!(windows) { r"\" } else { "/" },
         }
     }
 
@@ -53,11 +52,19 @@ impl Config {
         }
     }
 
-    pub async fn register_drive(&self, path: &str) {
-        let mut path = path.to_owned();
-        if !path.ends_with(&self.delim) {
-            path += self.delim;
+    fn clean_path(&self, path: &str) -> String {
+        let mut path = path.replace(self.delim, "/");
+        let re = Regex::new(r"/+").unwrap();
+        path = re.replace_all(&path, "/").to_string();
+        if !path.ends_with("/") {
+            path += "/";
         }
+        return path;
+    }
+
+    pub async fn register_drive(&self, path: &str) {
+        let path = self.clean_path(path);
+
         match self.get_drive_id() {
             Some(drive_id) => {
                 self.sql_db.update_mount(drive_id, &path).await;
@@ -67,7 +74,7 @@ impl Config {
                 self.set_drive_id(&id.to_string()[..]);
             }
         };
-        let path = path.replace(self.delim, "/");
+
         let folders = self.sql_db.get_all_folders().await;
         for folder in folders {
             let new_folder = folder.replacen(&path, "", 1);
@@ -80,29 +87,17 @@ impl Config {
     }
 
     pub async fn add_folders(&self, paths: Vec<&str>) {
-        let new_paths = match self.get_registered_mount().await {
+        let paths = paths.into_iter().map(|new_path| self.clean_path(new_path));
+        let new_paths = match self.get_registered_mount_raw().await {
             Some(mount) => paths
-                .into_iter()
                 .map(|path| match path.find(&mount[..]) {
                     Some(0) => path.replacen(&mount[..], "", 1),
                     _ => path.to_owned(),
                 })
                 .collect::<Vec<_>>(),
-            None => paths.into_iter().map(|path| path.to_owned()).collect(),
+            None => paths.map(|path| path.to_owned()).collect(),
         };
-        let new_paths = new_paths
-            .into_iter()
-            .map(|mut new_path| {
-                if self.replace_delim {
-                    new_path = new_path.replace(self.delim, "/");
-                }
 
-                if !new_path.ends_with("/") {
-                    new_path += "/";
-                }
-                new_path
-            })
-            .collect();
         self.sql_db.add_folders(new_paths).await;
     }
 
@@ -112,9 +107,7 @@ impl Config {
             Some(mount) => folders
                 .into_iter()
                 .map(|mut f| {
-                    if self.replace_delim {
-                        f = f.replace("/", self.delim);
-                    }
+                    f = f.replace("/", self.delim);
                     format!("{}{}", mount, f)
                 })
                 .collect(),
@@ -127,12 +120,19 @@ impl Config {
         self.sql_db.sync(folders).await
     }
 
-    pub async fn get_registered_mount(&self) -> Option<String> {
+    async fn get_registered_mount_raw(&self) -> Option<String> {
         match self.get_drive_id() {
             Some(drive_id) => {
                 let mount = self.sql_db.get_mount(drive_id).await;
                 Some(mount)
             }
+            None => None,
+        }
+    }
+
+    pub async fn get_registered_mount(&self) -> Option<String> {
+        match self.get_registered_mount_raw().await {
+            Some(mount) => Some(mount.replace("/", self.delim)),
             None => None,
         }
     }
@@ -148,7 +148,6 @@ impl Config {
     #[cfg(test)]
     fn set_delim(&mut self, delim: &'static str) {
         self.delim = delim;
-        self.replace_delim = true;
     }
 }
 
@@ -160,11 +159,13 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     pub async fn test_add_folders() {
         let tempdir = TempDir::new().unwrap();
-        let (db, config) = setup(&tempdir).await;
+        let (db, mut config) = setup(&tempdir).await;
+        config.set_delim("/");
 
-        config.add_folder("test1").await;
+        config.add_folder("test1/").await;
         config.add_folder("test1").await;
         config.add_folder("test2").await;
+        config.add_folder("test2//").await;
         let folders = config.get_all_folders().await;
         db.close().await;
         assert_eq!(vec!["test1/", "test2/"], folders);
@@ -174,16 +175,17 @@ mod tests {
     pub async fn test_change_mount() {
         let tempdir = TempDir::new().unwrap();
         let (db, mut config) = setup(&tempdir).await;
-        config.set_delim("\\");
+        config.set_delim(r"\");
 
-        config.register_drive("C:\\").await;
-        config.add_folder("C:\\test").await;
+        config.register_drive(r"C:\\").await;
+        config.add_folder(r"C:\test").await;
+        config.add_folder(r"C:\\test\\").await;
         let folders1 = config.get_all_folders().await;
-        config.register_drive("D:\\").await;
+        config.register_drive(r"D:\").await;
         let folders2 = config.get_all_folders().await;
         db.close().await;
-        assert_eq!(vec!["C:\\test\\"], folders1);
-        assert_eq!(vec!["D:\\test\\"], folders2);
+        assert_eq!(vec![r"C:\test\"], folders1);
+        assert_eq!(vec![r"D:\test\"], folders2);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -192,14 +194,15 @@ mod tests {
         let (db, mut config) = setup(&tempdir).await;
         config.set_delim("\\");
 
-        config.add_folder("C:\\test").await;
-        config.register_drive("C:\\").await;
+        config.add_folder(r"C:\test").await;
+        config.add_folder(r"C:\\test\\").await;
+        config.register_drive(r"C:\").await;
         let folders1 = config.get_all_folders().await;
-        config.register_drive("D:\\").await;
+        config.register_drive(r"D:\").await;
         let folders2 = config.get_all_folders().await;
         db.close().await;
-        assert_eq!(vec!["C:\\test\\"], folders1);
-        assert_eq!(vec!["D:\\test\\"], folders2);
+        assert_eq!(vec![r"C:\test\"], folders1);
+        assert_eq!(vec![r"D:\test\"], folders2);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -208,17 +211,18 @@ mod tests {
         let (db, mut config) = setup(&tempdir).await;
         let config_path2 = tempdir.path().join("platuneconfig2");
         let mut config2 = Config::new_from_path(&db, config_path2);
-        config.set_delim("\\");
-        config2.set_delim("\\");
+        config.set_delim(r"\");
+        config2.set_delim(r"\");
 
-        config.add_folder("C:\\test").await;
-        config.register_drive("C:\\").await;
+        config.add_folder(r"C:\test").await;
+        config.add_folder(r"C:\\test\\").await;
+        config.register_drive(r"C:\").await;
         let folders1 = config.get_all_folders().await;
-        config2.register_drive("D:\\").await;
+        config2.register_drive(r"D:\").await;
         let folders2 = config2.get_all_folders().await;
         db.close().await;
-        assert_eq!(vec!["C:\\test\\"], folders1);
-        assert_eq!(vec!["D:\\test\\"], folders2);
+        assert_eq!(vec![r"C:\test\"], folders1);
+        assert_eq!(vec![r"D:\test\"], folders2);
     }
 
     async fn setup(tempdir: &TempDir) -> (Database, Config) {

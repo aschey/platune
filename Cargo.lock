@@ -1431,6 +1431,7 @@ dependencies = [
  "katatsuki",
  "log",
  "postage",
+ "regex 1.5.4",
  "sled",
  "sqlx",
  "tempfile",

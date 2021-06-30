@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"strings"
@@ -23,27 +24,38 @@ type cmdState struct {
 	currentQueue   []string
 }
 
-func expandPath(song string) (string, error) {
+func expandPath(song string) (string, fs.FileInfo, error) {
 	if strings.HasPrefix(song, "http") {
-		return song, nil
+		return song, nil, nil
 	}
 
 	dir, base, err := utils.CleanFilePath(song)
 
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 	full := path.Join(dir, base)
 	stat, err := os.Stat(full)
-	if err != nil {
 
-		return "", err
-	}
-	if stat.Mode().IsDir() {
+	return full, stat, err
+}
+
+func expandFile(song string) (string, error) {
+	full, stat, err := expandPath(song)
+
+	if stat != nil && stat.Mode().IsDir() {
 		return "", fmt.Errorf("cannot add a directory")
 	}
-	return full, nil
+	return full, err
+}
 
+func expandFolder(song string) (string, error) {
+	full, stat, err := expandPath(song)
+
+	if stat != nil && !stat.Mode().IsDir() {
+		return "", fmt.Errorf("cannot add a file")
+	}
+	return full, err
 }
 
 func newCmdState() cmdState {
@@ -74,7 +86,7 @@ func (state *cmdState) executor(in string) {
 			fmt.Println("Usage: add-queue <path or url>")
 			return
 		}
-		full, err := expandPath(cmds[1])
+		full, err := expandFile(cmds[1])
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -101,6 +113,17 @@ func (state *cmdState) executor(in string) {
 		fmt.Println()
 	case "get-all-folders":
 		utils.Client.GetAllFolders()
+	case "add-folder":
+		if len(cmds) < 2 {
+			fmt.Println("Usage: add-folder <path>")
+			return
+		}
+		full, err := expandFolder(cmds[1])
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		utils.Client.AddFolder(full)
 	case "q":
 		fmt.Println("Exiting...")
 		os.Exit(0)
@@ -112,7 +135,7 @@ func (state *cmdState) executor(in string) {
 			state.currentQueue = []string{}
 			state.livePrefix = ""
 		} else {
-			in, err := expandPath(in)
+			in, err := expandFile(in)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -130,7 +153,8 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		return filePathCompleter.Complete(in, false)
 	}
 	if len(before) > 1 {
-		if before[0] == "add-queue" {
+		first := before[0]
+		if first == "add-queue" || first == "add-folder" {
 			return filePathCompleter.Complete(in, true)
 		}
 		return []prompt.Suggest{}
@@ -147,6 +171,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "stop", Description: StopDescription},
 		{Text: "sync", Description: SyncDescription},
 		{Text: "get-all-folders", Description: GetAllFoldersDescription},
+		{Text: "add-folder", Description: AddFolderDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)

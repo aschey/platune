@@ -156,11 +156,38 @@ func TestGetAllFolders(t *testing.T) {
 	}
 }
 
+func TestAddFolder(t *testing.T) {
+	folder := "folder1"
+	runManagementTest(t, "Added\n", func(expect *test.MockManagementClientMockRecorder) {
+		matcher := test.NewMatcher(func(arg interface{}) bool {
+			folders := arg.(*platune.FoldersMessage).Folders
+			return folders[0] == folder
+		})
+		expect.AddFolders(gomock.Any(), matcher)
+	}, "add-folder", folder)
+}
+
 func TestAddQueueCompleter(t *testing.T) {
 	state := newCmdState()
 
 	buf := prompt.NewBuffer()
 	buf.InsertText("add-queue root", false, true)
+	doc := buf.Document()
+
+	results := state.completer(*doc)
+	if len(results) != 1 {
+		t.Error("Should've found one result")
+	}
+	if results[0].Text != "root.go" {
+		t.Error("Result should be root.go")
+	}
+}
+
+func TestAddFolderCompleter(t *testing.T) {
+	state := newCmdState()
+
+	buf := prompt.NewBuffer()
+	buf.InsertText("add-folder root", false, true)
 	doc := buf.Document()
 
 	results := state.completer(*doc)
