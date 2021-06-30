@@ -90,12 +90,14 @@ impl Database {
             .collect()
     }
 
-    pub(crate) async fn get_mount(&self, mount_id: String) -> String {
-        sqlx::query!("select mount_path from mount where mount_id = ?", mount_id)
+    pub(crate) async fn get_mount(&self, mount_id: String) -> Option<String> {
+        match sqlx::query!("select mount_path from mount where mount_id = ?", mount_id)
             .fetch_one(&self.pool)
             .await
-            .unwrap()
-            .mount_path
+        {
+            Ok(res) => Some(res.mount_path),
+            Err(_) => None,
+        }
     }
 
     pub(crate) async fn add_mount(&self, path: &str) -> i32 {

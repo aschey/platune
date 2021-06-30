@@ -103,16 +103,16 @@ impl Config {
 
     pub async fn get_all_folders(&self) -> Vec<String> {
         let folders = self.sql_db.get_all_folders().await;
-        match self.get_registered_mount().await {
+        let res = match self.get_registered_mount().await {
             Some(mount) => folders
                 .into_iter()
-                .map(|mut f| {
-                    f = f.replace("/", self.delim);
-                    format!("{}{}", mount, f)
-                })
+                .map(|f| format!("{}{}", mount, f))
                 .collect(),
             None => folders,
-        }
+        };
+        res.into_iter()
+            .map(|r| r.replace("/", self.delim))
+            .collect()
     }
 
     pub async fn sync(&self) -> tokio::sync::mpsc::Receiver<f32> {
@@ -122,10 +122,7 @@ impl Config {
 
     async fn get_registered_mount_raw(&self) -> Option<String> {
         match self.get_drive_id() {
-            Some(drive_id) => {
-                let mount = self.sql_db.get_mount(drive_id).await;
-                Some(mount)
-            }
+            Some(drive_id) => self.sql_db.get_mount(drive_id).await,
             None => None,
         }
     }
@@ -160,15 +157,15 @@ mod tests {
     pub async fn test_add_folders() {
         let tempdir = TempDir::new().unwrap();
         let (db, mut config) = setup(&tempdir).await;
-        config.set_delim("/");
+        config.set_delim(r"\");
 
-        config.add_folder("test1/").await;
+        config.add_folder(r"test1\").await;
         config.add_folder("test1").await;
         config.add_folder("test2").await;
-        config.add_folder("test2//").await;
+        config.add_folder(r"test2\\").await;
         let folders = config.get_all_folders().await;
         db.close().await;
-        assert_eq!(vec!["test1/", "test2/"], folders);
+        assert_eq!(vec![r"test1\", r"test2\"], folders);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
