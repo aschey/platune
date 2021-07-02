@@ -232,8 +232,12 @@ mod tests {
         create_dir(music_dir.clone()).unwrap();
         config.add_folder(music_dir.to_str().unwrap()).await;
         let mut receiver = config.sync().await;
-        while let Some(_) = receiver.recv().await {}
+        let mut msgs = vec![];
+        while let Some(msg) = receiver.recv().await {
+            msgs.push(msg);
+        }
         db.close().await;
+        assert_eq!(vec![1.], msgs);
     }
 
     async fn setup(tempdir: &TempDir) -> (Database, Config) {

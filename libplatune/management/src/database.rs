@@ -158,9 +158,15 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
         match timeout(Duration::from_millis(1), finished_rx.recv()).await {
             Ok(Some(DirRead::Completed)) => {
                 dirs_processed += 1.;
+
+                // edge case - entire dir is empty
+                if total_dirs == 0. {
+                    tx.send(1.).await.unwrap();
+                    break;
+                }
                 tx.send(dirs_processed / total_dirs).await.unwrap();
 
-                if total_dirs <= dirs_processed {
+                if total_dirs == dirs_processed {
                     break;
                 }
             }
