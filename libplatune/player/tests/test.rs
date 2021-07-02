@@ -14,9 +14,9 @@ use libplatune_player::platune_player::PlayerEvent;
 use postage::{broadcast::Receiver, prelude::Stream};
 
 #[cfg(not(target_os = "windows"))]
-pub static SEPARATOR: &str = "/";
+static SEPARATOR: &str = "/";
 #[cfg(target_os = "windows")]
-pub static SEPARATOR: &str = "\\";
+static SEPARATOR: &str = "\\";
 
 struct SongInfo {
     path: String,
@@ -171,8 +171,6 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 async fn test_seek(num_songs: usize, seek_index: usize) {
-    // let num_songs = 1;
-    // let seek_index = 0;
     let (player, mut receiver, songs) = init_play(num_songs).await;
     let seek_time = 100;
     for (i, _) in songs.iter().enumerate() {

@@ -150,6 +150,8 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::create_dir;
+
     use crate::{config::Config, database::Database};
     use tempfile::TempDir;
 
@@ -220,6 +222,18 @@ mod tests {
         db.close().await;
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    pub async fn test_sync_empty() {
+        let tempdir = TempDir::new().unwrap();
+        let (db, config) = setup(&tempdir).await;
+        let music_dir = tempdir.path().join("configdir");
+        create_dir(music_dir.clone()).unwrap();
+        config.add_folder(music_dir.to_str().unwrap()).await;
+        let mut receiver = config.sync().await;
+        while let Some(_) = receiver.recv().await {}
+        db.close().await;
     }
 
     async fn setup(tempdir: &TempDir) -> (Database, Config) {

@@ -155,12 +155,12 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
     let mut total_dirs = 0.;
     let mut dirs_processed = 0.;
     loop {
-        match timeout(Duration::from_nanos(1), finished_rx.recv()).await {
+        match timeout(Duration::from_millis(1), finished_rx.recv()).await {
             Ok(Some(DirRead::Completed)) => {
                 dirs_processed += 1.;
                 tx.send(dirs_processed / total_dirs).await.unwrap();
 
-                if total_dirs == dirs_processed {
+                if total_dirs <= dirs_processed {
                     break;
                 }
             }
