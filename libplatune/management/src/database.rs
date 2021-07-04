@@ -46,15 +46,15 @@ struct SpellFixRes {
 }
 
 #[cfg(not(unix))]
-fn path_to_cstring(p: &Path) -> CString {
-    let s = p.to_str().unwrap();
+fn path_to_cstring<P: AsRef<Path>>(p: &P) -> CString {
+    let s = p.as_ref().to_str().unwrap();
     CString::new(s).unwrap()
 }
 
 #[cfg(unix)]
-fn path_to_cstring(p: &Path) -> CString {
+fn path_to_cstring<P: AsRef<Path>>(p: &P) -> CString {
     use std::os::unix::ffi::OsStrExt;
-    CString::new(p.as_os_str().as_bytes()).unwrap()
+    CString::new(p.as_ref().as_os_str().as_bytes()).unwrap()
 }
 
 unsafe fn errmsg_to_string(errmsg: *const c_char) -> String {
@@ -62,7 +62,7 @@ unsafe fn errmsg_to_string(errmsg: *const c_char) -> String {
     String::from_utf8_lossy(c_slice).into_owned()
 }
 
-fn load_extension(db: *mut sqlite3, dylib_path: &Path) {
+fn load_extension<P: AsRef<Path>>(db: *mut sqlite3, dylib_path: &P) {
     let dylib_str = path_to_cstring(dylib_path);
     unsafe {
         let mut errmsg: *mut c_char = ptr::null_mut();
