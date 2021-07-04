@@ -109,8 +109,8 @@ impl Database {
     pub async fn search(&self, query: &str, limit: i32) -> Vec<SearchRes> {
         // blss, bliss, bless
         let mut con = self.acquire_with_spellfix().await;
-        let special_chars = Regex::new(r"[^A-Za-z0-9\s]").unwrap();
-        let query = special_chars.replace(query, "").to_string();
+        let special_chars = Regex::new(r"[^A-Za-z0-9&\s]").unwrap();
+        let query = special_chars.replace(&query, "").to_string();
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(&query).collect_vec();
         let spellfix_query = terms
@@ -138,7 +138,7 @@ impl Database {
             corrected = corrected.bind(term);
         }
         let spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
-        let corrected_search = spellfix_res
+        let mut corrected_search = spellfix_res
             .into_iter()
             .group_by(|row| row.search.to_owned())
             .into_iter()
@@ -150,7 +150,7 @@ impl Database {
             })
             .join("OR ")
             + "*";
-
+        corrected_search = corrected_search.replace("&", "and");
         println!("{:?}", corrected_search);
 
         let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
@@ -553,7 +553,13 @@ async fn tags_task(
             }
             let acronym = words
                 .into_iter()
-                .map(|w| w.chars().next().unwrap().to_string().to_lowercase())
+                .map(|w| {
+                    if w == "and" {
+                        "&".to_owned()
+                    } else {
+                        w.chars().next().unwrap().to_string().to_lowercase()
+                    }
+                })
                 .collect_vec()
                 .join("");
             sqlx::query(
@@ -570,6 +576,24 @@ async fn tags_task(
             .execute(&mut tran)
             .await
             .unwrap();
+
+            if acronym.contains("&") {
+                let replaced = acronym.replace("&", "a");
+                sqlx::query(
+                    "
+                        insert into search_spellfix(word, soundslike)
+                        select $1, $2
+                        where  (
+                            select count(1) from search_spellfix where word = $1
+                        ) < 2
+                    ",
+                )
+                .bind(entry_value)
+                .bind(replaced)
+                .execute(&mut tran)
+                .await
+                .unwrap();
+            }
         }
 
         println!("committing");
