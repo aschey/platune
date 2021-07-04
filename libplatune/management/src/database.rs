@@ -136,7 +136,7 @@ impl Database {
             corrected = corrected.bind(term);
         }
         let spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
-        let corrected_search = spellfix_res
+        let mut corrected_search = spellfix_res
             .into_iter()
             .group_by(|row| row.search.to_owned())
             .into_iter()
@@ -147,6 +147,9 @@ impl Database {
                     .collect_vec()
             })
             .join("OR ");
+
+        let special_chars = Regex::new(r"[^A-Za-z0-9\s]").unwrap();
+        corrected_search = special_chars.replace(&corrected_search, " ").to_string();
 
         println!("{:?}", corrected_search);
 
@@ -359,8 +362,9 @@ async fn tags_task(
                     let title = metadata.title.trim();
                     let fingerprint = artist.to_owned() + album + title;
                     let _ = sqlx::query!(
-                        "insert or ignore into artist(artist_name) values(?);",
-                        artist
+                        "insert or ignore into artist(artist_name, created_date) values(?, ?);",
+                        artist,
+                        timestamp
                     )
                     .execute(&mut tran)
                     .await
@@ -373,16 +377,20 @@ async fn tags_task(
                         };
 
                     let _ = sqlx::query!(
-                        "insert or ignore into album_artist(album_artist_name) values(?);",
-                        album_artist
+                        "insert or ignore into album_artist(album_artist_name, created_date) values(?, ?);",
+                        album_artist,
+                        timestamp
                     )
                     .execute(&mut tran)
                     .await
                     .unwrap();
                     let _ =
                         sqlx::query!("
-                            insert or ignore into album(album_name, album_artist_id) 
-                            values(?, (select album_artist_id from album_artist where album_artist_name = ?));", album, album_artist)
+                            insert or ignore into album(album_name, album_artist_id, created_date) 
+                            values(?, (select album_artist_id from album_artist where album_artist_name = ?), ?);", 
+                            album,
+                            album_artist,
+                            timestamp)
                             .fetch_all(&mut tran)
                             .await
                             .unwrap();
@@ -392,6 +400,7 @@ async fn tags_task(
                         insert into song(
                             song_path,
                             modified_date,
+                            created_date,
                             last_scanned_date,
                             artist_id,
                             song_title,
@@ -409,7 +418,7 @@ async fn tags_task(
                             )
                             values
                             (
-                                ?, ?, ?,
+                                ?, ?, ?, ?,
                                 (select artist_id from artist where artist_name = ?), 
                                 ?, 
                                 (
@@ -423,6 +432,7 @@ async fn tags_task(
                             set last_scanned_date = ?;
                         ",
                         path,
+                        timestamp,
                         timestamp,
                         timestamp,
                         artist,
@@ -522,6 +532,63 @@ async fn tags_task(
         .execute(&mut tran)
         .await
         .unwrap();
+
+        let long_vals = sqlx::query!(
+            "
+            select entry_value
+            from search_index
+            where length(entry_value) >= 20
+            and entry_type != 'song'
+            "
+        )
+        .fetch_all(&mut tran)
+        .await
+        .unwrap();
+        let re = Regex::new(r"\s+").unwrap();
+        for val in long_vals {
+            let entry_value = val.entry_value.unwrap();
+            let words = re.split(&entry_value).collect_vec();
+            if words.len() < 3 {
+                continue;
+            }
+            let acronym = words
+                .into_iter()
+                .map(|w| w.chars().next().unwrap().to_string().to_lowercase())
+                .collect_vec()
+                .join("");
+            sqlx::query(
+                "
+                    insert into search_spellfix(word, soundslike)
+                    select $1, $2
+                    where not exists (
+                        select 1 from search_spellfix where word = $1
+                    )
+                ",
+            )
+            .bind(entry_value.clone())
+            .bind(acronym.clone())
+            .execute(&mut tran)
+            .await
+            .unwrap();
+
+            if acronym.contains("&") {
+                let replaced = acronym.replace("&", "a");
+                sqlx::query(
+                    "
+                        insert into search_spellfix(word, soundslike)
+                        select $1, $2
+                        where  (
+                            select count(1) from search_spellfix where word = $1
+                        ) < 2
+                    ",
+                )
+                .bind(entry_value)
+                .bind(replaced)
+                .execute(&mut tran)
+                .await
+                .unwrap();
+            }
+        }
 
         println!("committing");
         tran.commit().await.unwrap();

@@ -1,7 +1,6 @@
 CREATE TABLE IF NOT EXISTS song (
     song_id INTEGER PRIMARY KEY NOT NULL,
     song_path TEXT NOT NULL UNIQUE,
-    modified_date INTEGER NOT NULL,
     last_scanned_date INTEGER NOT NULL,
     artist_id INTEGER NOT NULL,
     song_title TEXT NOT NULL,
@@ -18,6 +17,8 @@ CREATE TABLE IF NOT EXISTS song (
     bit_rate INTEGER NOT NULL,
     album_art_path TEXT NULL,
     fingerprint TEXT NOT NULL,
+    created_date INTEGER NOT NULL,
+    modified_date INTEGER NOT NULL,
     FOREIGN KEY(artist_id) REFERENCES artist(artist_id),
     FOREIGN KEY(album_id) REFERENCES album(album_id)
 )

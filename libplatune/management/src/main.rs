@@ -12,13 +12,23 @@ async fn main() {
     //db.migrate().await;
     let now = Instant::now();
 
-    println!("{:?}", db.search("between", 10).await);
+    println!("{:?}", db.search("tdagarb", 10).await);
 
-    // let config = Config::new(&db);
-    // config.register_drive("C:\\").await;
-    // config.add_folder("C:\\shared_files\\Music").await;
+    let config = Config::new(&db);
+    // #[cfg(target_os = "windows")]
+    // {
+    //     config.register_drive("C:\\").await;
+    //     config.add_folder("C:\\shared_files\\Music").await;
+    // }
+    // #[cfg(target_os = "linux")]
+    // {
+    //     config.register_drive("/home/aschey/windows").await;
+    //     config
+    //         .add_folder("/home/aschey/windows/shared_files/Music")
+    //         .await;
+    // }
 
-    // let now = Instant::now();
+    //let now = Instant::now();
     // let mut rx = config.sync().await;
     // while let Some(_) = rx.recv().await {}
 

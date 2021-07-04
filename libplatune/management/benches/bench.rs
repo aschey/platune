@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-
 use criterion::Criterion;
 use criterion::{criterion_group, criterion_main};
 

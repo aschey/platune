@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS artist (
     artist_id INTEGER PRIMARY KEY NOT NULL,
-    artist_name TEXT NOT NULL UNIQUE
+    artist_name TEXT NOT NULL UNIQUE,
+    created_date INTEGER NOT NULL
 )
