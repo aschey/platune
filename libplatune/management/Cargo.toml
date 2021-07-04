@@ -21,7 +21,9 @@ name = "bench"
 [dependencies]
 directories = "3.0.2"
 dotenv = "0.15.0"
+itertools = "0.10.1"
 katatsuki = {git = "https://github.com/aschey/seiri", rev = "041c76dfc9614568a3ad56c7a6b322b3837861a1"}
+libsqlite3-sys = "0.22.2"
 log = "0.4.14"
 postage = "0.4.1"
 regex = "1.5.4"

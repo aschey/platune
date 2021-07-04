@@ -150,7 +150,7 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use std::fs::create_dir;
+    use std::fs::{self, create_dir, create_dir_all};
 
     use crate::{config::Config, database::Database};
     use tempfile::TempDir;
@@ -238,6 +238,40 @@ mod tests {
         }
         db.close().await;
         assert_eq!(vec![1.], msgs);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    pub async fn test_sync_basic() {
+        let tempdir = TempDir::new().unwrap();
+        let (db, config) = setup(&tempdir).await;
+        let music_dir = tempdir.path().join("configdir");
+        let inner_dir = music_dir.join("folder1");
+        create_dir_all(inner_dir.clone()).unwrap();
+
+        fs::copy(
+            "../player/tests/assets/test.mp3",
+            inner_dir.join("test.mp3"),
+        )
+        .unwrap();
+        fs::copy(
+            "../player/tests/assets/test2.mp3",
+            inner_dir.join("test2.mp3"),
+        )
+        .unwrap();
+        fs::copy(
+            "../player/tests/assets/test3.mp3",
+            inner_dir.join("test3.mp3"),
+        )
+        .unwrap();
+
+        config.add_folder(music_dir.to_str().unwrap()).await;
+        let mut receiver = config.sync().await;
+        let mut msgs = vec![];
+        while let Some(msg) = receiver.recv().await {
+            msgs.push(msg);
+        }
+        assert_eq!(vec![0., 1.], msgs);
+        db.close().await;
     }
 
     async fn setup(tempdir: &TempDir) -> (Database, Config) {

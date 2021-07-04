@@ -1,4 +1,11 @@
-CREATE VIRTUAL TABLE search_index USING fts5(entry_value, entry_type, assoc_id);
+CREATE VIRTUAL TABLE search_index USING fts5(
+    entry_value,
+    entry_type unindexed,
+    assoc_id unindexed,
+    tokenize = 'unicode61 remove_diacritics 2'
+);
+CREATE VIRTUAL TABLE search_vocab USING fts5vocab(search_index, row);
+CREATE VIRTUAL TABLE search_spellfix USING spellfix1;
 -- Song
 CREATE TRIGGER after_song_insert
 AFTER

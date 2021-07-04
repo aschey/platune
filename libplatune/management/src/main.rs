@@ -9,13 +9,16 @@ async fn main() {
         .unwrap()
         .replace("sqlite://", "");
     let db = Database::connect(path, true).await;
-    let config = Config::new(&db);
-    config.register_drive("C:\\").await;
-    config.add_folder("C:\\shared_files\\Music").await;
+    //db.migrate().await;
+    println!("{:?}", db.search("between", 10).await);
 
-    let now = Instant::now();
-    let mut rx = config.sync().await;
-    while let Some(_) = rx.recv().await {}
+    // let config = Config::new(&db);
+    // config.register_drive("C:\\").await;
+    // config.add_folder("C:\\shared_files\\Music").await;
 
-    println!("{:?}", now.elapsed());
+    // let now = Instant::now();
+    // let mut rx = config.sync().await;
+    // while let Some(_) = rx.recv().await {}
+
+    // println!("{:?}", now.elapsed());
 }

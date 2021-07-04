@@ -1,9 +1,6 @@
-use std::{
-    path::{Path, PathBuf},
-    time::{Duration, SystemTime},
-};
-
+use itertools::Itertools;
 use katatsuki::Track;
+use libsqlite3_sys::{sqlite3, sqlite3_load_extension};
 use log::LevelFilter;
 use postage::{
     dispatch::{self, Receiver, Sender},
@@ -11,11 +8,69 @@ use postage::{
     prelude::Stream,
     sink::Sink,
 };
-use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
+use regex::Regex;
+use sqlx::{
+    migrate::Migrate, pool::PoolConnection, sqlite::SqliteConnectOptions, Acquire, ConnectOptions,
+    Connection, Pool, Sqlite, SqliteConnection, SqlitePool, Transaction,
+};
+use std::{
+    ffi::{CStr, CString},
+    ops::{Deref, DerefMut},
+    os::raw::c_char,
+    ptr,
+};
+use std::{
+    path::{Path, PathBuf},
+    time::{Duration, SystemTime},
+};
 use tokio::{task::JoinHandle, time::timeout};
 
 pub struct Database {
     pool: Pool<Sqlite>,
+    opts: SqliteConnectOptions,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct SearchRes {
+    formatted_entry: String,
+    entry_type: String,
+    artist: Option<String>,
+    correlation_id: i32,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct SpellFixRes {
+    word: String,
+    search: String,
+}
+
+#[cfg(not(unix))]
+fn path_to_cstring(p: &Path) -> CString {
+    let s = p.to_str().unwrap();
+    CString::new(s).unwrap()
+}
+
+#[cfg(unix)]
+fn path_to_cstring(&self, p: &Path) -> Result<CString> {
+    use std::os::unix::ffi::OsStrExt;
+    Ok(CString::new(p.as_os_str().as_bytes())?)
+}
+
+unsafe fn errmsg_to_string(errmsg: *const c_char) -> String {
+    let c_slice = CStr::from_ptr(errmsg).to_bytes();
+    String::from_utf8_lossy(c_slice).into_owned()
+}
+
+fn load_extension(db: *mut sqlite3, dylib_path: &Path) {
+    let dylib_str = path_to_cstring(dylib_path);
+    unsafe {
+        let mut errmsg: *mut c_char = ptr::null_mut();
+
+        let res = sqlite3_load_extension(db, dylib_str.as_ptr(), ptr::null(), &mut errmsg);
+        if res != 0 {
+            println!("{}", errmsg_to_string(errmsg));
+        }
+    }
 }
 
 impl Database {
@@ -27,23 +82,107 @@ impl Database {
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
             .to_owned();
 
-        let pool = SqlitePool::connect_with(opts).await.unwrap();
-        Self { pool }
-    }
+        let pool = SqlitePool::connect_with(opts.clone()).await.unwrap();
 
-    pub async fn from_pool(pool: Pool<Sqlite>) -> Self {
-        Self { pool }
+        Self { pool, opts }
     }
 
     pub async fn migrate(&self) {
-        sqlx::migrate!("./migrations")
-            .run(&self.pool)
-            .await
-            .unwrap();
+        let mut con = SqliteConnection::connect_with(&self.opts).await.unwrap();
+        let handle = con.as_raw_handle();
+        load_extension(
+            handle,
+            &Path::new(r"C:\Users\asche\Downloads\sqlite-src-3360000\ext\misc\spellfix.dll"),
+        );
+
+        sqlx::migrate!("./migrations").run(&mut con).await.unwrap();
+
+        println!("done");
     }
 
     pub async fn close(&self) {
         self.pool.close().await;
+    }
+
+    pub async fn search(&self, query: &str, limit: i32) -> Vec<SearchRes> {
+        // blss, bliss, bless
+        let mut con = self.pool.acquire().await.unwrap();
+        let handle = con.as_raw_handle();
+        load_extension(
+            handle,
+            &Path::new(r"C:\Users\asche\Downloads\sqlite-src-3360000\ext\misc\spellfix.dll"),
+        );
+
+        let re = Regex::new(r"\s+").unwrap();
+        let terms = re.split(query).collect::<Vec<_>>();
+        let spellfix_query = terms
+            .iter()
+            .enumerate()
+            .map(|(i, _)| {
+                format!(
+                    "select word, ${0} as search from search_spellfix 
+                    where word match ${0}
+                    and distance = (
+                        select distance 
+                        from search_spellfix 
+                        where word match ${0}
+                        order by distance 
+                        limit 1
+                    )",
+                    i + 1
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" union all ");
+
+        let mut corrected = sqlx::query_as::<_, SpellFixRes>(&spellfix_query);
+        for term in terms {
+            corrected = corrected.bind(term);
+        }
+        let spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
+        let corrected_search = spellfix_res
+            .into_iter()
+            .group_by(|row| row.search.to_owned())
+            .into_iter()
+            .map(|(_, val)| val.map(|v| v.word + " ").collect::<Vec<_>>())
+            .fold(vec!["".to_owned()], |a, b| {
+                a.into_iter()
+                    .flat_map(|x| b.iter().map(move |y| x.clone() + &y))
+                    .collect_vec()
+            })
+            .join("OR ");
+
+        println!("{:?}", corrected_search);
+
+        let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
+        let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
+
+        let res = sqlx::query_as::<_, SearchRes>(&format!("
+        WITH CTE AS (
+            SELECT DISTINCT formatted_entry, entry_type, rank,
+            CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
+            {0} artist,
+            ROW_NUMBER() OVER (PARTITION BY entry_value, {0}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
+            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{', '}}') formatted_entry, rank from search_index where entry_value match ?) a
+            LEFT OUTER JOIN song s on s.song_id = assoc_id
+            LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
+            LEFT OUTER JOIN album al on al.album_id = assoc_id
+            LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+            ORDER BY {1}
+            LIMIT ?
+        )
+        SELECT formatted_entry, entry_type, artist, correlation_id FROM cte
+        WHERE row_num = 1
+        ORDER BY {1}
+        LIMIT ?", artist_select, order_clause))
+        .bind(corrected_search)
+        .bind(limit * 2)
+        .bind(limit)
+        .fetch_all(&mut con)
+        .await
+        .unwrap();
+
+        return res;
     }
 
     pub(crate) async fn sync(&self, folders: Vec<String>) -> tokio::sync::mpsc::Receiver<f32> {
@@ -128,6 +267,7 @@ impl Clone for Database {
     fn clone(&self) -> Self {
         Self {
             pool: self.pool.clone(),
+            opts: self.opts.clone(),
         }
     }
 }
@@ -138,7 +278,7 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
     let (mut dispatch_tx, _) = dispatch::channel(10000);
     let (finished_tx, mut finished_rx) = mpsc::channel(10000);
     let (mut tags_tx, tags_rx) = mpsc::channel(10000);
-    let tags_handle = tags_task(pool, tags_rx);
+    let tags_handle = tags_task(pool, tags_rx).await;
     let mut handles = vec![];
     for _ in 0..num_tasks {
         handles.push(spawn_task(
@@ -202,17 +342,21 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
     tags_handle.await.unwrap();
 }
 
-fn tags_task(
+async fn tags_task(
     pool: Pool<Sqlite>,
     mut tags_rx: mpsc::Receiver<Option<(Track, String)>>,
 ) -> JoinHandle<()> {
+    let mut tran = pool.begin().await.unwrap();
+    let handle = tran.as_raw_handle();
+    load_extension(
+        handle,
+        &Path::new(r"C:\Users\asche\Downloads\sqlite-src-3360000\ext\misc\spellfix.dll"),
+    );
     tokio::spawn(async move {
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs() as u32;
-
-        let mut tran = pool.begin().await.unwrap();
 
         while let Some(metadata) = tags_rx.recv().await {
             match metadata {
@@ -357,6 +501,35 @@ fn tags_task(
             .fetch_all(&mut tran)
             .await
             .unwrap();
+
+        sqlx::query(
+            "
+        insert into search_spellfix(word)
+        select term
+        from search_vocab
+        where term not in (
+            select word
+            from search_spellfix
+        )
+        ",
+        )
+        .execute(&mut tran)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "
+        delete from search_spellfix
+        where word NOT IN (
+            select term
+            from search_vocab
+        )
+        ",
+        )
+        .execute(&mut tran)
+        .await
+        .unwrap();
+
         println!("committing");
         tran.commit().await.unwrap();
         println!("done");
