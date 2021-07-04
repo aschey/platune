@@ -12,7 +12,7 @@ async fn main() {
     //db.migrate().await;
     let now = Instant::now();
 
-    println!("{:?}", db.search("tdagarb", 10).await);
+    println!("{:?}", db.search("the devil and go", 10).await);
 
     let config = Config::new(&db);
     // #[cfg(target_os = "windows")]

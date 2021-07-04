@@ -109,8 +109,10 @@ impl Database {
     pub async fn search(&self, query: &str, limit: i32) -> Vec<SearchRes> {
         // blss, bliss, bless
         let mut con = self.acquire_with_spellfix().await;
+        let special_chars = Regex::new(r"[^A-Za-z0-9\s]").unwrap();
+        let query = special_chars.replace(query, "").to_string();
         let re = Regex::new(r"\s+").unwrap();
-        let terms = re.split(query).collect::<Vec<_>>();
+        let terms = re.split(&query).collect_vec();
         let spellfix_query = terms
             .iter()
             .enumerate()
@@ -136,7 +138,7 @@ impl Database {
             corrected = corrected.bind(term);
         }
         let spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
-        let mut corrected_search = spellfix_res
+        let corrected_search = spellfix_res
             .into_iter()
             .group_by(|row| row.search.to_owned())
             .into_iter()
@@ -146,10 +148,8 @@ impl Database {
                     .flat_map(|x| b.iter().map(move |y| x.clone() + &y))
                     .collect_vec()
             })
-            .join("OR ");
-
-        let special_chars = Regex::new(r"[^A-Za-z0-9\s]").unwrap();
-        corrected_search = special_chars.replace(&corrected_search, " ").to_string();
+            .join("OR ")
+            + "*";
 
         println!("{:?}", corrected_search);
 
@@ -534,12 +534,12 @@ async fn tags_task(
         .unwrap();
 
         let long_vals = sqlx::query!(
-            "
-            select entry_value
+            r#"
+            select entry_value as "entry_value: String"
             from search_index
             where length(entry_value) >= 20
             and entry_type != 'song'
-            "
+            "#
         )
         .fetch_all(&mut tran)
         .await
@@ -570,24 +570,6 @@ async fn tags_task(
             .execute(&mut tran)
             .await
             .unwrap();
-
-            if acronym.contains("&") {
-                let replaced = acronym.replace("&", "a");
-                sqlx::query(
-                    "
-                        insert into search_spellfix(word, soundslike)
-                        select $1, $2
-                        where  (
-                            select count(1) from search_spellfix where word = $1
-                        ) < 2
-                    ",
-                )
-                .bind(entry_value)
-                .bind(replaced)
-                .execute(&mut tran)
-                .await
-                .unwrap();
-            }
         }
 
         println!("committing");
