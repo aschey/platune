@@ -14,6 +14,7 @@ use sqlx::{
     Connection, Pool, Sqlite, SqliteConnection, SqlitePool, Transaction,
 };
 use std::{
+    env,
     ffi::{CStr, CString},
     ops::{Deref, DerefMut},
     os::raw::c_char,
@@ -87,13 +88,14 @@ impl Database {
         Self { pool, opts }
     }
 
+    async fn acquire_with_spellfix(&self) -> PoolConnection<Sqlite> {
+        let mut con = self.pool.acquire().await.unwrap();
+        load_spellfix(&mut con);
+        con
+    }
+
     pub async fn migrate(&self) {
-        let mut con = SqliteConnection::connect_with(&self.opts).await.unwrap();
-        let handle = con.as_raw_handle();
-        load_extension(
-            handle,
-            &Path::new(r"C:\Users\asche\Downloads\sqlite-src-3360000\ext\misc\spellfix.dll"),
-        );
+        let mut con = self.acquire_with_spellfix().await;
 
         sqlx::migrate!("./migrations").run(&mut con).await.unwrap();
 
@@ -106,13 +108,7 @@ impl Database {
 
     pub async fn search(&self, query: &str, limit: i32) -> Vec<SearchRes> {
         // blss, bliss, bless
-        let mut con = self.pool.acquire().await.unwrap();
-        let handle = con.as_raw_handle();
-        load_extension(
-            handle,
-            &Path::new(r"C:\Users\asche\Downloads\sqlite-src-3360000\ext\misc\spellfix.dll"),
-        );
-
+        let mut con = self.acquire_with_spellfix().await;
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(query).collect::<Vec<_>>();
         let spellfix_query = terms
@@ -347,11 +343,8 @@ async fn tags_task(
     mut tags_rx: mpsc::Receiver<Option<(Track, String)>>,
 ) -> JoinHandle<()> {
     let mut tran = pool.begin().await.unwrap();
-    let handle = tran.as_raw_handle();
-    load_extension(
-        handle,
-        &Path::new(r"C:\Users\asche\Downloads\sqlite-src-3360000\ext\misc\spellfix.dll"),
-    );
+    load_spellfix(&mut tran);
+
     tokio::spawn(async move {
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -534,6 +527,14 @@ async fn tags_task(
         tran.commit().await.unwrap();
         println!("done");
     })
+}
+
+fn load_spellfix(con: &mut SqliteConnection) {
+    let handle = con.as_raw_handle();
+    load_extension(
+        handle,
+        &Path::new(&format!("./assets/{}/spellfix.dll", env::consts::OS)),
+    );
 }
 
 fn spawn_task(

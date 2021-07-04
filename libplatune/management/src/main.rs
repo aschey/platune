@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{ops::Range, time::Instant};
 
 use libplatune_management::{config::Config, database::Database};
 
@@ -10,6 +10,8 @@ async fn main() {
         .replace("sqlite://", "");
     let db = Database::connect(path, true).await;
     //db.migrate().await;
+    let now = Instant::now();
+
     println!("{:?}", db.search("between", 10).await);
 
     // let config = Config::new(&db);
@@ -20,5 +22,5 @@ async fn main() {
     // let mut rx = config.sync().await;
     // while let Some(_) = rx.recv().await {}
 
-    // println!("{:?}", now.elapsed());
+    println!("{:?}", now.elapsed());
 }
