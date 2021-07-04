@@ -52,9 +52,9 @@ fn path_to_cstring(p: &Path) -> CString {
 }
 
 #[cfg(unix)]
-fn path_to_cstring(&self, p: &Path) -> Result<CString> {
+fn path_to_cstring(p: &Path) -> CString {
     use std::os::unix::ffi::OsStrExt;
-    Ok(CString::new(p.as_os_str().as_bytes())?)
+    CString::new(p.as_os_str().as_bytes()).unwrap()
 }
 
 unsafe fn errmsg_to_string(errmsg: *const c_char) -> String {
@@ -531,10 +531,11 @@ async fn tags_task(
 
 fn load_spellfix(con: &mut SqliteConnection) {
     let handle = con.as_raw_handle();
-    load_extension(
-        handle,
-        &Path::new(&format!("./assets/{}/spellfix.dll", env::consts::OS)),
-    );
+    #[cfg(target_os = "linux")]
+    let path = "./assets/linux/spellfix.o";
+    #[cfg(target_os = "windows")]
+    let path = "./assets/windows/spellfix.dll";
+    load_extension(handle, &Path::new(path));
 }
 
 fn spawn_task(
