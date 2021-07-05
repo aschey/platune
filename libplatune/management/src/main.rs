@@ -9,12 +9,13 @@ async fn main() {
         .unwrap()
         .replace("sqlite://", "");
     let db = Database::connect(path, true).await;
-    //db.migrate().await;
+    db.migrate().await;
     let now = Instant::now();
 
     println!("{:?}", db.search("td&g", 10).await);
 
     let config = Config::new(&db);
+
     // #[cfg(target_os = "windows")]
     // {
     //     config.register_drive("C:\\").await;

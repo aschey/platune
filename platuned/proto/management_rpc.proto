@@ -13,17 +13,35 @@ service Management {
   rpc AddFolders(FoldersMessage) returns (google.protobuf.Empty) {}
   rpc GetAllFolders(google.protobuf.Empty) returns (FoldersMessage) {}
   rpc RegisterMount(RegisteredMountMessage) returns (google.protobuf.Empty) {}
-  rpc GetRegisteredMount(google.protobuf.Empty) returns (RegisteredMountMessage) {}
+  rpc GetRegisteredMount(google.protobuf.Empty)
+      returns (RegisteredMountMessage) {}
+  rpc Search(stream SearchRequest) returns (stream SearchResponse) {}
 }
 
-message Progress {
-  float percentage = 1;
+message Progress { float percentage = 1; }
+
+message FoldersMessage { repeated string folders = 1; }
+
+message RegisteredMountMessage { string mount = 1; }
+
+message SearchRequest {
+  string query = 1;
+  optional string start_separator = 2;
+  optional string end_separator = 3;
 }
 
-message FoldersMessage {
-  repeated string folders = 1;
+enum EntryType {
+  ALBUM = 0;
+  SONG = 1;
+  ARTIST = 2;
+  ALBUM_ARTIST = 3;
 }
 
-message RegisteredMountMessage {
-  string mount = 1;
+message SearchResult {
+  string result = 1;
+  EntryType entry_type = 2;
+  optional string artist = 3;
+  int32 correlation_id = 4;
 }
+
+message SearchResponse { repeated SearchResult results = 1; }

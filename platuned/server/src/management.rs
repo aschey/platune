@@ -2,14 +2,18 @@ use crate::management_server::Management;
 
 use crate::rpc::*;
 use std::pin::Pin;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
+use tokio::sync::mpsc;
 use tonic::{Response, Status};
 
 pub struct ManagementImpl {
     config: Config,
+    db: Database,
 }
 
 impl ManagementImpl {
@@ -19,7 +23,7 @@ impl ManagementImpl {
         let db = Database::connect(path, true).await;
         db.migrate().await;
         let config = Config::new(&db);
-        ManagementImpl { config }
+        ManagementImpl { config, db }
     }
 }
 
@@ -81,5 +85,40 @@ impl Management for ManagementImpl {
         Ok(Response::new(RegisteredMountMessage {
             mount: mount.unwrap_or_default(),
         }))
+    }
+
+    type SearchStream = Pin<
+        Box<dyn futures::Stream<Item = Result<SearchResponse, Status>> + Send + Sync + 'static>,
+    >;
+
+    async fn search(
+        &self,
+        request: tonic::Request<tonic::Streaming<crate::rpc::SearchRequest>>,
+    ) -> Result<tonic::Response<Self::SearchStream>, tonic::Status> {
+        let mut messages = request.into_inner();
+        let db = self.db.clone();
+        let (tx, rx) = mpsc::channel(32);
+
+        tokio::spawn(async move {
+            while let Some(msg) = messages.next().await {
+                let msg = msg.unwrap();
+                tx.send(db.search(&msg.query, 10).await).await.unwrap();
+            }
+        });
+
+        Ok(Response::new(Box::pin({
+            tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| {
+                let results = r
+                    .into_iter()
+                    .map(|res| SearchResult {
+                        result: res.formatted_entry,
+                        entry_type: 0,
+                        artist: res.artist,
+                        correlation_id: res.correlation_id,
+                    })
+                    .collect();
+                Ok(SearchResponse { results })
+            })
+        })))
     }
 }

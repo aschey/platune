@@ -33,10 +33,10 @@ pub struct Database {
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct SearchRes {
-    formatted_entry: String,
-    entry_type: String,
-    artist: Option<String>,
-    correlation_id: i32,
+    pub formatted_entry: String,
+    pub entry_type: String,
+    pub artist: Option<String>,
+    pub correlation_id: i32,
 }
 
 #[derive(Debug, sqlx::FromRow)]

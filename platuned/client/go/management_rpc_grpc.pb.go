@@ -24,6 +24,7 @@ type ManagementClient interface {
 	GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*FoldersMessage, error)
 	RegisterMount(ctx context.Context, in *RegisteredMountMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RegisteredMountMessage, error)
+	Search(ctx context.Context, opts ...grpc.CallOption) (Management_SearchClient, error)
 }
 
 type managementClient struct {
@@ -102,6 +103,37 @@ func (c *managementClient) GetRegisteredMount(ctx context.Context, in *emptypb.E
 	return out, nil
 }
 
+func (c *managementClient) Search(ctx context.Context, opts ...grpc.CallOption) (Management_SearchClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Management_ServiceDesc.Streams[1], "/management_rpc.Management/Search", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &managementSearchClient{stream}
+	return x, nil
+}
+
+type Management_SearchClient interface {
+	Send(*SearchRequest) error
+	Recv() (*SearchResponse, error)
+	grpc.ClientStream
+}
+
+type managementSearchClient struct {
+	grpc.ClientStream
+}
+
+func (x *managementSearchClient) Send(m *SearchRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *managementSearchClient) Recv() (*SearchResponse, error) {
+	m := new(SearchResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ManagementServer is the server API for Management service.
 // All implementations must embed UnimplementedManagementServer
 // for forward compatibility
@@ -111,6 +143,7 @@ type ManagementServer interface {
 	GetAllFolders(context.Context, *emptypb.Empty) (*FoldersMessage, error)
 	RegisterMount(context.Context, *RegisteredMountMessage) (*emptypb.Empty, error)
 	GetRegisteredMount(context.Context, *emptypb.Empty) (*RegisteredMountMessage, error)
+	Search(Management_SearchServer) error
 	mustEmbedUnimplementedManagementServer()
 }
 
@@ -132,6 +165,9 @@ func (UnimplementedManagementServer) RegisterMount(context.Context, *RegisteredM
 }
 func (UnimplementedManagementServer) GetRegisteredMount(context.Context, *emptypb.Empty) (*RegisteredMountMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRegisteredMount not implemented")
+}
+func (UnimplementedManagementServer) Search(Management_SearchServer) error {
+	return status.Errorf(codes.Unimplemented, "method Search not implemented")
 }
 func (UnimplementedManagementServer) mustEmbedUnimplementedManagementServer() {}
 
@@ -239,6 +275,32 @@ func _Management_GetRegisteredMount_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Management_Search_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ManagementServer).Search(&managementSearchServer{stream})
+}
+
+type Management_SearchServer interface {
+	Send(*SearchResponse) error
+	Recv() (*SearchRequest, error)
+	grpc.ServerStream
+}
+
+type managementSearchServer struct {
+	grpc.ServerStream
+}
+
+func (x *managementSearchServer) Send(m *SearchResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *managementSearchServer) Recv() (*SearchRequest, error) {
+	m := new(SearchRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Management_ServiceDesc is the grpc.ServiceDesc for Management service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -268,6 +330,12 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "Sync",
 			Handler:       _Management_Sync_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "Search",
+			Handler:       _Management_Search_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "management_rpc.proto",
