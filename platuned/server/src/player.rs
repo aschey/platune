@@ -80,7 +80,7 @@ impl Player for PlayerImpl {
 
     async fn subscribe_events(
         &self,
-        _: tonic::Request<()>,
+        _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut ended_rx = self.event_rx.clone();
         let (tx, rx) = tokio::sync::mpsc::channel(32);

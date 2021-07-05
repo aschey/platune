@@ -9,6 +9,8 @@ use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use tokio::sync::mpsc;
+use tonic::Request;
+use tonic::Streaming;
 use tonic::{Response, Status};
 
 pub struct ManagementImpl {
@@ -32,20 +34,14 @@ impl Management for ManagementImpl {
     type SyncStream =
         Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
 
-    async fn sync(
-        &self,
-        _: tonic::Request<()>,
-    ) -> Result<tonic::Response<Self::SyncStream>, tonic::Status> {
+    async fn sync(&self, _: Request<()>) -> Result<Response<Self::SyncStream>, Status> {
         let rx = self.config.sync().await;
         Ok(Response::new(Box::pin(
             tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| Ok(Progress { percentage: r })),
         )))
     }
 
-    async fn add_folders(
-        &self,
-        request: tonic::Request<crate::rpc::FoldersMessage>,
-    ) -> Result<tonic::Response<()>, tonic::Status> {
+    async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
         self.config
             .add_folders(
                 request
@@ -59,18 +55,15 @@ impl Management for ManagementImpl {
         Ok(Response::new(()))
     }
 
-    async fn get_all_folders(
-        &self,
-        _: tonic::Request<()>,
-    ) -> Result<tonic::Response<crate::rpc::FoldersMessage>, tonic::Status> {
+    async fn get_all_folders(&self, _: Request<()>) -> Result<Response<FoldersMessage>, Status> {
         let folders = self.config.get_all_folders().await;
         Ok(Response::new(FoldersMessage { folders }))
     }
 
     async fn register_mount(
         &self,
-        request: tonic::Request<crate::rpc::RegisteredMountMessage>,
-    ) -> Result<tonic::Response<()>, tonic::Status> {
+        request: Request<RegisteredMountMessage>,
+    ) -> Result<Response<()>, Status> {
         self.config
             .register_drive(&request.into_inner().mount)
             .await;
@@ -79,8 +72,8 @@ impl Management for ManagementImpl {
 
     async fn get_registered_mount(
         &self,
-        _: tonic::Request<()>,
-    ) -> Result<tonic::Response<crate::rpc::RegisteredMountMessage>, tonic::Status> {
+        _: Request<()>,
+    ) -> Result<Response<RegisteredMountMessage>, Status> {
         let mount = self.config.get_registered_mount().await;
         Ok(Response::new(RegisteredMountMessage {
             mount: mount.unwrap_or_default(),
@@ -93,8 +86,8 @@ impl Management for ManagementImpl {
 
     async fn search(
         &self,
-        request: tonic::Request<tonic::Streaming<crate::rpc::SearchRequest>>,
-    ) -> Result<tonic::Response<Self::SearchStream>, tonic::Status> {
+        request: Request<Streaming<SearchRequest>>,
+    ) -> Result<Response<Self::SearchStream>, Status> {
         let mut messages = request.into_inner();
         let db = self.db.clone();
         let (tx, rx) = mpsc::channel(32);
