@@ -15,7 +15,7 @@ async fn main() {
 
     println!(
         "{:?}",
-        db.search("road trip", 10)
+        db.search("blss", 10)
             .await
             .iter()
             .map(|v| v.get_description())

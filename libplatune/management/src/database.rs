@@ -236,16 +236,16 @@ impl Database {
             .enumerate()
             .map(|(i, _)| {
                 format!(
-                    "select word, ${0} as search from search_spellfix 
-                    where word match ${0}
-                    and distance = (
-                        select distance 
-                        from search_spellfix 
+                    "
+                    select * from (
+                        select distinct word, ${0} as search from search_spellfix 
                         where word match ${0}
-                        and score < 150
-                        order by distance 
-                        limit 1
-                    )",
+                        and (
+                            (word like '% %' and distance * 1.0 / (length(word) - length(replace(word, ' ', ''))) < 15) or 
+                            (word not like '% %' and editdist3(${0}, word) * 1.0 / length(word) < 50)
+                        )
+                        order by distance
+                        limit 5)",
                     i + 1
                 )
             })
