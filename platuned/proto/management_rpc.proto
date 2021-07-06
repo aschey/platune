@@ -38,10 +38,11 @@ enum EntryType {
 }
 
 message SearchResult {
-  string result = 1;
+  string entry = 1;
   EntryType entry_type = 2;
   optional string artist = 3;
   int32 correlation_id = 4;
+  string description = 5;
 }
 
 message SearchResponse { repeated SearchResult results = 1; }

@@ -1,13 +1,9 @@
 use crate::management_server::Management;
-
 use crate::rpc::*;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::sync::Mutex;
-
 use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
+use std::pin::Pin;
 use tokio::sync::mpsc;
 use tonic::Request;
 use tonic::Streaming;
@@ -104,8 +100,16 @@ impl Management for ManagementImpl {
                 let results = r
                     .into_iter()
                     .map(|res| SearchResult {
-                        result: res.formatted_entry,
-                        entry_type: 0,
+                        description: res.get_description(),
+                        entry: res.entry,
+                        entry_type: (match &res.entry_type[..] {
+                            "song" => EntryType::Song,
+                            "artist" => EntryType::Artist,
+                            "album_artist" => EntryType::AlbumArtist,
+                            "album" => EntryType::Album,
+                            _ => unreachable!("Unknown entry type"),
+                        })
+                        .into(),
                         artist: res.artist,
                         correlation_id: res.correlation_id,
                     })

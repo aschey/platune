@@ -106,6 +106,16 @@ func (p *PlatuneClient) Sync() (platune.Management_SyncClient, context.CancelFun
 	return sync, cancel
 }
 
+func (p *PlatuneClient) Search() platune.Management_SearchClient {
+	ctx := context.Background()
+	search, err := p.managementClient.Search(ctx)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return search
+}
+
 func (p *PlatuneClient) GetAllFolders() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	allFolders, err := p.managementClient.GetAllFolders(ctx, &emptypb.Empty{})

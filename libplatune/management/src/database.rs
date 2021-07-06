@@ -8,12 +8,13 @@ use postage::{
     prelude::Stream,
     sink::Sink,
 };
-use regex::Regex;
+use regex::{Regex, RegexBuilder};
 use sqlx::{
     migrate::Migrate, pool::PoolConnection, sqlite::SqliteConnectOptions, Acquire, ConnectOptions,
     Connection, Pool, Sqlite, SqliteConnection, SqlitePool, Transaction,
 };
 use std::{
+    cmp::Ordering,
     env,
     ffi::{CStr, CString},
     ops::{Deref, DerefMut},
@@ -33,10 +34,77 @@ pub struct Database {
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct SearchRes {
-    pub formatted_entry: String,
+    pub entry: String,
     pub entry_type: String,
     pub artist: Option<String>,
     pub correlation_id: i32,
+    rank: f32,
+}
+
+impl SearchRes {
+    fn score_match(&self) -> usize {
+        let count = self.entry.chars().filter(|c| *c == '{').count();
+        let re = Regex::new(&r"(\{.*?\}[^\s]*).*".repeat(count)).unwrap();
+        let caps = re.captures(&self.entry).unwrap();
+        let score = caps
+            .iter()
+            .skip(1)
+            .map(|c| match c.map(|c| c.as_str()) {
+                Some(cap) => cap.len(),
+                None => 0,
+            })
+            .sum();
+
+        return score;
+    }
+
+    fn capitalize(&self, s: &str) -> String {
+        let mut c = s.chars();
+        match c.next() {
+            None => String::new(),
+            Some(f) => f.to_uppercase().chain(c).collect(),
+        }
+    }
+
+    pub fn get_description(&self) -> String {
+        match &self.artist {
+            Some(artist) => format!("{} by {}", self.capitalize(&self.entry_type), artist),
+            None => self
+                .entry_type
+                .split("_")
+                .map(|s| self.capitalize(s))
+                .collect_vec()
+                .join(" "),
+        }
+    }
+}
+
+impl Ord for SearchRes {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl PartialOrd for SearchRes {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let ord = self.rank.partial_cmp(&other.rank).unwrap();
+
+        if ord != Ordering::Equal {
+            return Some(ord);
+        }
+
+        let self_score = self.score_match();
+        let other_score = other.score_match();
+        return Some(self_score.cmp(&other_score));
+    }
+}
+
+impl Eq for SearchRes {}
+
+impl PartialEq for SearchRes {
+    fn eq(&self, other: &Self) -> bool {
+        self.cmp(other) == Ordering::Equal
+    }
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -106,13 +174,63 @@ impl Database {
         self.pool.close().await;
     }
 
+    async fn run_search(
+        &self,
+        query: &str,
+        limit: i32,
+        con: &mut PoolConnection<Sqlite>,
+    ) -> Vec<SearchRes> {
+        let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
+        let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
+
+        let full_query = format!("
+        WITH CTE AS (
+            SELECT DISTINCT entry, entry_type, rank,
+            CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
+            {0} artist,
+            ROW_NUMBER() OVER (PARTITION BY entry_value, {0}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
+            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{', '}}') entry, rank from search_index where entry_value match ?) a
+            LEFT OUTER JOIN song s on s.song_id = assoc_id
+            LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
+            LEFT OUTER JOIN album al on al.album_id = assoc_id
+            LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+            ORDER BY {1}
+            LIMIT ?
+        )
+        SELECT entry, entry_type, artist, correlation_id, rank FROM cte
+        WHERE row_num = 1
+        ORDER BY {1}
+        LIMIT ?", artist_select, order_clause);
+        let res = sqlx::query_as::<_, SearchRes>(&full_query)
+            .bind(query.to_owned() + "*")
+            .bind(limit * 2)
+            .bind(limit)
+            .fetch_all(con)
+            .await
+            .unwrap();
+
+        return res;
+    }
+
     pub async fn search(&self, query: &str, limit: i32) -> Vec<SearchRes> {
         // blss, bliss, bless
         let mut con = self.acquire_with_spellfix().await;
         let special_chars = Regex::new(r"[^A-Za-z0-9&\s]").unwrap();
-        let query = special_chars.replace(&query, "").to_string();
+        let query = special_chars.replace_all(&query, "").trim().to_string();
+        if query.is_empty() {
+            return vec![];
+        }
+        println!("query {}", query);
+        let mut res = self
+            .run_search(&(query.replace("&", "and")), limit, &mut con)
+            .await;
+        res.sort();
+        if res.len() == limit as usize {
+            return res;
+        }
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(&query).collect_vec();
+        let last = terms.last().unwrap().to_owned().to_owned();
         let spellfix_query = terms
             .iter()
             .enumerate()
@@ -124,21 +242,27 @@ impl Database {
                         select distance 
                         from search_spellfix 
                         where word match ${0}
+                        and score < 150
                         order by distance 
                         limit 1
                     )",
                     i + 1
                 )
             })
-            .collect::<Vec<_>>()
+            .collect_vec()
             .join(" union all ");
 
         let mut corrected = sqlx::query_as::<_, SpellFixRes>(&spellfix_query);
         for term in terms {
             corrected = corrected.bind(term);
         }
-        let spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
-        let mut corrected_search = spellfix_res
+        let mut spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
+
+        spellfix_res.push(SpellFixRes {
+            word: last.to_owned(),
+            search: last,
+        });
+        let corrected_search = spellfix_res
             .into_iter()
             .group_by(|row| row.search.to_owned())
             .into_iter()
@@ -149,38 +273,23 @@ impl Database {
                     .collect_vec()
             })
             .join("OR ")
-            + "*";
-        corrected_search = corrected_search.replace("&", "and");
+            .trim()
+            .replace("&", "and")
+            .to_owned();
+        if corrected_search.is_empty() {
+            return vec![];
+        }
+
         println!("{:?}", corrected_search);
 
-        let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
-        let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
-
-        let res = sqlx::query_as::<_, SearchRes>(&format!("
-        WITH CTE AS (
-            SELECT DISTINCT formatted_entry, entry_type, rank,
-            CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
-            {0} artist,
-            ROW_NUMBER() OVER (PARTITION BY entry_value, {0}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
-            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{', '}}') formatted_entry, rank from search_index where entry_value match ?) a
-            LEFT OUTER JOIN song s on s.song_id = assoc_id
-            LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
-            LEFT OUTER JOIN album al on al.album_id = assoc_id
-            LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
-            ORDER BY {1}
-            LIMIT ?
-        )
-        SELECT formatted_entry, entry_type, artist, correlation_id FROM cte
-        WHERE row_num = 1
-        ORDER BY {1}
-        LIMIT ?", artist_select, order_clause))
-        .bind(corrected_search)
-        .bind(limit * 2)
-        .bind(limit)
-        .fetch_all(&mut con)
-        .await
-        .unwrap();
-
+        let rest = self.run_search(&corrected_search, limit, &mut con).await;
+        res.extend(rest);
+        let mut res = res
+            .into_iter()
+            .unique_by(|r| r.entry.clone() + "-" + &r.entry_type)
+            .take(limit as usize)
+            .collect_vec();
+        res.sort();
         return res;
     }
 

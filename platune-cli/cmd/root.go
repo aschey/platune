@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/aschey/platune/cli/v2/utils"
+	platune "github.com/aschey/platune/client"
 	"github.com/c-bata/go-prompt"
 	"github.com/c-bata/go-prompt/completer"
 	"github.com/charmbracelet/lipgloss"
@@ -17,6 +18,7 @@ import (
 )
 
 var cfgFile string
+var searchClient platune.Management_SearchClient
 
 type cmdState struct {
 	livePrefix     string
@@ -154,8 +156,39 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 	}
 	if len(before) > 1 {
 		first := before[0]
-		if first == "add-queue" || first == "add-folder" {
+		if first == "add-folder" {
 			return filePathCompleter.Complete(in, true)
+		} else if first == "add-queue" {
+			if searchClient == nil {
+				search := utils.Client.Search()
+				searchClient = search
+			}
+			rest := strings.Join(before[1:], " ")
+
+			if strings.HasPrefix(rest, "http://") || strings.HasPrefix(rest, "https://") {
+				return []prompt.Suggest{}
+			}
+
+			suggestions := filePathCompleter.Complete(in, true)
+			if len(suggestions) > 0 && strings.Contains(rest, string(os.PathSeparator)) {
+				return suggestions
+			}
+
+			sendErr := searchClient.Send(&platune.SearchRequest{Query: rest})
+			if sendErr != nil {
+				fmt.Println(sendErr)
+				return []prompt.Suggest{}
+			}
+			res, recvErr := searchClient.Recv()
+			if recvErr != nil {
+				fmt.Println(recvErr)
+			}
+
+			for _, r := range res.Results {
+				suggestions = append(suggestions, prompt.Suggest{Text: r.Entry, Description: r.Description})
+			}
+
+			return suggestions
 		}
 		return []prompt.Suggest{}
 	}

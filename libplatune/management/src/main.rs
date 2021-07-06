@@ -1,5 +1,6 @@
 use std::{ops::Range, time::Instant};
 
+use itertools::Itertools;
 use libplatune_management::{config::Config, database::Database};
 
 #[tokio::main]
@@ -9,12 +10,19 @@ async fn main() {
         .unwrap()
         .replace("sqlite://", "");
     let db = Database::connect(path, true).await;
-    db.migrate().await;
-    let now = Instant::now();
+    // db.migrate().await;
+    // let now = Instant::now();
 
-    println!("{:?}", db.search("td&g", 10).await);
+    println!(
+        "{:?}",
+        db.search("road trip", 10)
+            .await
+            .iter()
+            .map(|v| v.get_description())
+            .collect_vec()
+    );
 
-    let config = Config::new(&db);
+    // let config = Config::new(&db);
 
     // #[cfg(target_os = "windows")]
     // {
@@ -33,5 +41,5 @@ async fn main() {
     // let mut rx = config.sync().await;
     // while let Some(_) = rx.recv().await {}
 
-    println!("{:?}", now.elapsed());
+    //println!("{:?}", now.elapsed());
 }
