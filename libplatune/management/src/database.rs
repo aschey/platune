@@ -262,7 +262,7 @@ impl Database {
             word: last.to_owned(),
             search: last,
         });
-        let corrected_search = spellfix_res
+        let mut corrected_search = spellfix_res
             .into_iter()
             .group_by(|row| row.search.to_owned())
             .into_iter()
@@ -279,7 +279,7 @@ impl Database {
         if corrected_search.is_empty() {
             return vec![];
         }
-
+        corrected_search = special_chars.replace_all(&corrected_search, "").to_string();
         println!("{:?}", corrected_search);
 
         let rest = self.run_search(&corrected_search, limit, &mut con).await;

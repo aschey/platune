@@ -45,6 +45,23 @@ func CleanFilePath(path string) (dir, base string, err error) {
 	return dir, base, nil
 }
 
+func (c *FilePathCompleter) adjustCompletions(completions []prompt.Suggest, sub string) []prompt.Suggest {
+	tokens := strings.Split(sub, " ")
+	filteredCompletions := prompt.FilterHasPrefix(completions, sub, c.IgnoreCase)
+	if len(tokens) > 1 {
+
+		allExceptLast := strings.Join(tokens[0:len(tokens)-1], " ")
+		newCompletions := []prompt.Suggest{}
+		for _, completion := range filteredCompletions {
+			completion.Text = completion.Text[len(allExceptLast)+1:]
+			newCompletions = append(newCompletions, completion)
+		}
+
+		return newCompletions
+	}
+	return filteredCompletions
+}
+
 // Complete returns suggestions from your local file system.
 func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt.Suggest {
 	if c.fileListCache == nil {
@@ -62,7 +79,7 @@ func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt
 	}
 
 	if cached, ok := c.fileListCache[dir]; ok {
-		return prompt.FilterHasPrefix(cached, base, c.IgnoreCase)
+		return c.adjustCompletions(cached, base)
 	}
 
 	files, err := ioutil.ReadDir(dir)
@@ -81,5 +98,5 @@ func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt
 		suggests = append(suggests, prompt.Suggest{Text: f.Name()})
 	}
 	c.fileListCache[dir] = suggests
-	return prompt.FilterHasPrefix(suggests, base, c.IgnoreCase)
+	return c.adjustCompletions(suggests, base)
 }
