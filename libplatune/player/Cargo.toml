@@ -33,5 +33,5 @@ ctor = "0.1.20"
 flexi_logger = "0.18.0"
 futures = "0.3.15"
 rstest = "0.10.0"
-tokio = {version = "1.7.1", features = ["rt-multi-thread"]}
+tokio = {version = "1.7.1", features = ["rt-multi-thread", "macros"]}
 yansi = "0.5.0"
