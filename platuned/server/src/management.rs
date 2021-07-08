@@ -91,7 +91,9 @@ impl Management for ManagementImpl {
         tokio::spawn(async move {
             while let Some(msg) = messages.next().await {
                 let msg = msg.unwrap();
-                tx.send(db.search(&msg.query, 10).await).await.unwrap();
+                tx.send(db.search(&msg.query, Default::default()).await)
+                    .await
+                    .unwrap();
             }
         });
 
@@ -101,7 +103,7 @@ impl Management for ManagementImpl {
                     .into_iter()
                     .map(|res| SearchResult {
                         description: res.get_description(),
-                        entry: res.entry,
+                        entry: res.get_formatted_entry(),
                         entry_type: (match &res.entry_type[..] {
                             "song" => EntryType::Song,
                             "artist" => EntryType::Artist,

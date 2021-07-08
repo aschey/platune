@@ -32,19 +32,37 @@ pub struct Database {
     opts: SqliteConnectOptions,
 }
 
+pub struct SearchOptions<'a> {
+    pub start_highlight: &'a str,
+    pub end_highlight: &'a str,
+    pub limit: i32,
+}
+
+impl<'a> Default for SearchOptions<'a> {
+    fn default() -> Self {
+        Self {
+            start_highlight: "",
+            end_highlight: "",
+            limit: 10,
+        }
+    }
+}
+
 #[derive(Debug, sqlx::FromRow)]
 pub struct SearchRes {
-    pub entry: String,
+    entry: String,
     pub entry_type: String,
     pub artist: Option<String>,
     pub correlation_id: i32,
     rank: f32,
+    start_highlight: String,
+    end_highlight: String,
 }
 
 impl SearchRes {
     fn score_match(&self) -> usize {
-        let count = self.entry.chars().filter(|c| *c == '{').count();
-        let re = Regex::new(&r"(\{.*?\}[^\s]*).*".repeat(count)).unwrap();
+        let count = self.entry.matches(r"{startmatch}").count();
+        let re = Regex::new(&r"(\{startmatch\}.*?\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
         let caps = re.captures(&self.entry).unwrap();
         let score = caps
             .iter()
@@ -76,6 +94,12 @@ impl SearchRes {
                 .collect_vec()
                 .join(" "),
         }
+    }
+
+    pub fn get_formatted_entry(&self) -> String {
+        self.entry
+            .replace("{startmatch}", &self.start_highlight)
+            .replace("{endmatch}", &self.end_highlight)
     }
 }
 
@@ -177,7 +201,7 @@ impl Database {
     async fn run_search(
         &self,
         query: &str,
-        limit: i32,
+        options: &SearchOptions<'_>,
         con: &mut PoolConnection<Sqlite>,
     ) -> Vec<SearchRes> {
         let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
@@ -185,11 +209,11 @@ impl Database {
 
         let full_query = format!("
         WITH CTE AS (
-            SELECT DISTINCT entry, entry_type, rank,
+            SELECT DISTINCT entry, entry_type, rank, ? start_highlight, ? end_highlight,
             CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
             {0} artist,
             ROW_NUMBER() OVER (PARTITION BY entry_value, {0}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
-            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{', '}}') entry, rank from search_index where entry_value match ?) a
+            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match ?) a
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
             LEFT OUTER JOIN album al on al.album_id = assoc_id
@@ -197,14 +221,16 @@ impl Database {
             ORDER BY {1}
             LIMIT ?
         )
-        SELECT entry, entry_type, artist, correlation_id, rank FROM cte
+        SELECT entry, entry_type, artist, correlation_id, rank, start_highlight, end_highlight FROM cte
         WHERE row_num = 1
         ORDER BY {1}
         LIMIT ?", artist_select, order_clause);
         let res = sqlx::query_as::<_, SearchRes>(&full_query)
+            .bind(options.start_highlight)
+            .bind(options.end_highlight)
             .bind(query.to_owned() + "*")
-            .bind(limit * 2)
-            .bind(limit)
+            .bind(options.limit * 2)
+            .bind(options.limit)
             .fetch_all(con)
             .await
             .unwrap();
@@ -212,20 +238,19 @@ impl Database {
         return res;
     }
 
-    pub async fn search(&self, query: &str, limit: i32) -> Vec<SearchRes> {
-        // blss, bliss, bless
+    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
         let mut con = self.acquire_with_spellfix().await;
         let special_chars = Regex::new(r"[^A-Za-z0-9&\s]").unwrap();
-        let query = special_chars.replace_all(&query, "").trim().to_string();
+        let query = special_chars.replace_all(&query, " ").trim().to_string();
         if query.is_empty() {
             return vec![];
         }
         println!("query {}", query);
         let mut res = self
-            .run_search(&(query.replace("&", "and")), limit, &mut con)
+            .run_search(&(query.replace("&", "and")), &options, &mut con)
             .await;
         res.sort();
-        if res.len() == limit as usize {
+        if res.len() == options.limit as usize {
             return res;
         }
         let re = Regex::new(r"\s+").unwrap();
@@ -279,15 +304,17 @@ impl Database {
         if corrected_search.is_empty() {
             return vec![];
         }
-        corrected_search = special_chars.replace_all(&corrected_search, "").to_string();
+        corrected_search = special_chars
+            .replace_all(&corrected_search, " ")
+            .to_string();
         println!("{:?}", corrected_search);
 
-        let rest = self.run_search(&corrected_search, limit, &mut con).await;
+        let rest = self.run_search(&corrected_search, &options, &mut con).await;
         res.extend(rest);
         let mut res = res
             .into_iter()
             .unique_by(|r| r.entry.clone() + "-" + &r.entry_type)
-            .take(limit as usize)
+            .take(options.limit as usize)
             .collect_vec();
         res.sort();
         return res;
@@ -653,7 +680,7 @@ async fn tags_task(
         .fetch_all(&mut tran)
         .await
         .unwrap();
-        let re = Regex::new(r"\s+").unwrap();
+        let re = Regex::new(r"[\s-]+").unwrap();
         for val in long_vals {
             let entry_value = val.entry_value.unwrap();
             let words = re.split(&entry_value).collect_vec();
