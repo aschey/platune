@@ -15,7 +15,7 @@ async fn main() {
 
     println!(
         "{:?}",
-        db.search("blss", 10)
+        db.search("blss", Default::default())
             .await
             .iter()
             .map(|v| v.get_description())

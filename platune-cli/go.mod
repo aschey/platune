@@ -3,8 +3,8 @@ module github.com/aschey/platune/cli/v2
 go 1.16
 
 require (
+	github.com/aschey/go-prompt v0.2.7-0.20210710202005-e9a38ef71562
 	github.com/aschey/platune/client v0.0.0
-	github.com/c-bata/go-prompt v0.2.6
 	github.com/charmbracelet/lipgloss v0.2.1
 	github.com/golang/mock v1.5.0
 	github.com/mitchellh/go-homedir v1.1.0

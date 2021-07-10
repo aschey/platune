@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aschey/platune/cli/v2/utils"
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"github.com/superhawk610/bar"
@@ -24,7 +24,7 @@ var syncCmd = &cobra.Command{
 }
 
 func SyncProgress() {
-	sync, cancel := utils.Client.Sync()
+	sync, cancel := internal.Client.Sync()
 	defer cancel()
 	if sync != nil {
 
@@ -51,11 +51,11 @@ func SyncProgress() {
 func init() {
 	usageFunc := syncCmd.UsageFunc()
 	syncCmd.SetUsageFunc(func(c *cobra.Command) error {
-		utils.FormatUsage(c, usageFunc, "")
+		internal.FormatUsage(c, usageFunc, "")
 		return nil
 	})
 	syncCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		utils.FormatHelp(c)
+		internal.FormatHelp(c)
 	})
 	rootCmd.AddCommand(syncCmd)
 }

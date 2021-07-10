@@ -90,10 +90,14 @@ impl Management for ManagementImpl {
 
         tokio::spawn(async move {
             while let Some(msg) = messages.next().await {
-                let msg = msg.unwrap();
-                tx.send(db.search(&msg.query, Default::default()).await)
-                    .await
-                    .unwrap();
+                match msg {
+                    Ok(msg) => {
+                        tx.send(db.search(&msg.query, Default::default()).await)
+                            .await
+                            .unwrap();
+                    }
+                    Err(_) => break,
+                }
             }
         });
 

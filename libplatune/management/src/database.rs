@@ -8,16 +8,14 @@ use postage::{
     prelude::Stream,
     sink::Sink,
 };
-use regex::{Regex, RegexBuilder};
+use regex::Regex;
 use sqlx::{
-    migrate::Migrate, pool::PoolConnection, sqlite::SqliteConnectOptions, Acquire, ConnectOptions,
-    Connection, Pool, Sqlite, SqliteConnection, SqlitePool, Transaction,
+    pool::PoolConnection, sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite,
+    SqliteConnection, SqlitePool,
 };
 use std::{
     cmp::Ordering,
-    env,
     ffi::{CStr, CString},
-    ops::{Deref, DerefMut},
     os::raw::c_char,
     ptr,
 };
@@ -36,6 +34,7 @@ pub struct SearchOptions<'a> {
     pub start_highlight: &'a str,
     pub end_highlight: &'a str,
     pub limit: i32,
+    pub restrict_entry_type: Vec<&'a str>,
 }
 
 impl<'a> Default for SearchOptions<'a> {
@@ -44,6 +43,7 @@ impl<'a> Default for SearchOptions<'a> {
             start_highlight: "",
             end_highlight: "",
             limit: 10,
+            restrict_entry_type: vec![],
         }
     }
 }
@@ -202,52 +202,91 @@ impl Database {
         &self,
         query: &str,
         options: &SearchOptions<'_>,
+        artist_filter: &Vec<String>,
         con: &mut PoolConnection<Sqlite>,
     ) -> Vec<SearchRes> {
         let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
         let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
+        let mut artist_filter_clause = "".to_owned();
+        let num_base_args = 5;
+        let mut num_extra_args = 0;
+        if artist_filter.len() > 0 {
+            let start = num_base_args + num_extra_args + 1;
+            let artist_list = (start..start + artist_filter.len())
+                .map(|i| "$".to_owned() + &i.to_string())
+                .collect_vec()
+                .join(",");
+            artist_filter_clause = format!("WHERE {} in ({})", artist_select, artist_list);
+            num_extra_args += artist_filter.len();
+        }
+        let mut type_filter = "".to_owned();
+        if !options.restrict_entry_type.is_empty() {
+            let start = num_base_args + num_extra_args + 1;
+            let in_list = (start..start + options.restrict_entry_type.len())
+                .map(|i| "$".to_owned() + &i.to_string())
+                .collect_vec()
+                .join(",");
 
+            type_filter = format!("AND entry_type in ({})", &in_list);
+            num_extra_args += options.restrict_entry_type.len();
+        }
         let full_query = format!("
         WITH CTE AS (
-            SELECT DISTINCT entry, entry_type, rank, ? start_highlight, ? end_highlight,
+            SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight,
             CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
             {0} artist,
             ROW_NUMBER() OVER (PARTITION BY entry_value, {0}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
-            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match ?) a
+            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match $3 {3}) a
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
             LEFT OUTER JOIN album al on al.album_id = assoc_id
             LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+            {2}
             ORDER BY {1}
-            LIMIT ?
+            LIMIT $4
         )
         SELECT entry, entry_type, artist, correlation_id, rank, start_highlight, end_highlight FROM cte
         WHERE row_num = 1
         ORDER BY {1}
-        LIMIT ?", artist_select, order_clause);
-        let res = sqlx::query_as::<_, SearchRes>(&full_query)
+        LIMIT $5", artist_select, order_clause, artist_filter_clause, type_filter);
+        let mut sql_query = sqlx::query_as::<_, SearchRes>(&full_query)
             .bind(options.start_highlight)
             .bind(options.end_highlight)
             .bind(query.to_owned() + "*")
             .bind(options.limit * 2)
-            .bind(options.limit)
-            .fetch_all(con)
-            .await
-            .unwrap();
+            .bind(options.limit);
+
+        for artist in artist_filter {
+            sql_query = sql_query.bind(artist.to_owned());
+        }
+        for entry_type in &options.restrict_entry_type {
+            sql_query = sql_query.bind(entry_type.to_owned());
+        }
+        let res = sql_query.fetch_all(con).await.unwrap();
 
         return res;
     }
 
-    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
-        let mut con = self.acquire_with_spellfix().await;
+    async fn search_helper(
+        &self,
+        query: &str,
+        options: SearchOptions<'_>,
+        artist_filter: Vec<String>,
+    ) -> Vec<SearchRes> {
         let special_chars = Regex::new(r"[^A-Za-z0-9&\s]").unwrap();
         let query = special_chars.replace_all(&query, " ").trim().to_string();
         if query.is_empty() {
             return vec![];
         }
         println!("query {}", query);
+        let mut con = self.acquire_with_spellfix().await;
         let mut res = self
-            .run_search(&(query.replace("&", "and")), &options, &mut con)
+            .run_search(
+                &(query.replace("&", "and")),
+                &options,
+                &artist_filter,
+                &mut con,
+            )
             .await;
         res.sort();
         if res.len() == options.limit as usize {
@@ -309,7 +348,9 @@ impl Database {
             .to_string();
         println!("{:?}", corrected_search);
 
-        let rest = self.run_search(&corrected_search, &options, &mut con).await;
+        let rest = self
+            .run_search(&corrected_search, &options, &artist_filter, &mut con)
+            .await;
         res.extend(rest);
         let mut res = res
             .into_iter()
@@ -318,6 +359,35 @@ impl Database {
             .collect_vec();
         res.sort();
         return res;
+    }
+
+    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
+        let mut query = query.to_owned();
+        let artist_split = query.split("artist:").collect_vec();
+        let mut artist_filter: Vec<String> = vec![];
+        if artist_split.len() > 1 {
+            let _query = artist_split.get(0).unwrap().to_string();
+            let _artist_filter = artist_split.get(1).unwrap().to_string();
+
+            artist_filter = self
+                .search_helper(
+                    &_artist_filter,
+                    SearchOptions {
+                        restrict_entry_type: vec!["artist", "album_artist"],
+                        ..Default::default()
+                    },
+                    vec![],
+                )
+                .await
+                .into_iter()
+                .map(|r| r.get_formatted_entry())
+                .collect_vec();
+
+            println!("artist filter {:?}", artist_filter);
+            query = _query;
+        }
+
+        return self.search_helper(&query, options, artist_filter).await;
     }
 
     pub(crate) async fn sync(&self, folders: Vec<String>) -> tokio::sync::mpsc::Receiver<f32> {

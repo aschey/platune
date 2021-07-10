@@ -7,10 +7,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/aschey/platune/cli/v2/utils"
+	"github.com/aschey/go-prompt"
+	"github.com/aschey/platune/cli/v2/internal"
 	platune "github.com/aschey/platune/client"
-	"github.com/c-bata/go-prompt"
-	"github.com/c-bata/go-prompt/completer"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
@@ -19,6 +18,7 @@ import (
 
 var cfgFile string
 var searchClient platune.Management_SearchClient
+var curPrompt *prompt.Prompt
 
 type cmdState struct {
 	livePrefix     string
@@ -31,7 +31,7 @@ func expandPath(song string) (string, fs.FileInfo, error) {
 		return song, nil, nil
 	}
 
-	dir, base, err := utils.CleanFilePath(song)
+	dir, base, err := internal.CleanFilePath(song)
 
 	if err != nil {
 		return "", nil, err
@@ -93,28 +93,28 @@ func (state *cmdState) executor(in string) {
 			fmt.Println(err)
 			return
 		}
-		utils.Client.AddToQueue(full)
+		internal.Client.AddToQueue(full)
 	case "seek":
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
 			return
 		}
-		utils.Client.Seek(cmds[1])
+		internal.Client.Seek(cmds[1])
 	case "pause":
-		utils.Client.Pause()
+		internal.Client.Pause()
 	case "resume":
-		utils.Client.Resume()
+		internal.Client.Resume()
 	case "stop":
-		utils.Client.Stop()
+		internal.Client.Stop()
 	case "next":
-		utils.Client.Next()
+		internal.Client.Next()
 	case "previous":
-		utils.Client.Previous()
+		internal.Client.Previous()
 	case "sync":
 		SyncProgress()
 		fmt.Println()
 	case "get-all-folders":
-		utils.Client.GetAllFolders()
+		internal.Client.GetAllFolders()
 	case "add-folder":
 		if len(cmds) < 2 {
 			fmt.Println("Usage: add-folder <path>")
@@ -125,14 +125,14 @@ func (state *cmdState) executor(in string) {
 			fmt.Println(err)
 			return
 		}
-		utils.Client.AddFolder(full)
+		internal.Client.AddFolder(full)
 	case "q":
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
 	if state.isSetQueueMode {
 		if strings.Trim(in, " ") == "" {
-			utils.Client.SetQueue(state.currentQueue)
+			internal.Client.SetQueue(state.currentQueue)
 			state.isSetQueueMode = false
 			state.currentQueue = []string{}
 			state.livePrefix = ""
@@ -144,7 +144,7 @@ func (state *cmdState) executor(in string) {
 			}
 
 			state.currentQueue = append(state.currentQueue, in)
-			fmt.Println(utils.PrettyPrintList(state.currentQueue))
+			fmt.Println(internal.PrettyPrintList(state.currentQueue))
 		}
 	}
 }
@@ -160,7 +160,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			return filePathCompleter.Complete(in, true)
 		} else if first == "add-queue" {
 			if searchClient == nil {
-				search := utils.Client.Search()
+				search := internal.Client.Search()
 				searchClient = search
 			}
 			rest := strings.Join(before[1:], " ")
@@ -170,7 +170,8 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			}
 
 			suggestions := filePathCompleter.Complete(in, true)
-			if len(suggestions) > 0 && strings.Contains(rest, string(os.PathSeparator)) {
+			if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
+				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(curPrompt)
 				return suggestions
 			}
 
@@ -187,7 +188,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			for _, r := range res.Results {
 				suggestions = append(suggestions, prompt.Suggest{Text: r.Entry, Description: r.Description})
 			}
-
+			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(curPrompt)
 			return suggestions
 		}
 		return []prompt.Suggest{}
@@ -210,7 +211,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
 }
 
-var filePathCompleter = utils.FilePathCompleter{
+var filePathCompleter = internal.FilePathCompleter{
 	IgnoreCase: true,
 }
 
@@ -249,8 +250,9 @@ var rootCmd = &cobra.Command{
 				prompt.OptionPrefix(">>> "),
 				prompt.OptionLivePrefix(state.changeLivePrefix),
 				prompt.OptionTitle("Platune CLI"),
-				prompt.OptionCompletionWordSeparator(completer.FilePathCompletionSeparator),
+				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"}),
 			)
+			curPrompt = p
 			p.Run()
 		} else {
 			err := cmd.Help()
@@ -273,12 +275,12 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	usageFunc := rootCmd.UsageFunc()
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
-		utils.FormatUsage(c, usageFunc, "")
+		internal.FormatUsage(c, usageFunc, "")
 		return nil
 	})
 
 	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		utils.FormatHelp(c)
+		internal.FormatHelp(c)
 	})
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,

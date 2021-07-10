@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/aschey/platune/cli/v2/utils"
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -14,18 +14,18 @@ var getAllFoldersCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.Client.GetAllFolders()
+		internal.Client.GetAllFolders()
 	},
 }
 
 func init() {
 	usageFunc := getAllFoldersCmd.UsageFunc()
 	getAllFoldersCmd.SetUsageFunc(func(c *cobra.Command) error {
-		utils.FormatUsage(c, usageFunc, "")
+		internal.FormatUsage(c, usageFunc, "")
 		return nil
 	})
 	getAllFoldersCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		utils.FormatHelp(c)
+		internal.FormatHelp(c)
 	})
 	rootCmd.AddCommand(getAllFoldersCmd)
 }

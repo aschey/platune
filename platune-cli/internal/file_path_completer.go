@@ -1,4 +1,4 @@
-package utils
+package internal
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/c-bata/go-prompt"
+	"github.com/aschey/go-prompt"
 )
 
 type FilePathCompleter struct {
@@ -23,11 +23,11 @@ func CleanFilePath(path string) (dir, base string, err error) {
 	}
 
 	var endsWithSeparator bool
-	if len(path) >= 1 && path[len(path)-1] == os.PathSeparator {
+	if len(path) >= 1 && equalsSeparator(path[len(path)-1]) {
 		endsWithSeparator = true
 	}
 
-	if len(path) >= 2 && path[0:2] == "~"+string(os.PathSeparator) {
+	if len(path) >= 2 && path[0:1] == "~" && equalsSeparator(path[2]) {
 		me, err := user.Current()
 		if err != nil {
 			return "", "", err
@@ -43,6 +43,10 @@ func CleanFilePath(path string) (dir, base string, err error) {
 		base = ""                             // Set empty string if path ends with separator.
 	}
 	return dir, base, nil
+}
+
+func equalsSeparator(check byte) bool {
+	return strings.ContainsAny(string(check), "/\\")
 }
 
 func (c *FilePathCompleter) adjustCompletions(completions []prompt.Suggest, sub string) []prompt.Suggest {

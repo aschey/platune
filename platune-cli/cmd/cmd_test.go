@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aschey/go-prompt"
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/test"
-	"github.com/aschey/platune/cli/v2/utils"
 	platune "github.com/aschey/platune/client"
-	"github.com/c-bata/go-prompt"
 	"github.com/golang/mock/gomock"
 )
 
@@ -22,7 +22,7 @@ func runPlayerTest(t *testing.T, expected string,
 	defer ctrl.Finish()
 	mock := test.NewMockPlayerClient(ctrl)
 	expectFunc(mock.EXPECT())
-	utils.Client = utils.NewTestClient(mock, nil)
+	internal.Client = internal.NewTestClient(mock, nil)
 
 	runTest(t, expected, args...)
 }
@@ -33,7 +33,7 @@ func runManagementTest(t *testing.T, expected string,
 	defer ctrl.Finish()
 	mock := test.NewMockManagementClient(ctrl)
 	expectFunc(mock.EXPECT())
-	utils.Client = utils.NewTestClient(nil, mock)
+	internal.Client = internal.NewTestClient(nil, mock)
 
 	return runTest(t, expected, args...)
 }
@@ -235,6 +235,6 @@ func TestSetQueueExecutor(t *testing.T) {
 		return strings.HasSuffix(queue[0], "root.go")
 	})
 	mock.EXPECT().SetQueue(gomock.Any(), matcher)
-	utils.Client = utils.NewTestClient(mock, nil)
+	internal.Client = internal.NewTestClient(mock, nil)
 	state.executor("")
 }

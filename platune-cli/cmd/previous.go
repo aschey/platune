@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/aschey/platune/cli/v2/utils"
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -14,18 +14,18 @@ var previousCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.Client.Previous()
+		internal.Client.Previous()
 	},
 }
 
 func init() {
 	usageFunc := previousCmd.UsageFunc()
 	previousCmd.SetUsageFunc(func(c *cobra.Command) error {
-		utils.FormatUsage(c, usageFunc, "")
+		internal.FormatUsage(c, usageFunc, "")
 		return nil
 	})
 	previousCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		utils.FormatHelp(c)
+		internal.FormatHelp(c)
 	})
 	rootCmd.AddCommand(previousCmd)
 }

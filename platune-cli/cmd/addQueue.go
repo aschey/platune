@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/aschey/platune/cli/v2/utils"
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
@@ -17,18 +17,18 @@ var addQueueCmd = &cobra.Command{
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		utils.Client.AddToQueue(args[0])
+		internal.Client.AddToQueue(args[0])
 	},
 }
 
 func init() {
 	usageFunc := addQueueCmd.UsageFunc()
 	addQueueCmd.SetUsageFunc(func(c *cobra.Command) error {
-		utils.FormatUsage(c, usageFunc, addQueueExampleText)
+		internal.FormatUsage(c, usageFunc, addQueueExampleText)
 		return nil
 	})
 	addQueueCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		utils.FormatHelp(c)
+		internal.FormatHelp(c)
 	})
 	rootCmd.AddCommand(addQueueCmd)
 }
