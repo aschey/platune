@@ -536,14 +536,14 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
             }
         }
     }
-    tags_tx.send(None).await.unwrap();
+
     for _ in 0..handles.len() {
         dispatch_tx.send(None).await.unwrap();
     }
     for handle in handles {
         handle.await.unwrap();
     }
-
+    tags_tx.send(None).await.unwrap();
     tags_handle.await.unwrap();
 }
 
