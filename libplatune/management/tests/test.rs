@@ -79,12 +79,18 @@ pub async fn test_search() {
     )
     .unwrap();
 
+    let t = katatsuki::Track::from_path(&inner_dir.join("test.mp3"), None).unwrap();
+
+    t.set_title("asdf");
+    t.save();
+    drop(t);
+
     config.add_folder(music_dir.to_str().unwrap()).await;
     let mut receiver = config.sync().await;
 
     while let Some(_) = receiver.recv().await {}
 
-    let res = db.search("test", Default::default()).await;
+    let res = db.search("asdf", Default::default()).await;
     db.close().await;
     assert!(res.len() > 0);
 }
