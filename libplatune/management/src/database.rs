@@ -48,8 +48,17 @@ impl<'a> Default for SearchOptions<'a> {
     }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug)]
 pub struct SearchRes {
+    pub entry: String,
+    pub entry_type: String,
+    pub description: String,
+    pub artist: Option<String>,
+    pub correlation_ids: Vec<i32>,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct SearchEntry {
     entry: String,
     pub entry_type: String,
     pub artist: Option<String>,
@@ -59,7 +68,7 @@ pub struct SearchRes {
     end_highlight: String,
 }
 
-impl SearchRes {
+impl SearchEntry {
     fn score_match(&self) -> usize {
         let count = self.entry.matches(r"{startmatch}").count();
         let re = Regex::new(&r"(\{startmatch\}.*?\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
@@ -103,13 +112,13 @@ impl SearchRes {
     }
 }
 
-impl Ord for SearchRes {
+impl Ord for SearchEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         self.partial_cmp(other).unwrap()
     }
 }
 
-impl PartialOrd for SearchRes {
+impl PartialOrd for SearchEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let ord = self.rank.partial_cmp(&other.rank).unwrap();
 
@@ -123,9 +132,9 @@ impl PartialOrd for SearchRes {
     }
 }
 
-impl Eq for SearchRes {}
+impl Eq for SearchEntry {}
 
-impl PartialEq for SearchRes {
+impl PartialEq for SearchEntry {
     fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
@@ -204,7 +213,7 @@ impl Database {
         options: &SearchOptions<'_>,
         artist_filter: &Vec<String>,
         con: &mut PoolConnection<Sqlite>,
-    ) -> Vec<SearchRes> {
+    ) -> Vec<SearchEntry> {
         let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
         let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
         let mut artist_filter_clause = "".to_owned();
@@ -235,12 +244,19 @@ impl Database {
             SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight,
             CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
             {0} artist,
-            ROW_NUMBER() OVER (PARTITION BY entry_value, {0}, CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END ORDER BY entry_type DESC) row_num
+            ROW_NUMBER() OVER (PARTITION BY 
+                entry_value, 
+                {0}, 
+                CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
+                CASE entry_type WHEN 'song' THEN s.song_title WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
+                ORDER BY entry_type DESC) row_num
             FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match $3 {3}) a
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
             LEFT OUTER JOIN album al on al.album_id = assoc_id
             LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+            LEFT OUTER JOIN artist ar2 on ar2.artist_id = assoc_id
+            LEFT OUTER JOIN album_artist aa2 on aa2.album_artist_id = assoc_id
             {2}
             ORDER BY {1}
             LIMIT $4
@@ -249,7 +265,7 @@ impl Database {
         WHERE row_num = 1
         ORDER BY {1}
         LIMIT $5", artist_select, order_clause, artist_filter_clause, type_filter);
-        let mut sql_query = sqlx::query_as::<_, SearchRes>(&full_query)
+        let mut sql_query = sqlx::query_as::<_, SearchEntry>(&full_query)
             .bind(options.start_highlight)
             .bind(options.end_highlight)
             .bind(query.to_owned() + "*")
@@ -265,6 +281,27 @@ impl Database {
         let res = sql_query.fetch_all(con).await.unwrap();
 
         return res;
+    }
+
+    fn convert_res(&self, res: Vec<SearchEntry>) -> Vec<SearchRes> {
+        let grouped = res
+            .into_iter()
+            .group_by(|key| (key.get_formatted_entry(), key.entry_type.clone()))
+            .into_iter()
+            .map(|(key, group)| {
+                let group = group.collect_vec();
+                let first = group.get(0).unwrap();
+                SearchRes {
+                    entry: key.0,
+                    entry_type: key.1,
+                    artist: first.artist.to_owned(),
+                    description: first.get_description(),
+                    correlation_ids: group.iter().map(|v| v.correlation_id).collect(),
+                }
+            })
+            .collect_vec();
+
+        return grouped;
     }
 
     async fn search_helper(
@@ -290,7 +327,7 @@ impl Database {
             .await;
         res.sort();
         if res.len() == options.limit as usize {
-            return res;
+            return self.convert_res(res);
         }
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(&query).collect_vec();
@@ -358,7 +395,8 @@ impl Database {
             .take(options.limit as usize)
             .collect_vec();
         res.sort();
-        return res;
+
+        return self.convert_res(res);
     }
 
     pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
@@ -380,7 +418,7 @@ impl Database {
                 )
                 .await
                 .into_iter()
-                .map(|r| r.get_formatted_entry())
+                .map(|r| r.entry)
                 .collect_vec();
 
             println!("artist filter {:?}", artist_filter);

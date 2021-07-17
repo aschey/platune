@@ -1328,7 +1328,7 @@ dependencies = [
 [[package]]
 name = "katatsuki"
 version = "1.0.11"
-source = "git+https://github.com/aschey/seiri?rev=82b9c1d03950d258807dffd99c4130a8705a0604#82b9c1d03950d258807dffd99c4130a8705a0604"
+source = "git+https://github.com/aschey/seiri?rev=55c8646edf3d7526bcd5c7b4a11629c73fb55f25#55c8646edf3d7526bcd5c7b4a11629c73fb55f25"
 dependencies = [
  "chrono",
  "enum-primitive-derive",
@@ -1398,7 +1398,7 @@ checksum = "12b8adadd720df158f4d70dfe7ccc6adb0472d7c55ca83445f6a5ab3e36f8fb6"
 [[package]]
 name = "libkatatsuki-sys"
 version = "1.0.11"
-source = "git+https://github.com/aschey/seiri?rev=82b9c1d03950d258807dffd99c4130a8705a0604#82b9c1d03950d258807dffd99c4130a8705a0604"
+source = "git+https://github.com/aschey/seiri?rev=55c8646edf3d7526bcd5c7b4a11629c73fb55f25#55c8646edf3d7526bcd5c7b4a11629c73fb55f25"
 dependencies = [
  "bindgen",
  "cmake",
@@ -1419,6 +1419,7 @@ dependencies = [
 name = "libplatune-management"
 version = "0.1.0"
 dependencies = [
+ "assert_matches",
  "criterion",
  "directories",
  "dotenv",
@@ -1428,6 +1429,7 @@ dependencies = [
  "log",
  "postage",
  "regex 1.5.4",
+ "rstest",
  "sled",
  "sqlx",
  "tempfile",

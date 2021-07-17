@@ -106,8 +106,8 @@ impl Management for ManagementImpl {
                 let results = r
                     .into_iter()
                     .map(|res| SearchResult {
-                        description: res.get_description(),
-                        entry: res.get_formatted_entry(),
+                        description: res.description,
+                        entry: res.entry,
                         entry_type: (match &res.entry_type[..] {
                             "song" => EntryType::Song,
                             "artist" => EntryType::Artist,
@@ -117,7 +117,7 @@ impl Management for ManagementImpl {
                         })
                         .into(),
                         artist: res.artist,
-                        correlation_id: res.correlation_id,
+                        correlation_ids: res.correlation_ids,
                     })
                     .collect();
                 Ok(SearchResponse { results })

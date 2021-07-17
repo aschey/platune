@@ -41,7 +41,7 @@ message SearchResult {
   string entry = 1;
   EntryType entry_type = 2;
   optional string artist = 3;
-  int32 correlation_id = 4;
+  repeated int32 correlation_ids = 4;
   string description = 5;
 }
 

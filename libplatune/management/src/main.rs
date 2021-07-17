@@ -18,7 +18,7 @@ async fn main() {
         db.search("blss", Default::default())
             .await
             .iter()
-            .map(|v| v.get_description())
+            .map(|v| v.description.to_owned())
             .collect_vec()
     );
 
