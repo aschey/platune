@@ -59,134 +59,168 @@ pub async fn test_sync_basic() {
     assert_eq!(vec![0., 1.], msgs);
 }
 
+pub struct SongTest {
+    title: Option<&'static str>,
+    artist: Option<&'static str>,
+}
+
+impl Default for SongTest {
+    fn default() -> Self {
+        Self {
+            title: None,
+            artist: None,
+        }
+    }
+}
+
 #[rstest(
-    song1,
-    song2,
-    artist1,
-    artist2,
-    result1,
-    result2,
+    songs,
+    results,
     search,
-    case(Some("asdf"), None, None, None, Some("asdf"), None, "asdf"),
-    case(
-        Some("bless"),
-        Some("bliss"),
-        None,
-        None,
-        Some("bless"),
-        Some("bliss"),
-        "blss"
-    ),
-    case(
-        Some("bliss"),
-        Some("bless blah blah"),
-        None,
-        None,
-        Some("bliss"),
-        Some("bless blah blah"),
-        "blss"
-    ),
-    case(
-        Some("bliss"),
-        Some("blah bless blah"),
-        None,
-        None,
-        Some("bliss"),
-        Some("blah bless blah"),
-        "blss"
-    ),
-    case(Some("bless"), Some("asdf"), None, None, Some("bless"), None, "blss"),
-    case(
-        None,
-        None,
-        Some("red hot chili peppers"),
-        Some("real hearty chopped pies"),
-        Some("red hot chili peppers"),
-        Some("real hearty chopped pies"),
-        "rhcp"
-    ),
-    case(Some("a/b"), None, None, None, Some("a/b"), None, "a b"),
-    case(Some("a/b"), None, None, None, Some("a/b"), None, "a/b"),
-    case(Some("a & b"), None, None, None, Some("a and b"), None, "a & b"),
-    case(
-        Some("a & b"),
-        Some("a and b"),
-        None,
-        None,
-        Some("a and b"),
-        None,
-        "a & b"
-    ),
-    case(
-        Some("a & b"),
-        Some("a and b"),
-        None,
-        None,
-        Some("a and b"),
-        None,
-        "a and b"
-    ),
-    case(
-        Some("a & b"),
-        Some("a and b"),
-        None,
-        None,
-        Some("a and b"),
-        None,
-        "a b"
-    )
+    case(vec![
+        SongTest { 
+            title: Some("asdf"), 
+            ..Default::default()
+        }], 
+        vec!["asdf"],
+        "asdf"),
+    case(vec![
+        SongTest {
+            title: Some("bless"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("bliss"),
+            ..Default::default()
+        }],
+        vec!["bless", "bliss"], 
+        "blss"),
+    case(vec![
+        SongTest {
+            title: Some("bless blah blah"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("bliss"),
+            ..Default::default()
+        }],
+        vec!["bliss", "bless blah blah"], 
+        "blss"),
+    case(vec![
+        SongTest {
+            title: Some("blah bless blah"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("bliss"),
+            ..Default::default()
+        }],
+        vec!["bliss", "blah bless blah"], 
+        "blss"),
+    case(vec![
+        SongTest {
+            title: Some("bless"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("asdf"),
+            ..Default::default()
+        }],
+        vec!["bless"], 
+        "blss"),
+    case(vec![
+        SongTest {
+            artist: Some("red hot chili peppers"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("real hearty chopped pies"),
+            ..Default::default()
+        }],
+        vec!["red hot chili peppers", "real hearty chopped pies"], 
+        "rhcp"),
+    case(vec![
+        SongTest {
+            artist: Some("a/b"),
+            ..Default::default()
+        }],
+        vec!["a/b"], 
+        "a b"),
+    case(vec![
+        SongTest {
+            artist: Some("a/b"),
+            ..Default::default()
+        }],
+        vec!["a/b"], 
+        "a/b"),
+    case(vec![
+        SongTest {
+            artist: Some("a & b"),
+            ..Default::default()
+        }],
+        vec!["a and b"], 
+        "a & b"),
+    case(vec![
+        SongTest {
+            artist: Some("a & b"),
+            ..Default::default()
+        }],
+        vec!["a and b"], 
+        "a and b"),
+    case(vec![
+        SongTest {
+            artist: Some("a & b"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("a and b"),
+            ..Default::default()
+        }],
+        vec!["a and b"], 
+        "a & b"),
+    case(vec![
+        SongTest {
+            artist: Some("a & b"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("a and b"),
+            ..Default::default()
+        }],
+        vec!["a and b"], 
+        "a and b"),
+    case(vec![
+        SongTest {
+            artist: Some("a & b"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("a and b"),
+            ..Default::default()
+        }],
+        vec!["a and b"], 
+        "a b"),
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-pub async fn test_search(
-    song1: Option<&str>,
-    song2: Option<&str>,
-    artist1: Option<&str>,
-    artist2: Option<&str>,
-    result1: Option<&str>,
-    result2: Option<&str>,
-    search: &str,
-) {
+pub async fn test_search(songs: Vec<SongTest>, results: Vec<&str>, search: &str) {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
 
-    fs::copy(
-        "../player/tests/assets/test.mp3",
-        inner_dir.join("test.mp3"),
-    )
-    .unwrap();
-    fs::copy(
-        "../player/tests/assets/test2.mp3",
-        inner_dir.join("test2.mp3"),
-    )
-    .unwrap();
-    fs::copy(
-        "../player/tests/assets/test3.mp3",
-        inner_dir.join("test3.mp3"),
-    )
-    .unwrap();
+    for (i, song) in songs.iter().enumerate() {
+        let song_path = inner_dir.join(format!("test{}.mp3", i));
+        fs::copy("../player/tests/assets/test.mp3", song_path.clone()).unwrap();
+        let t = katatsuki::Track::from_path(&song_path, None).unwrap();
 
-    {
-        let t1 = katatsuki::Track::from_path(&inner_dir.join("test.mp3"), None).unwrap();
-
-        if let Some(song1) = song1 {
-            t1.set_title(song1);
+        if let Some(title) = song.title {
+            t.set_title(title);
         }
-        if let Some(artist1) = artist1 {
-            t1.set_artist(artist1);
+        if let Some(artist) = song.artist {
+            t.set_artist(artist);
         }
-        t1.save();
-
-        let t2 = katatsuki::Track::from_path(&inner_dir.join("test2.mp3"), None).unwrap();
-        if let Some(song2) = song2 {
-            t2.set_title(song2);
-        }
-        if let Some(artist2) = artist2 {
-            t2.set_artist(artist2);
-        }
-        t2.save();
+        t.save();
     }
 
     config.add_folder(music_dir.to_str().unwrap()).await;
@@ -197,18 +231,11 @@ pub async fn test_search(
     let res = db.search(search, Default::default()).await;
     db.close().await;
     println!("{:?}", res);
-    let result_len = vec![result1, result2]
-        .iter()
-        .filter(|r| r.is_some())
-        .count();
-    assert!(res.len() == result_len);
 
-    if result_len > 0 {
-        assert_matches!(&res[0], a if a.entry == result1.unwrap());
-    }
+    assert!(res.len() == results.len());
 
-    if result_len > 1 {
-        assert_matches!(&res[1], a if a.entry == result2.unwrap());
+    for (i, result) in results.iter().enumerate() {
+        assert_matches!(&res[i], a if &a.entry == result);
     }
 }
 
