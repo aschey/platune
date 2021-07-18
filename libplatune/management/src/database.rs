@@ -141,9 +141,10 @@ impl PartialEq for SearchEntry {
 }
 
 #[derive(Debug, sqlx::FromRow)]
-struct SpellFixRes {
+struct SpellfixRes {
     word: String,
     search: String,
+    score: f32,
 }
 
 #[cfg(not(unix))]
@@ -336,38 +337,42 @@ impl Database {
             .iter()
             .enumerate()
             .map(|(i, _)| {
+                let score_clause = format!("case 
+                when word like '% %' then (distance * 1.0 / (length(word) - length(replace(word, ' ', '')))) * 3.5 
+                else  editdist3(${0}, word) * 1.0 / length(word) end", i + 1);
                 format!(
                     "
                     select * from (
-                        select distinct word, ${0} as search from search_spellfix 
+                        select distinct word, ${0} search, {1} score
+                        from search_spellfix 
                         where word match ${0}
-                        and (
-                            (word like '% %' and distance * 1.0 / (length(word) - length(replace(word, ' ', ''))) < 15) or 
-                            (word not like '% %' and editdist3(${0}, word) * 1.0 / length(word) < 50)
-                        )
-                        order by distance
-                        limit 5)",
-                    i + 1
+                        and ({1}) <= 50
+                        order by {1}
+                        limit 5
+                    )
+                   ",
+                    i + 1, score_clause
                 )
             })
             .collect_vec()
             .join(" union all ");
 
-        let mut corrected = sqlx::query_as::<_, SpellFixRes>(&spellfix_query);
+        let mut corrected = sqlx::query_as::<_, SpellfixRes>(&spellfix_query);
         for term in terms {
             corrected = corrected.bind(term);
         }
         let mut spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
 
-        spellfix_res.push(SpellFixRes {
+        spellfix_res.push(SpellfixRes {
             word: last.to_owned(),
             search: last,
+            score: 0.,
         });
         let mut corrected_search = spellfix_res
             .into_iter()
             .group_by(|row| row.search.to_owned())
             .into_iter()
-            .map(|(_, val)| val.map(|v| v.word + " ").collect::<Vec<_>>())
+            .map(|(_, val)| val.map(|v| v.word + " ").collect_vec())
             .fold(vec!["".to_owned()], |a, b| {
                 a.into_iter()
                     .flat_map(|x| b.iter().map(move |y| x.clone() + &y))
