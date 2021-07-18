@@ -435,12 +435,14 @@ impl Database {
 
     pub(crate) async fn sync(&self, folders: Vec<String>) -> tokio::sync::mpsc::Receiver<f32> {
         let (tx, rx) = tokio::sync::mpsc::channel(32);
-        let pool = self.pool.clone();
+        if !folders.is_empty() {
+            let pool = self.pool.clone();
 
-        tokio::task::spawn_blocking(move || {
-            let rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(controller(folders, pool, tx));
-        });
+            tokio::task::spawn_blocking(move || {
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(controller(folders, pool, tx));
+            });
+        }
 
         rx
     }

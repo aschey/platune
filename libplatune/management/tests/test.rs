@@ -23,7 +23,21 @@ pub async fn test_sync_empty() {
     assert_eq!(vec![1.], msgs);
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 8)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+pub async fn test_sync_no_folder() {
+    let tempdir = TempDir::new().unwrap();
+    let (db, config) = setup(&tempdir).await;
+
+    let mut receiver = config.sync().await;
+    let mut msgs = vec![];
+    while let Some(msg) = receiver.recv().await {
+        msgs.push(msg);
+    }
+    db.close().await;
+    assert_eq!(Vec::<f32>::new(), msgs);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 pub async fn test_sync_basic() {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
@@ -78,10 +92,10 @@ impl Default for SongTest {
     results,
     search,
     case(vec![
-        SongTest { 
+        SongTest {
             title: Some("asdf"), 
             ..Default::default()
-        }], 
+        }],
         vec!["asdf"],
         "asdf"),
     case(vec![
