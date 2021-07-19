@@ -10,12 +10,14 @@ use postage::{
 };
 use regex::Regex;
 use sqlx::{
-    pool::PoolConnection, sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite,
+    pool::PoolConnection, sqlite::SqliteConnectOptions, ConnectOptions, Pool, Row, Sqlite,
     SqliteConnection, SqlitePool,
 };
 use std::{
     cmp::Ordering,
+    collections::HashMap,
     ffi::{CStr, CString},
+    iter::Sum,
     os::raw::c_char,
     ptr,
 };
@@ -57,19 +59,51 @@ pub struct SearchRes {
     pub correlation_ids: Vec<i32>,
 }
 
-#[derive(Debug, sqlx::FromRow)]
-pub struct SearchEntry {
+struct ResultScore {
+    len_score: usize,
+    weighted_score: f32,
+}
+
+impl Sum for ResultScore {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.reduce(|a, b| ResultScore {
+            weighted_score: a.weighted_score + b.weighted_score,
+            len_score: a.len_score + b.len_score,
+        })
+        .unwrap()
+    }
+}
+
+impl PartialEq for ResultScore {
+    fn eq(&self, other: &Self) -> bool {
+        self.weighted_score.partial_cmp(&other.weighted_score) == Some(Ordering::Equal)
+            && self.len_score.cmp(&other.len_score) == Ordering::Equal
+    }
+}
+
+impl PartialOrd for ResultScore {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        let ord = self.weighted_score.partial_cmp(&other.weighted_score);
+        match ord {
+            Some(Ordering::Greater | Ordering::Less) => ord,
+            _ => Some(self.len_score.cmp(&other.len_score)),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct SearchEntry {
     entry: String,
     pub entry_type: String,
     pub artist: Option<String>,
     pub correlation_id: i32,
-    rank: f32,
     start_highlight: String,
     end_highlight: String,
+    weights: HashMap<String, f32>,
 }
 
 impl SearchEntry {
-    fn score_match(&self) -> usize {
+    fn score_match(&self) -> ResultScore {
         let count = self.entry.matches(r"{startmatch}").count();
         let re = Regex::new(&r"(\{startmatch\}.*?\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
         let caps = re.captures(&self.entry).unwrap();
@@ -77,8 +111,20 @@ impl SearchEntry {
             .iter()
             .skip(1)
             .map(|c| match c.map(|c| c.as_str()) {
-                Some(cap) => cap.len(),
-                None => 0,
+                Some(cap) => match self.weights.get(cap) {
+                    Some(weight) => ResultScore {
+                        weighted_score: *weight,
+                        len_score: cap.len(),
+                    },
+                    None => ResultScore {
+                        weighted_score: 0.,
+                        len_score: cap.len(),
+                    },
+                },
+                None => ResultScore {
+                    weighted_score: 0.,
+                    len_score: 0,
+                },
             })
             .sum();
 
@@ -120,15 +166,10 @@ impl Ord for SearchEntry {
 
 impl PartialOrd for SearchEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let ord = self.rank.partial_cmp(&other.rank).unwrap();
-
-        if ord != Ordering::Equal {
-            return Some(ord);
-        }
-
         let self_score = self.score_match();
         let other_score = other.score_match();
-        return Some(self_score.cmp(&other_score));
+
+        self_score.partial_cmp(&other_score)
     }
 }
 
@@ -211,6 +252,7 @@ impl Database {
     async fn run_search(
         &self,
         query: &str,
+        weights: HashMap<String, f32>,
         options: &SearchOptions<'_>,
         artist_filter: &Vec<String>,
         con: &mut PoolConnection<Sqlite>,
@@ -262,11 +304,11 @@ impl Database {
             ORDER BY {1}
             LIMIT $4
         )
-        SELECT entry, entry_type, artist, correlation_id, rank, start_highlight, end_highlight FROM cte
+        SELECT entry, entry_type, artist, correlation_id, start_highlight, end_highlight FROM cte
         WHERE row_num = 1
         ORDER BY {1}
         LIMIT $5", artist_select, order_clause, artist_filter_clause, type_filter);
-        let mut sql_query = sqlx::query_as::<_, SearchEntry>(&full_query)
+        let mut sql_query = sqlx::query(&full_query)
             .bind(options.start_highlight)
             .bind(options.end_highlight)
             .bind(query.to_owned() + "*")
@@ -279,7 +321,19 @@ impl Database {
         for entry_type in &options.restrict_entry_type {
             sql_query = sql_query.bind(entry_type.to_owned());
         }
-        let res = sql_query.fetch_all(con).await.unwrap();
+        let res = sql_query
+            .map(|row| SearchEntry {
+                entry: row.try_get("entry").unwrap(),
+                entry_type: row.try_get("entry_type").unwrap(),
+                artist: row.try_get("artist").unwrap(),
+                correlation_id: row.try_get("correlation_id").unwrap(),
+                start_highlight: row.try_get("start_highlight").unwrap(),
+                end_highlight: row.try_get("end_highlight").unwrap(),
+                weights: weights.clone(),
+            })
+            .fetch_all(con)
+            .await
+            .unwrap();
 
         return res;
     }
@@ -321,6 +375,7 @@ impl Database {
         let mut res = self
             .run_search(
                 &(query.replace("&", "and")),
+                HashMap::new(),
                 &options,
                 &artist_filter,
                 &mut con,
@@ -339,7 +394,7 @@ impl Database {
             .map(|(i, _)| {
                 let score_clause = format!("case 
                 when word like '% %' then (distance * 1.0 / (length(word) - length(replace(word, ' ', '')))) * 3.5 
-                else  editdist3(${0}, word) * 1.0 / length(word) end", i + 1);
+                else editdist3(${0}, word) * 1.0 / length(word) end", i + 1);
                 format!(
                     "
                     select * from (
@@ -350,7 +405,7 @@ impl Database {
                         order by {1}
                         limit 5
                     )
-                   ",
+                    ",
                     i + 1, score_clause
                 )
             })
@@ -368,6 +423,10 @@ impl Database {
             search: last,
             score: 0.,
         });
+        let weights = spellfix_res
+            .iter()
+            .map(|s| (s.word.to_owned(), s.score))
+            .collect::<HashMap<_, _>>();
         let mut corrected_search = spellfix_res
             .into_iter()
             .group_by(|row| row.search.to_owned())
@@ -391,7 +450,13 @@ impl Database {
         println!("{:?}", corrected_search);
 
         let rest = self
-            .run_search(&corrected_search, &options, &artist_filter, &mut con)
+            .run_search(
+                &corrected_search,
+                weights,
+                &options,
+                &artist_filter,
+                &mut con,
+            )
             .await;
         res.extend(rest);
         let mut res = res

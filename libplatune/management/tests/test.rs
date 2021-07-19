@@ -214,6 +214,47 @@ impl Default for SongTest {
         }],
         vec!["a and b"], 
         "a b"),
+    case(vec![
+        SongTest {
+            artist: Some("bad bad"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("bag"),
+            ..Default::default()
+        }],
+        vec!["bag", "bad bad"], 
+        "bag"),
+    case(vec![
+        SongTest {
+            artist: Some("bad bad"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("bad bag"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("bag"),
+            ..Default::default()
+        }],
+        vec!["bag", "bad bag", "bad bad"], 
+        "bag"),
+    case(vec![
+        SongTest {
+            artist: Some("qwerty"),
+            title: Some("untitled")
+        },
+        SongTest {
+            artist: Some("qwerty"),
+            title: Some("untitled 2")
+        },
+        SongTest {
+            artist: Some("bag"),
+            title: Some("untitled")
+        }],
+        vec!["untitled", "untitled 2"], 
+        "untitled artist:qwerty")
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<&str>, search: &str) {
