@@ -59,6 +59,7 @@ pub struct SearchRes {
     pub correlation_ids: Vec<i32>,
 }
 
+#[derive(Debug)]
 struct ResultScore {
     len_score: usize,
     weighted_score: f32,
@@ -105,8 +106,9 @@ struct SearchEntry {
 impl SearchEntry {
     fn score_match(&self) -> ResultScore {
         let count = self.entry.matches(r"{startmatch}").count();
-        let re = Regex::new(&r"(\{startmatch\}.*?\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
+        let re = Regex::new(&r"(?:\{startmatch\}(.*?)\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
         let caps = re.captures(&self.entry).unwrap();
+
         let score = caps
             .iter()
             .skip(1)
@@ -452,12 +454,16 @@ impl Database {
         let rest = self
             .run_search(
                 &corrected_search,
-                weights,
+                weights.clone(),
                 &options,
                 &artist_filter,
                 &mut con,
             )
             .await;
+
+        for mut r in &mut res {
+            r.weights = weights.clone();
+        }
         res.extend(rest);
         let mut res = res
             .into_iter()

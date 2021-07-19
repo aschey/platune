@@ -155,6 +155,17 @@ impl Default for SongTest {
         "rhcp"),
     case(vec![
         SongTest {
+            artist: Some("red hot chili peppers"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("rhcpa"),
+            ..Default::default()
+        }],
+        vec!["red hot chili peppers", "rhcpa"], 
+        "rhcp"),
+    case(vec![
+        SongTest {
             artist: Some("a/b"),
             ..Default::default()
         }],
@@ -254,7 +265,22 @@ impl Default for SongTest {
             title: Some("untitled")
         }],
         vec!["untitled", "untitled 2"], 
-        "untitled artist:qwerty")
+        "untitled artist:qwerty"),
+    case(vec![
+        SongTest {
+            artist: Some("red hot chili peppers"),
+            title: Some("untitled")
+        },
+        SongTest {
+            artist: Some("red hot chili peppers"),
+            title: Some("untitled 2")
+        },
+        SongTest {
+            artist: Some("bag"),
+            title: Some("untitled")
+        }],
+        vec!["untitled", "untitled 2"], 
+        "untitled artist:rhcp")
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<&str>, search: &str) {
