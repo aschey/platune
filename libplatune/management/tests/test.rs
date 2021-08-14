@@ -87,6 +87,11 @@ impl Default for SongTest {
     }
 }
 
+pub struct SearchResultTest {
+    entry: &'static str,
+    num_correlation_ids: usize,
+}
+
 #[rstest(
     songs,
     results,
@@ -96,7 +101,7 @@ impl Default for SongTest {
             title: Some("asdf"), 
             ..Default::default()
         }],
-        vec!["asdf"],
+        vec![SearchResultTest {entry: "asdf", num_correlation_ids: 1}],
         "asdf"),
     case(vec![
         SongTest {
@@ -107,7 +112,10 @@ impl Default for SongTest {
             title: Some("bliss"),
             ..Default::default()
         }],
-        vec!["bless", "bliss"], 
+        vec![
+            SearchResultTest {entry: "bless", num_correlation_ids: 1},
+            SearchResultTest {entry: "bliss", num_correlation_ids: 1}
+        ],
         "blss"),
     case(vec![
         SongTest {
@@ -118,7 +126,10 @@ impl Default for SongTest {
             title: Some("bliss"),
             ..Default::default()
         }],
-        vec!["bliss", "bless blah blah"], 
+        vec![
+            SearchResultTest {entry: "bliss", num_correlation_ids: 1},
+            SearchResultTest {entry: "bless blah blah", num_correlation_ids: 1}
+        ],
         "blss"),
     case(vec![
         SongTest {
@@ -129,7 +140,10 @@ impl Default for SongTest {
             title: Some("bliss"),
             ..Default::default()
         }],
-        vec!["bliss", "blah bless blah"], 
+        vec![
+            SearchResultTest {entry: "bliss", num_correlation_ids: 1},
+            SearchResultTest {entry: "blah bless blah", num_correlation_ids: 1}
+        ],
         "blss"),
     case(vec![
         SongTest {
@@ -140,7 +154,9 @@ impl Default for SongTest {
             title: Some("asdf"),
             ..Default::default()
         }],
-        vec!["bless"], 
+        vec![
+            SearchResultTest {entry: "bless", num_correlation_ids: 1}
+        ],
         "blss"),
     case(vec![
         SongTest {
@@ -151,7 +167,10 @@ impl Default for SongTest {
             artist: Some("real hearty chopped pies"),
             ..Default::default()
         }],
-        vec!["red hot chili peppers", "real hearty chopped pies"], 
+        vec![
+            SearchResultTest {entry: "red hot chili peppers", num_correlation_ids: 1},
+            SearchResultTest {entry: "real hearty chopped pies", num_correlation_ids: 1}
+        ],
         "rhcp"),
     case(vec![
         SongTest {
@@ -162,35 +181,46 @@ impl Default for SongTest {
             artist: Some("rhcpa"),
             ..Default::default()
         }],
-        vec!["red hot chili peppers", "rhcpa"], 
+        vec![
+            SearchResultTest {entry: "red hot chili peppers", num_correlation_ids: 1},
+            SearchResultTest {entry: "rhcpa", num_correlation_ids: 1}
+        ],
         "rhcp"),
     case(vec![
         SongTest {
             artist: Some("a/b"),
             ..Default::default()
         }],
-        vec!["a/b"], 
+        vec![
+            SearchResultTest {entry: "a/b", num_correlation_ids: 1},
+        ],
         "a b"),
     case(vec![
         SongTest {
             artist: Some("a/b"),
             ..Default::default()
         }],
-        vec!["a/b"], 
+        vec![
+            SearchResultTest {entry: "a/b", num_correlation_ids: 1},
+        ],
         "a/b"),
     case(vec![
         SongTest {
             artist: Some("a & b"),
             ..Default::default()
         }],
-        vec!["a and b"], 
+        vec![
+            SearchResultTest {entry: "a and b", num_correlation_ids: 1},
+        ],
         "a & b"),
     case(vec![
         SongTest {
             artist: Some("a & b"),
             ..Default::default()
         }],
-        vec!["a and b"], 
+        vec![
+            SearchResultTest {entry: "a and b", num_correlation_ids: 1},
+        ],
         "a and b"),
     case(vec![
         SongTest {
@@ -201,7 +231,9 @@ impl Default for SongTest {
             artist: Some("a and b"),
             ..Default::default()
         }],
-        vec!["a and b"], 
+        vec![
+            SearchResultTest {entry: "a and b", num_correlation_ids: 2},
+        ],
         "a & b"),
     case(vec![
         SongTest {
@@ -212,7 +244,9 @@ impl Default for SongTest {
             artist: Some("a and b"),
             ..Default::default()
         }],
-        vec!["a and b"], 
+        vec![
+            SearchResultTest {entry: "a and b", num_correlation_ids: 2},
+        ],
         "a and b"),
     case(vec![
         SongTest {
@@ -223,7 +257,9 @@ impl Default for SongTest {
             artist: Some("a and b"),
             ..Default::default()
         }],
-        vec!["a and b"], 
+        vec![
+            SearchResultTest {entry: "a and b", num_correlation_ids: 2},
+        ],
         "a b"),
     case(vec![
         SongTest {
@@ -234,7 +270,10 @@ impl Default for SongTest {
             artist: Some("bag"),
             ..Default::default()
         }],
-        vec!["bag", "bad bad"], 
+        vec![
+            SearchResultTest {entry: "bag", num_correlation_ids: 1},
+            SearchResultTest {entry: "bad bad", num_correlation_ids: 1},
+        ],
         "bag"),
     case(vec![
         SongTest {
@@ -249,7 +288,11 @@ impl Default for SongTest {
             artist: Some("bag"),
             ..Default::default()
         }],
-        vec!["bag", "bad bag", "bad bad"], 
+        vec![
+            SearchResultTest {entry: "bag", num_correlation_ids: 1},
+            SearchResultTest {entry: "bad bag", num_correlation_ids: 1},
+            SearchResultTest {entry: "bad bad", num_correlation_ids: 1},
+        ],
         "bag"),
     case(vec![
         SongTest {
@@ -264,7 +307,10 @@ impl Default for SongTest {
             artist: Some("bag"),
             title: Some("untitled")
         }],
-        vec!["untitled", "untitled 2"], 
+        vec![
+            SearchResultTest {entry: "untitled", num_correlation_ids: 1},
+            SearchResultTest {entry: "untitled 2", num_correlation_ids: 1},
+        ],
         "untitled artist:qwerty"),
     case(vec![
         SongTest {
@@ -279,11 +325,14 @@ impl Default for SongTest {
             artist: Some("bag"),
             title: Some("untitled")
         }],
-        vec!["untitled", "untitled 2"], 
+        vec![
+            SearchResultTest {entry: "untitled", num_correlation_ids: 1},
+            SearchResultTest {entry: "untitled 2", num_correlation_ids: 1},
+        ],
         "untitled artist:rhcp")
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-pub async fn test_search(songs: Vec<SongTest>, results: Vec<&str>, search: &str) {
+pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
@@ -316,7 +365,8 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<&str>, search: &str)
     assert!(res.len() == results.len());
 
     for (i, result) in results.iter().enumerate() {
-        assert_matches!(&res[i], a if &a.entry == result);
+        assert_matches!(&res[i], a if &a.entry == result.entry && 
+            a.correlation_ids.len() == result.num_correlation_ids);
     }
 }
 
