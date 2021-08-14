@@ -19,6 +19,7 @@ pub async fn test_sync_empty() {
         msgs.push(msg);
     }
     db.close().await;
+    tempdir.close().unwrap();
     assert_eq!(vec![1.], msgs);
 }
 
@@ -33,6 +34,7 @@ pub async fn test_sync_no_folder() {
         msgs.push(msg);
     }
     db.close().await;
+    tempdir.close().unwrap();
     assert_eq!(Vec::<f32>::new(), msgs);
 }
 
@@ -69,6 +71,7 @@ pub async fn test_sync_basic() {
     }
 
     db.close().await;
+    tempdir.close().unwrap();
     assert_eq!(vec![0., 1.], msgs);
 }
 
@@ -374,6 +377,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         //     assert_eq!(&ids[j], id);
         // }
     }
+    tempdir.close().unwrap();
 }
 
 async fn setup(tempdir: &TempDir) -> (Database, Config) {
