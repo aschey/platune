@@ -12,6 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: apt-get update
+        # act doesn't have sudo installed but it's required on the real actions runner
         run: $(command -v sudo>/dev/null && echo "sudo") apt-get update
       - name: Install deps
         run: $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev cmake build-essential pkg-config git zlib1g-dev
@@ -26,7 +27,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --features=dummy -- --test-threads=8
+          args: --features=dummy -- --test-threads=4
   go:
     name: Run Go tests
     runs-on: ubuntu-latest
