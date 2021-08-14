@@ -396,7 +396,65 @@ pub struct SearchResultTest {
         vec![
             SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
         ],
-        "abc")
+        "abc"),
+    case(vec![
+        SongTest {
+            album: Some("abc test"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("abc test"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("abc test"),
+            ..Default::default()
+        },
+        SongTest {
+            album_artist: Some("abc test"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
+            SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
+            SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
+        ],
+        "abc"),
+    case(vec![
+        SongTest {
+            title: Some("qwerty song 1"),
+            album: Some("qwerty album 1"),
+            artist: Some("qwerty artist 1"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("qwerty song 1"),
+            album: Some("qwerty album 2"),
+            artist: Some("qwerty artist 2"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![1]},
+            SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![2]},
+        ],
+        "qwerty song 1"),
+    case(vec![
+        SongTest {
+            title: Some("qwerty song 1"),
+            album: Some("qwerty album 1"),
+            artist: Some("qwerty artist 1"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("qwerty song 1"),
+            album: Some("qwerty album 2"),
+            artist: Some("qwerty artist 1"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![1, 2]},
+        ],
+        "qwerty song 1")
     )
 ]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

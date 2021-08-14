@@ -292,7 +292,7 @@ impl Database {
                 entry_value, 
                 {0}, 
                 CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
-                CASE entry_type WHEN 'song' THEN s.song_title WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
+                CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
                 ORDER BY entry_type DESC) row_num
             FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match $3 {3}) a
             LEFT OUTER JOIN song s on s.song_id = assoc_id
@@ -343,7 +343,7 @@ impl Database {
         println!("convert res {:?}", res);
         let grouped = res
             .into_iter()
-            .group_by(|key| (key.get_formatted_entry(), key.entry_type.clone()))
+            .group_by(|key| (key.get_formatted_entry(), key.get_description()))
             .into_iter()
             .map(|(key, group)| {
                 let group = group.collect_vec();
