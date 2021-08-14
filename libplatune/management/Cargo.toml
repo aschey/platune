@@ -22,7 +22,7 @@ name = "bench"
 directories = "3.0.2"
 dotenv = "0.15.0"
 itertools = "0.10.1"
-katatsuki = {git = "https://github.com/aschey/seiri", rev = "cc846f244888aecdace34a02c1258d467c3ea6da"}
+katatsuki = {git = "https://github.com/aschey/seiri", rev = "c49bbba571eedbbca47e1ca40e20788b5433fcc3"}
 libsqlite3-sys = "0.22.2"
 log = "0.4.14"
 postage = "0.4.1"

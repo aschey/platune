@@ -79,6 +79,7 @@ pub struct SongTest {
     title: Option<&'static str>,
     artist: Option<&'static str>,
     album_artist: Option<&'static str>,
+    album: Option<&'static str>,
 }
 
 impl Default for SongTest {
@@ -87,6 +88,7 @@ impl Default for SongTest {
             title: None,
             artist: None,
             album_artist: None,
+            album: None,
         }
     }
 }
@@ -372,21 +374,30 @@ pub struct SearchResultTest {
             SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
         ],
         "abc"),
-        case(vec![
-            SongTest {
-                album_artist: Some("abc test1"),
-                ..Default::default()
-            },
-            SongTest {
-                artist: Some("abc test2"),
-                ..Default::default()
-            }],
-            vec![
-                SearchResultTest {entry: "abc test1", correlation_ids: vec![1]},
-                SearchResultTest {entry: "abc test2", correlation_ids: vec![1]},
-            ],
-            "abc")
-)
+    case(vec![
+        SongTest {
+            album_artist: Some("abc test1"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("abc test2"),
+            ..Default::default()
+        }],
+        vec![
+            SearchResultTest {entry: "abc test1", correlation_ids: vec![1]},
+            SearchResultTest {entry: "abc test2", correlation_ids: vec![1]},
+        ],
+        "abc"),
+    case(vec![
+        SongTest {
+            album: Some("abc test"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
+        ],
+        "abc")
+    )
 ]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
@@ -409,6 +420,9 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         }
         if let Some(album_artist) = song.album_artist {
             t.set_album_artists(album_artist);
+        }
+        if let Some(album) = song.album {
+            t.set_album(album);
         }
         t.save();
     }
