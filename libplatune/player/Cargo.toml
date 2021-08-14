@@ -17,21 +17,21 @@ runtime-tokio = ["tokio"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-futures-util = "0.3.15"
+futures-util = "0.3.16"
 log = "0.4.14"
 postage = "0.4.1"
 reqwest = {version = "0.11.4", features = ["stream"]}
 rodio = {git = "https://github.com/aschey/rodio", rev = "e2ba0a05", default-features = false, features = ["symphonia-all", "vorbis"]}
 strum_macros = "0.21.1"
 tempfile = "3.2.0"
-tokio = {version = "1.8.1", features = ["rt-multi-thread"], optional = true}
+tokio = {version = "1.10.0", features = ["rt-multi-thread"], optional = true}
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.50"
+async-trait = "0.1.51"
 ctor = "0.1.20"
 flexi_logger = "0.18.0"
-futures = "0.3.15"
-rstest = "0.10.0"
-tokio = {version = "1.8.1", features = ["rt-multi-thread", "macros"]}
+futures = "0.3.16"
+rstest = "0.11.0"
+tokio = {version = "1.10.0", features = ["rt-multi-thread", "macros"]}
 yansi = "0.5.0"
