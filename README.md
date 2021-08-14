@@ -45,7 +45,7 @@ Platune is a cross-platform music player that uses a client-server architecture 
 
 ## Project Goals
 
-- Be simple to use with minimal configuration. Don't try support every possible use case.
+- Be simple to use with minimal configuration. Don't try to support every possible use case.
 - Follow the [Unix Philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) - the core code should be simple and extendable, non-essential functionality should be implemented separately.
 - Strive for compatiblity with established tools and protocols where possible.
 - Focus on local media playback, not streaming services (integration with streaming services may be added via plugins in the future).
