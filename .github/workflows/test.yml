@@ -11,10 +11,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Update apt
-        run: sudo apt-get update
-      - name: Install alsa
-        run: sudo apt-get install -y --no-install-recommends libasound2-dev cmake
+      - name: apt-get update
+        run: apt-get update
+      - name: Install deps
+        run: apt-get install -y libssl-dev libasound2-dev cmake build-essential pkg-config git zlib1g-dev
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
