@@ -1,5 +1,5 @@
 {
   "scripts": {
-    "test":  "cargo test --features=dummy -- --test-threads=8"
+    "test":  "cargo test --features=dummy -- --test-threads=4"
   }
 }

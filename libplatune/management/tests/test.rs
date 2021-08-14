@@ -78,6 +78,7 @@ pub async fn test_sync_basic() {
 pub struct SongTest {
     title: Option<&'static str>,
     artist: Option<&'static str>,
+    album_artist: Option<&'static str>,
 }
 
 impl Default for SongTest {
@@ -85,6 +86,7 @@ impl Default for SongTest {
         Self {
             title: None,
             artist: None,
+            album_artist: None,
         }
     }
 }
@@ -299,15 +301,18 @@ pub struct SearchResultTest {
     case(vec![
         SongTest {
             artist: Some("qwerty"),
-            title: Some("untitled")
+            title: Some("untitled"),
+            ..Default::default()
         },
         SongTest {
             artist: Some("qwerty"),
-            title: Some("untitled 2")
+            title: Some("untitled 2"),
+            ..Default::default()
         },
         SongTest {
             artist: Some("bag"),
-            title: Some("untitled")
+            title: Some("untitled"),
+            ..Default::default()
         }],
         vec![
             SearchResultTest {entry: "untitled", correlation_ids: vec![3]},
@@ -317,22 +322,71 @@ pub struct SearchResultTest {
     case(vec![
         SongTest {
             artist: Some("red hot chili peppers"),
-            title: Some("untitled")
+            title: Some("untitled"),
+            ..Default::default()
         },
         SongTest {
             artist: Some("red hot chili peppers"),
-            title: Some("untitled 2")
+            title: Some("untitled 2"),
+            ..Default::default()
         },
         SongTest {
             artist: Some("bag"),
-            title: Some("untitled")
+            title: Some("untitled"),
+            ..Default::default()
         }],
         vec![
             SearchResultTest {entry: "untitled", correlation_ids: vec![3]},
             SearchResultTest {entry: "untitled 2", correlation_ids: vec![2]},
         ],
-        "untitled artist:rhcp")
- )
+        "untitled artist:rhcp"),
+    case(vec![
+        SongTest {
+            artist: Some("abc test"),
+            album_artist: Some("abc test"),
+            ..Default::default()
+        }],
+        vec![
+            SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
+        ],
+        "abc"),
+    case(vec![
+        SongTest {
+            album_artist: Some("abc test"),
+            ..Default::default()
+        }],
+        vec![
+            SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
+        ],
+        "abc"),
+    case(vec![
+        SongTest {
+            album_artist: Some("abc test"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("abc test"),
+            ..Default::default()
+        }],
+        vec![
+            SearchResultTest {entry: "abc test", correlation_ids: vec![1]},
+        ],
+        "abc"),
+        case(vec![
+            SongTest {
+                album_artist: Some("abc test1"),
+                ..Default::default()
+            },
+            SongTest {
+                artist: Some("abc test2"),
+                ..Default::default()
+            }],
+            vec![
+                SearchResultTest {entry: "abc test1", correlation_ids: vec![1]},
+                SearchResultTest {entry: "abc test2", correlation_ids: vec![1]},
+            ],
+            "abc")
+)
 ]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
@@ -352,6 +406,9 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         }
         if let Some(artist) = song.artist {
             t.set_artist(artist);
+        }
+        if let Some(album_artist) = song.album_artist {
+            t.set_album_artists(album_artist);
         }
         t.save();
     }
