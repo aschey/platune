@@ -17,14 +17,14 @@ INSERT INTO search_index (
     )
 VALUES(
         new.song_id,
-        REPLACE(new.song_title, '&', 'and'),
+        REPLACE(new.song_title, ' & ', ' and '),
         'song'
     );
 END;
 CREATE TRIGGER IF NOT EXISTS after_song_update
 UPDATE OF song_title ON song BEGIN
 UPDATE search_index
-SET entry_value = REPLACE(new.song_title, '&', 'and')
+SET entry_value = REPLACE(new.song_title, ' & ', ' and ')
 WHERE assoc_id = old.song_id
     and entry_type = 'song';
 END;
@@ -45,14 +45,14 @@ INSERT INTO search_index (
     )
 VALUES(
         new.album_id,
-        REPLACE(new.album_name, '&', 'and'),
+        REPLACE(new.album_name, ' & ', ' and '),
         'album'
     );
 END;
 CREATE TRIGGER IF NOT EXISTS after_album_update
 UPDATE OF album_name ON album BEGIN
 UPDATE search_index
-SET entry_value = REPLACE(new.album_name, '&', 'and')
+SET entry_value = REPLACE(new.album_name, ' & ', ' and ')
 WHERE assoc_id = old.album_id
     and entry_type = 'album';
 END;
@@ -73,14 +73,14 @@ INSERT INTO search_index (
     )
 VALUES(
         new.artist_id,
-        REPLACE(new.artist_name, '&', 'and'),
+        REPLACE(new.artist_name, ' & ', ' and '),
         'artist'
     );
 END;
 CREATE TRIGGER IF NOT EXISTS after_artist_update
 UPDATE OF artist_name ON artist BEGIN
 UPDATE search_index
-SET entry_value = REPLACE(new.artist_name, '&', 'and')
+SET entry_value = REPLACE(new.artist_name, ' & ', ' and ')
 WHERE assoc_id = old.artist_id
     and entry_type = 'artist';
 END;
@@ -101,14 +101,14 @@ INSERT INTO search_index (
     )
 VALUES(
         new.album_artist_id,
-        REPLACE(new.album_artist_name, '&', 'and'),
+        REPLACE(new.album_artist_name, ' & ', ' and '),
         'album_artist'
     );
 END;
 CREATE TRIGGER IF NOT EXISTS after_album_artist_update
 UPDATE OF album_artist_name ON album_artist BEGIN
 UPDATE search_index
-SET entry_value = REPLACE(new.album_artist_name, '&', 'and')
+SET entry_value = REPLACE(new.album_artist_name, ' & ', ' and ')
 WHERE assoc_id = old.album_artist_id
     and entry_type = 'album_artist';
 END;

@@ -282,7 +282,6 @@ impl Database {
                 .join(",");
 
             type_filter = format!("AND entry_type in ({})", &in_list);
-            num_extra_args += options.restrict_entry_type.len();
         }
         let full_query = format!("
         WITH CTE AS (
@@ -339,6 +338,10 @@ impl Database {
         return res;
     }
 
+    fn replace_ampersand(&self, string: &str) -> String {
+        string.replace(" & ", " and ").replace("&", " ")
+    }
+
     fn convert_res(&self, res: Vec<SearchEntry>) -> Vec<SearchRes> {
         println!("convert res {:?}", res);
         let grouped = res
@@ -376,7 +379,7 @@ impl Database {
         let mut con = self.acquire_with_spellfix().await;
         let mut res = self
             .run_search(
-                &(query.replace("&", "and")),
+                &(self.replace_ampersand(&query)),
                 HashMap::new(),
                 &options,
                 &artist_filter,
@@ -384,6 +387,7 @@ impl Database {
             )
             .await;
         res.sort();
+
         if res.len() == options.limit as usize {
             return self.convert_res(res);
         }
@@ -439,9 +443,11 @@ impl Database {
                     .flat_map(|x| b.iter().map(move |y| x.clone() + &y))
                     .collect_vec()
             })
+            .iter()
+            .map(|s| self.replace_ampersand(s))
+            .unique()
             .join("OR ")
             .trim()
-            .replace("&", "and")
             .to_owned();
         if corrected_search.is_empty() {
             return vec![];

@@ -269,6 +269,41 @@ pub struct SearchResultTest {
         "a b"),
     case(vec![
         SongTest {
+            artist: Some("br&nd"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "br&nd", correlation_ids: vec![1]},
+        ],
+        "br&nd"),
+    case(vec![
+        SongTest {
+            artist: Some("red hot & chili peppers"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("red hot and chili peppers"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "red hot and chili peppers", correlation_ids: vec![1, 2]},
+        ],
+        "rhacp"),
+    case(vec![
+        SongTest {
+            artist: Some("red hot & chili peppers"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("red hot and chili peppers"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "red hot and chili peppers", correlation_ids: vec![1, 2]},
+        ],
+        "rh&cp"),
+    case(vec![
+        SongTest {
             artist: Some("bad bad"),
             ..Default::default()
         },
