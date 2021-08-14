@@ -38,7 +38,7 @@ pub async fn test_sync_no_folder() {
     assert_eq!(Vec::<f32>::new(), msgs);
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_basic() {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
