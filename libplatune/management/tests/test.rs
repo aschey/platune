@@ -1,4 +1,3 @@
-use assert_matches::*;
 use libplatune_management::{
     config::Config,
     database::{Database, SearchRes},
@@ -89,7 +88,7 @@ impl Default for SongTest {
 
 pub struct SearchResultTest {
     entry: &'static str,
-    num_correlation_ids: usize,
+    correlation_ids: Vec<i32>,
 }
 
 #[rstest(
@@ -101,7 +100,7 @@ pub struct SearchResultTest {
             title: Some("asdf"), 
             ..Default::default()
         }],
-        vec![SearchResultTest {entry: "asdf", num_correlation_ids: 1}],
+        vec![SearchResultTest {entry: "asdf", correlation_ids: vec![1]}],
         "asdf"),
     case(vec![
         SongTest {
@@ -113,8 +112,8 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "bless", num_correlation_ids: 1},
-            SearchResultTest {entry: "bliss", num_correlation_ids: 1}
+            SearchResultTest {entry: "bless", correlation_ids: vec![2]},
+            SearchResultTest {entry: "bliss", correlation_ids: vec![1]}
         ],
         "blss"),
     case(vec![
@@ -127,8 +126,8 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "bliss", num_correlation_ids: 1},
-            SearchResultTest {entry: "bless blah blah", num_correlation_ids: 1}
+            SearchResultTest {entry: "bliss", correlation_ids: vec![1]},
+            SearchResultTest {entry: "bless blah blah", correlation_ids: vec![2]}
         ],
         "blss"),
     case(vec![
@@ -141,8 +140,8 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "bliss", num_correlation_ids: 1},
-            SearchResultTest {entry: "blah bless blah", num_correlation_ids: 1}
+            SearchResultTest {entry: "bliss", correlation_ids: vec![1]},
+            SearchResultTest {entry: "blah bless blah", correlation_ids: vec![2]}
         ],
         "blss"),
     case(vec![
@@ -155,7 +154,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "bless", num_correlation_ids: 1}
+            SearchResultTest {entry: "bless", correlation_ids: vec![2]}
         ],
         "blss"),
     case(vec![
@@ -168,8 +167,8 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "red hot chili peppers", num_correlation_ids: 1},
-            SearchResultTest {entry: "real hearty chopped pies", num_correlation_ids: 1}
+            SearchResultTest {entry: "red hot chili peppers", correlation_ids: vec![2]},
+            SearchResultTest {entry: "real hearty chopped pies", correlation_ids: vec![1]}
         ],
         "rhcp"),
     case(vec![
@@ -182,8 +181,8 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "red hot chili peppers", num_correlation_ids: 1},
-            SearchResultTest {entry: "rhcpa", num_correlation_ids: 1}
+            SearchResultTest {entry: "red hot chili peppers", correlation_ids: vec![2]},
+            SearchResultTest {entry: "rhcpa", correlation_ids: vec![1]}
         ],
         "rhcp"),
     case(vec![
@@ -192,7 +191,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "a/b", num_correlation_ids: 1},
+            SearchResultTest {entry: "a/b", correlation_ids: vec![1]},
         ],
         "a b"),
     case(vec![
@@ -201,7 +200,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "a/b", num_correlation_ids: 1},
+            SearchResultTest {entry: "a/b", correlation_ids: vec![1]},
         ],
         "a/b"),
     case(vec![
@@ -210,7 +209,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "a and b", num_correlation_ids: 1},
+            SearchResultTest {entry: "a and b", correlation_ids: vec![1]},
         ],
         "a & b"),
     case(vec![
@@ -219,7 +218,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "a and b", num_correlation_ids: 1},
+            SearchResultTest {entry: "a and b", correlation_ids: vec![1]},
         ],
         "a and b"),
     case(vec![
@@ -232,7 +231,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "a and b", num_correlation_ids: 2},
+            SearchResultTest {entry: "a and b", correlation_ids: vec![1, 2]},
         ],
         "a & b"),
     case(vec![
@@ -245,7 +244,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "a and b", num_correlation_ids: 2},
+            SearchResultTest {entry: "a and b", correlation_ids: vec![1, 2]},
         ],
         "a and b"),
     case(vec![
@@ -258,7 +257,7 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "a and b", num_correlation_ids: 2},
+            SearchResultTest {entry: "a and b", correlation_ids: vec![1, 2]},
         ],
         "a b"),
     case(vec![
@@ -271,8 +270,8 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "bag", num_correlation_ids: 1},
-            SearchResultTest {entry: "bad bad", num_correlation_ids: 1},
+            SearchResultTest {entry: "bag", correlation_ids: vec![1]},
+            SearchResultTest {entry: "bad bad", correlation_ids: vec![2]},
         ],
         "bag"),
     case(vec![
@@ -289,9 +288,9 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "bag", num_correlation_ids: 1},
-            SearchResultTest {entry: "bad bag", num_correlation_ids: 1},
-            SearchResultTest {entry: "bad bad", num_correlation_ids: 1},
+            SearchResultTest {entry: "bag", correlation_ids: vec![1]},
+            SearchResultTest {entry: "bad bag", correlation_ids: vec![2]},
+            SearchResultTest {entry: "bad bad", correlation_ids: vec![3]},
         ],
         "bag"),
     case(vec![
@@ -308,8 +307,8 @@ pub struct SearchResultTest {
             title: Some("untitled")
         }],
         vec![
-            SearchResultTest {entry: "untitled", num_correlation_ids: 1},
-            SearchResultTest {entry: "untitled 2", num_correlation_ids: 1},
+            SearchResultTest {entry: "untitled", correlation_ids: vec![3]},
+            SearchResultTest {entry: "untitled 2", correlation_ids: vec![2]},
         ],
         "untitled artist:qwerty"),
     case(vec![
@@ -326,11 +325,12 @@ pub struct SearchResultTest {
             title: Some("untitled")
         }],
         vec![
-            SearchResultTest {entry: "untitled", num_correlation_ids: 1},
-            SearchResultTest {entry: "untitled 2", num_correlation_ids: 1},
+            SearchResultTest {entry: "untitled", correlation_ids: vec![3]},
+            SearchResultTest {entry: "untitled 2", correlation_ids: vec![2]},
         ],
         "untitled artist:rhcp")
-)]
+ )
+]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
     let tempdir = TempDir::new().unwrap();
@@ -360,13 +360,18 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
 
     let res = db.search(search, Default::default()).await;
     db.close().await;
-    println!("{:?}", res);
+    println!("res {:?}", res);
 
     assert!(res.len() == results.len());
 
     for (i, result) in results.iter().enumerate() {
-        assert_matches!(&res[i], a if &a.entry == result.entry && 
-            a.correlation_ids.len() == result.num_correlation_ids);
+        assert_eq!(&res[i].entry, result.entry);
+        assert_eq!(&res[i].correlation_ids.len(), &result.correlation_ids.len());
+        let mut ids = res[i].correlation_ids.clone();
+        ids.sort();
+        for (j, id) in result.correlation_ids.iter().enumerate() {
+            assert_eq!(&ids[j], id);
+        }
     }
 }
 

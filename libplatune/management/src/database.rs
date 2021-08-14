@@ -286,8 +286,7 @@ impl Database {
         }
         let full_query = format!("
         WITH CTE AS (
-            SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight,
-            CASE entry_type WHEN 'song' THEN ar.artist_id WHEN 'album' THEN al.album_id ELSE assoc_id END correlation_id,
+            SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight, assoc_id correlation_id,
             {0} artist,
             ROW_NUMBER() OVER (PARTITION BY 
                 entry_value, 
@@ -341,6 +340,7 @@ impl Database {
     }
 
     fn convert_res(&self, res: Vec<SearchEntry>) -> Vec<SearchRes> {
+        println!("convert res {:?}", res);
         let grouped = res
             .into_iter()
             .group_by(|key| (key.get_formatted_entry(), key.entry_type.clone()))
@@ -467,7 +467,15 @@ impl Database {
         res.extend(rest);
         let mut res = res
             .into_iter()
-            .unique_by(|r| r.entry.clone() + "-" + &r.entry_type)
+            .unique_by(|r| {
+                r.entry
+                    .clone()
+                    .replace("{startmatch}", "")
+                    .replace("{endmatch}", "")
+                    + "-"
+                    + &r.entry_type
+                    + &r.correlation_id.to_string()
+            })
             .take(options.limit as usize)
             .collect_vec();
         res.sort();

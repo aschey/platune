@@ -32,7 +32,6 @@ sqlx = {version = "0.5.5", features = ["runtime-tokio-rustls", "sqlite", "offlin
 tokio = {version = "1.10.0", features = ["rt-multi-thread", "macros"]}
 
 [dev-dependencies]
-assert_matches = "1.5.0"
 criterion = {version = "0.3.5", features = ["async_tokio"]}
 rstest = "0.11.0"
 tempfile = "3.2.0"
