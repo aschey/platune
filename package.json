@@ -2,7 +2,7 @@
   "private": true,
   "workspaces": ["libplatune", "platune-cli"],
   "scripts": {
-    "test": "mono-run test"
+    "test": "mono-run test --ui row"
   },
   "devDependencies": {"monorepo-run": "https://github.com/Akryum/monorepo-run"}
 }
