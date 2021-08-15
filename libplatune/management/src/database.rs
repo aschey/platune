@@ -335,7 +335,6 @@ impl Database {
     }
 
     fn convert_res(&self, res: Vec<SearchEntry>) -> Vec<SearchRes> {
-        println!("convert res {:?}", res);
         let grouped = res
             .into_iter()
             .group_by(|key| (key.get_formatted_entry(), key.get_description()))
@@ -345,9 +344,9 @@ impl Database {
                 let first = group.get(0).unwrap();
                 SearchRes {
                     entry: key.0,
-                    entry_type: key.1,
+                    entry_type: first.entry_type.to_owned(),
                     artist: first.artist.to_owned(),
-                    description: first.get_description(),
+                    description: key.1,
                     correlation_ids: group.iter().map(|v| v.correlation_id).collect(),
                 }
             })
