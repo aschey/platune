@@ -21,6 +21,9 @@ use std::{
 };
 use tokio::{sync::mpsc, task::JoinHandle, time::timeout};
 
+const MIN_WORDS: usize = 3;
+const MIN_LEN: usize = 20;
+
 pub struct Database {
     pool: Pool<Sqlite>,
     opts: SqliteConnectOptions,
@@ -57,6 +60,7 @@ pub struct SearchRes {
 struct ResultScore {
     len_score: usize,
     weighted_score: f32,
+    entry: String,
 }
 
 impl Sum for ResultScore {
@@ -64,6 +68,7 @@ impl Sum for ResultScore {
         iter.reduce(|a, b| ResultScore {
             weighted_score: a.weighted_score + b.weighted_score,
             len_score: a.len_score + b.len_score,
+            entry: a.entry + &b.entry,
         })
         .unwrap()
     }
@@ -78,11 +83,15 @@ impl PartialEq for ResultScore {
 
 impl PartialOrd for ResultScore {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let ord = self.weighted_score.partial_cmp(&other.weighted_score);
-        match ord {
-            Some(Ordering::Greater | Ordering::Less) => ord,
-            _ => Some(self.len_score.cmp(&other.len_score)),
+        let weighted_ord = self.weighted_score.partial_cmp(&other.weighted_score);
+        if weighted_ord != Some(Ordering::Equal) && weighted_ord != None {
+            return weighted_ord;
         }
+        let len_ord = self.len_score.cmp(&other.len_score);
+        if len_ord != Ordering::Equal {
+            return Some(len_ord);
+        }
+        return Some(self.entry.cmp(&other.entry));
     }
 }
 
@@ -93,6 +102,7 @@ struct SearchEntry {
     pub artist: Option<String>,
     pub album: Option<String>,
     pub correlation_id: i32,
+    original_query: String,
     start_highlight: String,
     end_highlight: String,
     weights: HashMap<String, f32>,
@@ -104,7 +114,7 @@ impl SearchEntry {
         let re = Regex::new(&r"(?:\{startmatch\}(.*?)\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
         let caps = re.captures(&self.entry).unwrap();
 
-        let score = caps
+        let mut score: ResultScore = caps
             .iter()
             .skip(1)
             .map(|c| match c.map(|c| c.as_str()) {
@@ -112,18 +122,29 @@ impl SearchEntry {
                     Some(weight) => ResultScore {
                         weighted_score: *weight,
                         len_score: cap.len(),
+                        entry: cap.to_owned(),
                     },
                     None => ResultScore {
                         weighted_score: 0.,
                         len_score: cap.len(),
+                        entry: cap.to_owned(),
                     },
                 },
                 None => ResultScore {
                     weighted_score: 0.,
                     len_score: 0,
+                    entry: "".to_owned(),
                 },
             })
             .sum();
+
+        if score.weighted_score == 0.
+            && score.len_score + count >= MIN_LEN
+            && count >= MIN_WORDS
+            && self.original_query.len() == count
+        {
+            score.len_score = self.original_query.len();
+        }
 
         return score;
     }
@@ -243,6 +264,7 @@ impl Database {
     async fn run_search(
         &self,
         query: &str,
+        original_query: &str,
         weights: HashMap<String, f32>,
         options: &SearchOptions<'_>,
         artist_filter: &Vec<String>,
@@ -302,7 +324,7 @@ impl Database {
         let mut sql_query = sqlx::query(&full_query)
             .bind(options.start_highlight)
             .bind(options.end_highlight)
-            .bind(query.to_owned() + "*")
+            .bind(query.to_owned())
             .bind(options.limit * 2)
             .bind(options.limit);
 
@@ -318,6 +340,7 @@ impl Database {
                 entry_type: row.try_get("entry_type").unwrap(),
                 artist: row.try_get("artist").unwrap(),
                 album: row.try_get("album").unwrap(),
+                original_query: original_query.to_owned(),
                 correlation_id: row.try_get("correlation_id").unwrap(),
                 start_highlight: row.try_get("start_highlight").unwrap(),
                 end_highlight: row.try_get("end_highlight").unwrap(),
@@ -334,7 +357,8 @@ impl Database {
         string.replace(" & ", " and ").replace("&", " ")
     }
 
-    fn convert_res(&self, res: Vec<SearchEntry>) -> Vec<SearchRes> {
+    fn convert_res(&self, mut res: Vec<SearchEntry>) -> Vec<SearchRes> {
+        res.sort();
         let grouped = res
             .into_iter()
             .group_by(|key| (key.get_formatted_entry(), key.get_description()))
@@ -358,26 +382,30 @@ impl Database {
     async fn search_helper(
         &self,
         query: &str,
+        original_query: &str,
         options: SearchOptions<'_>,
         artist_filter: Vec<String>,
     ) -> Vec<SearchRes> {
-        let special_chars = Regex::new(r"[^A-Za-z0-9&\s]").unwrap();
-        let query = special_chars.replace_all(&query, " ").trim().to_string();
+        let special_chars = Regex::new(r"[^A-Za-z0-9&\*\s]").unwrap();
+        let mut query = special_chars.replace_all(&query, " ").trim().to_string();
         if query.is_empty() {
             return vec![];
         }
-        println!("query {}", query);
+        if !query.ends_with("*") {
+            query += "*";
+        }
+
         let mut con = self.acquire_with_spellfix().await;
         let mut res = self
             .run_search(
                 &(self.replace_ampersand(&query)),
+                original_query,
                 HashMap::new(),
                 &options,
                 &artist_filter,
                 &mut con,
             )
             .await;
-        res.sort();
 
         if res.len() == options.limit as usize {
             return self.convert_res(res);
@@ -397,7 +425,7 @@ impl Database {
                     select * from (
                         select distinct word, ${0} search, {1} score
                         from search_spellfix 
-                        where word match ${0}
+                        where word match replace(${0}, '*', '')
                         and ({1}) <= 50
                         order by {1}
                         limit 5
@@ -451,6 +479,7 @@ impl Database {
         let rest = self
             .run_search(
                 &corrected_search,
+                original_query,
                 weights.clone(),
                 &options,
                 &artist_filter,
@@ -462,7 +491,7 @@ impl Database {
             r.weights = weights.clone();
         }
         res.extend(rest);
-        let mut res = res
+        let res = res
             .into_iter()
             .unique_by(|r| {
                 r.entry
@@ -475,7 +504,6 @@ impl Database {
             })
             .take(options.limit as usize)
             .collect_vec();
-        res.sort();
 
         return self.convert_res(res);
     }
@@ -491,6 +519,7 @@ impl Database {
             artist_filter = self
                 .search_helper(
                     &_artist_filter,
+                    &query,
                     SearchOptions {
                         restrict_entry_type: vec!["artist", "album_artist"],
                         ..Default::default()
@@ -505,7 +534,9 @@ impl Database {
             query = _query;
         }
 
-        return self.search_helper(&query, options, artist_filter).await;
+        return self
+            .search_helper(&query, &query, options, artist_filter)
+            .await;
     }
 
     pub(crate) async fn sync(&self, folders: Vec<String>) -> tokio::sync::mpsc::Receiver<f32> {
@@ -863,9 +894,10 @@ async fn tags_task(
             r#"
             select entry_value as "entry_value: String"
             from search_index
-            where length(entry_value) >= 20
+            where length(entry_value) >= $1
             and entry_type != 'song'
-            "#
+            "#,
+            MIN_LEN as i32
         )
         .fetch_all(&mut tran)
         .await
@@ -874,7 +906,7 @@ async fn tags_task(
         for val in long_vals {
             let entry_value = val.entry_value.unwrap();
             let words = re.split(&entry_value).collect_vec();
-            if words.len() < 3 {
+            if words.len() < MIN_WORDS {
                 continue;
             }
             let acronym = words

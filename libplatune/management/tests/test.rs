@@ -174,8 +174,8 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
+            SearchResultTest {entry: "real hearty chopped pies", correlation_ids: vec![1]},
             SearchResultTest {entry: "red hot chili peppers", correlation_ids: vec![2]},
-            SearchResultTest {entry: "real hearty chopped pies", correlation_ids: vec![1]}
         ],
         "rhcp"),
     case(vec![
@@ -192,6 +192,19 @@ pub struct SearchResultTest {
             SearchResultTest {entry: "rhcpa", correlation_ids: vec![1]}
         ],
         "rhcp"),
+    case(vec![
+        SongTest {
+            artist: Some("between the buried and me"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("thee"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "between the buried and me", correlation_ids: vec![2]},
+        ],
+        "betwen the b"),
     case(vec![
         SongTest {
             artist: Some("a/b"),
