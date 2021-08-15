@@ -10,24 +10,6 @@
       "nullable": []
     }
   },
-  "288fda0fdcd51c0d0406e4aac35a6a81b2804ee2ab1af4e442da5cb4433e03bd": {
-    "query": "\n            select entry_value as \"entry_value: String\"\n            from search_index\n            where length(entry_value) >= 20\n            and entry_type != 'song'\n            ",
-    "describe": {
-      "columns": [
-        {
-          "name": "entry_value: String",
-          "ordinal": 0,
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Right": 0
-      },
-      "nullable": [
-        true
-      ]
-    }
-  },
   "48b93f37ed89f2f302e5465207adaafd2066eca6677701dc7783ea6760616459": {
     "query": "update mount set mount_path = ? where mount_id = ?",
     "describe": {
@@ -271,6 +253,24 @@
       },
       "nullable": [
         false
+      ]
+    }
+  },
+  "eaa96754639349a4acb343d03863bacc44fbacf7a2d1aa7d0511ac2201e8f64a": {
+    "query": "\n            select entry_value as \"entry_value: String\"\n            from search_index\n            where length(entry_value) >= $1\n            and entry_type != 'song'\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "entry_value: String",
+          "ordinal": 0,
+          "type_info": "Null"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        true
       ]
     }
   },
