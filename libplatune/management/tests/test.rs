@@ -487,7 +487,8 @@ pub struct SearchResultTest {
             ..Default::default()
         },],
         vec![
-            SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![1, 2]},
+            SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![1]},
+            SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![2]},
         ],
         "qwerty song 1")
     )

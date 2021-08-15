@@ -97,6 +97,7 @@ struct SearchEntry {
     entry: String,
     pub entry_type: String,
     pub artist: Option<String>,
+    pub album: Option<String>,
     pub correlation_id: i32,
     start_highlight: String,
     end_highlight: String,
@@ -133,23 +134,17 @@ impl SearchEntry {
         return score;
     }
 
-    fn capitalize(&self, s: &str) -> String {
-        let mut c = s.chars();
-        match c.next() {
-            None => String::new(),
-            Some(f) => f.to_uppercase().chain(c).collect(),
-        }
-    }
-
     pub fn get_description(&self) -> String {
-        match &self.artist {
-            Some(artist) => format!("{} by {}", self.capitalize(&self.entry_type), artist),
-            None => self
-                .entry_type
-                .split("_")
-                .map(|s| self.capitalize(s))
-                .collect_vec()
-                .join(" "),
+        match &self.entry_type[..] {
+            "song" => format!(
+                "Song from {} by {}",
+                self.album.to_owned().unwrap(),
+                self.artist.to_owned().unwrap(),
+            ),
+            "album" => format!("Album by {}", self.artist.to_owned().unwrap()),
+            "artist" => "Artist".to_owned(),
+            "album_artist" => "Album Artist".to_owned(),
+            _ => "".to_owned(),
         }
     }
 
@@ -287,6 +282,7 @@ impl Database {
         WITH CTE AS (
             SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight, assoc_id correlation_id,
             {0} artist,
+            al2.album_name album,
             ROW_NUMBER() OVER (PARTITION BY 
                 entry_value, 
                 {0}, 
@@ -297,6 +293,7 @@ impl Database {
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
             LEFT OUTER JOIN album al on al.album_id = assoc_id
+            LEFT OUTER JOIN album al2 on al2.album_id = s.album_id
             LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
             LEFT OUTER JOIN artist ar2 on ar2.artist_id = assoc_id
             LEFT OUTER JOIN album_artist aa2 on aa2.album_artist_id = assoc_id
@@ -304,7 +301,7 @@ impl Database {
             ORDER BY {1}
             LIMIT $4
         )
-        SELECT entry, entry_type, artist, correlation_id, start_highlight, end_highlight FROM cte
+        SELECT entry, entry_type, artist, album, correlation_id, start_highlight, end_highlight FROM cte
         WHERE row_num = 1
         ORDER BY {1}
         LIMIT $5", artist_select, order_clause, artist_filter_clause, type_filter);
@@ -326,6 +323,7 @@ impl Database {
                 entry: row.try_get("entry").unwrap(),
                 entry_type: row.try_get("entry_type").unwrap(),
                 artist: row.try_get("artist").unwrap(),
+                album: row.try_get("album").unwrap(),
                 correlation_id: row.try_get("correlation_id").unwrap(),
                 start_highlight: row.try_get("start_highlight").unwrap(),
                 end_highlight: row.try_get("end_highlight").unwrap(),
@@ -511,7 +509,6 @@ impl Database {
                 .map(|r| r.entry)
                 .collect_vec();
 
-            println!("artist filter {:?}", artist_filter);
             query = _query;
         }
 
