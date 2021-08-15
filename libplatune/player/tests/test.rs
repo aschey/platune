@@ -5,13 +5,13 @@ use futures::Future;
 
 use rstest::*;
 use std::{env::current_dir, time::Duration};
+use tokio::sync::broadcast;
 use tokio::time::{error::Elapsed, timeout};
 use yansi::{Color, Style};
 
 use assert_matches::*;
 use libplatune_player::platune_player::PlatunePlayer;
 use libplatune_player::platune_player::PlayerEvent;
-use postage::{broadcast::Receiver, prelude::Stream};
 
 #[cfg(not(target_os = "windows"))]
 static SEPARATOR: &str = "/";
@@ -32,9 +32,9 @@ trait TimedFut<T> {
 }
 
 #[async_trait]
-impl TimedFut<Option<PlayerEvent>> for Receiver<PlayerEvent> {
+impl TimedFut<Option<PlayerEvent>> for broadcast::Receiver<PlayerEvent> {
     async fn timed_recv(&mut self) -> Option<PlayerEvent> {
-        timed_await(self.recv()).await.unwrap_or(None)
+        timed_await(self.recv()).await.unwrap().ok()
     }
 }
 impl SongVec for Vec<SongInfo> {
@@ -103,8 +103,15 @@ where
     timeout(Duration::from_secs(10), future).await
 }
 
-async fn init_play(num_songs: usize) -> (PlatunePlayer, Receiver<PlayerEvent>, Vec<SongInfo>) {
-    let (player, mut receiver) = PlatunePlayer::new();
+async fn init_play(
+    num_songs: usize,
+) -> (
+    PlatunePlayer,
+    broadcast::Receiver<PlayerEvent>,
+    Vec<SongInfo>,
+) {
+    let player = PlatunePlayer::new();
+    let mut receiver = player.subscribe();
 
     let songs = get_test_files(num_songs);
     let song_queue = songs.get_paths();
@@ -127,7 +134,7 @@ async fn test_basic(num_songs: usize) {
 
     assert_matches!(
         timed_await(receiver.recv()).await.unwrap(),
-        Some(PlayerEvent::QueueEnded)
+        Ok(PlayerEvent::QueueEnded)
     );
     player.join();
 }

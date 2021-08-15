@@ -3,21 +3,18 @@ use crate::rpc::*;
 use std::pin::Pin;
 
 use libplatune_player::platune_player::*;
+use tokio::sync::broadcast;
 use tonic::{Request, Response, Status};
 
 pub struct PlayerImpl {
     player: PlatunePlayer,
-    event_rx: broadcast::Receiver<PlayerEvent>,
 }
 
 impl PlayerImpl {
     pub fn new() -> PlayerImpl {
-        let (platune, event_rx) = PlatunePlayer::new();
+        let player = PlatunePlayer::new();
 
-        PlayerImpl {
-            player: platune,
-            event_rx,
-        }
+        PlayerImpl { player }
     }
 }
 
@@ -82,10 +79,10 @@ impl Player for PlayerImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
-        let mut ended_rx = self.event_rx.clone();
+        let mut ended_rx = self.player.subscribe();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
-            while let Some(msg) = ended_rx.recv().await {
+            while let Ok(msg) = ended_rx.recv().await {
                 match &msg {
                     PlayerEvent::SetVolume(volume) => tx
                         .send(Ok(EventResponse {

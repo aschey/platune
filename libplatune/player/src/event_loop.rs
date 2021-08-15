@@ -1,6 +1,7 @@
 use std::sync::mpsc::{Receiver, Sender, SyncSender};
 
 use log::info;
+use tokio::sync::broadcast;
 
 use crate::{
     enums::{Command, PlayerEvent},
@@ -20,7 +21,7 @@ pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSende
 pub(crate) fn main_loop(
     receiver: Receiver<Command>,
     finish_rx: Sender<Receiver<()>>,
-    event_tx: postage::broadcast::Sender<PlayerEvent>,
+    event_tx: broadcast::Sender<PlayerEvent>,
 ) {
     let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
     let mut queue = Player::new(finish_rx, event_tx, handle);

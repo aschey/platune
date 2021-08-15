@@ -7,19 +7,19 @@ mod event_loop;
 mod http_stream_reader;
 mod player;
 pub mod platune_player {
+    use tokio::sync::broadcast;
+
     pub use crate::enums::{Command, PlayerEvent};
     use crate::event_loop::{ended_loop, main_loop};
-    pub use postage::*;
-
-    pub use postage::{sink::Sink, stream::Stream};
     use std::fs::remove_file;
 
     pub struct PlatunePlayer {
         cmd_sender: std::sync::mpsc::SyncSender<Command>,
+        event_tx: broadcast::Sender<PlayerEvent>,
     }
 
     impl PlatunePlayer {
-        pub fn new() -> (PlatunePlayer, broadcast::Receiver<PlayerEvent>) {
+        pub fn new() -> Self {
             for entry in std::env::temp_dir()
                 .read_dir()
                 .expect("read_dir call failed")
@@ -35,13 +35,14 @@ pub mod platune_player {
                     }
                 }
             }
-            let (event_tx, event_rx) = broadcast::channel(32);
+            let (event_tx, _) = broadcast::channel(32);
             let (tx, rx) = std::sync::mpsc::channel();
             let tx_ = tx.clone();
             let (finish_tx, finish_rx) = std::sync::mpsc::sync_channel(32);
             let finish_tx_ = finish_tx.clone();
 
-            let main_loop_fn = || main_loop(finish_rx, tx_, event_tx);
+            let event_tx_ = event_tx.clone();
+            let main_loop_fn = || main_loop(finish_rx, tx_, event_tx_);
             let ended_loop_fn = || ended_loop(rx, finish_tx_);
             #[cfg(feature = "runtime-tokio")]
             {
@@ -49,12 +50,14 @@ pub mod platune_player {
                 tokio::task::spawn_blocking(ended_loop_fn);
             }
 
-            (
-                PlatunePlayer {
-                    cmd_sender: finish_tx,
-                },
-                event_rx,
-            )
+            PlatunePlayer {
+                cmd_sender: finish_tx,
+                event_tx,
+            }
+        }
+
+        pub fn subscribe(&self) -> broadcast::Receiver<PlayerEvent> {
+            self.event_tx.subscribe()
         }
 
         pub fn set_queue(&self, queue: Vec<String>) {

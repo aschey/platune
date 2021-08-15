@@ -2,12 +2,6 @@ use itertools::Itertools;
 use katatsuki::Track;
 use libsqlite3_sys::{sqlite3, sqlite3_load_extension};
 use log::LevelFilter;
-use postage::{
-    dispatch::{self, Receiver, Sender},
-    mpsc,
-    prelude::Stream,
-    sink::Sink,
-};
 use regex::Regex;
 use sqlx::{
     pool::PoolConnection, sqlite::SqliteConnectOptions, ConnectOptions, Pool, Row, Sqlite,
@@ -25,7 +19,7 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
-use tokio::{task::JoinHandle, time::timeout};
+use tokio::{sync::mpsc, task::JoinHandle, time::timeout};
 
 pub struct Database {
     pool: Pool<Sqlite>,
@@ -607,15 +601,15 @@ impl Clone for Database {
 async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mpsc::Sender<f32>) {
     let mut num_tasks = 1;
     let max_tasks = 100;
-    let (mut dispatch_tx, _) = dispatch::channel(10000);
-    let (finished_tx, mut finished_rx) = mpsc::channel(10000);
-    let (mut tags_tx, tags_rx) = mpsc::channel(10000);
+    let (dispatch_tx, dispatch_rx) = async_channel::bounded(100);
+    let (finished_tx, mut finished_rx) = mpsc::channel(100);
+    let (tags_tx, tags_rx) = mpsc::channel(100);
     let tags_handle = tags_task(pool, tags_rx).await;
     let mut handles = vec![];
     for _ in 0..num_tasks {
         handles.push(spawn_task(
             dispatch_tx.clone(),
-            dispatch_tx.subscribe(),
+            dispatch_rx.clone(),
             finished_tx.clone(),
             tags_tx.clone(),
         ));
@@ -654,7 +648,7 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
                     println!("spawning task");
                     handles.push(spawn_task(
                         dispatch_tx.clone(),
-                        dispatch_tx.subscribe(),
+                        dispatch_rx.clone(),
                         finished_tx.clone(),
                         tags_tx.clone(),
                     ));
@@ -945,13 +939,13 @@ fn load_spellfix(con: &mut SqliteConnection) {
 }
 
 fn spawn_task(
-    mut dispatch_tx: Sender<Option<PathBuf>>,
-    mut dispatch_rx: Receiver<Option<PathBuf>>,
-    mut finished_tx: mpsc::Sender<DirRead>,
-    mut tags_tx: mpsc::Sender<Option<(Track, String)>>,
+    dispatch_tx: async_channel::Sender<Option<PathBuf>>,
+    dispatch_rx: async_channel::Receiver<Option<PathBuf>>,
+    finished_tx: mpsc::Sender<DirRead>,
+    tags_tx: mpsc::Sender<Option<(Track, String)>>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        while let Some(path) = dispatch_rx.recv().await {
+        while let Ok(path) = dispatch_rx.recv().await {
             match path {
                 Some(path) => {
                     for dir_result in path.read_dir().unwrap() {

@@ -6,8 +6,8 @@ use std::{
 };
 
 use log::info;
-use postage::sink::Sink;
 use rodio::{Decoder, OutputStreamHandle, Sink as RodioSink};
+use tokio::sync::broadcast;
 
 use crate::enums::PlayerEvent;
 #[cfg(feature = "runtime-tokio")]
@@ -16,7 +16,7 @@ use crate::http_stream_reader::HttpStreamReader;
 pub struct Player {
     sink: RodioSink,
     queue: Vec<String>,
-    event_tx: postage::broadcast::Sender<PlayerEvent>,
+    event_tx: broadcast::Sender<PlayerEvent>,
     position: usize,
     finish_tx: Sender<Receiver<()>>,
     handle: OutputStreamHandle,
@@ -28,7 +28,7 @@ pub struct Player {
 impl Player {
     pub fn new(
         finish_tx: Sender<Receiver<()>>,
-        event_tx: postage::broadcast::Sender<PlayerEvent>,
+        event_tx: broadcast::Sender<PlayerEvent>,
         handle: OutputStreamHandle,
     ) -> Self {
         let sink = rodio::Sink::try_new(&handle).unwrap();
@@ -75,18 +75,18 @@ impl Player {
             self.signal_finish();
         }
         self.event_tx
-            .try_send(PlayerEvent::StartQueue(self.queue.clone()))
+            .send(PlayerEvent::StartQueue(self.queue.clone()))
             .unwrap();
     }
 
     pub fn play(&mut self) {
         self.sink.play();
-        self.event_tx.try_send(PlayerEvent::Resume).unwrap();
+        self.event_tx.send(PlayerEvent::Resume).unwrap();
     }
 
     pub fn pause(&mut self) {
         self.sink.pause();
-        self.event_tx.try_send(PlayerEvent::Pause).unwrap();
+        self.event_tx.send(PlayerEvent::Pause).unwrap();
     }
 
     pub fn set_volume(&mut self, volume: f32) {
@@ -96,13 +96,13 @@ impl Player {
 
     pub fn seek(&mut self, millis: u64) {
         self.sink.seek(Duration::from_millis(millis));
-        self.event_tx.try_send(PlayerEvent::Seek(millis)).unwrap();
+        self.event_tx.send(PlayerEvent::Seek(millis)).unwrap();
     }
 
     pub fn stop(&mut self) {
         self.reset();
         self.position = 0;
-        self.event_tx.try_send(PlayerEvent::Stop).unwrap();
+        self.event_tx.send(PlayerEvent::Stop).unwrap();
     }
 
     fn ignore_ended(&mut self) {
@@ -130,12 +130,12 @@ impl Player {
         } else {
             info!("Not ignoring ended event");
         }
-        self.event_tx.try_send(PlayerEvent::Ended).unwrap();
+        self.event_tx.send(PlayerEvent::Ended).unwrap();
         if self.position < self.queue.len() - 1 {
             self.position += 1;
             info!("Incrementing position. New position: {}", self.position);
         } else {
-            self.event_tx.try_send(PlayerEvent::QueueEnded).unwrap();
+            self.event_tx.send(PlayerEvent::QueueEnded).unwrap();
         }
 
         if let Some(file) = self.get_next() {
@@ -172,7 +172,7 @@ impl Player {
             }
 
             self.event_tx
-                .try_send(PlayerEvent::QueueUpdated(self.queue.clone()))
+                .send(PlayerEvent::QueueUpdated(self.queue.clone()))
                 .unwrap();
         }
     }
@@ -198,7 +198,7 @@ impl Player {
             self.position += 1;
             self.reset();
             self.start();
-            self.event_tx.try_send(PlayerEvent::Next).unwrap();
+            self.event_tx.send(PlayerEvent::Next).unwrap();
         } else {
             info!("Already at beginning. Not going to previous track.");
         }
@@ -210,7 +210,7 @@ impl Player {
             self.position -= 1;
             self.reset();
             self.start();
-            self.event_tx.try_send(PlayerEvent::Previous).unwrap();
+            self.event_tx.send(PlayerEvent::Previous).unwrap();
         } else {
             info!(
                 "Current position: {}. Already at end. Not going to next track.",
