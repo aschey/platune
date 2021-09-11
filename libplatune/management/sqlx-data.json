@@ -1,5 +1,53 @@
 {
   "db": "SQLite",
+  "003e3f034acafb42411411f121bcadb61896aa7ed95f2743a9d8dcdfde083875": {
+    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            from song s\n            inner join artist ar on ar.artist_id = s.artist_id\n            inner join album al on al.album_id = s.album_id\n            inner join album_artist aa on aa.album_artist_id = al.album_artist_id\n            where s.song_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "song",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "track",
+          "ordinal": 5,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "07e8ac7262b424e460550c5ceb3f937da0317a36913c51214f4048e7f19734ea": {
     "query": "update folder set folder_path = ? where folder_path = ?",
     "describe": {
@@ -64,6 +112,102 @@
         "Right": 0
       },
       "nullable": [
+        false
+      ]
+    }
+  },
+  "b7b6ea40a50b75672165fd5148e25671447503d2e08c84702abc02d49f6da86f": {
+    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            from artist ar\n            inner join song s on s.artist_id = ar.artist_id\n            inner join album al on al.album_id = s.album_id\n            inner join album_artist aa on aa.album_artist_id = al.album_artist_id\n            where ar.artist_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "song",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "track",
+          "ordinal": 5,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "bf88648ff9341decce1a77f3c911ae77a9db59f35c7c4d2d7d752f3b3cb8dda5": {
+    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            from album_artist aa\n            inner join album al on al.album_artist_id = aa.album_artist_id\n            inner join song s on s.album_id = al.album_id\n            inner join artist ar on ar.artist_id = s.artist_id\n            where aa.album_artist_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "song",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "track",
+          "ordinal": 5,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
         false
       ]
     }
@@ -218,6 +362,54 @@
         "Right": 3
       },
       "nullable": []
+    }
+  },
+  "d258adbf66d199908c47ec323d63e699025b02deeb37e415b0de8e8f8771025f": {
+    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track \n            from album al\n            inner join album_artist aa on aa.album_artist_id = al.album_artist_id\n            inner join song s on s.album_id = al.album_id\n            inner join artist ar on ar.artist_id = s.artist_id\n            where al.album_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "song",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "track",
+          "ordinal": 5,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     }
   },
   "d83d0f1d9a8844195e3ec90a39e57746d20aefd637f68830f83750594662cc11": {
