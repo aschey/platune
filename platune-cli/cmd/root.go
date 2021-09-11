@@ -160,8 +160,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			return filePathCompleter.Complete(in, true)
 		} else if first == "add-queue" {
 			if searchClient == nil {
-				search := internal.Client.Search()
-				searchClient = search
+				searchClient = internal.Client.Search()
 			}
 			rest := strings.Join(before[1:], " ")
 
@@ -183,6 +182,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			res, recvErr := searchClient.Recv()
 			if recvErr != nil {
 				fmt.Println(recvErr)
+				return []prompt.Suggest{}
 			}
 
 			for _, r := range res.Results {

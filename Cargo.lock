@@ -1463,6 +1463,7 @@ dependencies = [
  "rstest",
  "sled",
  "sqlx",
+ "strum",
  "tempfile",
  "tokio",
 ]
@@ -1481,7 +1482,7 @@ dependencies = [
  "reqwest",
  "rodio",
  "rstest",
- "strum_macros",
+ "strum",
  "tempfile",
  "tokio",
  "yansi",
@@ -2817,6 +2818,15 @@ name = "strsim"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6446ced80d6c486436db5c078dde11a9f73d42b57fb273121e160b84f63d894c"
+
+[[package]]
+name = "strum"
+version = "0.21.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aaf86bbcfd1fa9670b7a129f64fc0c9fcbbfe4f1bc4210e9e98fe71ffc12cde2"
+dependencies = [
+ "strum_macros",
+]
 
 [[package]]
 name = "strum_macros"

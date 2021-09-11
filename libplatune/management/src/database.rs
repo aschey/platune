@@ -14,11 +14,13 @@ use std::{
     iter::Sum,
     os::raw::c_char,
     ptr,
+    str::FromStr,
 };
 use std::{
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
+use strum::EnumString;
 use tokio::{sync::mpsc, task::JoinHandle, time::timeout};
 
 const MIN_WORDS: usize = 3;
@@ -47,10 +49,20 @@ impl<'a> Default for SearchOptions<'a> {
     }
 }
 
+#[derive(Debug, EnumString)]
+#[strum(ascii_case_insensitive)]
+pub enum EntryType {
+    Song,
+    Artist,
+    #[strum(serialize = "album_artist")]
+    AlbumArtist,
+    Album,
+}
+
 #[derive(Debug)]
 pub struct SearchRes {
     pub entry: String,
-    pub entry_type: String,
+    pub entry_type: EntryType,
     pub description: String,
     pub artist: Option<String>,
     pub correlation_ids: Vec<i32>,
@@ -61,6 +73,16 @@ struct ResultScore {
     len_score: usize,
     weighted_score: f32,
     entry: String,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct LookupEntry {
+    pub artist: String,
+    pub album_artist: String,
+    pub album: String,
+    pub song: String,
+    pub path: String,
+    pub track: i64,
 }
 
 impl Sum for ResultScore {
@@ -261,6 +283,97 @@ impl Database {
         self.pool.close().await;
     }
 
+    pub async fn lookup(
+        &self,
+        correlation_ids: Vec<i32>,
+        entry_type: EntryType,
+    ) -> Vec<LookupEntry> {
+        match entry_type {
+            EntryType::Album => self.all_by_albums(correlation_ids).await,
+            EntryType::Song => self.all_by_ids(correlation_ids).await,
+            EntryType::Artist => self.all_by_artists(correlation_ids).await,
+            EntryType::AlbumArtist => self.all_by_album_artists(correlation_ids).await,
+        }
+    }
+
+    async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Vec<LookupEntry> {
+        sqlx::query_as!(
+            LookupEntry,
+            "
+            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            from artist ar
+            inner join song s on s.artist_id = ar.artist_id
+            inner join album al on al.album_id = s.album_id
+            inner join album_artist aa on aa.album_artist_id = al.album_artist_id
+            where ar.artist_id = ?
+            order by aa.album_artist_id, al.album_id, s.track_number",
+            artist_ids[0]
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap()
+    }
+
+    async fn all_by_album_artists(&self, album_artist_ids: Vec<i32>) -> Vec<LookupEntry> {
+        sqlx::query_as!(
+            LookupEntry,
+            "
+            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            from album_artist aa
+            inner join album al on al.album_artist_id = aa.album_artist_id
+            inner join song s on s.album_id = al.album_id
+            inner join artist ar on ar.artist_id = s.artist_id
+            where aa.album_artist_id = ?
+            order by aa.album_artist_id, al.album_id, s.track_number",
+            album_artist_ids[0]
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap()
+    }
+
+    async fn all_by_albums(&self, album_ids: Vec<i32>) -> Vec<LookupEntry> {
+        sqlx::query_as!(
+            LookupEntry,
+            "
+            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            al.album_name album, aa.album_artist_name album_artist, s.track_number track 
+            from album al
+            inner join album_artist aa on aa.album_artist_id = al.album_artist_id
+            inner join song s on s.album_id = al.album_id
+            inner join artist ar on ar.artist_id = s.artist_id
+            where al.album_id = ?
+            order by aa.album_artist_id, al.album_id, s.track_number
+            ",
+            album_ids[0]
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap()
+    }
+
+    async fn all_by_ids(&self, song_ids: Vec<i32>) -> Vec<LookupEntry> {
+        sqlx::query_as!(
+            LookupEntry,
+            "
+            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            from song s
+            inner join artist ar on ar.artist_id = s.artist_id
+            inner join album al on al.album_id = s.album_id
+            inner join album_artist aa on aa.album_artist_id = al.album_artist_id
+            where s.song_id = ?
+            order by aa.album_artist_id, al.album_id, s.track_number
+            ",
+            song_ids[0]
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap()
+    }
+
     async fn run_search(
         &self,
         query: &str,
@@ -368,7 +481,7 @@ impl Database {
                 let first = group.get(0).unwrap();
                 SearchRes {
                     entry: key.0,
-                    entry_type: first.entry_type.to_owned(),
+                    entry_type: EntryType::from_str(&first.entry_type).unwrap(),
                     artist: first.artist.to_owned(),
                     description: key.1,
                     correlation_ids: group.iter().map(|v| v.correlation_id).collect(),

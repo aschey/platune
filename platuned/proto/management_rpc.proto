@@ -16,6 +16,7 @@ service Management {
   rpc GetRegisteredMount(google.protobuf.Empty)
       returns (RegisteredMountMessage) {}
   rpc Search(stream SearchRequest) returns (stream SearchResponse) {}
+  rpc Lookup(LookupRequest) returns (LookupResponse) {}
 }
 
 message Progress { float percentage = 1; }
@@ -29,6 +30,22 @@ message SearchRequest {
   optional string start_separator = 2;
   optional string end_separator = 3;
 }
+
+message LookupRequest {
+  EntryType entry_type = 1;
+  repeated int32 correlation_ids = 2;
+}
+
+message LookupEntry {
+  string artist = 1;
+  string album_artist = 2;
+  string album = 3;
+  string song = 4;
+  string path = 5;
+  int64 track = 6;
+}
+
+message LookupResponse { repeated LookupEntry entries = 1; }
 
 enum EntryType {
   ALBUM = 0;

@@ -2,6 +2,7 @@ use crate::management_server::Management;
 use crate::rpc::*;
 use futures::StreamExt;
 use libplatune_management::config::Config;
+use libplatune_management::database;
 use libplatune_management::database::Database;
 use std::pin::Pin;
 use tokio::sync::mpsc;
@@ -76,6 +77,36 @@ impl Management for ManagementImpl {
         }))
     }
 
+    async fn lookup(
+        &self,
+        request: Request<LookupRequest>,
+    ) -> Result<Response<LookupResponse>, Status> {
+        let request = request.into_inner();
+        let entries = self
+            .db
+            .lookup(
+                request.correlation_ids,
+                match EntryType::from_i32(request.entry_type).unwrap() {
+                    EntryType::Song => database::EntryType::Song,
+                    EntryType::Album => database::EntryType::Album,
+                    EntryType::AlbumArtist => database::EntryType::AlbumArtist,
+                    EntryType::Artist => database::EntryType::Artist,
+                },
+            )
+            .await
+            .into_iter()
+            .map(|e| LookupEntry {
+                artist: e.artist,
+                album_artist: e.album_artist,
+                album: e.album,
+                song: e.song,
+                path: e.path,
+                track: e.track,
+            })
+            .collect();
+        Ok(Response::new(LookupResponse { entries }))
+    }
+
     type SearchStream = Pin<
         Box<dyn futures::Stream<Item = Result<SearchResponse, Status>> + Send + Sync + 'static>,
     >;
@@ -108,12 +139,11 @@ impl Management for ManagementImpl {
                     .map(|res| SearchResult {
                         description: res.description,
                         entry: res.entry,
-                        entry_type: (match &res.entry_type[..] {
-                            "song" => EntryType::Song,
-                            "artist" => EntryType::Artist,
-                            "album_artist" => EntryType::AlbumArtist,
-                            "album" => EntryType::Album,
-                            _ => unreachable!("Unknown entry type"),
+                        entry_type: (match res.entry_type {
+                            database::EntryType::Song => EntryType::Song,
+                            database::EntryType::Artist => EntryType::Artist,
+                            database::EntryType::AlbumArtist => EntryType::AlbumArtist,
+                            database::EntryType::Album => EntryType::Album,
                         })
                         .into(),
                         artist: res.artist,

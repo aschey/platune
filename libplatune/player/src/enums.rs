@@ -1,4 +1,4 @@
-use strum_macros::Display;
+use strum::Display;
 #[derive(Debug, Clone)]
 pub enum Command {
     SetQueue(Vec<String>),

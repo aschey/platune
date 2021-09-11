@@ -98,6 +98,26 @@ func (mr *MockManagementClientMockRecorder) GetRegisteredMount(ctx, in interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegisteredMount", reflect.TypeOf((*MockManagementClient)(nil).GetRegisteredMount), varargs...)
 }
 
+// Lookup mocks base method.
+func (m *MockManagementClient) Lookup(ctx context.Context, in *v2.LookupRequest, opts ...grpc.CallOption) (*v2.LookupResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Lookup", varargs...)
+	ret0, _ := ret[0].(*v2.LookupResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Lookup indicates an expected call of Lookup.
+func (mr *MockManagementClientMockRecorder) Lookup(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lookup", reflect.TypeOf((*MockManagementClient)(nil).Lookup), varargs...)
+}
+
 // RegisterMount mocks base method.
 func (m *MockManagementClient) RegisterMount(ctx context.Context, in *v2.RegisteredMountMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
@@ -484,6 +504,21 @@ func (m *MockManagementServer) GetRegisteredMount(arg0 context.Context, arg1 *em
 func (mr *MockManagementServerMockRecorder) GetRegisteredMount(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegisteredMount", reflect.TypeOf((*MockManagementServer)(nil).GetRegisteredMount), arg0, arg1)
+}
+
+// Lookup mocks base method.
+func (m *MockManagementServer) Lookup(arg0 context.Context, arg1 *v2.LookupRequest) (*v2.LookupResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Lookup", arg0, arg1)
+	ret0, _ := ret[0].(*v2.LookupResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Lookup indicates an expected call of Lookup.
+func (mr *MockManagementServerMockRecorder) Lookup(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lookup", reflect.TypeOf((*MockManagementServer)(nil).Lookup), arg0, arg1)
 }
 
 // RegisterMount mocks base method.
