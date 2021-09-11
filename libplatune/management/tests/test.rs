@@ -6,7 +6,7 @@ use rstest::*;
 use std::fs::{self, create_dir, create_dir_all};
 use tempfile::TempDir;
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_empty() {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
@@ -23,7 +23,7 @@ pub async fn test_sync_empty() {
     assert_eq!(vec![1.], msgs);
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_no_folder() {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
