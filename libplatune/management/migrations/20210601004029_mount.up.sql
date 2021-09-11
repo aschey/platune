@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS mount (
     mount_id INTEGER PRIMARY KEY NOT NULL,
-    mount_path TEXT NOT NULL UNIQUE
+    mount_path TEXT NOT NULL COLLATE NOCASE,
+    UNIQUE (mount_path COLLATE NOCASE)
 )
