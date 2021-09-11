@@ -15,5 +15,5 @@ func (o matcherCustomizer) Matches(x interface{}) bool {
 }
 
 func (o matcherCustomizer) String() string {
-	return "[call back function matcher has returned false]"
+	return "[callback function matcher has returned false]"
 }

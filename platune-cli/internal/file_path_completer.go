@@ -27,7 +27,7 @@ func CleanFilePath(path string) (dir, base string, err error) {
 		endsWithSeparator = true
 	}
 
-	if len(path) >= 2 && path[0:1] == "~" && equalsSeparator(path[2]) {
+	if len(path) >= 2 && path[0:1] == "~" && equalsSeparator(path[1]) {
 		me, err := user.Current()
 		if err != nil {
 			return "", "", err
