@@ -506,7 +506,7 @@ pub struct SearchResultTest {
         "qwerty song 1")
     )
 ]
-#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
