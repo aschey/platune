@@ -154,7 +154,7 @@ mod tests {
     use crate::{config::Config, database::Database};
     use tempfile::TempDir;
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_add_folders() {
         let tempdir = TempDir::new().unwrap();
         let (db, mut config) = setup(&tempdir).await;
@@ -169,7 +169,7 @@ mod tests {
         assert_eq!(vec![r"test1\", r"test2\"], folders);
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_change_mount() {
         let tempdir = TempDir::new().unwrap();
         let (db, mut config) = setup(&tempdir).await;
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(vec![r"D:\test\"], folders2);
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_change_mount_after() {
         let tempdir = TempDir::new().unwrap();
         let (db, mut config) = setup(&tempdir).await;
@@ -203,7 +203,7 @@ mod tests {
         assert_eq!(vec![r"D:\test\"], folders2);
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_multiple_mounts() {
         let tempdir = TempDir::new().unwrap();
         let (db, mut config) = setup(&tempdir).await;
