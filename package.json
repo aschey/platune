@@ -1,8 +1,15 @@
 {
   "private": true,
-  "workspaces": ["libplatune", "platune-cli"],
+  "workspaces": [
+    "libplatune",
+    "platune-cli"
+  ],
   "scripts": {
-    "test": "mono-run test --ui row"
+    "test": "mono-run test --ui row",
+    "prepare": "husky install"
   },
-  "devDependencies": {"monorepo-run": "https://github.com/Akryum/monorepo-run"}
+  "devDependencies": {
+    "husky": "^7.0.2",
+    "monorepo-run": "https://github.com/Akryum/monorepo-run"
+  }
 }
