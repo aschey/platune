@@ -165,7 +165,7 @@ mod tests {
         config.add_folder("test2").await;
         config.add_folder(r"test2\\").await;
         let folders = config.get_all_folders().await;
-        db.close().await;
+
         assert_eq!(vec![r"test1\", r"test2\"], folders);
     }
 
@@ -181,7 +181,7 @@ mod tests {
         let folders1 = config.get_all_folders().await;
         config.register_drive(r"D:\").await;
         let folders2 = config.get_all_folders().await;
-        db.close().await;
+
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
     }
@@ -198,7 +198,7 @@ mod tests {
         let folders1 = config.get_all_folders().await;
         config.register_drive(r"D:\").await;
         let folders2 = config.get_all_folders().await;
-        db.close().await;
+
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
     }
@@ -218,7 +218,7 @@ mod tests {
         let folders1 = config.get_all_folders().await;
         config2.register_drive(r"D:\").await;
         let folders2 = config2.get_all_folders().await;
-        db.close().await;
+
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
     }

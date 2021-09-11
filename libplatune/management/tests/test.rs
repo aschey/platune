@@ -18,8 +18,8 @@ pub async fn test_sync_empty() {
     while let Some(msg) = receiver.recv().await {
         msgs.push(msg);
     }
-    db.close().await;
-    tempdir.close().unwrap_or_default();
+
+    tempdir.close().unwrap();
     assert_eq!(vec![1.], msgs);
 }
 
@@ -33,8 +33,8 @@ pub async fn test_sync_no_folder() {
     while let Some(msg) = receiver.recv().await {
         msgs.push(msg);
     }
-    db.close().await;
-    tempdir.close().unwrap_or_default();
+
+    tempdir.close().unwrap();
     assert_eq!(Vec::<f32>::new(), msgs);
 }
 
@@ -70,8 +70,7 @@ pub async fn test_sync_basic() {
         msgs.push(msg);
     }
 
-    db.close().await;
-    tempdir.close().unwrap_or_default();
+    tempdir.close().unwrap();
     assert_eq!(vec![0., 1.], msgs);
 }
 
@@ -554,7 +553,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         //     assert_eq!(&ids[j], id);
         // }
     }
-    tempdir.close().unwrap_or_default();
+    tempdir.close().unwrap();
 }
 
 async fn setup(tempdir: &TempDir) -> (Database, Config) {
