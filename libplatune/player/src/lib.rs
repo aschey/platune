@@ -64,8 +64,8 @@ pub mod platune_player {
             self.cmd_sender.send(Command::SetQueue(queue)).unwrap();
         }
 
-        pub fn add_to_queue(&self, song: String) {
-            self.cmd_sender.send(Command::AddToQueue(song)).unwrap();
+        pub fn add_to_queue(&self, songs: Vec<String>) {
+            self.cmd_sender.send(Command::AddToQueue(songs)).unwrap();
         }
 
         pub fn seek(&self, millis: u64) {

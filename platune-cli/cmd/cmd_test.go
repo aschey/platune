@@ -64,7 +64,7 @@ func TestAddQueue(t *testing.T) {
 	testSong := "test"
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			return arg.(*platune.AddToQueueRequest).Song == testSong
+			return arg.(*platune.AddToQueueRequest).Songs[0] == testSong
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
 	}, "add-queue", testSong)
@@ -215,11 +215,11 @@ func TestSetQueueCompleter(t *testing.T) {
 
 func TestSetQueueExecutor(t *testing.T) {
 	state := newCmdState()
-	state.executor("set-queue")
+	state.executor("set-queue", nil)
 	if state.livePrefix != "set-queue> " {
 		t.Error("Live prefix should be set to set-queue> ")
 	}
-	state.executor("root.go")
+	state.executor("root.go", nil)
 	if len(state.currentQueue) != 1 {
 		t.Error("Should've added an item to the queue")
 	}
@@ -236,5 +236,5 @@ func TestSetQueueExecutor(t *testing.T) {
 	})
 	mock.EXPECT().SetQueue(gomock.Any(), matcher)
 	internal.Client = internal.NewTestClient(mock, nil)
-	state.executor("")
+	state.executor("", nil)
 }

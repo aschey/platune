@@ -36,9 +36,9 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
-func (p *PlatuneClient) AddToQueue(song string) {
+func (p *PlatuneClient) AddToQueue(songs []string) {
 	p.runCommand("Added", func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Song: song})
+		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Songs: songs})
 	})
 }
 
@@ -114,6 +114,16 @@ func (p *PlatuneClient) Search() platune.Management_SearchClient {
 		return nil
 	}
 	return search
+}
+
+func (p *PlatuneClient) Lookup(request *platune.LookupRequest) *platune.LookupResponse {
+	ctx := context.Background()
+	response, err := p.managementClient.Lookup(ctx, request)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return response
 }
 
 func (p *PlatuneClient) GetAllFolders() {

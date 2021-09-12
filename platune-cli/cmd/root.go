@@ -24,6 +24,7 @@ type cmdState struct {
 	livePrefix     string
 	isSetQueueMode bool
 	currentQueue   []string
+	dbResults      []*platune.SearchResult
 }
 
 func expandPath(song string) (string, fs.FileInfo, error) {
@@ -70,7 +71,8 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 	return state.livePrefix, len(state.livePrefix) > 0
 }
 
-func (state *cmdState) executor(in string) {
+func (state *cmdState) executor(in string, selected *prompt.Suggest) {
+	fmt.Println(selected)
 	cmds := strings.SplitN(in, " ", 2)
 	if len(cmds) == 0 {
 		return
@@ -88,12 +90,30 @@ func (state *cmdState) executor(in string) {
 			fmt.Println("Usage: add-queue <path or url>")
 			return
 		}
+
+		if selected != nil {
+			for _, dbResult := range state.dbResults {
+				if dbResult.Entry == selected.Text && dbResult.Description == selected.Description {
+					lookupResults := internal.Client.Lookup(&platune.LookupRequest{
+						EntryType:      dbResult.EntryType,
+						CorrelationIds: dbResult.CorrelationIds,
+					})
+					paths := []string{}
+					for _, entry := range lookupResults.Entries {
+						paths = append(paths, entry.Path)
+					}
+					internal.Client.AddToQueue(paths)
+					return
+				}
+			}
+		}
+
 		full, err := expandFile(cmds[1])
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		internal.Client.AddToQueue(full)
+		internal.Client.AddToQueue([]string{full})
 	case "seek":
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
@@ -155,6 +175,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		return filePathCompleter.Complete(in, false)
 	}
 	if len(before) > 1 {
+		state.dbResults = []*platune.SearchResult{}
 		first := before[0]
 		if first == "add-folder" {
 			return filePathCompleter.Complete(in, true)
@@ -185,6 +206,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 				return []prompt.Suggest{}
 			}
 
+			state.dbResults = res.Results
 			for _, r := range res.Results {
 				suggestions = append(suggestions, prompt.Suggest{Text: r.Entry, Description: r.Description})
 			}

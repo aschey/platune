@@ -157,7 +157,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_add_folders() {
         let tempdir = TempDir::new().unwrap();
-        let (db, mut config) = setup(&tempdir).await;
+        let (_, mut config) = setup(&tempdir).await;
         config.set_delim(r"\");
 
         config.add_folder(r"test1\").await;
@@ -172,7 +172,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_change_mount() {
         let tempdir = TempDir::new().unwrap();
-        let (db, mut config) = setup(&tempdir).await;
+        let (_, mut config) = setup(&tempdir).await;
         config.set_delim(r"\");
 
         config.register_drive(r"C:\\").await;
@@ -189,7 +189,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_change_mount_after() {
         let tempdir = TempDir::new().unwrap();
-        let (db, mut config) = setup(&tempdir).await;
+        let (_, mut config) = setup(&tempdir).await;
         config.set_delim("\\");
 
         config.add_folder(r"C:\test").await;

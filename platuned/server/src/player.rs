@@ -29,7 +29,7 @@ impl Player for PlayerImpl {
         &self,
         request: Request<AddToQueueRequest>,
     ) -> Result<Response<()>, Status> {
-        self.player.add_to_queue(request.into_inner().song);
+        self.player.add_to_queue(request.into_inner().songs);
         Ok(Response::new(()))
     }
 

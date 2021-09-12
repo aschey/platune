@@ -17,7 +17,7 @@ var addQueueCmd = &cobra.Command{
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.Client.AddToQueue(args[0])
+		internal.Client.AddToQueue(args)
 	},
 }
 

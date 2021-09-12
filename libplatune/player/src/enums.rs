@@ -2,7 +2,7 @@ use strum::Display;
 #[derive(Debug, Clone)]
 pub enum Command {
     SetQueue(Vec<String>),
-    AddToQueue(String),
+    AddToQueue(Vec<String>),
     Seek(u64),
     SetVolume(f32),
     Pause,

@@ -76,17 +76,17 @@ impl Player {
         }
         self.event_tx
             .send(PlayerEvent::StartQueue(self.queue.clone()))
-            .unwrap();
+            .unwrap_or_default();
     }
 
     pub fn play(&mut self) {
         self.sink.play();
-        self.event_tx.send(PlayerEvent::Resume).unwrap();
+        self.event_tx.send(PlayerEvent::Resume).unwrap_or_default();
     }
 
     pub fn pause(&mut self) {
         self.sink.pause();
-        self.event_tx.send(PlayerEvent::Pause).unwrap();
+        self.event_tx.send(PlayerEvent::Pause).unwrap_or_default();
     }
 
     pub fn set_volume(&mut self, volume: f32) {
@@ -96,13 +96,15 @@ impl Player {
 
     pub fn seek(&mut self, millis: u64) {
         self.sink.seek(Duration::from_millis(millis));
-        self.event_tx.send(PlayerEvent::Seek(millis)).unwrap();
+        self.event_tx
+            .send(PlayerEvent::Seek(millis))
+            .unwrap_or_default();
     }
 
     pub fn stop(&mut self) {
         self.reset();
         self.position = 0;
-        self.event_tx.send(PlayerEvent::Stop).unwrap();
+        self.event_tx.send(PlayerEvent::Stop).unwrap_or_default();
     }
 
     fn ignore_ended(&mut self) {
@@ -130,12 +132,14 @@ impl Player {
         } else {
             info!("Not ignoring ended event");
         }
-        self.event_tx.send(PlayerEvent::Ended).unwrap();
+        self.event_tx.send(PlayerEvent::Ended).unwrap_or_default();
         if self.position < self.queue.len() - 1 {
             self.position += 1;
             info!("Incrementing position. New position: {}", self.position);
         } else {
-            self.event_tx.send(PlayerEvent::QueueEnded).unwrap();
+            self.event_tx
+                .send(PlayerEvent::QueueEnded)
+                .unwrap_or_default();
         }
 
         if let Some(file) = self.get_next() {
@@ -158,7 +162,13 @@ impl Player {
         self.start();
     }
 
-    pub fn add_to_queue(&mut self, song: String) {
+    pub fn add_to_queue(&mut self, songs: Vec<String>) {
+        for song in songs {
+            self.add_one_to_queue(song);
+        }
+    }
+
+    fn add_one_to_queue(&mut self, song: String) {
         // Queue as not currently running, need to start it
         if self.queued_count == 0 {
             self.set_queue(vec![song]);
@@ -173,7 +183,7 @@ impl Player {
 
             self.event_tx
                 .send(PlayerEvent::QueueUpdated(self.queue.clone()))
-                .unwrap();
+                .unwrap_or_default();
         }
     }
 
@@ -198,7 +208,7 @@ impl Player {
             self.position += 1;
             self.reset();
             self.start();
-            self.event_tx.send(PlayerEvent::Next).unwrap();
+            self.event_tx.send(PlayerEvent::Next).unwrap_or_default();
         } else {
             info!("Already at beginning. Not going to previous track.");
         }
@@ -210,7 +220,9 @@ impl Player {
             self.position -= 1;
             self.reset();
             self.start();
-            self.event_tx.send(PlayerEvent::Previous).unwrap();
+            self.event_tx
+                .send(PlayerEvent::Previous)
+                .unwrap_or_default();
         } else {
             info!(
                 "Current position: {}. Already at end. Not going to next track.",
