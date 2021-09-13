@@ -720,8 +720,8 @@ impl Database {
         return res.mount_id.unwrap();
     }
 
-    pub(crate) async fn update_mount(&self, mount_id: String, path: &str) {
-        sqlx::query!(
+    pub(crate) async fn update_mount(&self, mount_id: String, path: &str) -> u64 {
+        let res = sqlx::query!(
             "update mount set mount_path = ? where mount_id = ?",
             path,
             mount_id
@@ -729,6 +729,7 @@ impl Database {
         .execute(&self.pool)
         .await
         .unwrap();
+        return res.rows_affected();
     }
 }
 

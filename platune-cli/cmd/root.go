@@ -72,7 +72,6 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 }
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest) {
-	fmt.Println(selected)
 	cmds := strings.SplitN(in, " ", 2)
 	if len(cmds) == 0 {
 		return

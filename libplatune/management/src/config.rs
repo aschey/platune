@@ -67,11 +67,13 @@ impl Config {
 
         match self.get_drive_id() {
             Some(drive_id) => {
-                self.sql_db.update_mount(drive_id, &path).await;
+                let rows = self.sql_db.update_mount(drive_id, &path).await;
+                if rows == 0 {
+                    self.set_drive(&path).await;
+                }
             }
             None => {
-                let id = self.sql_db.add_mount(&path).await;
-                self.set_drive_id(&id.to_string()[..]);
+                self.set_drive(&path).await;
             }
         };
 
@@ -138,8 +140,9 @@ impl Config {
         self.get(CONFIG_NAMESPACE, DRIVE_ID)
     }
 
-    fn set_drive_id<V: Into<IVec>>(&self, drive_id: V) {
-        self.set(CONFIG_NAMESPACE, DRIVE_ID, drive_id);
+    async fn set_drive(&self, path: &str) {
+        let id = self.sql_db.add_mount(path).await;
+        self.set(CONFIG_NAMESPACE, DRIVE_ID, &id.to_string()[..]);
     }
 
     #[cfg(test)]
@@ -221,6 +224,33 @@ mod tests {
 
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    pub async fn test_reset_drive_id_if_missing() {
+        let tempdir = TempDir::new().unwrap();
+        let sql_path = tempdir.path().join("platune.db");
+        let config_path = tempdir.path().join("platuneconfig");
+        let db = Database::connect(sql_path, true).await;
+        db.migrate().await;
+        let mut config = Config::new_from_path(&db, config_path.clone());
+        config.set_delim(r"\");
+
+        config.add_folder(r"C:\test").await;
+        config.register_drive(r"C:\").await;
+        drop(config);
+        let tempdir2 = TempDir::new().unwrap();
+        let sql_path2 = tempdir2.path().join("platune.db");
+        let db2 = Database::connect(sql_path2, true).await;
+        db2.migrate().await;
+        let mut config2 = Config::new_from_path(&db2, config_path);
+        config2.set_delim(r"\");
+
+        config2.add_folder(r"C:\test").await;
+        config2.register_drive(r"C:\").await;
+
+        let folders = config2.get_all_folders().await;
+        assert_eq!(vec![r"C:\test\"], folders);
     }
 
     async fn setup(tempdir: &TempDir) -> (Database, Config) {
