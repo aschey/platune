@@ -1,9 +1,9 @@
-use std::path::Path;
-
-use regex::Regex;
-use sled::IVec;
+use std::path::{Path, PathBuf};
 
 use crate::database::Database;
+use regex::Regex;
+use sled::IVec;
+use thiserror::Error;
 
 static CONFIG_NAMESPACE: &str = "platune-server";
 static DRIVE_ID: &str = "drive-id";
@@ -12,6 +12,13 @@ pub struct Config {
     sled_db: sled::Db,
     sql_db: Database,
     delim: &'static str,
+    validate_paths: bool,
+}
+
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("{0} is not a valid path")]
+    InvalidPath(PathBuf),
 }
 
 impl Config {
@@ -28,6 +35,7 @@ impl Config {
             sled_db,
             sql_db: db.clone(),
             delim: if cfg!(windows) { r"\" } else { "/" },
+            validate_paths: true,
         }
     }
 
@@ -62,8 +70,13 @@ impl Config {
         return path;
     }
 
-    pub async fn register_drive(&self, path: &str) {
-        let path = self.clean_path(path);
+    pub async fn register_drive<P: AsRef<Path>>(&self, path: P) -> Result<(), ConfigError> {
+        let path = path.as_ref();
+        if self.validate_paths && !path.exists() {
+            return Err(ConfigError::InvalidPath(path.to_owned()));
+        }
+
+        let path = self.clean_path(&path.to_string_lossy().into_owned());
 
         match self.get_drive_id() {
             Some(drive_id) => {
@@ -82,6 +95,8 @@ impl Config {
             let new_folder = folder.replacen(&path, "", 1);
             self.sql_db.update_folder(folder, new_folder).await;
         }
+
+        Ok(())
     }
 
     pub async fn add_folder(&self, path: &str) {
@@ -144,16 +159,10 @@ impl Config {
         let id = self.sql_db.add_mount(path).await;
         self.set(CONFIG_NAMESPACE, DRIVE_ID, &id.to_string()[..]);
     }
-
-    #[cfg(test)]
-    fn set_delim(&mut self, delim: &'static str) {
-        self.delim = delim;
-    }
 }
 
 #[cfg(test)]
 mod tests {
-
     use crate::{config::Config, database::Database};
     use tempfile::TempDir;
 
@@ -161,7 +170,7 @@ mod tests {
     pub async fn test_add_folders() {
         let tempdir = TempDir::new().unwrap();
         let (_, mut config) = setup(&tempdir).await;
-        config.set_delim(r"\");
+        config.delim = r"\";
 
         config.add_folder(r"test1\").await;
         config.add_folder("test1").await;
@@ -176,13 +185,14 @@ mod tests {
     pub async fn test_change_mount() {
         let tempdir = TempDir::new().unwrap();
         let (_, mut config) = setup(&tempdir).await;
-        config.set_delim(r"\");
+        config.delim = r"\";
+        config.validate_paths = false;
 
-        config.register_drive(r"C:\\").await;
+        config.register_drive(r"C:\\").await.unwrap();
         config.add_folder(r"C:\test").await;
         config.add_folder(r"C:\\test\\").await;
         let folders1 = config.get_all_folders().await;
-        config.register_drive(r"D:\").await;
+        config.register_drive(r"D:\").await.unwrap();
         let folders2 = config.get_all_folders().await;
 
         assert_eq!(vec![r"C:\test\"], folders1);
@@ -193,13 +203,14 @@ mod tests {
     pub async fn test_change_mount_after() {
         let tempdir = TempDir::new().unwrap();
         let (_, mut config) = setup(&tempdir).await;
-        config.set_delim("\\");
+        config.delim = r"\";
+        config.validate_paths = false;
 
         config.add_folder(r"C:\test").await;
         config.add_folder(r"C:\\test\\").await;
-        config.register_drive(r"C:\").await;
+        config.register_drive(r"C:\").await.unwrap();
         let folders1 = config.get_all_folders().await;
-        config.register_drive(r"D:\").await;
+        config.register_drive(r"D:\").await.unwrap();
         let folders2 = config.get_all_folders().await;
 
         assert_eq!(vec![r"C:\test\"], folders1);
@@ -212,14 +223,16 @@ mod tests {
         let (db, mut config) = setup(&tempdir).await;
         let config_path2 = tempdir.path().join("platuneconfig2");
         let mut config2 = Config::new_from_path(&db, config_path2);
-        config.set_delim(r"\");
-        config2.set_delim(r"\");
+        config.delim = r"\";
+        config.validate_paths = false;
+        config2.delim = r"\";
+        config2.validate_paths = false;
 
         config.add_folder(r"C:\test").await;
         config.add_folder(r"C:\\test\\").await;
-        config.register_drive(r"C:\").await;
+        config.register_drive(r"C:\").await.unwrap();
         let folders1 = config.get_all_folders().await;
-        config2.register_drive(r"D:\").await;
+        config2.register_drive(r"D:\").await.unwrap();
         let folders2 = config2.get_all_folders().await;
 
         assert_eq!(vec![r"C:\test\"], folders1);
@@ -234,23 +247,36 @@ mod tests {
         let db = Database::connect(sql_path, true).await;
         db.migrate().await;
         let mut config = Config::new_from_path(&db, config_path.clone());
-        config.set_delim(r"\");
+        config.delim = r"\";
+        config.validate_paths = false;
 
         config.add_folder(r"C:\test").await;
-        config.register_drive(r"C:\").await;
+        config.register_drive(r"C:\").await.unwrap();
         drop(config);
         let tempdir2 = TempDir::new().unwrap();
         let sql_path2 = tempdir2.path().join("platune.db");
         let db2 = Database::connect(sql_path2, true).await;
         db2.migrate().await;
         let mut config2 = Config::new_from_path(&db2, config_path);
-        config2.set_delim(r"\");
+        config2.delim = r"\";
+        config2.validate_paths = false;
 
         config2.add_folder(r"C:\test").await;
-        config2.register_drive(r"C:\").await;
+        config2.register_drive(r"C:\").await.unwrap();
 
         let folders = config2.get_all_folders().await;
         assert_eq!(vec![r"C:\test\"], folders);
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    pub async fn test_validate_path() {
+        let tempdir = TempDir::new().unwrap();
+        let (_, mut config) = setup(&tempdir).await;
+
+        config.delim = r"\";
+
+        let res = config.register_drive(r"/some/invalid/path").await;
+        assert!(res.is_err());
     }
 
     async fn setup(tempdir: &TempDir) -> (Database, Config) {

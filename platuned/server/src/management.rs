@@ -61,10 +61,14 @@ impl Management for ManagementImpl {
         &self,
         request: Request<RegisteredMountMessage>,
     ) -> Result<Response<()>, Status> {
-        self.config
+        match self
+            .config
             .register_drive(&request.into_inner().mount)
-            .await;
-        Ok(Response::new(()))
+            .await
+        {
+            Ok(()) => Ok(Response::new(())),
+            Err(e) => Err(Status::invalid_argument(format!("{}", e))),
+        }
     }
 
     async fn get_registered_mount(
