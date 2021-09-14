@@ -652,14 +652,18 @@ impl Database {
             .await;
     }
 
-    pub(crate) async fn sync(&self, folders: Vec<String>) -> tokio::sync::mpsc::Receiver<f32> {
+    pub(crate) async fn sync(
+        &self,
+        folders: Vec<String>,
+        mount: Option<String>,
+    ) -> tokio::sync::mpsc::Receiver<f32> {
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         if !folders.is_empty() {
             let pool = self.pool.clone();
 
             tokio::task::spawn_blocking(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(controller(folders, pool, tx));
+                rt.block_on(controller(folders, pool, tx, mount));
             });
         }
 
@@ -742,7 +746,12 @@ impl Clone for Database {
     }
 }
 
-async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mpsc::Sender<f32>) {
+async fn controller(
+    paths: Vec<String>,
+    pool: Pool<Sqlite>,
+    tx: mpsc::Sender<f32>,
+    mount: Option<String>,
+) {
     let mut num_tasks = 1;
     let max_tasks = 100;
     let (dispatch_tx, dispatch_rx) = async_channel::bounded(100);
@@ -756,6 +765,7 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
             dispatch_rx.clone(),
             finished_tx.clone(),
             tags_tx.clone(),
+            mount.clone(),
         ));
     }
     for path in paths {
@@ -795,6 +805,7 @@ async fn controller(paths: Vec<String>, pool: Pool<Sqlite>, tx: tokio::sync::mps
                         dispatch_rx.clone(),
                         finished_tx.clone(),
                         tags_tx.clone(),
+                        mount.clone(),
                     ));
                     num_tasks += 1;
                 }
@@ -1088,6 +1099,7 @@ fn spawn_task(
     dispatch_rx: async_channel::Receiver<Option<PathBuf>>,
     finished_tx: mpsc::Sender<DirRead>,
     tags_tx: mpsc::Sender<Option<(Track, String)>>,
+    mount: Option<String>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         while let Ok(path) = dispatch_rx.recv().await {
@@ -1120,6 +1132,11 @@ fn spawn_task(
                                 let mut file_path_str = file_path.to_str().unwrap().to_owned();
                                 if cfg!(windows) {
                                     file_path_str = file_path_str.replace(r"\", r"/");
+                                }
+                                if let Some(ref mount) = mount {
+                                    if file_path_str.starts_with(&mount[..]) {
+                                        file_path_str = file_path_str.replace(&mount[..], "");
+                                    }
                                 }
                                 tags_tx.send(Some((metadata, file_path_str))).await.unwrap();
                             }

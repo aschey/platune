@@ -105,7 +105,7 @@ impl Config {
 
     pub async fn add_folders(&self, paths: Vec<&str>) {
         let paths = paths.into_iter().map(|new_path| self.clean_path(new_path));
-        let new_paths = match self.get_registered_mount_raw().await {
+        let new_paths = match self.get_registered_mount().await {
             Some(mount) => paths
                 .map(|path| match path.find(&mount[..]) {
                     Some(0) => path.replacen(&mount[..], "", 1),
@@ -134,19 +134,13 @@ impl Config {
 
     pub async fn sync(&self) -> tokio::sync::mpsc::Receiver<f32> {
         let folders = self.get_all_folders().await;
-        self.sql_db.sync(folders).await
-    }
-
-    async fn get_registered_mount_raw(&self) -> Option<String> {
-        match self.get_drive_id() {
-            Some(drive_id) => self.sql_db.get_mount(drive_id).await,
-            None => None,
-        }
+        let mount = self.get_registered_mount().await;
+        self.sql_db.sync(folders, mount).await
     }
 
     pub async fn get_registered_mount(&self) -> Option<String> {
-        match self.get_registered_mount_raw().await {
-            Some(mount) => Some(mount.replace("/", self.delim)),
+        match self.get_drive_id() {
+            Some(drive_id) => self.sql_db.get_mount(drive_id).await,
             None => None,
         }
     }
