@@ -1103,7 +1103,7 @@ fn spawn_task(
                             let mut song_metadata: Option<Track> = None;
                             match &name.to_str().unwrap_or_default().to_lowercase()[..] {
                                 "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
-                                    let tag_result = Track::from_path(&dir.path(), None);
+                                    let tag_result = Track::from_path(&file_path, None);
                                     match tag_result {
                                         Err(e) => {
                                             println!("{:?}", e);
@@ -1117,10 +1117,11 @@ fn spawn_task(
                                 _ => {}
                             }
                             if let Some(metadata) = song_metadata {
-                                tags_tx
-                                    .send(Some((metadata, file_path.to_str().unwrap().to_owned())))
-                                    .await
-                                    .unwrap();
+                                let mut file_path_str = file_path.to_str().unwrap().to_owned();
+                                if cfg!(windows) {
+                                    file_path_str = file_path_str.replace(r"\", r"/");
+                                }
+                                tags_tx.send(Some((metadata, file_path_str))).await.unwrap();
                             }
                         } else {
                             dispatch_tx.send(Some(dir.path())).await.unwrap();
