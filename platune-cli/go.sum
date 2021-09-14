@@ -24,6 +24,8 @@ github.com/aschey/go-prompt v0.2.7-0.20210710202005-e9a38ef71562 h1:fuswKPhbWE4w
 github.com/aschey/go-prompt v0.2.7-0.20210710202005-e9a38ef71562/go.mod h1:d0IZaQm/wLGDHBFTPH5UHq9tcvaNShJH7labKYLB6Ck=
 github.com/aschey/go-prompt v0.2.7-0.20210912025248-d0541674ff04 h1:y2+EYCIDdFDi69rnVyI148MYOfmjkq68TuIxQFuFPpM=
 github.com/aschey/go-prompt v0.2.7-0.20210912025248-d0541674ff04/go.mod h1:d0IZaQm/wLGDHBFTPH5UHq9tcvaNShJH7labKYLB6Ck=
+github.com/aschey/go-prompt v0.2.7-0.20210914072712-fe453763407f h1:ChAJ84pP8YZMSAQICDJPwII4yIDxxzr+qfneC0bjZ0Q=
+github.com/aschey/go-prompt v0.2.7-0.20210914072712-fe453763407f/go.mod h1:d0IZaQm/wLGDHBFTPH5UHq9tcvaNShJH7labKYLB6Ck=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
