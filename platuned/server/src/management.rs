@@ -4,6 +4,7 @@ use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database;
 use libplatune_management::database::Database;
+use libplatune_management::manager::Manager;
 use std::pin::Pin;
 use tokio::sync::mpsc;
 use tonic::Request;
@@ -11,7 +12,7 @@ use tonic::Streaming;
 use tonic::{Response, Status};
 
 pub struct ManagementImpl {
-    config: Config,
+    manager: Manager,
     db: Database,
 }
 
@@ -21,8 +22,9 @@ impl ManagementImpl {
         let path = std::env::var("DATABASE_URL").unwrap();
         let db = Database::connect(path, true).await;
         db.migrate().await;
-        let config = Config::new(&db);
-        ManagementImpl { config, db }
+        let config = Config::new();
+        let manager = Manager::new(&db, config);
+        ManagementImpl { manager, db }
     }
 }
 
@@ -32,14 +34,14 @@ impl Management for ManagementImpl {
         Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
 
     async fn sync(&self, _: Request<()>) -> Result<Response<Self::SyncStream>, Status> {
-        let rx = self.config.sync().await;
+        let rx = self.manager.sync().await;
         Ok(Response::new(Box::pin(
             tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| Ok(Progress { percentage: r })),
         )))
     }
 
     async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
-        self.config
+        self.manager
             .add_folders(
                 request
                     .into_inner()
@@ -53,7 +55,7 @@ impl Management for ManagementImpl {
     }
 
     async fn get_all_folders(&self, _: Request<()>) -> Result<Response<FoldersMessage>, Status> {
-        let folders = self.config.get_all_folders().await;
+        let folders = self.manager.get_all_folders().await;
         Ok(Response::new(FoldersMessage { folders }))
     }
 
@@ -62,7 +64,7 @@ impl Management for ManagementImpl {
         request: Request<RegisteredMountMessage>,
     ) -> Result<Response<()>, Status> {
         match self
-            .config
+            .manager
             .register_drive(&request.into_inner().mount)
             .await
         {
@@ -75,7 +77,7 @@ impl Management for ManagementImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<RegisteredMountMessage>, Status> {
-        let mount = self.config.get_registered_mount().await;
+        let mount = self.manager.get_registered_mount().await;
         Ok(Response::new(RegisteredMountMessage {
             mount: mount.unwrap_or_default(),
         }))

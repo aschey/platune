@@ -2,7 +2,7 @@ use std::{ops::Range, path::Path, time::Instant};
 
 use itertools::Itertools;
 use katatsuki::Track;
-use libplatune_management::{config::Config, database::Database};
+use libplatune_management::{config::Config, database::Database, manager::Manager};
 
 #[tokio::main]
 async fn main() {
@@ -24,7 +24,8 @@ async fn main() {
     //         .collect_vec()
     // );
 
-    let config = Config::new(&db);
+    let config = Config::new();
+    let manager = Manager::new(&db, config);
 
     // #[cfg(target_os = "windows")]
     // {
@@ -40,7 +41,7 @@ async fn main() {
     // }
 
     // let now = Instant::now();
-    let mut rx = config.sync().await;
+    let mut rx = manager.sync().await;
     while let Some(_) = rx.recv().await {}
 
     //println!("{:?}", now.elapsed());

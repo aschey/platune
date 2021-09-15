@@ -1,7 +1,4 @@
-use libplatune_management::{
-    config::Config,
-    database::{Database, SearchRes},
-};
+use libplatune_management::{config::Config, database::Database, manager::Manager};
 use rstest::*;
 use std::{
     fs::{self, create_dir, create_dir_all},
@@ -572,11 +569,12 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         .unwrap_or_default();
 }
 
-async fn setup(tempdir: &TempDir) -> (Database, Config) {
+async fn setup(tempdir: &TempDir) -> (Database, Manager) {
     let sql_path = tempdir.path().join("platune.db");
     let config_path = tempdir.path().join("platuneconfig");
     let db = Database::connect(sql_path, true).await;
     db.migrate().await;
-    let config = Config::new_from_path(&db, config_path);
-    (db, config)
+    let config = Config::new_from_path(config_path);
+    let manager = Manager::new(&db, config);
+    (db, manager)
 }
