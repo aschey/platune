@@ -283,7 +283,7 @@ impl Database {
         self.pool.close().await;
     }
 
-    pub async fn lookup(
+    pub(crate) async fn lookup(
         &self,
         correlation_ids: Vec<i32>,
         entry_type: EntryType,

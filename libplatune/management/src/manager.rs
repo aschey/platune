@@ -3,7 +3,10 @@ use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-use crate::{config::Config, database::Database};
+use crate::{
+    config::Config,
+    database::{Database, EntryType, LookupEntry},
+};
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
@@ -109,6 +112,25 @@ impl Manager {
             Some(drive_id) => self.db.get_mount(drive_id).await,
             None => None,
         }
+    }
+
+    pub async fn lookup(
+        &self,
+        correlation_ids: Vec<i32>,
+        entry_type: EntryType,
+    ) -> Vec<LookupEntry> {
+        let mut res = self.db.lookup(correlation_ids, entry_type).await;
+        if let Some(mount) = self.get_registered_mount().await {
+            let mount = Path::new(&mount);
+            for entry in &mut res {
+                entry.path = mount
+                    .join(entry.path.to_owned())
+                    .to_str()
+                    .unwrap()
+                    .to_owned()
+            }
+        }
+        res
     }
 
     fn clean_path(&self, path: &str) -> String {

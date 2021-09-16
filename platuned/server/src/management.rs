@@ -17,8 +17,8 @@ pub struct ManagementImpl {
 }
 
 impl ManagementImpl {
-    pub async fn new() -> ManagementImpl {
-        dotenv::from_path("./.env").unwrap_or_default();
+    pub async fn new(env_path: &str) -> ManagementImpl {
+        dotenv::from_path(env_path).unwrap_or_default();
         let path = std::env::var("DATABASE_URL").unwrap();
         let db = Database::connect(path, true).await;
         db.migrate().await;
@@ -89,7 +89,7 @@ impl Management for ManagementImpl {
     ) -> Result<Response<LookupResponse>, Status> {
         let request = request.into_inner();
         let entries = self
-            .db
+            .manager
             .lookup(
                 request.correlation_ids,
                 match EntryType::from_i32(request.entry_type).unwrap() {
