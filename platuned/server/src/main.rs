@@ -191,7 +191,7 @@ async fn os_main() {
 
 #[cfg(not(windows))]
 async fn os_main() {
-    run_server(("./.env", None).await;
+    run_server("./.env", None).await;
 }
 
 pub fn colored(
