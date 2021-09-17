@@ -4,6 +4,7 @@ use std::path::Path;
 static CONFIG_NAMESPACE: &str = "platune-server";
 static DRIVE_ID: &str = "drive-id";
 
+#[derive(Clone)]
 pub struct Config {
     sled_db: sled::Db,
 }
@@ -42,11 +43,11 @@ impl Config {
         }
     }
 
-    pub fn get_drive_id(&self) -> Option<String> {
+    pub(crate) fn get_drive_id(&self) -> Option<String> {
         self.get(CONFIG_NAMESPACE, DRIVE_ID)
     }
 
-    pub fn set_drive_id(&self, id: &str) {
+    pub(crate) fn set_drive_id(&self, id: &str) {
         self.set(CONFIG_NAMESPACE, DRIVE_ID, id);
     }
 }

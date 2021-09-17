@@ -25,7 +25,7 @@ async fn main() {
     // );
 
     let config = Config::new();
-    let manager = Manager::new(&db, config);
+    let manager = Manager::new(&db, &config);
 
     // #[cfg(target_os = "windows")]
     // {

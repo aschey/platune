@@ -21,7 +21,11 @@ pub mod rpc {
 
 #[cfg(windows)]
 mod service {
-    use std::{env, ffi::OsString, time::Duration};
+    use std::{
+        env,
+        ffi::{OsStr, OsString},
+        time::Duration,
+    };
     use tokio::runtime::Runtime;
     use windows_service::{
         service::{
@@ -49,7 +53,10 @@ mod service {
         let service_manager = ServiceManager::local_computer(None::<&str>, manager_access).unwrap();
         let service_access =
             ServiceAccess::QUERY_STATUS | ServiceAccess::STOP | ServiceAccess::DELETE;
-        if let Ok(service) = service_manager.open_service("platuned", service_access) {
+        if let Ok(service) = service_manager.open_service(SERVICE_NAME, service_access) {
+            if service.query_status().unwrap().current_state == ServiceState::Running {
+                service.stop().unwrap();
+            }
             service.delete().unwrap();
         }
 
@@ -59,8 +66,8 @@ mod service {
         let service_binary_path = ::std::env::current_exe().unwrap();
 
         let service_info = ServiceInfo {
-            name: OsString::from("platuned"),
-            display_name: OsString::from("platuned"),
+            name: OsString::from(SERVICE_NAME),
+            display_name: OsString::from(SERVICE_NAME),
             service_type: ServiceType::OWN_PROCESS,
             start_type: ServiceStartType::OnDemand,
             error_control: ServiceErrorControl::Normal,
@@ -70,9 +77,14 @@ mod service {
             account_name: None, // run as System
             account_password: None,
         };
-        service_manager
-            .create_service(&service_info, ServiceAccess::CHANGE_CONFIG)
+        let service = service_manager
+            .create_service(
+                &service_info,
+                ServiceAccess::CHANGE_CONFIG | ServiceAccess::START,
+            )
             .unwrap();
+        service.set_description("platune service").unwrap();
+        service.start(&[OsStr::new("Started")]).unwrap();
     }
 
     pub fn handle_service_main(_arguments: Vec<OsString>) {

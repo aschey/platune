@@ -13,7 +13,6 @@ use tonic::{Response, Status};
 
 pub struct ManagementImpl {
     manager: Manager,
-    db: Database,
 }
 
 impl ManagementImpl {
@@ -23,8 +22,8 @@ impl ManagementImpl {
         let db = Database::connect(path, true).await;
         db.migrate().await;
         let config = Config::new();
-        let manager = Manager::new(&db, config);
-        ManagementImpl { manager, db }
+        let manager = Manager::new(&db, &config);
+        ManagementImpl { manager }
     }
 }
 
@@ -122,14 +121,14 @@ impl Management for ManagementImpl {
         request: Request<Streaming<SearchRequest>>,
     ) -> Result<Response<Self::SearchStream>, Status> {
         let mut messages = request.into_inner();
-        let db = self.db.clone();
+        let manager = self.manager.clone();
         let (tx, rx) = mpsc::channel(32);
 
         tokio::spawn(async move {
             while let Some(msg) = messages.next().await {
                 match msg {
                     Ok(msg) => {
-                        tx.send(db.search(&msg.query, Default::default()).await)
+                        tx.send(manager.search(&msg.query, Default::default()).await)
                             .await
                             .unwrap();
                     }

@@ -518,7 +518,7 @@ pub struct SearchResultTest {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
     let tempdir = TempDir::new().unwrap();
-    let (db, config) = setup(&tempdir).await;
+    let (db, manager) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
@@ -543,12 +543,12 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         t.save();
     }
 
-    config.add_folder(music_dir.to_str().unwrap()).await;
-    let mut receiver = config.sync().await;
+    manager.add_folder(music_dir.to_str().unwrap()).await;
+    let mut receiver = manager.sync().await;
 
     while let Some(_) = receiver.recv().await {}
 
-    let res = db.search(search, Default::default()).await;
+    let res = manager.search(search, Default::default()).await;
     println!("res {:?}", res);
 
     assert!(res.len() == results.len());
@@ -575,6 +575,6 @@ async fn setup(tempdir: &TempDir) -> (Database, Manager) {
     let db = Database::connect(sql_path, true).await;
     db.migrate().await;
     let config = Config::new_from_path(config_path);
-    let manager = Manager::new(&db, config);
+    let manager = Manager::new(&db, &config);
     (db, manager)
 }

@@ -5,7 +5,7 @@ use tokio::sync::mpsc;
 
 use crate::{
     config::Config,
-    database::{Database, EntryType, LookupEntry},
+    database::{Database, EntryType, LookupEntry, SearchOptions, SearchRes},
 };
 
 #[derive(Error, Debug)]
@@ -14,6 +14,7 @@ pub enum ConfigError {
     InvalidPath(PathBuf),
 }
 
+#[derive(Clone)]
 pub struct Manager {
     db: Database,
     config: Config,
@@ -22,10 +23,10 @@ pub struct Manager {
 }
 
 impl Manager {
-    pub fn new(db: &Database, config: Config) -> Self {
+    pub fn new(db: &Database, config: &Config) -> Self {
         Self {
             db: db.clone(),
-            config,
+            config: config.clone(),
             validate_paths: true,
             delim: if cfg!(windows) { r"\" } else { "/" },
         }
@@ -133,6 +134,10 @@ impl Manager {
         res
     }
 
+    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
+        self.db.search(query, options).await
+    }
+
     fn clean_path(&self, path: &str) -> String {
         let mut path = path.replace(self.delim, "/");
         let re = Regex::new(r"/+").unwrap();
@@ -213,7 +218,7 @@ mod tests {
         let (db, mut manager) = setup(&tempdir).await;
         let config_path2 = tempdir.path().join("platuneconfig2");
         let config2 = Config::new_from_path(config_path2);
-        let mut manager2 = Manager::new(&db, config2);
+        let mut manager2 = Manager::new(&db, &config2);
         manager.delim = r"\";
         manager.validate_paths = false;
         manager2.delim = r"\";
@@ -238,19 +243,19 @@ mod tests {
         let db = Database::connect(sql_path, true).await;
         db.migrate().await;
         let config = Config::new_from_path(config_path.clone());
-        let mut manager = Manager::new(&db, config);
+        let mut manager = Manager::new(&db, &config);
         manager.delim = r"\";
         manager.validate_paths = false;
 
         manager.add_folder(r"C:\test").await;
         manager.register_drive(r"C:\").await.unwrap();
-        drop(manager);
+
         let tempdir2 = TempDir::new().unwrap();
         let sql_path2 = tempdir2.path().join("platune.db");
         let db2 = Database::connect(sql_path2, true).await;
         db2.migrate().await;
-        let config2 = Config::new_from_path(config_path);
-        let mut manager2 = Manager::new(&db, config2);
+
+        let mut manager2 = Manager::new(&db2, &config);
         manager2.delim = r"\";
         manager2.validate_paths = false;
 
@@ -278,7 +283,7 @@ mod tests {
         let db = Database::connect(sql_path, true).await;
         db.migrate().await;
         let config = Config::new_from_path(config_path);
-        let manager = Manager::new(&db, config);
+        let manager = Manager::new(&db, &config);
         (db, manager)
     }
 }

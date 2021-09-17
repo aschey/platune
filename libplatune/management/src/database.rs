@@ -26,6 +26,7 @@ use tokio::{sync::mpsc, task::JoinHandle, time::timeout};
 const MIN_WORDS: usize = 3;
 const MIN_LEN: usize = 20;
 
+#[derive(Clone)]
 pub struct Database {
     pool: Pool<Sqlite>,
     opts: SqliteConnectOptions,
@@ -630,7 +631,7 @@ impl Database {
         return self.convert_res(res, options);
     }
 
-    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
+    pub(crate) async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
         let mut query = query.to_owned();
         let artist_split = query.split("artist:").collect_vec();
         let mut artist_filter: Vec<String> = vec![];
@@ -745,15 +746,6 @@ impl Database {
         .await
         .unwrap();
         return res.rows_affected();
-    }
-}
-
-impl Clone for Database {
-    fn clone(&self) -> Self {
-        Self {
-            pool: self.pool.clone(),
-            opts: self.opts.clone(),
-        }
     }
 }
 
