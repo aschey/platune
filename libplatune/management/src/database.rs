@@ -1090,7 +1090,7 @@ fn load_spellfix(con: &mut SqliteConnection) {
     #[cfg(target_os = "linux")]
     let path = "./assets/linux/spellfix.o";
     #[cfg(target_os = "windows")]
-    let path = "./assets/windows/spellfix.dll";
+    let path = "C:/Users/asche/code/platune/libplatune/management/assets/windows/spellfix.dll";
     load_extension(handle, &Path::new(path));
 }
 
