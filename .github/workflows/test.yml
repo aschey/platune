@@ -3,28 +3,28 @@ on: [push]
 name: CI
 
 jobs:
-  rust:
-    env:
-      SQLX_OFFLINE: true
-    name: Run Rust tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: apt-get update
-        # act doesn't have sudo installed but it's required on the real actions runner
-        run: $(command -v sudo>/dev/null && echo "sudo") apt-get update
-      - name: Install deps
-        run: $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev cmake build-essential pkg-config git zlib1g-dev
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          default: true
-          profile: minimal
-          components: rustfmt, clippy
-      - name: Test
-        run: cargo test --features=dummy -- --test-threads=1
+  # rust:
+  #   env:
+  #     SQLX_OFFLINE: true
+  #   name: Run Rust tests
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v2
+  #     - name: apt-get update
+  #       # act doesn't have sudo installed but it's required on the real actions runner
+  #       run: $(command -v sudo>/dev/null && echo "sudo") apt-get update
+  #     - name: Install deps
+  #       run: $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev cmake build-essential pkg-config git zlib1g-dev
+  #     - name: Install rust
+  #       uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #         default: true
+  #         profile: minimal
+  #         components: rustfmt, clippy
+  #     - name: Test
+  #       run: cargo test --features=dummy -- --test-threads=1
   go:
     name: Run Go tests
     runs-on: ubuntu-latest
@@ -35,6 +35,5 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: '^1.16'
-      - uses: Yuri6037/Action-FakeTTY@v1
       - name: Test
-        run: cd platune-cli && go build && faketty go test ./... -v
+        run: cd platune-cli && go build && TERM=xterm-256color script -q -e -c "go test ./... -v"
