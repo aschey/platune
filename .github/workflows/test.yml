@@ -35,5 +35,6 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: '^1.16'
+      - uses: Yuri6037/Action-FakeTTY@v1
       - name: Test
-        run: cd platune-cli && go build && go test ./... -v
+        run: cd platune-cli && go build && faketty go test ./... -v
