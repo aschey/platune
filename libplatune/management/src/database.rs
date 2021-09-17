@@ -712,16 +712,18 @@ impl Database {
         }
     }
 
-    pub(crate) async fn add_mount(&self, path: &str) -> i32 {
-        let res = sqlx::query!(
-            r#"insert or ignore into mount(mount_path) values(?) returning mount_id as "mount_id: i32""#,
-            path
-        )
-        .fetch_one(&self.pool)
-        .await
-        .unwrap();
+    pub(crate) async fn add_mount(&self, path: &str) -> i64 {
+        sqlx::query!(r"insert or ignore into mount(mount_path) values(?)", path)
+            .execute(&self.pool)
+            .await
+            .unwrap();
 
-        return res.mount_id.unwrap();
+        let res = sqlx::query!(r"select mount_id from mount where mount_path = ?", path)
+            .fetch_one(&self.pool)
+            .await
+            .unwrap();
+
+        return res.mount_id;
     }
 
     pub(crate) async fn update_mount(&self, mount_id: String, path: &str) -> u64 {

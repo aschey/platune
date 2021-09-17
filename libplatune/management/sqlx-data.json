@@ -58,6 +58,24 @@
       "nullable": []
     }
   },
+  "4378592db0a04e875ec33f69dd998fa14697356b6db290f5ecc44001c73af10c": {
+    "query": "select mount_id from mount where mount_path = ?",
+    "describe": {
+      "columns": [
+        {
+          "name": "mount_id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "48b93f37ed89f2f302e5465207adaafd2066eca6677701dc7783ea6760616459": {
     "query": "update mount set mount_path = ? where mount_id = ?",
     "describe": {
@@ -84,6 +102,16 @@
       "columns": [],
       "parameters": {
         "Right": 15
+      },
+      "nullable": []
+    }
+  },
+  "99c71f11716e6474849335b657e791f22f3849f4143356f09dae476778ab58a5": {
+    "query": "insert or ignore into mount(mount_path) values(?)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
       },
       "nullable": []
     }
@@ -409,24 +437,6 @@
         false,
         false,
         false
-      ]
-    }
-  },
-  "d83d0f1d9a8844195e3ec90a39e57746d20aefd637f68830f83750594662cc11": {
-    "query": "insert or ignore into mount(mount_path) values(?) returning mount_id as \"mount_id: i32\"",
-    "describe": {
-      "columns": [
-        {
-          "name": "mount_id: i32",
-          "ordinal": 0,
-          "type_info": "Null"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        null
       ]
     }
   },
