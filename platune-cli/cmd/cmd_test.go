@@ -168,12 +168,24 @@ func TestAddFolder(t *testing.T) {
 }
 
 func TestAddQueueCompleter(t *testing.T) {
-	state := newCmdState()
-
 	buf := prompt.NewBuffer()
 	buf.InsertText("add-queue root", false, true)
 	doc := buf.Document()
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mock := test.NewMockManagementClient(ctrl)
+	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream.EXPECT().Send(gomock.Any()).Return(nil)
+	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
+	// matcher := test.NewMatcher(func(arg interface{}) bool {
+
+	// 	return true
+	// })
+	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
+	internal.Client = internal.NewTestClient(nil, mock)
+	state := newCmdState()
 	results := state.completer(*doc)
 	if len(results) != 1 {
 		t.Error("Should've found one result")
@@ -185,7 +197,6 @@ func TestAddQueueCompleter(t *testing.T) {
 
 func TestAddFolderCompleter(t *testing.T) {
 	state := newCmdState()
-
 	buf := prompt.NewBuffer()
 	buf.InsertText("add-folder root", false, true)
 	doc := buf.Document()

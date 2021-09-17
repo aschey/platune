@@ -18,13 +18,13 @@ import (
 
 var cfgFile string
 var searchClient platune.Management_SearchClient
-var curPrompt *prompt.Prompt
 
 type cmdState struct {
 	livePrefix     string
 	isSetQueueMode bool
 	currentQueue   []string
 	dbResults      []*platune.SearchResult
+	curPrompt      *prompt.Prompt
 }
 
 func expandPath(song string) (string, fs.FileInfo, error) {
@@ -62,7 +62,16 @@ func expandFolder(song string) (string, error) {
 }
 
 func newCmdState() cmdState {
-	return cmdState{livePrefix: "", isSetQueueMode: false, currentQueue: []string{}}
+	state := cmdState{livePrefix: "", isSetQueueMode: false, currentQueue: []string{}}
+	state.curPrompt = prompt.New(
+		state.executor,
+		state.completer,
+		prompt.OptionPrefix(">>> "),
+		prompt.OptionLivePrefix(state.changeLivePrefix),
+		prompt.OptionTitle("Platune CLI"),
+		prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"}),
+	)
+	return state
 }
 
 var state = newCmdState()
@@ -190,18 +199,18 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 
 			suggestions := filePathCompleter.Complete(in, true)
 			if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
-				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(curPrompt)
+				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
 				return suggestions
 			}
 
 			sendErr := searchClient.Send(&platune.SearchRequest{Query: rest})
 			if sendErr != nil {
-				fmt.Println(sendErr)
+				fmt.Println("send error", sendErr)
 				return []prompt.Suggest{}
 			}
 			res, recvErr := searchClient.Recv()
 			if recvErr != nil {
-				fmt.Println(recvErr)
+				fmt.Println("recv error", recvErr)
 				return []prompt.Suggest{}
 			}
 
@@ -209,7 +218,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			for _, r := range res.Results {
 				suggestions = append(suggestions, prompt.Suggest{Text: r.Entry, Description: r.Description})
 			}
-			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(curPrompt)
+			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(state.curPrompt)
 			return suggestions
 		}
 		return []prompt.Suggest{}
@@ -265,16 +274,7 @@ var rootCmd = &cobra.Command{
 			return
 		}
 		if interactive {
-			p := prompt.New(
-				state.executor,
-				state.completer,
-				prompt.OptionPrefix(">>> "),
-				prompt.OptionLivePrefix(state.changeLivePrefix),
-				prompt.OptionTitle("Platune CLI"),
-				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"}),
-			)
-			curPrompt = p
-			p.Run()
+			state.curPrompt.Run()
 		} else {
 			err := cmd.Help()
 			if err != nil {
