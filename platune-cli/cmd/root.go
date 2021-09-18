@@ -12,6 +12,7 @@ import (
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mitchellh/go-homedir"
+	"github.com/nathan-fiscaletti/consolesize-go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -202,8 +203,10 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
 				return suggestions
 			}
-
-			sendErr := searchClient.Send(&platune.SearchRequest{Query: rest})
+			cols, _ := consolesize.GetConsoleSize()
+			col := in.CursorPositionCol()
+			maxLength := int32((cols - col) / 2)
+			sendErr := searchClient.Send(&platune.SearchRequest{Query: rest, MaxLength: &maxLength})
 			if sendErr != nil {
 				fmt.Println("send error", sendErr)
 				return []prompt.Suggest{}

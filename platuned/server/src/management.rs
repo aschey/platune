@@ -4,6 +4,7 @@ use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database;
 use libplatune_management::database::Database;
+use libplatune_management::database::SearchOptions;
 use libplatune_management::manager::Manager;
 use std::pin::Pin;
 use tokio::sync::mpsc;
@@ -128,7 +129,11 @@ impl Management for ManagementImpl {
             while let Some(msg) = messages.next().await {
                 match msg {
                     Ok(msg) => {
-                        tx.send(manager.search(&msg.query, Default::default()).await)
+                        let options = SearchOptions {
+                            max_length: msg.max_length.map(|l| l as usize),
+                            ..Default::default()
+                        };
+                        tx.send(manager.search(&msg.query, options).await)
                             .await
                             .unwrap();
                     }
