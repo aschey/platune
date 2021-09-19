@@ -29,7 +29,8 @@ message SearchRequest {
   string query = 1;
   optional string start_separator = 2;
   optional string end_separator = 3;
-  optional int32 max_length = 4;
+  optional int32 title_max_length = 4;
+  optional int32 description_max_length = 5;
 }
 
 message LookupRequest {

@@ -204,9 +204,15 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 				return suggestions
 			}
 			cols, _ := consolesize.GetConsoleSize()
+			fmt.Println(cols)
 			col := in.CursorPositionCol()
-			maxLength := int32((cols - col) / 2)
-			sendErr := searchClient.Send(&platune.SearchRequest{Query: rest, MaxLength: &maxLength})
+			base := float32(cols-col) - 10
+			titleMaxLength := int32(base * (1.0 / 3.0))
+			descriptionMaxLength := int32(base * (2.0 / 3.0))
+			sendErr := searchClient.Send(&platune.SearchRequest{
+				Query:                rest,
+				TitleMaxLength:       &titleMaxLength,
+				DescriptionMaxLength: &descriptionMaxLength})
 			if sendErr != nil {
 				fmt.Println("send error", sendErr)
 				return []prompt.Suggest{}

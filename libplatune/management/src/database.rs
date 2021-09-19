@@ -37,7 +37,8 @@ pub struct SearchOptions<'a> {
     pub end_highlight: &'a str,
     pub limit: i32,
     pub restrict_entry_type: Vec<&'a str>,
-    pub max_length: Option<usize>,
+    pub title_max_length: Option<usize>,
+    pub description_max_length: Option<usize>,
 }
 
 impl<'a> Default for SearchOptions<'a> {
@@ -47,7 +48,8 @@ impl<'a> Default for SearchOptions<'a> {
             end_highlight: "",
             limit: 10,
             restrict_entry_type: vec![],
-            max_length: Some(75),
+            title_max_length: None,
+            description_max_length: None,
         }
     }
 }
@@ -499,10 +501,10 @@ impl Database {
                 let group = group.collect_vec();
                 let first = group.get(0).unwrap();
                 SearchRes {
-                    entry: self.cap_text(key.0, options.max_length),
+                    entry: self.cap_text(key.0, options.title_max_length),
                     entry_type: EntryType::from_str(&first.entry_type).unwrap(),
                     artist: first.artist.to_owned(),
-                    description: self.cap_text(key.1, options.max_length),
+                    description: self.cap_text(key.1, options.description_max_length),
                     correlation_ids: group.iter().map(|v| v.correlation_id).collect(),
                 }
             })
@@ -606,7 +608,6 @@ impl Database {
         corrected_search = special_chars
             .replace_all(&corrected_search, " ")
             .to_string();
-        println!("{:?}", corrected_search);
 
         let rest = self
             .run_search(
