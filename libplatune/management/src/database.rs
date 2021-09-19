@@ -37,8 +37,6 @@ pub struct SearchOptions<'a> {
     pub end_highlight: &'a str,
     pub limit: i32,
     pub restrict_entry_type: Vec<&'a str>,
-    pub title_max_length: Option<usize>,
-    pub description_max_length: Option<usize>,
 }
 
 impl<'a> Default for SearchOptions<'a> {
@@ -48,8 +46,6 @@ impl<'a> Default for SearchOptions<'a> {
             end_highlight: "",
             limit: 10,
             restrict_entry_type: vec![],
-            title_max_length: None,
-            description_max_length: None,
         }
     }
 }
@@ -484,14 +480,7 @@ impl Database {
         string.replace(" & ", " and ").replace("&", " ")
     }
 
-    fn cap_text(&self, text: String, max_length: Option<usize>) -> String {
-        if max_length.is_none() || text.len() <= max_length.unwrap() {
-            return text;
-        }
-        format!("{}...", &text[..max_length.unwrap() - 3])
-    }
-
-    fn convert_res(&self, mut res: Vec<SearchEntry>, options: SearchOptions) -> Vec<SearchRes> {
+    fn convert_res(&self, mut res: Vec<SearchEntry>) -> Vec<SearchRes> {
         res.sort();
         let grouped = res
             .into_iter()
@@ -501,10 +490,10 @@ impl Database {
                 let group = group.collect_vec();
                 let first = group.get(0).unwrap();
                 SearchRes {
-                    entry: self.cap_text(key.0, options.title_max_length),
+                    entry: key.0,
                     entry_type: EntryType::from_str(&first.entry_type).unwrap(),
                     artist: first.artist.to_owned(),
-                    description: self.cap_text(key.1, options.description_max_length),
+                    description: key.1,
                     correlation_ids: group.iter().map(|v| v.correlation_id).collect(),
                 }
             })
@@ -542,7 +531,7 @@ impl Database {
             .await;
 
         if res.len() == options.limit as usize {
-            return self.convert_res(res, options);
+            return self.convert_res(res);
         }
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(&query).collect_vec();
@@ -638,7 +627,7 @@ impl Database {
             .take(options.limit as usize)
             .collect_vec();
 
-        return self.convert_res(res, options);
+        return self.convert_res(res);
     }
 
     pub(crate) async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {

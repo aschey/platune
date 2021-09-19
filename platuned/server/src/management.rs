@@ -130,8 +130,6 @@ impl Management for ManagementImpl {
                 match msg {
                     Ok(msg) => {
                         let options = SearchOptions {
-                            title_max_length: msg.title_max_length.map(|l| l as usize),
-                            description_max_length: msg.description_max_length.map(|l| l as usize),
                             ..Default::default()
                         };
                         tx.send(manager.search(&msg.query, options).await)

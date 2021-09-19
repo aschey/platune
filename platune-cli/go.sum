@@ -22,6 +22,8 @@ github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmV
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/aschey/go-prompt v0.2.7-0.20210914072712-fe453763407f h1:ChAJ84pP8YZMSAQICDJPwII4yIDxxzr+qfneC0bjZ0Q=
 github.com/aschey/go-prompt v0.2.7-0.20210914072712-fe453763407f/go.mod h1:d0IZaQm/wLGDHBFTPH5UHq9tcvaNShJH7labKYLB6Ck=
+github.com/aschey/go-prompt v0.2.7-0.20210919073046-a73566fba649 h1:F2Y4eiqjf2sdyZy4lvVkwSJpgV5nIqSyVz/7WVnPw7w=
+github.com/aschey/go-prompt v0.2.7-0.20210919073046-a73566fba649/go.mod h1:d0IZaQm/wLGDHBFTPH5UHq9tcvaNShJH7labKYLB6Ck=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
