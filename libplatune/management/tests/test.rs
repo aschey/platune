@@ -175,6 +175,34 @@ pub struct SearchResultTest {
         "blss"),
     case(vec![
         SongTest {
+            title: Some("Color of Autumn"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("Colors"),
+            ..Default::default()
+        }],
+        vec![
+            SearchResultTest {entry: "Colors", correlation_ids: vec![2]},
+            SearchResultTest {entry: "Color of Autumn", correlation_ids: vec![1]}
+        ],
+        "colors"),
+    case(vec![
+        SongTest {
+            title: Some("Censored Colors"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("Colors"),
+            ..Default::default()
+        }],
+        vec![
+            SearchResultTest {entry: "Colors", correlation_ids: vec![2]},
+            SearchResultTest {entry: "Censored Colors", correlation_ids: vec![1]}
+        ],
+        "colors"),
+    case(vec![
+        SongTest {
             artist: Some("red hot chili peppers"),
             ..Default::default()
         },
@@ -183,8 +211,22 @@ pub struct SearchResultTest {
             ..Default::default()
         }],
         vec![
-            SearchResultTest {entry: "real hearty chopped pies", correlation_ids: vec![1]},
             SearchResultTest {entry: "red hot chili peppers", correlation_ids: vec![2]},
+            SearchResultTest {entry: "real hearty chopped pies", correlation_ids: vec![1]},
+        ],
+        "rhcp"),
+    case(vec![
+        SongTest {
+            artist: Some("red hot chili peppers"),
+            ..Default::default()
+        },
+        SongTest {
+            artist: Some("rad hot chili peppers"),
+            ..Default::default()
+        }],
+        vec![
+            SearchResultTest {entry: "rad hot chili peppers", correlation_ids: vec![2]},
+            SearchResultTest {entry: "red hot chili peppers", correlation_ids: vec![1]},
         ],
         "rhcp"),
     case(vec![

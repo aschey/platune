@@ -73,9 +73,10 @@ pub struct SearchRes {
 
 #[derive(Debug)]
 struct ResultScore {
-    len_score: usize,
+    match_len_score: usize,
+    full_len_score: usize,
     weighted_score: f32,
-    entry: String,
+    full_entry: String,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -92,8 +93,9 @@ impl Sum for ResultScore {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|a, b| ResultScore {
             weighted_score: a.weighted_score + b.weighted_score,
-            len_score: a.len_score + b.len_score,
-            entry: a.entry + &b.entry,
+            match_len_score: a.match_len_score + b.match_len_score,
+            full_len_score: a.full_len_score,
+            full_entry: a.full_entry,
         })
         .unwrap()
     }
@@ -102,7 +104,7 @@ impl Sum for ResultScore {
 impl PartialEq for ResultScore {
     fn eq(&self, other: &Self) -> bool {
         self.weighted_score.partial_cmp(&other.weighted_score) == Some(Ordering::Equal)
-            && self.len_score.cmp(&other.len_score) == Ordering::Equal
+            && self.full_len_score.cmp(&other.full_len_score) == Ordering::Equal
     }
 }
 
@@ -112,11 +114,15 @@ impl PartialOrd for ResultScore {
         if weighted_ord != Some(Ordering::Equal) && weighted_ord != None {
             return weighted_ord;
         }
-        let len_ord = self.len_score.cmp(&other.len_score);
+        let len_ord = self.match_len_score.cmp(&other.match_len_score);
         if len_ord != Ordering::Equal {
             return Some(len_ord);
         }
-        return Some(self.entry.cmp(&other.entry));
+        let full_len_ord = self.full_len_score.cmp(&other.full_len_score);
+        if full_len_ord != Ordering::Equal {
+            return Some(full_len_ord);
+        }
+        return self.full_entry.partial_cmp(&other.full_entry);
     }
 }
 
@@ -135,40 +141,44 @@ struct SearchEntry {
 
 impl SearchEntry {
     fn score_match(&self) -> ResultScore {
-        let count = self.entry.matches(r"{startmatch}").count();
+        let entry = self.entry.to_lowercase();
+        let count = entry.matches(r"{startmatch}").count();
         let re = Regex::new(&r"(?:\{startmatch\}(.*?)\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
-        let caps = re.captures(&self.entry).unwrap();
+        let caps = re.captures(&entry).unwrap();
 
         let mut score: ResultScore = caps
             .iter()
             .skip(1)
             .map(|c| match c.map(|c| c.as_str()) {
-                Some(cap) => match self.weights.get(cap) {
+                Some(cap) => match self.weights.get(&cap.to_lowercase()) {
                     Some(weight) => ResultScore {
                         weighted_score: *weight,
-                        len_score: cap.len(),
-                        entry: cap.to_owned(),
+                        match_len_score: cap.len(),
+                        full_len_score: entry.len(),
+                        full_entry: entry.to_owned(),
                     },
                     None => ResultScore {
                         weighted_score: 0.,
-                        len_score: cap.len(),
-                        entry: cap.to_owned(),
+                        match_len_score: cap.len(),
+                        full_len_score: entry.len(),
+                        full_entry: entry.to_owned(),
                     },
                 },
                 None => ResultScore {
                     weighted_score: 0.,
-                    len_score: 0,
-                    entry: "".to_owned(),
+                    match_len_score: 0,
+                    full_len_score: entry.len(),
+                    full_entry: entry.to_owned(),
                 },
             })
             .sum();
 
         if score.weighted_score == 0.
-            && score.len_score + count >= MIN_LEN
+            && score.match_len_score + count >= MIN_LEN
             && count >= MIN_WORDS
             && self.original_query.len() == count
         {
-            score.len_score = self.original_query.len();
+            score.match_len_score = self.original_query.len();
         }
 
         return score;
@@ -387,7 +397,6 @@ impl Database {
         con: &mut PoolConnection<Sqlite>,
     ) -> Vec<SearchEntry> {
         let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
-        let order_clause = "rank * (CASE entry_type WHEN 'artist' THEN 1.4 WHEN 'album_artist' THEN 1.4 WHEN 'tag' THEN 1.3 WHEN 'album' THEN 1.25 ELSE 1 END)";
         let mut artist_filter_clause = "".to_owned();
         let num_base_args = 5;
         let mut num_extra_args = 0;
@@ -421,7 +430,7 @@ impl Database {
                 CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
                 CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
                 ORDER BY entry_type DESC) row_num
-            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match $3 {3}) a
+            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match $3 {2}) a
             LEFT OUTER JOIN song s on s.song_id = assoc_id
             LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
             LEFT OUTER JOIN album al on al.album_id = assoc_id
@@ -429,14 +438,14 @@ impl Database {
             LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
             LEFT OUTER JOIN artist ar2 on ar2.artist_id = assoc_id
             LEFT OUTER JOIN album_artist aa2 on aa2.album_artist_id = assoc_id
-            {2}
-            ORDER BY {1}
+            {1}
+            ORDER BY rank
             LIMIT $4
         )
         SELECT entry, entry_type, artist, album, correlation_id, start_highlight, end_highlight FROM cte
         WHERE row_num = 1
-        ORDER BY {1}
-        LIMIT $5", artist_select, order_clause, artist_filter_clause, type_filter);
+        ORDER BY rank
+        LIMIT $5", artist_select, artist_filter_clause, type_filter);
         let mut sql_query = sqlx::query(&full_query)
             .bind(options.start_highlight)
             .bind(options.end_highlight)
