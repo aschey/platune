@@ -117,20 +117,15 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 		}
 
 		if selected != nil {
-			for _, dbResult := range state.dbResults {
-				if dbResult.Entry == selected.Text && dbResult.Description == selected.Description {
-					lookupResults := internal.Client.Lookup(&platune.LookupRequest{
-						EntryType:      dbResult.EntryType,
-						CorrelationIds: dbResult.CorrelationIds,
-					})
-					paths := []string{}
-					for _, entry := range lookupResults.Entries {
-						paths = append(paths, entry.Path)
-					}
-					internal.Client.AddToQueue(paths)
-					return
-				}
+			lookupRequest := selected.Metadata.(platune.LookupRequest)
+			lookupResults := internal.Client.Lookup(&lookupRequest)
+
+			paths := []string{}
+			for _, entry := range lookupResults.Entries {
+				paths = append(paths, entry.Path)
 			}
+			internal.Client.AddToQueue(paths)
+			return
 		}
 
 		full, err := expandFile(cmds[1])
@@ -238,13 +233,14 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			col := in.CursorPositionCol()
 			base := getAvailableWidth(col)
 
-			titleMaxLength := int32(base * (1.0 / 3.0))
-			descriptionMaxLength := int32(base * (2.0 / 3.0))
+			titleMaxLength := int(base * (1.0 / 3.0))
+			descriptionMaxLength := int(base * (2.0 / 3.0))
 
 			for _, r := range res.Results {
 				suggestions = append(suggestions, prompt.Suggest{
-					Text:        ellipsize(r.Entry, int(titleMaxLength)),
-					Description: ellipsize(r.Description, int(descriptionMaxLength)),
+					Text:        ellipsize(r.Entry, titleMaxLength),
+					Description: ellipsize(r.Description, descriptionMaxLength),
+					Metadata:    platune.LookupRequest{EntryType: r.EntryType, CorrelationIds: r.CorrelationIds},
 				})
 			}
 			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(state.curPrompt)
