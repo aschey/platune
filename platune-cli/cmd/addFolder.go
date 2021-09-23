@@ -9,7 +9,6 @@ const AddFolderDescription = "Adds a folder to the library"
 
 const addFolderExampleText = "path"
 
-// setQueueCmd represents the setQueue command
 var addFolderCmd = &cobra.Command{
 	Use:   "add-folder " + addFolderExampleText,
 	Short: AddFolderDescription,

@@ -11,6 +11,7 @@ import (
 	"github.com/aschey/platune/cli/v2/internal"
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 	"github.com/mitchellh/go-homedir"
 	"github.com/nathan-fiscaletti/consolesize-go"
 	"github.com/spf13/cobra"
@@ -75,6 +76,19 @@ func newCmdState() cmdState {
 		prompt.OptionCompletionOnDown(),
 	)
 	return state
+}
+
+func getAvailableWidth(currentCol int) float32 {
+	cols, _ := consolesize.GetConsoleSize()
+	base := float32(cols-currentCol) - 10
+	return base
+}
+
+func ellipsize(text string, max int) string {
+	if max > 0 && runewidth.StringWidth(text) > max {
+		return text[:max-3] + "..."
+	}
+	return text
 }
 
 var state = newCmdState()
@@ -205,13 +219,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
 				return suggestions
 			}
-			cols, _ := consolesize.GetConsoleSize()
-			col := in.CursorPositionCol()
-			base := float32(cols-col) - 10
-			titleMaxLength := int32(base * (1.0 / 3.0))
-			descriptionMaxLength := int32(base * (2.0 / 3.0))
-			prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
-			prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
+
 			sendErr := searchClient.Send(&platune.SearchRequest{
 				Query: rest,
 			})
@@ -226,8 +234,18 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 			}
 
 			state.dbResults = res.Results
+
+			col := in.CursorPositionCol()
+			base := getAvailableWidth(col)
+
+			titleMaxLength := int32(base * (1.0 / 3.0))
+			descriptionMaxLength := int32(base * (2.0 / 3.0))
+
 			for _, r := range res.Results {
-				suggestions = append(suggestions, prompt.Suggest{Text: r.Entry, Description: r.Description})
+				suggestions = append(suggestions, prompt.Suggest{
+					Text:        ellipsize(r.Entry, int(titleMaxLength)),
+					Description: ellipsize(r.Description, int(descriptionMaxLength)),
+				})
 			}
 			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(state.curPrompt)
 			return suggestions
@@ -235,7 +253,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		return []prompt.Suggest{}
 	}
 
-	s := []prompt.Suggest{
+	cmds := []prompt.Suggest{
 		{Text: "set-queue", Description: SetQueueDescription},
 		{Text: "add-queue", Description: AddQueueDescription},
 		{Text: "pause", Description: PauseDescription},
@@ -249,12 +267,20 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "add-folder", Description: AddFolderDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
-	return prompt.FilterHasPrefix(s, in.GetWordBeforeCursor(), true)
+	maxCmdLength := 15
+	maxWidth := getAvailableWidth(maxCmdLength)
+	for i, cmd := range cmds {
+		cmds[i].Description = ellipsize(cmd.Description, int(maxWidth))
+	}
+
+	return prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
 }
 
 var filePathCompleter = internal.FilePathCompleter{
 	IgnoreCase: true,
 }
+var title1 = "█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █"
+var title2 = "█▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █"
 
 var title = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("9")).
@@ -262,9 +288,7 @@ var title = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("6")).
 	PaddingLeft(1).
 	PaddingRight(1).
-	// This says "Platune CLI" but I can't find a way to make gofmt make it legible
-	Render(`█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █
-█▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █`)
+	Render(title1 + "\n" + title2)
 
 var subtitle = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("9")).

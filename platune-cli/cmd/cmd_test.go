@@ -2,8 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -51,7 +52,7 @@ func runTest(t *testing.T, expected string, args ...string) string {
 	wOut.Close()
 	rootCmd.SetOut(rescueStdout)
 	os.Stdout = rescueStdout
-	var out, _ = ioutil.ReadAll(rOut)
+	var out, _ = io.ReadAll(rOut)
 	outStr := string(out)
 	if expected != "" && outStr != expected {
 		t.Errorf("Expected %s, Got %s", expected, outStr)
@@ -61,10 +62,11 @@ func runTest(t *testing.T, expected string, args ...string) string {
 }
 
 func TestAddQueue(t *testing.T) {
-	testSong := "test"
+	testSong := "root.go"
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			return arg.(*platune.AddToQueueRequest).Songs[0] == testSong
+			path, _ := filepath.Abs(testSong)
+			return arg.(*platune.AddToQueueRequest).Songs[0] == path
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
 	}, "add-queue", testSong)

@@ -2,7 +2,7 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -12,7 +12,7 @@ import (
 )
 
 type FilePathCompleter struct {
-	Filter        func(fi os.FileInfo) bool
+	Filter        func(de fs.DirEntry) bool
 	IgnoreCase    bool
 	fileListCache map[string][]prompt.Suggest
 }
@@ -86,7 +86,7 @@ func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt
 		return c.adjustCompletions(cached, base)
 	}
 
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil && os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
