@@ -167,7 +167,8 @@ func TestAddFolder(t *testing.T) {
 	}, "add-folder", folder)
 }
 
-func TestAddQueueCompleter(t *testing.T) {
+func TestAddQueueFileCompleter(t *testing.T) {
+	searchClient = nil
 	buf := prompt.NewBuffer()
 	buf.InsertText("add-queue root", false, true)
 	doc := buf.Document()
@@ -179,10 +180,7 @@ func TestAddQueueCompleter(t *testing.T) {
 	stream := test.NewMockManagement_SearchClient(ctrl)
 	stream.EXPECT().Send(gomock.Any()).Return(nil)
 	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
-	// matcher := test.NewMatcher(func(arg interface{}) bool {
 
-	// 	return true
-	// })
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	internal.Client = internal.NewTestClient(nil, mock)
 	state := newCmdState()
@@ -192,6 +190,38 @@ func TestAddQueueCompleter(t *testing.T) {
 	}
 	if results[0].Text != "root.go" {
 		t.Error("Result should be root.go")
+	}
+}
+
+func TestAddQueueDbCompleter(t *testing.T) {
+	searchClient = nil
+	buf := prompt.NewBuffer()
+	buf.InsertText("add-queue song name", false, true)
+	doc := buf.Document()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mock := test.NewMockManagementClient(ctrl)
+	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream.EXPECT().Send(gomock.Any()).Return(nil)
+	artist := "blah"
+	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{
+		{Entry: "song name", EntryType: platune.EntryType_SONG, Artist: &artist, CorrelationIds: []int32{1}, Description: "song desc"},
+	}}, nil)
+
+	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
+	internal.Client = internal.NewTestClient(nil, mock)
+	state := newCmdState()
+	results := state.completer(*doc)
+	if len(results) != 1 {
+		t.Error("Should've found one result")
+	}
+	if results[0].Text != "song name" {
+		t.Error("Result should be 'song name'")
+	}
+	if results[0].Description != "song desc" {
+		t.Error("Description should be 'song desc'")
 	}
 }
 
