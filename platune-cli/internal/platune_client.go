@@ -36,6 +36,11 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
+func (p *PlatuneClient) AddSearchResultsToQueue(lookupRequest *platune.LookupRequest) {
+	paths := p.getPathsFromLookup(lookupRequest)
+	p.AddToQueue(paths)
+}
+
 func (p *PlatuneClient) AddToQueue(songs []string) {
 	p.runCommand("Added", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Songs: songs})
@@ -152,6 +157,17 @@ func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Conte
 	}
 
 	fmt.Println(successMsg)
+}
+
+func (p *PlatuneClient) getPathsFromLookup(lookupRequest *platune.LookupRequest) []string {
+	lookupResults := p.Lookup(lookupRequest)
+
+	paths := []string{}
+	for _, entry := range lookupResults.Entries {
+		paths = append(paths, entry.Path)
+	}
+
+	return paths
 }
 
 var Client = NewPlatuneClient()

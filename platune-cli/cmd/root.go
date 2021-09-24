@@ -117,14 +117,17 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 		}
 
 		if selected != nil {
-			lookupRequest := selected.Metadata.(platune.LookupRequest)
-			lookupResults := internal.Client.Lookup(&lookupRequest)
-
-			paths := []string{}
-			for _, entry := range lookupResults.Entries {
-				paths = append(paths, entry.Path)
+			//internal.RenderSearchResults(&platune.SearchResponse{})
+			searchResult := selected.Metadata.(*platune.SearchResult)
+			if searchResult.EntryType == platune.EntryType_ALBUM {
+				lookupResult := internal.Client.Lookup(&platune.LookupRequest{EntryType: searchResult.EntryType, CorrelationIds: searchResult.CorrelationIds})
+				results := []*platune.SearchResult{}
+				for _, l := range lookupResult.Entries {
+					results = append(results, &platune.SearchResult{EntryType: platune.EntryType_SONG, Entry: l.Song, Description: "Song"})
+				}
+				internal.RenderSearchResults(&platune.SearchResponse{Results: results})
 			}
-			internal.Client.AddToQueue(paths)
+			//nternal.Client.AddSearchResultsToQueue(&lookupRequest)
 			return
 		}
 
@@ -240,7 +243,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 				suggestions = append(suggestions, prompt.Suggest{
 					Text:        ellipsize(r.Entry, titleMaxLength),
 					Description: ellipsize(r.Description, descriptionMaxLength),
-					Metadata:    platune.LookupRequest{EntryType: r.EntryType, CorrelationIds: r.CorrelationIds},
+					Metadata:    r,
 				})
 			}
 			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(state.curPrompt)
