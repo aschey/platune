@@ -18,7 +18,7 @@ const AddQueueDescription = "Adds a song to the end of the queue"
 
 const addQueueExampleText = "fileOrUrl"
 
-type item string
+type item platune.SearchResult
 
 var (
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
@@ -30,10 +30,10 @@ var (
 
 type model struct {
 	list   list.Model
-	choice string
+	choice item
 }
 
-func (i item) FilterValue() string { return string(i) }
+func (i item) FilterValue() string { return i.Entry }
 
 type itemDelegate struct{}
 
@@ -46,7 +46,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	str := fmt.Sprintf("%d. %s", index+1, i)
+	str := fmt.Sprintf("%d. %s - %s", index+1, i.Entry, i.Description)
 
 	fn := itemStyle.Render
 	if index == m.Index() {
@@ -74,7 +74,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			i, ok := m.list.SelectedItem().(item)
 			if ok {
-				m.choice = string(i)
+				m.choice = i
+				lookupRequest := platune.LookupRequest{
+					EntryType:      i.EntryType,
+					CorrelationIds: i.CorrelationIds,
+				}
+				lookupResults := internal.Client.Lookup(&lookupRequest)
+				paths := []string{}
+				for _, entry := range lookupResults.Entries {
+					paths = append(paths, entry.Path)
+				}
+				internal.Client.AddToQueue(paths)
 			}
 			return m, tea.Quit
 
@@ -90,8 +100,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	if m.choice != "" {
-		return quitTextStyle.Render(fmt.Sprintf("%s added to queue", m.choice))
+	if m.choice.Entry != "" {
+		return quitTextStyle.Render(fmt.Sprintf("%s added to queue", m.choice.Entry))
 	}
 
 	return "\n" + m.list.View()
@@ -124,7 +134,7 @@ var addQueueCmd = &cobra.Command{
 			}
 			items := []list.Item{}
 			for _, result := range results.Results {
-				items = append(items, item(result.Entry+" - "+result.Description))
+				items = append(items, item(*result))
 			}
 
 			l := list.NewModel(items, itemDelegate{}, 20, 14)
