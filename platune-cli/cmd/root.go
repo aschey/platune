@@ -5,38 +5,17 @@ import (
 	"io/fs"
 	"os"
 	"path"
-	"sort"
 	"strings"
 
-	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mattn/go-runewidth"
-	"github.com/mitchellh/go-homedir"
 	"github.com/nathan-fiscaletti/consolesize-go"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
-var cfgFile string
 var searchClient platune.Management_SearchClient
-
-type Mode string
-
-const (
-	NormalMode   Mode = ">>> "
-	SetQueueMode Mode = "set-queue> "
-	AlbumMode    Mode = "album> "
-	SongMode     Mode = "song> "
-)
-
-type cmdState struct {
-	mode         Mode
-	currentQueue []string
-	lookupResult []*platune.LookupEntry
-	curPrompt    *prompt.Prompt
-}
 
 func expandPath(song string) (string, fs.FileInfo, error) {
 	if strings.HasPrefix(song, "http") {
@@ -72,21 +51,6 @@ func expandFolder(song string) (string, error) {
 	return full, err
 }
 
-func newCmdState() cmdState {
-	state := cmdState{mode: NormalMode, currentQueue: []string{}}
-	state.curPrompt = prompt.New(
-		state.executor,
-		state.completer,
-		prompt.OptionPrefix(">>> "),
-		prompt.OptionLivePrefix(state.changeLivePrefix),
-		prompt.OptionTitle("Platune CLI"),
-		prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"}),
-		prompt.OptionShowCompletionAtStart(),
-		prompt.OptionCompletionOnDown(),
-	)
-	return state
-}
-
 func getAvailableWidth(currentCol int) float32 {
 	cols, _ := consolesize.GetConsoleSize()
 	base := float32(cols-currentCol) - 10
@@ -100,262 +64,8 @@ func ellipsize(text string, max int) string {
 	return text
 }
 
-var state = newCmdState()
-
-func (state *cmdState) changeLivePrefix() (string, bool) {
-	return string(state.mode), state.mode != NormalMode
-}
-
-func (state *cmdState) executor(in string, selected *prompt.Suggest) {
-	switch state.mode {
-	case SetQueueMode:
-		if strings.Trim(in, " ") == "" {
-			internal.Client.SetQueue(state.currentQueue)
-			state.currentQueue = []string{}
-			state.mode = NormalMode
-		} else {
-			in, err := expandFile(in)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			state.currentQueue = append(state.currentQueue, in)
-			fmt.Println(internal.PrettyPrintList(state.currentQueue))
-		}
-
-	case AlbumMode:
-		if selected.Text == "(Select All)" {
-			results := selected.Metadata.([]*platune.LookupEntry)
-			internal.Client.AddSearchResultsToQueue(results)
-			state.mode = NormalMode
-			return
-		}
-		state.mode = SongMode
-		newResults := []*platune.LookupEntry{}
-		for _, r := range state.lookupResult {
-			if r.Album == in {
-				newResults = append(newResults, r)
-			}
-		}
-		state.lookupResult = newResults
-	case SongMode:
-		if selected.Text == "(Select All)" {
-			results := selected.Metadata.([]*platune.LookupEntry)
-			internal.Client.AddSearchResultsToQueue(results)
-			state.mode = NormalMode
-			return
-		}
-		state.mode = NormalMode
-		lookupResponse := selected.Metadata.(*platune.LookupEntry)
-		internal.Client.AddToQueue([]string{lookupResponse.Path})
-	}
-
-	cmds := strings.SplitN(in, " ", 2)
-	if len(cmds) == 0 {
-		return
-	}
-
-	switch cmds[0] {
-	case "set-queue":
-		fmt.Println("Enter file paths or urls to add to the queue.")
-		fmt.Println("Enter a blank line when done.")
-		state.mode = SetQueueMode
-		return
-	case "add-queue":
-		if len(cmds) < 2 {
-			fmt.Println("Usage: add-queue <path or url>")
-			return
-		}
-
-		if selected != nil {
-			searchResult := selected.Metadata.(*platune.SearchResult)
-			lookupResult := internal.Client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
-			switch searchResult.EntryType {
-			case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
-				state.mode = AlbumMode
-				state.lookupResult = lookupResult.Entries
-			case platune.EntryType_ALBUM:
-				state.mode = SongMode
-				state.lookupResult = lookupResult.Entries
-			case platune.EntryType_SONG:
-				state.mode = NormalMode
-				internal.Client.AddSearchResultsToQueue(lookupResult.Entries)
-			}
-
-			return
-		}
-
-		full, err := expandFile(cmds[1])
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		internal.Client.AddToQueue([]string{full})
-	case "seek":
-		if len(cmds) < 2 {
-			fmt.Println("Usage: seek [hh]:[mm]:ss")
-			return
-		}
-		internal.Client.Seek(cmds[1])
-	case "pause":
-		internal.Client.Pause()
-	case "resume":
-		internal.Client.Resume()
-	case "stop":
-		internal.Client.Stop()
-	case "next":
-		internal.Client.Next()
-	case "previous":
-		internal.Client.Previous()
-	case "sync":
-		SyncProgress()
-		fmt.Println()
-	case "get-all-folders":
-		internal.Client.GetAllFolders()
-	case "add-folder":
-		if len(cmds) < 2 {
-			fmt.Println("Usage: add-folder <path>")
-			return
-		}
-		full, err := expandFolder(cmds[1])
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		internal.Client.AddFolder(full)
-	case "set-mount":
-		if len(cmds) < 2 {
-			fmt.Println("Usage: set-mount <path>")
-			return
-		}
-		full, err := expandFolder(cmds[1])
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		internal.Client.SetMount(full)
-	case "q":
-		fmt.Println("Exiting...")
-		os.Exit(0)
-	}
-
-}
-
-func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
-	suggestions := []prompt.Suggest{}
-	before := strings.Split(in.TextBeforeCursor(), " ")
-	switch state.mode {
-	case SetQueueMode:
-		return filePathCompleter.Complete(in, false)
-	case AlbumMode:
-		suggestionMap := map[string]prompt.Suggest{}
-		for _, r := range state.lookupResult {
-			suggestionMap[r.Album] = prompt.Suggest{Text: r.Album, Metadata: r}
-		}
-
-		for r := range suggestionMap {
-			suggestions = append(suggestions, suggestionMap[r])
-		}
-		sort.Slice(suggestions, func(i, j int) bool {
-			return suggestions[i].Text < suggestions[j].Text
-		})
-		suggestions = append([]prompt.Suggest{{Text: "(Select All)", Metadata: state.lookupResult}}, suggestions...)
-		return suggestions
-	case SongMode:
-		suggestions = []prompt.Suggest{{Text: "(Select All)", Metadata: state.lookupResult}}
-		for _, r := range state.lookupResult {
-			suggestions = append(suggestions, prompt.Suggest{Text: r.Song, Metadata: r})
-		}
-		return suggestions
-	}
-
-	if len(before) > 1 {
-		first := before[0]
-		switch first {
-
-		case "add-folder", "set-mount":
-			return filePathCompleter.Complete(in, true)
-		case "add-queue":
-			if searchClient == nil {
-				searchClient = internal.Client.Search()
-			}
-			rest := strings.Join(before[1:], " ")
-
-			if strings.HasPrefix(rest, "http://") || strings.HasPrefix(rest, "https://") {
-				return []prompt.Suggest{}
-			}
-
-			suggestions = filePathCompleter.Complete(in, true)
-			if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
-				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
-				return suggestions
-			}
-
-			sendErr := searchClient.Send(&platune.SearchRequest{
-				Query: rest,
-			})
-			if sendErr != nil {
-				fmt.Println("send error", sendErr)
-				return []prompt.Suggest{}
-			}
-			res, recvErr := searchClient.Recv()
-			if recvErr != nil {
-				fmt.Println("recv error", recvErr)
-				return []prompt.Suggest{}
-			}
-
-			col := in.CursorPositionCol()
-			base := getAvailableWidth(col)
-
-			titleMaxLength := int(base * (1.0 / 3.0))
-			descriptionMaxLength := int(base * (2.0 / 3.0))
-			prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
-			prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
-			for _, r := range res.Results {
-				suggestions = append(suggestions, prompt.Suggest{
-					Text:        r.Entry,
-					Description: r.Description,
-					Metadata:    r,
-				})
-			}
-			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(state.curPrompt)
-			return suggestions
-		default:
-			return []prompt.Suggest{}
-		}
-
-	}
-
-	cmds := []prompt.Suggest{
-		{Text: "set-queue", Description: SetQueueDescription},
-		{Text: "add-queue", Description: AddQueueDescription},
-		{Text: "pause", Description: PauseDescription},
-		{Text: "resume", Description: ResumeDescription},
-		{Text: "seek", Description: SeekDescription},
-		{Text: "next", Description: NextDescription},
-		{Text: "previous", Description: PreviousDescription},
-		{Text: "stop", Description: StopDescription},
-		{Text: "sync", Description: SyncDescription},
-		{Text: "get-all-folders", Description: GetAllFoldersDescription},
-		{Text: "add-folder", Description: AddFolderDescription},
-		{Text: "set-mount", Description: SetMountDescription},
-		{Text: "q", Description: "Quit interactive prompt"},
-	}
-	maxCmdLength := 15
-	maxWidth := getAvailableWidth(maxCmdLength)
-	for i, cmd := range cmds {
-		cmds[i].Description = ellipsize(cmd.Description, int(maxWidth))
-	}
-
-	return prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
-}
-
-var filePathCompleter = internal.FilePathCompleter{
-	IgnoreCase: true,
-}
-var title1 = "█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █"
-var title2 = "█▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █"
+var title1 = "█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █"
+var title2 = "█▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █"
 
 var title = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("9")).
@@ -365,15 +75,10 @@ var title = lipgloss.NewStyle().
 	PaddingRight(1).
 	Render(title1 + "\n" + title2)
 
-var subtitle = lipgloss.NewStyle().
-	Foreground(lipgloss.Color("9")).
-	Render(" A simple CLI to manage your Platune server")
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "platune-cli",
-	Short: subtitle,
-	Long:  lipgloss.JoinVertical(lipgloss.Left, title, subtitle),
+	Use:  "platune-cli",
+	Long: title,
 
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
@@ -403,7 +108,8 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	initState()
+
 	usageFunc := rootCmd.UsageFunc()
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, "")
@@ -413,36 +119,6 @@ func init() {
 	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.platune.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
 	rootCmd.Flags().BoolP("interactive", "i", false, "Run in interactive mode")
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".platune" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".platune")
-	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-	}
 }

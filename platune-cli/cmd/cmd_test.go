@@ -196,7 +196,7 @@ func TestAddQueueFileCompleter(t *testing.T) {
 
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	internal.Client = internal.NewTestClient(nil, mock)
-	state := newCmdState()
+	initState()
 	results := state.completer(*doc)
 	if len(results) != 1 {
 		t.Error("Should've found one result")
@@ -225,7 +225,7 @@ func TestAddQueueDbCompleter(t *testing.T) {
 
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	internal.Client = internal.NewTestClient(nil, mock)
-	state := newCmdState()
+	initState()
 	results := state.completer(*doc)
 	if len(results) != 1 {
 		t.Error("Should've found one result")
@@ -239,7 +239,7 @@ func TestAddQueueDbCompleter(t *testing.T) {
 }
 
 func TestAddFolderCompleter(t *testing.T) {
-	state := newCmdState()
+	initState()
 	buf := prompt.NewBuffer()
 	buf.InsertText("add-folder root", false, true)
 	doc := buf.Document()
@@ -254,7 +254,7 @@ func TestAddFolderCompleter(t *testing.T) {
 }
 
 func TestSetQueueCompleter(t *testing.T) {
-	state := newCmdState()
+	initState()
 	state.mode = SetQueueMode
 
 	buf := prompt.NewBuffer()
@@ -268,7 +268,7 @@ func TestSetQueueCompleter(t *testing.T) {
 }
 
 func TestSetQueueExecutor(t *testing.T) {
-	state := newCmdState()
+	initState()
 	state.executor("set-queue", nil)
 	if state.mode != "set-queue> " {
 		t.Error("Live prefix should be set to set-queue> ")
