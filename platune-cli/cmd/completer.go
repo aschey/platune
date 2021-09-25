@@ -17,6 +17,7 @@ var filePathCompleter = internal.FilePathCompleter{
 }
 
 func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
+	updateMaxWidths(in, 1./3)
 
 	if state.mode != NormalMode {
 		return state.completerMode(in)
@@ -32,6 +33,8 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 
 func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 	suggestions := []prompt.Suggest{}
+	updateMaxWidths(in, 1.)
+
 	switch state.mode {
 	case SetQueueMode:
 		return filePathCompleter.Complete(in, false)
@@ -61,6 +64,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 
 func (state *cmdState) completerCmd(in prompt.Document, before []string) []prompt.Suggest {
 	suggestions := []prompt.Suggest{}
+
 	first := before[0]
 	switch first {
 
@@ -95,13 +99,6 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 			return []prompt.Suggest{}
 		}
 
-		col := in.CursorPositionCol()
-		base := getAvailableWidth(col)
-
-		titleMaxLength := int(base * (1.0 / 3.0))
-		descriptionMaxLength := int(base * (2.0 / 3.0))
-		prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
-		prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
 		for _, r := range res.Results {
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:        r.Entry,
@@ -152,4 +149,14 @@ func ellipsize(text string, max int) string {
 		return text[:max-3] + "..."
 	}
 	return text
+}
+
+func updateMaxWidths(in prompt.Document, titleRatio float32) {
+	col := in.CursorPositionCol()
+	base := getAvailableWidth(col)
+
+	titleMaxLength := int(base * titleRatio)
+	descriptionMaxLength := int(base * (1 - titleRatio))
+	prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
+	prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
 }
