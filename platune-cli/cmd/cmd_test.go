@@ -244,7 +244,7 @@ func TestAddFolderCompleter(t *testing.T) {
 
 func TestSetQueueCompleter(t *testing.T) {
 	state := newCmdState()
-	state.isSetQueueMode = true
+	state.mode = SetQueueMode
 
 	buf := prompt.NewBuffer()
 	buf.InsertText("root", false, true)
@@ -259,7 +259,7 @@ func TestSetQueueCompleter(t *testing.T) {
 func TestSetQueueExecutor(t *testing.T) {
 	state := newCmdState()
 	state.executor("set-queue", nil)
-	if state.livePrefix != "set-queue> " {
+	if state.mode != "set-queue> " {
 		t.Error("Live prefix should be set to set-queue> ")
 	}
 	state.executor("root.go", nil)

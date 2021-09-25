@@ -36,8 +36,8 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
-func (p *PlatuneClient) AddSearchResultsToQueue(lookupRequest *platune.LookupRequest) {
-	paths := p.getPathsFromLookup(lookupRequest)
+func (p *PlatuneClient) AddSearchResultsToQueue(entries []*platune.LookupEntry) {
+	paths := p.getPathsFromLookup(entries)
 	p.AddToQueue(paths)
 }
 
@@ -121,9 +121,9 @@ func (p *PlatuneClient) Search() platune.Management_SearchClient {
 	return search
 }
 
-func (p *PlatuneClient) Lookup(request *platune.LookupRequest) *platune.LookupResponse {
+func (p *PlatuneClient) Lookup(entryType platune.EntryType, correlationIds []int32) *platune.LookupResponse {
 	ctx := context.Background()
-	response, err := p.managementClient.Lookup(ctx, request)
+	response, err := p.managementClient.Lookup(ctx, &platune.LookupRequest{EntryType: entryType, CorrelationIds: correlationIds})
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -159,11 +159,9 @@ func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Conte
 	fmt.Println(successMsg)
 }
 
-func (p *PlatuneClient) getPathsFromLookup(lookupRequest *platune.LookupRequest) []string {
-	lookupResults := p.Lookup(lookupRequest)
-
+func (p *PlatuneClient) getPathsFromLookup(entries []*platune.LookupEntry) []string {
 	paths := []string{}
-	for _, entry := range lookupResults.Entries {
+	for _, entry := range entries {
 		paths = append(paths, entry.Path)
 	}
 

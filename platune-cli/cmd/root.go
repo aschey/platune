@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/aschey/go-prompt"
@@ -21,12 +22,20 @@ import (
 var cfgFile string
 var searchClient platune.Management_SearchClient
 
+type Mode string
+
+const (
+	NormalMode   Mode = ">>> "
+	SetQueueMode Mode = "set-queue> "
+	AlbumMode    Mode = "album> "
+	SongMode     Mode = "song> "
+)
+
 type cmdState struct {
-	livePrefix     string
-	isSetQueueMode bool
-	currentQueue   []string
-	dbResults      []*platune.SearchResult
-	curPrompt      *prompt.Prompt
+	mode         Mode
+	currentQueue []string
+	lookupResult []*platune.LookupEntry
+	curPrompt    *prompt.Prompt
 }
 
 func expandPath(song string) (string, fs.FileInfo, error) {
@@ -64,7 +73,7 @@ func expandFolder(song string) (string, error) {
 }
 
 func newCmdState() cmdState {
-	state := cmdState{livePrefix: "", isSetQueueMode: false, currentQueue: []string{}}
+	state := cmdState{mode: NormalMode, currentQueue: []string{}}
 	state.curPrompt = prompt.New(
 		state.executor,
 		state.completer,
@@ -94,10 +103,54 @@ func ellipsize(text string, max int) string {
 var state = newCmdState()
 
 func (state *cmdState) changeLivePrefix() (string, bool) {
-	return state.livePrefix, len(state.livePrefix) > 0
+	return string(state.mode), state.mode != NormalMode
 }
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest) {
+	switch state.mode {
+	case SetQueueMode:
+		if strings.Trim(in, " ") == "" {
+			internal.Client.SetQueue(state.currentQueue)
+			state.currentQueue = []string{}
+			state.mode = NormalMode
+		} else {
+			in, err := expandFile(in)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+
+			state.currentQueue = append(state.currentQueue, in)
+			fmt.Println(internal.PrettyPrintList(state.currentQueue))
+		}
+
+	case AlbumMode:
+		if selected.Text == "(Select All)" {
+			results := selected.Metadata.([]*platune.LookupEntry)
+			internal.Client.AddSearchResultsToQueue(results)
+			state.mode = NormalMode
+			return
+		}
+		state.mode = SongMode
+		newResults := []*platune.LookupEntry{}
+		for _, r := range state.lookupResult {
+			if r.Album == in {
+				newResults = append(newResults, r)
+			}
+		}
+		state.lookupResult = newResults
+	case SongMode:
+		if selected.Text == "(Select All)" {
+			results := selected.Metadata.([]*platune.LookupEntry)
+			internal.Client.AddSearchResultsToQueue(results)
+			state.mode = NormalMode
+			return
+		}
+		state.mode = NormalMode
+		lookupResponse := selected.Metadata.(*platune.LookupEntry)
+		internal.Client.AddToQueue([]string{lookupResponse.Path})
+	}
+
 	cmds := strings.SplitN(in, " ", 2)
 	if len(cmds) == 0 {
 		return
@@ -107,8 +160,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 	case "set-queue":
 		fmt.Println("Enter file paths or urls to add to the queue.")
 		fmt.Println("Enter a blank line when done.")
-		state.isSetQueueMode = true
-		state.livePrefix = in + "> "
+		state.mode = SetQueueMode
 		return
 	case "add-queue":
 		if len(cmds) < 2 {
@@ -117,17 +169,20 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 		}
 
 		if selected != nil {
-			//internal.RenderSearchResults(&platune.SearchResponse{})
 			searchResult := selected.Metadata.(*platune.SearchResult)
-			if searchResult.EntryType == platune.EntryType_ALBUM {
-				lookupResult := internal.Client.Lookup(&platune.LookupRequest{EntryType: searchResult.EntryType, CorrelationIds: searchResult.CorrelationIds})
-				results := []*platune.SearchResult{}
-				for _, l := range lookupResult.Entries {
-					results = append(results, &platune.SearchResult{EntryType: platune.EntryType_SONG, Entry: l.Song, Description: "Song"})
-				}
-				internal.RenderSearchResults(&platune.SearchResponse{Results: results})
+			lookupResult := internal.Client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
+			switch searchResult.EntryType {
+			case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
+				state.mode = AlbumMode
+				state.lookupResult = lookupResult.Entries
+			case platune.EntryType_ALBUM:
+				state.mode = SongMode
+				state.lookupResult = lookupResult.Entries
+			case platune.EntryType_SONG:
+				state.mode = NormalMode
+				internal.Client.AddSearchResultsToQueue(lookupResult.Entries)
 			}
-			//nternal.Client.AddSearchResultsToQueue(&lookupRequest)
+
 			return
 		}
 
@@ -173,36 +228,44 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
-	if state.isSetQueueMode {
-		if strings.Trim(in, " ") == "" {
-			internal.Client.SetQueue(state.currentQueue)
-			state.isSetQueueMode = false
-			state.currentQueue = []string{}
-			state.livePrefix = ""
-		} else {
-			in, err := expandFile(in)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
 
-			state.currentQueue = append(state.currentQueue, in)
-			fmt.Println(internal.PrettyPrintList(state.currentQueue))
-		}
-	}
 }
 
 func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
+	suggestions := []prompt.Suggest{}
 	before := strings.Split(in.TextBeforeCursor(), " ")
-	if state.isSetQueueMode {
+	switch state.mode {
+	case SetQueueMode:
 		return filePathCompleter.Complete(in, false)
+	case AlbumMode:
+		suggestionMap := map[string]prompt.Suggest{}
+		for _, r := range state.lookupResult {
+			suggestionMap[r.Album] = prompt.Suggest{Text: r.Album, Metadata: r}
+		}
+
+		for r := range suggestionMap {
+			suggestions = append(suggestions, suggestionMap[r])
+		}
+		sort.Slice(suggestions, func(i, j int) bool {
+			return suggestions[i].Text < suggestions[j].Text
+		})
+		suggestions = append([]prompt.Suggest{{Text: "(Select All)", Metadata: state.lookupResult}}, suggestions...)
+		return suggestions
+	case SongMode:
+		suggestions = []prompt.Suggest{{Text: "(Select All)", Metadata: state.lookupResult}}
+		for _, r := range state.lookupResult {
+			suggestions = append(suggestions, prompt.Suggest{Text: r.Song, Metadata: r})
+		}
+		return suggestions
 	}
+
 	if len(before) > 1 {
-		state.dbResults = []*platune.SearchResult{}
 		first := before[0]
-		if first == "add-folder" {
+		switch first {
+
+		case "add-folder":
 			return filePathCompleter.Complete(in, true)
-		} else if first == "add-queue" {
+		case "add-queue":
 			if searchClient == nil {
 				searchClient = internal.Client.Search()
 			}
@@ -212,7 +275,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 				return []prompt.Suggest{}
 			}
 
-			suggestions := filePathCompleter.Complete(in, true)
+			suggestions = filePathCompleter.Complete(in, true)
 			if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
 				prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
 				return suggestions
@@ -231,25 +294,26 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 				return []prompt.Suggest{}
 			}
 
-			state.dbResults = res.Results
-
 			col := in.CursorPositionCol()
 			base := getAvailableWidth(col)
 
 			titleMaxLength := int(base * (1.0 / 3.0))
 			descriptionMaxLength := int(base * (2.0 / 3.0))
-
+			prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
+			prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
 			for _, r := range res.Results {
 				suggestions = append(suggestions, prompt.Suggest{
-					Text:        ellipsize(r.Entry, titleMaxLength),
-					Description: ellipsize(r.Description, descriptionMaxLength),
+					Text:        r.Entry,
+					Description: r.Description,
 					Metadata:    r,
 				})
 			}
 			prompt.OptionCompletionWordSeparator([]string{"add-queue "})(state.curPrompt)
 			return suggestions
+		default:
+			return []prompt.Suggest{}
 		}
-		return []prompt.Suggest{}
+
 	}
 
 	cmds := []prompt.Suggest{
