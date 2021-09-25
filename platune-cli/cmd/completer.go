@@ -8,6 +8,8 @@ import (
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
 	platune "github.com/aschey/platune/client"
+	"github.com/mattn/go-runewidth"
+	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
 var filePathCompleter = internal.FilePathCompleter{
@@ -137,4 +139,17 @@ func completerDefault(in prompt.Document) []prompt.Suggest {
 	}
 
 	return prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
+}
+
+func getAvailableWidth(currentCol int) float32 {
+	cols, _ := consolesize.GetConsoleSize()
+	base := float32(cols-currentCol) - 10
+	return base
+}
+
+func ellipsize(text string, max int) string {
+	if max > 0 && runewidth.StringWidth(text) > max {
+		return text[:max-3] + "..."
+	}
+	return text
 }

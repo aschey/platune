@@ -40,3 +40,4 @@ func initState() {
 }
 
 var state cmdState
+var searchClient platune.Management_SearchClient

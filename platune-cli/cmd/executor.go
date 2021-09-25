@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/aschey/go-prompt"
@@ -156,4 +158,38 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
+}
+
+func expandPath(song string) (string, fs.FileInfo, error) {
+	if strings.HasPrefix(song, "http") {
+		return song, nil, nil
+	}
+
+	dir, base, err := internal.CleanFilePath(song)
+
+	if err != nil {
+		return "", nil, err
+	}
+	full := path.Join(dir, base)
+	stat, err := os.Stat(full)
+
+	return full, stat, err
+}
+
+func expandFile(song string) (string, error) {
+	full, stat, err := expandPath(song)
+
+	if stat != nil && stat.Mode().IsDir() {
+		return "", fmt.Errorf("cannot add a directory")
+	}
+	return full, err
+}
+
+func expandFolder(song string) (string, error) {
+	full, stat, err := expandPath(song)
+
+	if stat != nil && !stat.Mode().IsDir() {
+		return "", fmt.Errorf("cannot add a file")
+	}
+	return full, err
 }
