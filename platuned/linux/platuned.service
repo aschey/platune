@@ -1,0 +1,17 @@
+[Unit]
+Description=platune daemon
+After=network.target
+After=network-online.target
+After=NetworkManager.service
+After=systemd-resolved.service
+StartLimitBurst=5
+StartLimitIntervalSec=20
+
+[Service]
+EnvironmentFile=/home/aschey/code/platune/platuned/server/.env
+Restart=always
+RestartSec=1
+ExecStart=/home/aschey/code/platune/target/release/platuned -s
+
+[Install]
+WantedBy=multi-user.target

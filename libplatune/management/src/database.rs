@@ -1089,11 +1089,15 @@ async fn tags_task(
 
 fn load_spellfix(con: &mut SqliteConnection) {
     let handle = con.as_raw_handle();
-    #[cfg(target_os = "linux")]
-    let path = "./assets/linux/spellfix.o";
-    #[cfg(target_os = "windows")]
-    let path = "C:/Users/asche/code/platune/libplatune/management/assets/windows/spellfix.dll";
-    load_extension(handle, &Path::new(path));
+    let spellfix_lib = match std::env::var("SPELLFIX_LIB") {
+        Ok(res) => res,
+        #[cfg(target_os = "linux")]
+        Err(_) => "./assets/linux/spellfix.o".to_owned(),
+        #[cfg(target_os = "windows")]
+        Err(_) => "./assets/windows/spellfix.dll".to_owned(),
+    };
+
+    load_extension(handle, &spellfix_lib);
 }
 
 fn spawn_task(

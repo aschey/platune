@@ -17,8 +17,7 @@ pub struct ManagementImpl {
 }
 
 impl ManagementImpl {
-    pub async fn new(env_path: &str) -> ManagementImpl {
-        dotenv::from_path(env_path).unwrap_or_default();
+    pub async fn new() -> ManagementImpl {
         let path = std::env::var("DATABASE_URL").unwrap();
         let db = Database::connect(path, true).await;
         db.migrate().await;

@@ -127,11 +127,7 @@ mod service {
         let rt = Runtime::new().unwrap();
 
         rt.block_on(async {
-            run_server(
-                r"C:\Users\asche\code\platune\platuned\server\.env",
-                Some(event_rx),
-            )
-            .await;
+            run_server(Some(event_rx)).await;
         });
 
         // Tell the system that service has stopped.
@@ -164,7 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn run_server(env_path: &str, rx: Option<Receiver<()>>) {
+async fn run_server(rx: Option<Receiver<()>>) {
     let service = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
         .build()
@@ -172,7 +168,7 @@ async fn run_server(env_path: &str, rx: Option<Receiver<()>>) {
     let addr = "0.0.0.0:50051".parse().unwrap();
 
     let player = PlayerImpl::new();
-    let management = ManagementImpl::new(env_path).await;
+    let management = ManagementImpl::new().await;
     let builder = Server::builder()
         .add_service(service)
         .add_service(PlayerServer::new(player))
@@ -195,15 +191,23 @@ async fn os_main() {
     }
 
     if args.len() > 1 && args[1] == "-s" {
+        dotenv::from_path(r"C:\Users\asche\code\platune\platuned\server\.env").unwrap();
         service::run();
         return;
     }
-    run_server("./.env", None).await;
+    dotenv::from_path("./.env").unwrap();
+    run_server(None).await;
 }
 
 #[cfg(not(windows))]
 async fn os_main() {
-    run_server("./.env", None).await;
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 && args[1] == "-s" {
+        run_server(None).await;
+        return;
+    }
+    dotenv::from_path("./.env").unwrap();
+    run_server(None).await;
 }
 
 pub fn colored(
