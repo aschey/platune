@@ -147,6 +147,12 @@ func (p *PlatuneClient) AddFolder(folder string) {
 	})
 }
 
+func (p *PlatuneClient) SetMount(mount string) {
+	p.runCommand("Set", func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.managementClient.RegisterMount(ctx, &platune.RegisteredMountMessage{Mount: mount})
+	})
+}
+
 func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := cmdFunc(ctx)

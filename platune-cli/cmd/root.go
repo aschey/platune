@@ -224,6 +224,17 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 			return
 		}
 		internal.Client.AddFolder(full)
+	case "set-mount":
+		if len(cmds) < 2 {
+			fmt.Println("Usage: set-mount <path>")
+			return
+		}
+		full, err := expandFolder(cmds[1])
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		internal.Client.SetMount(full)
 	case "q":
 		fmt.Println("Exiting...")
 		os.Exit(0)
@@ -263,7 +274,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		first := before[0]
 		switch first {
 
-		case "add-folder":
+		case "add-folder", "set-mount":
 			return filePathCompleter.Complete(in, true)
 		case "add-queue":
 			if searchClient == nil {
@@ -328,6 +339,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		{Text: "sync", Description: SyncDescription},
 		{Text: "get-all-folders", Description: GetAllFoldersDescription},
 		{Text: "add-folder", Description: AddFolderDescription},
+		{Text: "set-mount", Description: SetMountDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 	maxCmdLength := 15

@@ -169,6 +169,17 @@ func TestAddFolder(t *testing.T) {
 	}, "add-folder", folder)
 }
 
+func TestSetMount(t *testing.T) {
+	folder := "/home/test"
+	runManagementTest(t, "Set\n", func(expect *test.MockManagementClientMockRecorder) {
+		matcher := test.NewMatcher(func(arg interface{}) bool {
+			mount := arg.(*platune.RegisteredMountMessage).Mount
+			return mount == folder
+		})
+		expect.RegisterMount(gomock.Any(), matcher)
+	}, "set-mount", folder)
+}
+
 func TestAddQueueFileCompleter(t *testing.T) {
 	searchClient = nil
 	buf := prompt.NewBuffer()
