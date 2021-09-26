@@ -8,8 +8,9 @@ StartLimitBurst=5
 StartLimitIntervalSec=20
 
 [Service]
-EnvironmentFile=/home/aschey/code/platune/platuned/server/.env
+EnvironmentFile=/home/aschey/code/platune/platuned/linux/.service-env
 Restart=always
+User=aschey
 RestartSec=1
 ExecStart=/home/aschey/code/platune/target/release/platuned -s
 
