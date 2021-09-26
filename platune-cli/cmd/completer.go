@@ -74,7 +74,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 			suggestions = append(suggestions, prompt.Suggest{Text: r.Song, Metadata: r})
 		}
 	}
-	return prompt.FilterHasPrefix(suggestions, in.GetWordBeforeCursor(), true)
+	return prompt.FilterHasPrefix(suggestions, in.CurrentLineBeforeCursor(), true)
 }
 
 func (state *cmdState) completerCmd(in prompt.Document, before []string) []prompt.Suggest {
