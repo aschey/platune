@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 	"sort"
 	"strings"
 
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
 	platune "github.com/aschey/platune/client"
-	"github.com/mattn/go-runewidth"
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
@@ -17,7 +17,12 @@ var filePathCompleter = internal.FilePathCompleter{
 }
 
 func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
-	updateMaxWidths(in, 1./3)
+	// Windows terminal doesn't handle overflow as well as Unix
+	if isWindows() {
+		state.updateMaxWidths(in, 1./3)
+	} else {
+		state.unsetMaxWidths()
+	}
 
 	if state.mode != NormalMode {
 		return state.completerMode(in)
@@ -33,7 +38,9 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 
 func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 	suggestions := []prompt.Suggest{}
-	updateMaxWidths(in, 1.)
+	if isWindows() {
+		state.updateMaxWidths(in, 1.)
+	}
 
 	switch state.mode {
 	case SetQueueMode:
@@ -71,6 +78,7 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 	case "add-folder", "set-mount":
 		return filePathCompleter.Complete(in, true)
 	case "add-queue":
+		state.updateMaxWidths(in, 1./3)
 		if searchClient == nil {
 			searchClient = internal.Client.Search()
 		}
@@ -113,6 +121,25 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 	}
 }
 
+func (state *cmdState) updateMaxWidths(in prompt.Document, titleRatio float32) {
+	col := in.CursorPositionCol()
+	base := float32(getAvailableWidth(col))
+
+	titleMaxLength := int(base * titleRatio)
+	descriptionMaxLength := int(base * (1 - titleRatio))
+	prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
+	prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
+}
+
+func (state *cmdState) updateMaxDescriptionWidth(in prompt.Document, maxWidth int) {
+	prompt.OptionMaxDescriptionWidth(uint16(maxWidth))(state.curPrompt)
+}
+
+func (state *cmdState) unsetMaxWidths() {
+	prompt.OptionMaxTextWidth(0)(state.curPrompt)
+	prompt.OptionMaxDescriptionWidth(0)(state.curPrompt)
+}
+
 func completerDefault(in prompt.Document) []prompt.Suggest {
 	cmds := []prompt.Suggest{
 		{Text: "set-queue", Description: SetQueueDescription},
@@ -129,34 +156,23 @@ func completerDefault(in prompt.Document) []prompt.Suggest {
 		{Text: "set-mount", Description: SetMountDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
-	maxCmdLength := 15
-	maxWidth := getAvailableWidth(maxCmdLength)
-	for i, cmd := range cmds {
-		cmds[i].Description = ellipsize(cmd.Description, int(maxWidth))
+
+	if runtime.GOOS == "windows" {
+		state.unsetMaxWidths()
+		maxCmdLength := 15
+		maxWidth := getAvailableWidth(maxCmdLength)
+		state.updateMaxDescriptionWidth(in, maxWidth)
 	}
 
 	return prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
 }
 
-func getAvailableWidth(currentCol int) float32 {
+func getAvailableWidth(currentCol int) int {
 	cols, _ := consolesize.GetConsoleSize()
-	base := float32(cols-currentCol) - 10
+	base := cols - currentCol - 10
 	return base
 }
 
-func ellipsize(text string, max int) string {
-	if max > 0 && runewidth.StringWidth(text) > max {
-		return text[:max-3] + "..."
-	}
-	return text
-}
-
-func updateMaxWidths(in prompt.Document, titleRatio float32) {
-	col := in.CursorPositionCol()
-	base := getAvailableWidth(col)
-
-	titleMaxLength := int(base * titleRatio)
-	descriptionMaxLength := int(base * (1 - titleRatio))
-	prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
-	prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
+func isWindows() bool {
+	return runtime.GOOS == "windows"
 }
