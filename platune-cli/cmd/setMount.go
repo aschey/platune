@@ -1,18 +1,20 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
-const SetMountDescription = "Set the mount point for the library"
-
+const setMountDescription = "Set the mount point for the library"
+const setMountCmdText = "set-mount"
 const setMountExampleText = "path"
 
 var setMountCmd = &cobra.Command{
-	Use:   "set-mount " + setMountExampleText,
-	Short: SetMountDescription,
-	Long:  SetMountDescription,
+	Use:   fmt.Sprintf("%s %s", setMountCmdText, setMountExampleText),
+	Short: setMountDescription,
+	Long:  setMountDescription,
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

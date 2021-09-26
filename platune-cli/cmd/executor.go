@@ -45,10 +45,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		}
 
 	case AlbumMode:
-		if selected.Text == "(Select All)" {
-			results := selected.Metadata.([]*platune.LookupEntry)
-			internal.Client.AddSearchResultsToQueue(results)
-			state.mode = NormalMode
+		if checkSelectAll(selected) {
 			return
 		}
 		state.mode = SongMode
@@ -61,10 +58,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		state.lookupResult = newResults
 		return
 	case SongMode:
-		if selected.Text == "(Select All)" {
-			results := selected.Metadata.([]*platune.LookupEntry)
-			internal.Client.AddSearchResultsToQueue(results)
-			state.mode = NormalMode
+		if checkSelectAll(selected) {
 			return
 		}
 		state.mode = NormalMode
@@ -76,14 +70,14 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 
 func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 	switch cmds[0] {
-	case "set-queue":
+	case setQueueCmdText:
 		fmt.Println("Enter file paths or urls to add to the queue.")
 		fmt.Println("Enter a blank line when done.")
 		state.mode = SetQueueMode
 		return
-	case "add-queue":
+	case addQueueCmdText:
 		if len(cmds) < 2 {
-			fmt.Println("Usage: add-queue <path or url>")
+			fmt.Printf("Usage: %s <path or url>\n", addQueueCmdText)
 			return
 		}
 
@@ -111,30 +105,30 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			return
 		}
 		internal.Client.AddToQueue([]string{full})
-	case "seek":
+	case seekCmdText:
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
 			return
 		}
 		internal.Client.Seek(cmds[1])
-	case "pause":
+	case pauseCmdText:
 		internal.Client.Pause()
-	case "resume":
+	case resumeCmdText:
 		internal.Client.Resume()
-	case "stop":
+	case stopCmdText:
 		internal.Client.Stop()
-	case "next":
+	case nextCmdText:
 		internal.Client.Next()
-	case "previous":
+	case previousCmdText:
 		internal.Client.Previous()
-	case "sync":
+	case syncCmdText:
 		SyncProgress()
 		fmt.Println()
-	case "get-all-folders":
+	case getAllFoldersCmdText:
 		internal.Client.GetAllFolders()
-	case "add-folder":
+	case addFolderCmdText:
 		if len(cmds) < 2 {
-			fmt.Println("Usage: add-folder <path>")
+			fmt.Printf("Usage: %s <path>\n", addFolderCmdText)
 			return
 		}
 		full, err := expandFolder(cmds[1])
@@ -143,9 +137,9 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			return
 		}
 		internal.Client.AddFolder(full)
-	case "set-mount":
+	case setMountCmdText:
 		if len(cmds) < 2 {
-			fmt.Println("Usage: set-mount <path>")
+			fmt.Printf("Usage: %s <path>\n", setMountCmdText)
 			return
 		}
 		full, err := expandFolder(cmds[1])
@@ -192,4 +186,16 @@ func expandFolder(song string) (string, error) {
 		return "", fmt.Errorf("cannot add a file")
 	}
 	return full, err
+}
+
+func checkSelectAll(selected *prompt.Suggest) bool {
+	if selected.Text == SelectAll {
+		results, ok := selected.Metadata.([]*platune.LookupEntry)
+		if ok {
+			internal.Client.AddSearchResultsToQueue(results)
+			state.mode = NormalMode
+			return true
+		}
+	}
+	return false
 }

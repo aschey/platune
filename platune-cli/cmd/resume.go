@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const ResumeDescription = "Resumes the queue. No effect if already playing."
+const resumeDescription = "Resumes the queue. No effect if already playing."
+const resumeCmdText = "resume"
 
 var resumeCmd = &cobra.Command{
-	Use:   "resume",
-	Short: ResumeDescription,
-	Long:  ResumeDescription,
+	Use:   resumeCmdText,
+	Short: resumeDescription,
+	Long:  resumeDescription,
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {

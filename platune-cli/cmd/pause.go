@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const PauseDescription = "Pauses the queue"
+const pauseDescription = "Pauses the queue"
+const pauseCmdText = "pause"
 
 var pauseCmd = &cobra.Command{
-	Use:   "pause",
-	Short: PauseDescription,
-	Long:  PauseDescription,
+	Use:   pauseCmdText,
+	Short: pauseDescription,
+	Long:  pauseDescription,
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {

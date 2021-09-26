@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const StopDescription = "Stops the queue. No effect if already stopped."
+const stopDescription = "Stops the queue. No effect if already stopped."
+const stopCmdText = "stop"
 
 var stopCmd = &cobra.Command{
-	Use:   "stop",
-	Short: StopDescription,
-	Long:  StopDescription,
+	Use:   stopCmdText,
+	Short: stopDescription,
+	Long:  stopDescription,
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {

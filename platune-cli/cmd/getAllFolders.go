@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const GetAllFoldersDescription = "Lists all configured folders"
+const getAllFoldersDescription = "Lists all configured folders"
+const getAllFoldersCmdText = "get-all-folders"
 
 var getAllFoldersCmd = &cobra.Command{
-	Use:   "get-all-folders",
-	Short: GetAllFoldersDescription,
-	Long:  GetAllFoldersDescription,
+	Use:   getAllFoldersCmdText,
+	Short: getAllFoldersDescription,
+	Long:  getAllFoldersDescription,
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {

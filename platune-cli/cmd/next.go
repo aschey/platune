@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const NextDescription = "Skips to the next track"
+const nextDescription = "Skips to the next track"
+const nextCmdText = "next"
 
 var nextCmd = &cobra.Command{
-	Use:   "next",
-	Short: NextDescription,
-	Long:  NextDescription,
+	Use:   nextCmdText,
+	Short: nextDescription,
+	Long:  nextDescription,
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {

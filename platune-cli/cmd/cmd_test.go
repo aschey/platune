@@ -69,7 +69,7 @@ func TestAddQueue(t *testing.T) {
 			return arg.(*platune.AddToQueueRequest).Songs[0] == path
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
-	}, "add-queue", testSong)
+	}, addQueueCmdText, testSong)
 }
 
 func TestSetQueue(t *testing.T) {
@@ -81,7 +81,7 @@ func TestSetQueue(t *testing.T) {
 			return queue[0] == testSong1 && queue[1] == testSong2
 		})
 		expect.SetQueue(gomock.Any(), matcher)
-	}, "set-queue", testSong1, testSong2)
+	}, setQueueCmdText, testSong1, testSong2)
 }
 
 func TestSeek(t *testing.T) {
@@ -100,7 +100,7 @@ func TestSeek(t *testing.T) {
 		})
 		runPlayerTest(t, fmt.Sprintf("Seeked to %s\n", tc.formatStr), func(expect *test.MockPlayerClientMockRecorder) {
 			expect.Seek(gomock.Any(), matcher)
-		}, "seek", tc.formatStr)
+		}, seekCmdText, tc.formatStr)
 	}
 
 }
@@ -108,31 +108,31 @@ func TestSeek(t *testing.T) {
 func TestResume(t *testing.T) {
 	runPlayerTest(t, "Resumed\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Resume(gomock.Any(), gomock.Any())
-	}, "resume")
+	}, resumeCmdText)
 }
 
 func TestPause(t *testing.T) {
 	runPlayerTest(t, "Paused\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Pause(gomock.Any(), gomock.Any())
-	}, "pause")
+	}, pauseCmdText)
 }
 
 func TestNext(t *testing.T) {
 	runPlayerTest(t, "Next\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Next(gomock.Any(), gomock.Any())
-	}, "next")
+	}, nextCmdText)
 }
 
 func TestPrevious(t *testing.T) {
 	runPlayerTest(t, "Previous\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Previous(gomock.Any(), gomock.Any())
-	}, "previous")
+	}, previousCmdText)
 }
 
 func TestStop(t *testing.T) {
 	runPlayerTest(t, "Stopped\n", func(expect *test.MockPlayerClientMockRecorder) {
 		expect.Stop(gomock.Any(), gomock.Any())
-	}, "stop")
+	}, stopCmdText)
 }
 
 func TestSync(t *testing.T) {
@@ -142,7 +142,7 @@ func TestSync(t *testing.T) {
 		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1}, nil)
 		stream.EXPECT().Recv().Return(nil, fmt.Errorf("error"))
 		expect.Sync(gomock.Any(), gomock.Any()).Return(stream, nil)
-	}, "sync")
+	}, syncCmdText)
 	if len(res) == 0 {
 		t.Errorf("Expected length > 0")
 	}
@@ -152,7 +152,7 @@ func TestGetAllFolders(t *testing.T) {
 	response := "C://test"
 	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
 		expect.GetAllFolders(gomock.Any(), gomock.Any()).Return(&platune.FoldersMessage{Folders: []string{response}}, nil)
-	}, "get-all-folders")
+	}, getAllFoldersCmdText)
 	if !strings.Contains(res, response) {
 		t.Errorf("Response should contain folder")
 	}
@@ -166,7 +166,7 @@ func TestAddFolder(t *testing.T) {
 			return folders[0] == folder
 		})
 		expect.AddFolders(gomock.Any(), matcher)
-	}, "add-folder", folder)
+	}, addFolderCmdText, folder)
 }
 
 func TestSetMount(t *testing.T) {
@@ -177,13 +177,13 @@ func TestSetMount(t *testing.T) {
 			return mount == folder
 		})
 		expect.RegisterMount(gomock.Any(), matcher)
-	}, "set-mount", folder)
+	}, setMountCmdText, folder)
 }
 
 func TestAddQueueFileCompleter(t *testing.T) {
 	searchClient = nil
 	buf := prompt.NewBuffer()
-	buf.InsertText("add-queue root", false, true)
+	buf.InsertText(addQueueCmdText+" root", false, true)
 	doc := buf.Document()
 
 	ctrl := gomock.NewController(t)
@@ -209,7 +209,7 @@ func TestAddQueueFileCompleter(t *testing.T) {
 func TestAddQueueDbCompleter(t *testing.T) {
 	searchClient = nil
 	buf := prompt.NewBuffer()
-	buf.InsertText("add-queue song name", false, true)
+	buf.InsertText(addQueueCmdText+" song name", false, true)
 	doc := buf.Document()
 
 	ctrl := gomock.NewController(t)
@@ -241,7 +241,7 @@ func TestAddQueueDbCompleter(t *testing.T) {
 func TestAddFolderCompleter(t *testing.T) {
 	initState()
 	buf := prompt.NewBuffer()
-	buf.InsertText("add-folder root", false, true)
+	buf.InsertText(addFolderCmdText+" root", false, true)
 	doc := buf.Document()
 
 	results := state.completer(*doc)
@@ -269,9 +269,9 @@ func TestSetQueueCompleter(t *testing.T) {
 
 func TestSetQueueExecutor(t *testing.T) {
 	initState()
-	state.executor("set-queue", nil)
-	if state.mode != "set-queue> " {
-		t.Error("Live prefix should be set to set-queue> ")
+	state.executor(setQueueCmdText, nil)
+	if state.mode != setQueueCmdText+"> " {
+		t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
 	}
 	state.executor("root.go", nil)
 	if len(state.currentQueue) != 1 {

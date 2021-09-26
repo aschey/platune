@@ -1,18 +1,20 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
-const AddFolderDescription = "Adds a folder to the library"
-
+const addFolderDescription = "Adds a folder to the library"
+const addFolderCmdText = "add-folder"
 const addFolderExampleText = "path"
 
 var addFolderCmd = &cobra.Command{
-	Use:   "add-folder " + addFolderExampleText,
-	Short: AddFolderDescription,
-	Long:  AddFolderDescription,
+	Use:   fmt.Sprintf("%s %s", addFolderCmdText, addFolderExampleText),
+	Short: addFolderDescription,
+	Long:  addFolderDescription,
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

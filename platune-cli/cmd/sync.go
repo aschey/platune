@@ -10,12 +10,13 @@ import (
 	"github.com/superhawk610/bar"
 )
 
-const SyncDescription = "Syncs the database with the configured folders to import"
+const syncDescription = "Syncs the database with the configured folders to import"
+const syncCmdText = "sync"
 
 var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: SyncDescription,
-	Long:  SyncDescription,
+	Use:   syncCmdText,
+	Short: syncDescription,
+	Long:  syncDescription,
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {

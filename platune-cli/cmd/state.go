@@ -16,7 +16,7 @@ type Mode string
 
 const (
 	NormalMode   Mode = ">>> "
-	SetQueueMode Mode = "set-queue> "
+	SetQueueMode Mode = setQueueCmdText + "> "
 	AlbumMode    Mode = "album> "
 	SongMode     Mode = "song> "
 )

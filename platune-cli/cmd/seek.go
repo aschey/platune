@@ -1,17 +1,20 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
 const seekExampleText = "[hh:][mm:]ss"
-const SeekDescription = "Seek to a specific time. Input should be formatted like " + seekExampleText
+const seekDescription = "Seek to a specific time. Input should be formatted like " + seekExampleText
+const seekCmdText = "seek"
 
 var seekCmd = &cobra.Command{
-	Use:   "seek " + seekExampleText,
-	Short: SeekDescription,
-	Long:  SeekDescription,
+	Use:   fmt.Sprintf("%s %s", seekCmdText, seekExampleText),
+	Short: seekDescription,
+	Long:  seekDescription,
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

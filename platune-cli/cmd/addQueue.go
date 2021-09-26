@@ -10,14 +10,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const AddQueueDescription = "Adds a song to the end of the queue"
-
+const addQueueDescription = "Adds a song to the end of the queue"
+const addQueueCmdText = "add-queue"
 const addQueueExampleText = "fileOrUrl"
 
 var addQueueCmd = &cobra.Command{
-	Use:   "add-queue " + addQueueExampleText,
-	Short: AddQueueDescription,
-	Long:  AddQueueDescription,
+	Use:   fmt.Sprintf("%s %s", addQueueCmdText, addQueueExampleText),
+	Short: addQueueDescription,
+	Long:  addQueueDescription,
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {

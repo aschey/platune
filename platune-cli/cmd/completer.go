@@ -12,6 +12,8 @@ import (
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
+const SelectAll = "(Select All)"
+
 var filePathCompleter = internal.FilePathCompleter{
 	IgnoreCase: true,
 }
@@ -57,10 +59,10 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 		sort.Slice(suggestions, func(i, j int) bool {
 			return suggestions[i].Text < suggestions[j].Text
 		})
-		suggestions = append([]prompt.Suggest{{Text: "(Select All)", Metadata: state.lookupResult}}, suggestions...)
+		suggestions = append([]prompt.Suggest{{Text: SelectAll, Metadata: state.lookupResult}}, suggestions...)
 		return suggestions
 	case SongMode:
-		suggestions = []prompt.Suggest{{Text: "(Select All)", Metadata: state.lookupResult}}
+		suggestions = []prompt.Suggest{{Text: SelectAll, Metadata: state.lookupResult}}
 		for _, r := range state.lookupResult {
 			suggestions = append(suggestions, prompt.Suggest{Text: r.Song, Metadata: r})
 		}
@@ -75,9 +77,9 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 	first := before[0]
 	switch first {
 
-	case "add-folder", "set-mount":
+	case addFolderCmdText, setMountCmdText:
 		return filePathCompleter.Complete(in, true)
-	case "add-queue":
+	case addQueueCmdText:
 		state.updateMaxWidths(in, 1./3)
 		if searchClient == nil {
 			searchClient = internal.Client.Search()
@@ -114,7 +116,7 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 				Metadata:    r,
 			})
 		}
-		prompt.OptionCompletionWordSeparator([]string{"add-queue "})(state.curPrompt)
+		prompt.OptionCompletionWordSeparator([]string{addQueueCmdText + " "})(state.curPrompt)
 		return suggestions
 	default:
 		return suggestions
@@ -142,18 +144,18 @@ func (state *cmdState) unsetMaxWidths() {
 
 func completerDefault(in prompt.Document) []prompt.Suggest {
 	cmds := []prompt.Suggest{
-		{Text: "set-queue", Description: SetQueueDescription},
-		{Text: "add-queue", Description: AddQueueDescription},
-		{Text: "pause", Description: PauseDescription},
-		{Text: "resume", Description: ResumeDescription},
-		{Text: "seek", Description: SeekDescription},
-		{Text: "next", Description: NextDescription},
-		{Text: "previous", Description: PreviousDescription},
-		{Text: "stop", Description: StopDescription},
-		{Text: "sync", Description: SyncDescription},
-		{Text: "get-all-folders", Description: GetAllFoldersDescription},
-		{Text: "add-folder", Description: AddFolderDescription},
-		{Text: "set-mount", Description: SetMountDescription},
+		{Text: setQueueCmdText, Description: setQueueDescription},
+		{Text: addQueueCmdText, Description: addQueueDescription},
+		{Text: pauseCmdText, Description: pauseDescription},
+		{Text: resumeCmdText, Description: resumeDescription},
+		{Text: seekCmdText, Description: seekDescription},
+		{Text: nextCmdText, Description: nextDescription},
+		{Text: previousCmdText, Description: previousDescription},
+		{Text: stopCmdText, Description: stopDescription},
+		{Text: syncCmdText, Description: syncDescription},
+		{Text: getAllFoldersCmdText, Description: getAllFoldersDescription},
+		{Text: addFolderCmdText, Description: addFolderDescription},
+		{Text: setMountCmdText, Description: setMountDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 
