@@ -85,6 +85,36 @@ func executeInteractive(t *testing.T, steps []completionCase) {
 	}
 }
 
+func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.SearchResult,
+	lookupRequest *platune.LookupRequest, lookupEntries []*platune.LookupEntry,
+	matcherFunc func(arg *platune.AddToQueueRequest) bool, steps []completionCase) {
+	searchClient = nil
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mgmtMock := test.NewMockManagementClient(ctrl)
+	playerMock := test.NewMockPlayerClient(ctrl)
+	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream.EXPECT().Send(&platune.SearchRequest{Query: searchQuery}).Return(nil)
+
+	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: searchResults}, nil)
+
+	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
+	mgmtMock.EXPECT().
+		Lookup(gomock.Any(), lookupRequest).
+		Return(&platune.LookupResponse{Entries: lookupEntries}, nil)
+	matcher := test.NewMatcher(func(arg interface{}) bool {
+		return matcherFunc(arg.(*platune.AddToQueueRequest))
+	})
+	playerMock.EXPECT().AddToQueue(gomock.Any(), matcher)
+
+	internal.Client = internal.NewTestClient(playerMock, mgmtMock)
+	initState()
+
+	executeInteractive(t, steps)
+}
+
 func TestAddQueue(t *testing.T) {
 	testSong := "root.go"
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
@@ -231,81 +261,61 @@ func TestAddQueueFileCompleter(t *testing.T) {
 }
 
 func TestAddQueueSongSelection(t *testing.T) {
-	searchClient = nil
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mgmtMock := test.NewMockManagementClient(ctrl)
-	playerMock := test.NewMockPlayerClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	stream.EXPECT().Send(gomock.Any()).Return(nil)
 	artist := "blah"
-	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{
+	searchResults := []*platune.SearchResult{
 		{Entry: "song name", EntryType: platune.EntryType_SONG, Artist: &artist, CorrelationIds: []int32{1}, Description: "song desc"},
-	}}, nil)
-
-	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
-	mgmtMock.EXPECT().
-		Lookup(gomock.Any(), &platune.LookupRequest{EntryType: platune.EntryType_SONG, CorrelationIds: []int32{1}}).
-		Return(&platune.LookupResponse{Entries: []*platune.LookupEntry{
-			{Artist: "artist name", Album: "album 1", Song: "song name", Path: "/test/path/1", Track: 1},
-		}}, nil)
-	matcher := test.NewMatcher(func(arg interface{}) bool {
-		return arg.(*platune.AddToQueueRequest).Songs[0] == "/test/path/1"
-	})
-	playerMock.EXPECT().AddToQueue(gomock.Any(), matcher)
-
-	internal.Client = internal.NewTestClient(playerMock, mgmtMock)
-	initState()
-
+	}
+	lookupRequest := &platune.LookupRequest{EntryType: platune.EntryType_SONG, CorrelationIds: []int32{1}}
+	lookupEntries := []*platune.LookupEntry{
+		{Artist: "artist name", Album: "album 1", Song: "song name", Path: "/test/path/1", Track: 1},
+	}
+	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
+		return arg.Songs[0] == "/test/path/1"
+	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " song name", outLength: 1, choiceText: "song name", choiceIndex: 0},
 	}
-	executeInteractive(t, steps)
+	testInteractive(t, "song name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+}
+
+func TestAddQueueAlbumSelection(t *testing.T) {
+	artist := "blah"
+	searchResults := []*platune.SearchResult{
+		{Entry: "album name", EntryType: platune.EntryType_ALBUM, Artist: &artist, CorrelationIds: []int32{1}, Description: "album desc"},
+	}
+	lookupRequest := &platune.LookupRequest{EntryType: platune.EntryType_ALBUM, CorrelationIds: []int32{1}}
+	lookupEntries := []*platune.LookupEntry{
+		{Artist: "artist name", Album: "album name", Song: "track 1", Path: "/test/path/1", Track: 1},
+		{Artist: "artist name", Album: "album name", Song: "track 2", Path: "/test/path/2", Track: 2},
+	}
+	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
+		return arg.Songs[0] == "/test/path/1"
+	}
+	steps := []completionCase{
+		{in: addQueueCmdText + " album name", outLength: 1, choiceText: "album name", choiceIndex: 0},
+		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
+	}
+	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
 }
 
 func TestAddQueueArtistSelection(t *testing.T) {
-	searchClient = nil
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mgmtMock := test.NewMockManagementClient(ctrl)
-	playerMock := test.NewMockPlayerClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	stream.EXPECT().Send(gomock.Any()).Return(nil)
-
-	searchResult := platune.SearchResult{
-		Entry: "artist name", EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}, Description: "artist desc",
+	searchResults := []*platune.SearchResult{
+		{Entry: "artist name", EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}, Description: "artist desc"},
 	}
-
-	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{
-		&searchResult,
-	}}, nil)
-
-	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
-	mgmtMock.EXPECT().
-		Lookup(gomock.Any(), &platune.LookupRequest{EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}}).
-		Return(&platune.LookupResponse{Entries: []*platune.LookupEntry{
-			{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
-			{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/2", Track: 1},
-		}}, nil)
-
-	matcher := test.NewMatcher(func(arg interface{}) bool {
-		return arg.(*platune.AddToQueueRequest).Songs[0] == "/test/path/1"
-	})
-	playerMock.EXPECT().AddToQueue(gomock.Any(), matcher)
-
-	internal.Client = internal.NewTestClient(playerMock, mgmtMock)
-	initState()
-
+	lookupRequest := &platune.LookupRequest{EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}}
+	lookupEntries := []*platune.LookupEntry{
+		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/2", Track: 1},
+	}
+	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
+		return arg.Songs[0] == "/test/path/1"
+	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
 		{in: "album 1", outLength: 1, choiceText: "album 1", choiceIndex: 0},
 		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
 	}
-	executeInteractive(t, steps)
+	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
 }
 
 func TestAddFolderCompleter(t *testing.T) {
