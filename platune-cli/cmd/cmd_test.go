@@ -289,11 +289,31 @@ func TestAddQueueAlbumSelection(t *testing.T) {
 		{Artist: "artist name", Album: "album name", Song: "track 2", Path: "/test/path/2", Track: 2},
 	}
 	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return arg.Songs[0] == "/test/path/1"
+		return len(arg.Songs) == 1 && arg.Songs[0] == "/test/path/1"
 	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " album name", outLength: 1, choiceText: "album name", choiceIndex: 0},
 		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
+	}
+	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+}
+
+func TestAddQueueAlbumSelectAll(t *testing.T) {
+	artist := "blah"
+	searchResults := []*platune.SearchResult{
+		{Entry: "album name", EntryType: platune.EntryType_ALBUM, Artist: &artist, CorrelationIds: []int32{1}, Description: "album desc"},
+	}
+	lookupRequest := &platune.LookupRequest{EntryType: platune.EntryType_ALBUM, CorrelationIds: []int32{1}}
+	lookupEntries := []*platune.LookupEntry{
+		{Artist: "artist name", Album: "album name", Song: "track 1", Path: "/test/path/1", Track: 1},
+		{Artist: "artist name", Album: "album name", Song: "track 2", Path: "/test/path/2", Track: 2},
+	}
+	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
+		return len(arg.Songs) == 2 && arg.Songs[0] == "/test/path/1" && arg.Songs[1] == "/test/path/2"
+	}
+	steps := []completionCase{
+		{in: addQueueCmdText + " album name", outLength: 1, choiceText: "album name", choiceIndex: 0},
+		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
 	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
 }
@@ -305,15 +325,66 @@ func TestAddQueueArtistSelection(t *testing.T) {
 	lookupRequest := &platune.LookupRequest{EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}}
 	lookupEntries := []*platune.LookupEntry{
 		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
-		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/2", Track: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
 	}
 	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return arg.Songs[0] == "/test/path/1"
+		return len(arg.Songs) == 1 && arg.Songs[0] == "/test/path/1"
 	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
 		{in: "album 1", outLength: 1, choiceText: "album 1", choiceIndex: 0},
 		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
+	}
+	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+}
+
+func TestAddQueueArtistSelectAll(t *testing.T) {
+	searchResults := []*platune.SearchResult{
+		{Entry: "artist name", EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}, Description: "artist desc"},
+	}
+	lookupRequest := &platune.LookupRequest{EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}}
+	lookupEntries := []*platune.LookupEntry{
+		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
+	}
+	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
+		return len(arg.Songs) == 4 &&
+			arg.Songs[0] == "/test/path/1" &&
+			arg.Songs[1] == "/test/path/2" &&
+			arg.Songs[2] == "/test/path/3" &&
+			arg.Songs[3] == "/test/path/4"
+	}
+	steps := []completionCase{
+		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
+		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
+	}
+	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+}
+
+func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
+	searchResults := []*platune.SearchResult{
+		{Entry: "artist name", EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}, Description: "artist desc"},
+	}
+	lookupRequest := &platune.LookupRequest{EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}}
+	lookupEntries := []*platune.LookupEntry{
+		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
+	}
+	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
+		return len(arg.Songs) == 2 &&
+			arg.Songs[0] == "/test/path/3" &&
+			arg.Songs[1] == "/test/path/4"
+	}
+	steps := []completionCase{
+		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
+		{in: "album 2", outLength: 1, choiceText: "album 2", choiceIndex: 0},
+		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
 	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
 }
