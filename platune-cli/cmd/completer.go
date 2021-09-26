@@ -12,7 +12,8 @@ import (
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
-const SelectAll = "(Select All)"
+const selectAll = "(Select All)"
+const back = "(Back)"
 
 var filePathCompleter = internal.FilePathCompleter{
 	IgnoreCase: true,
@@ -59,16 +60,21 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 		sort.Slice(suggestions, func(i, j int) bool {
 			return suggestions[i].Text < suggestions[j].Text
 		})
-		suggestions = append([]prompt.Suggest{{Text: SelectAll, Metadata: state.lookupResult}}, suggestions...)
-		return suggestions
+		suggestions = append([]prompt.Suggest{
+			{Text: selectAll, Metadata: state.lookupResult},
+			{Text: back},
+		}, suggestions...)
+
 	case SongMode:
-		suggestions = []prompt.Suggest{{Text: SelectAll, Metadata: state.lookupResult}}
+		suggestions = []prompt.Suggest{
+			{Text: selectAll, Metadata: state.lookupResult},
+			{Text: back},
+		}
 		for _, r := range state.lookupResult {
 			suggestions = append(suggestions, prompt.Suggest{Text: r.Song, Metadata: r})
 		}
-		return suggestions
 	}
-	return suggestions
+	return prompt.FilterHasPrefix(suggestions, in.GetWordBeforeCursor(), true)
 }
 
 func (state *cmdState) completerCmd(in prompt.Document, before []string) []prompt.Suggest {

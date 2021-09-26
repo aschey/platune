@@ -45,7 +45,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		}
 
 	case AlbumMode:
-		if checkSelectAll(selected) {
+		if checkSpecialOptions(selected) {
 			return
 		}
 		state.mode = SongMode
@@ -58,7 +58,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		state.lookupResult = newResults
 		return
 	case SongMode:
-		if checkSelectAll(selected) {
+		if checkSpecialOptions(selected) {
 			return
 		}
 		state.mode = NormalMode
@@ -188,14 +188,23 @@ func expandFolder(song string) (string, error) {
 	return full, err
 }
 
-func checkSelectAll(selected *prompt.Suggest) bool {
-	if selected.Text == SelectAll {
+func checkSpecialOptions(selected *prompt.Suggest) bool {
+	switch selected.Text {
+	case selectAll:
 		results, ok := selected.Metadata.([]*platune.LookupEntry)
 		if ok {
 			internal.Client.AddSearchResultsToQueue(results)
 			state.mode = NormalMode
 			return true
 		}
+	case back:
+		if selected.Metadata == nil {
+			state.mode = NormalMode
+			return true
+		}
+	default:
+		return false
 	}
+
 	return false
 }
