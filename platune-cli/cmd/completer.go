@@ -51,7 +51,11 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 	case AlbumMode:
 		suggestionMap := map[string]prompt.Suggest{}
 		for _, r := range state.lookupResult {
-			suggestionMap[r.Album] = prompt.Suggest{Text: r.Album, Metadata: r}
+			album := r.Album
+			if strings.Trim(r.Album, " ") == "" {
+				album = "[Untitled]"
+			}
+			suggestionMap[album] = prompt.Suggest{Text: album, Metadata: r}
 		}
 
 		for r := range suggestionMap {
@@ -71,7 +75,14 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 			{Text: back},
 		}
 		for _, r := range state.lookupResult {
-			suggestions = append(suggestions, prompt.Suggest{Text: r.Song, Metadata: r})
+			completionText := r.Song
+			if r.Track > 0 {
+				completionText = fmt.Sprintf("%d. %s", r.Track, r.Song)
+			}
+			suggestions = append(suggestions, prompt.Suggest{
+				Text:           r.Song,
+				CompletionText: completionText,
+				Metadata:       r})
 		}
 	}
 	return prompt.FilterHasPrefix(suggestions, in.CurrentLineBeforeCursor(), true)

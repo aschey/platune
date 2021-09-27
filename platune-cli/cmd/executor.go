@@ -51,7 +51,11 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		state.mode = SongMode
 		newResults := []*platune.LookupEntry{}
 		for _, r := range state.lookupResult {
-			if r.Album == in {
+			album := r.Album
+			if strings.Trim(r.Album, " ") == "" {
+				album = "[Untitled]"
+			}
+			if album == in {
 				newResults = append(newResults, r)
 			}
 		}
