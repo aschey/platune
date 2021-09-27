@@ -19,8 +19,8 @@ github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRF
 github.com/armon/circbuf v0.0.0-20150827004946-bbbad097214e/go.mod h1:3U/XgcO3hCbHZ8TKRvWD2dDTCfh9M9ya+I9JpbB7O8o=
 github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmVTwzkszR9V5SSuryQ31EELlFMUz1kKyl939pY=
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
-github.com/aschey/go-prompt v0.2.7-0.20210927001418-91f10fbc98d5 h1:py3YG9ZgeYd13R5oOzsUoz7bxJcxG1fcjDPqZaIdeUw=
-github.com/aschey/go-prompt v0.2.7-0.20210927001418-91f10fbc98d5/go.mod h1:d0IZaQm/wLGDHBFTPH5UHq9tcvaNShJH7labKYLB6Ck=
+github.com/aschey/go-prompt v0.2.7-0.20210927010929-32dd49abc9f8 h1:A7ldbHut+Xaa+zELn0MY7tVsCW+CDwuQDEhkLNFdM8o=
+github.com/aschey/go-prompt v0.2.7-0.20210927010929-32dd49abc9f8/go.mod h1:d0IZaQm/wLGDHBFTPH5UHq9tcvaNShJH7labKYLB6Ck=
 github.com/atotto/clipboard v0.1.2 h1:YZCtFu5Ie8qX2VmVTBnrqLSiU9XOWwqNRmdT3gIQzbY=
 github.com/atotto/clipboard v0.1.2/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
