@@ -87,7 +87,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.choice.searchResult.Entry != "" {
-		return quitTextStyle.Render(fmt.Sprintf("%s added to queue", m.choice.searchResult.Entry))
+		result := m.choice.searchResult
+		if result.Artist != nil {
+			return quitTextStyle.Render(fmt.Sprintf("%s - %s added to queue", result.Entry, *result.Artist))
+		}
+		return quitTextStyle.Render(fmt.Sprintf("%s added to queue", result.Entry))
 	}
 
 	return m.list.View()
