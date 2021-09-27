@@ -6,7 +6,6 @@ import (
 	"os"
 
 	platune "github.com/aschey/platune/client"
-	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -14,11 +13,10 @@ import (
 
 type item struct {
 	searchResult platune.SearchResult
-	queuePos     int
 }
 
 var (
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(2)
+	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
@@ -28,7 +26,6 @@ var (
 type model struct {
 	list   list.Model
 	choice item
-	next   int
 }
 
 func (i item) FilterValue() string { return i.searchResult.Entry }
@@ -45,27 +42,11 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 	str := fmt.Sprintf("%s - %s", i.searchResult.Entry, i.searchResult.Description)
-	if index == 0 {
-		str = i.searchResult.Entry
-	}
 
-	position := i.queuePos
-	var prefix string
-	if position > 0 {
-		prefix = fmt.Sprintf("[%d] ", position)
-	} else if index == 0 {
-		prefix = ""
-	} else {
-		prefix = "[ ] "
-	}
-	var fn func(string) string
+	fn := itemStyle.Render
 	if index == m.Index() {
 		fn = func(s string) string {
-			return selectedItemStyle.Render(prefix + s)
-		}
-	} else {
-		fn = func(s string) string {
-			return itemStyle.Render(prefix + s)
+			return selectedItemStyle.Render("> " + s)
 		}
 	}
 
@@ -86,36 +67,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch keypress := msg.String(); keypress {
 
 		case "enter":
-			i, ok := m.list.SelectedItem().(item)
-			if ok {
-				if i.queuePos == 0 {
-					i.queuePos = m.next
-					m.list.Items()[m.list.Index()] = i
-					m.next++
-				} else {
-					oldPos := i.queuePos
-					i.queuePos = 0
-					m.list.Items()[m.list.Index()] = i
-					m.next--
-					for index, l := range m.list.Items() {
-						listItem := l.(item)
-						if listItem.queuePos > oldPos {
-							listItem.queuePos--
-							m.list.Items()[index] = listItem
-						}
-					}
-				}
-				m.choice = i
+			i := m.list.SelectedItem().(item)
+			lookupResults := Client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
+			Client.AddSearchResultsToQueue(lookupResults.Entries, false)
+			m.choice = i
 
-				// lookupRequest := platune.LookupRequest{
-				// 	EntryType:      i.EntryType,
-				// 	CorrelationIds: i.CorrelationIds,
-				// }
-				// Client.AddSearchResultsToQueue(&lookupRequest)
-			}
-			var cmd tea.Cmd
-			m.list, cmd = m.list.Update(msg)
-			return m, cmd
+			return m, tea.Quit
 
 		default:
 			var cmd tea.Cmd
@@ -129,32 +86,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	// if m.choice.Entry != "" {
-	// 	return quitTextStyle.Render(fmt.Sprintf("%s added to queue", m.choice.Entry))
-	// }
+	if m.choice.searchResult.Entry != "" {
+		return quitTextStyle.Render(fmt.Sprintf("%s added to queue", m.choice.searchResult.Entry))
+	}
 
 	return m.list.View()
 }
 
 func RenderSearchResults(results *platune.SearchResponse) {
-	items := []list.Item{item{searchResult: platune.SearchResult{Entry: "[Add All]"}, queuePos: 0}}
+	items := []list.Item{}
 	for _, result := range results.Results {
-		items = append(items, item{searchResult: *result, queuePos: 0})
+		items = append(items, item{searchResult: *result})
 	}
+	const defaultWidth = 20
+	const defaultHeight = 14
 
-	l := list.NewModel(items, itemDelegate{}, 20, 14)
+	l := list.NewModel(items, itemDelegate{}, defaultWidth, defaultHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowTitle(false)
-	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(key.WithKeys("s"), key.WithHelp("s", "save and close")),
-		}
-	}
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l, next: 1}
+	m := model{list: l}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)

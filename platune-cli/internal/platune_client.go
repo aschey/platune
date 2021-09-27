@@ -36,13 +36,17 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
-func (p *PlatuneClient) AddSearchResultsToQueue(entries []*platune.LookupEntry) {
+func (p *PlatuneClient) AddSearchResultsToQueue(entries []*platune.LookupEntry, printMsg bool) {
 	paths := p.getPathsFromLookup(entries)
-	p.AddToQueue(paths)
+	p.AddToQueue(paths, printMsg)
 }
 
-func (p *PlatuneClient) AddToQueue(songs []string) {
-	p.runCommand("Added", func(ctx context.Context) (*emptypb.Empty, error) {
+func (p *PlatuneClient) AddToQueue(songs []string, printMsg bool) {
+	msg := ""
+	if printMsg {
+		msg = "Added"
+	}
+	p.runCommand(msg, func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Songs: songs})
 	})
 }
@@ -161,8 +165,9 @@ func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Conte
 		fmt.Println(err)
 		return
 	}
-
-	fmt.Println(successMsg)
+	if successMsg != "" {
+		fmt.Println(successMsg)
+	}
 }
 
 func (p *PlatuneClient) getPathsFromLookup(entries []*platune.LookupEntry) []string {

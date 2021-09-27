@@ -67,7 +67,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		}
 		state.mode = NormalMode
 		lookupResponse := selected.Metadata.(*platune.LookupEntry)
-		internal.Client.AddToQueue([]string{lookupResponse.Path})
+		internal.Client.AddToQueue([]string{lookupResponse.Path}, true)
 		return
 	}
 }
@@ -97,7 +97,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 				state.lookupResult = lookupResult.Entries
 			case platune.EntryType_SONG:
 				state.mode = NormalMode
-				internal.Client.AddSearchResultsToQueue(lookupResult.Entries)
+				internal.Client.AddSearchResultsToQueue(lookupResult.Entries, true)
 			}
 
 			return
@@ -108,7 +108,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			fmt.Println(err)
 			return
 		}
-		internal.Client.AddToQueue([]string{full})
+		internal.Client.AddToQueue([]string{full}, true)
 	case seekCmdText:
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
@@ -197,7 +197,7 @@ func checkSpecialOptions(selected *prompt.Suggest) bool {
 	case selectAll:
 		results, ok := selected.Metadata.([]*platune.LookupEntry)
 		if ok {
-			internal.Client.AddSearchResultsToQueue(results)
+			internal.Client.AddSearchResultsToQueue(results, true)
 			state.mode = NormalMode
 			return true
 		}
