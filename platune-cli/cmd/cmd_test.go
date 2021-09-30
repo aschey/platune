@@ -406,7 +406,7 @@ func TestAddFolderCompleter(t *testing.T) {
 
 func TestSetQueueCompleter(t *testing.T) {
 	initState()
-	state.mode = SetQueueMode
+	state.mode = []Mode{SetQueueMode}
 
 	buf := prompt.NewBuffer()
 	buf.InsertText("root", false, true)
@@ -421,14 +421,14 @@ func TestSetQueueCompleter(t *testing.T) {
 func TestSetQueueExecutor(t *testing.T) {
 	initState()
 	state.executor(setQueueCmdText, nil)
-	if state.mode != setQueueCmdText+"> " {
+	if state.mode[0] != setQueueCmdText+"> " {
 		t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
 	}
 	state.executor("root.go", nil)
 	if len(state.currentQueue) != 1 {
 		t.Error("Should've added an item to the queue")
 	}
-	if !strings.HasSuffix(state.currentQueue[0], "root.go") {
+	if !strings.HasSuffix(state.currentQueue[0].Path, "root.go") {
 		t.Error("root.go should've been added to the queue")
 	}
 	ctrl := gomock.NewController(t)

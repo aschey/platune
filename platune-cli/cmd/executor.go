@@ -13,8 +13,12 @@ import (
 )
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest) {
-	if state.mode != NormalMode {
+	if state.mode[len(state.mode)-1] != NormalMode {
 		state.executeMode(in, selected)
+		if state.mode[0] == NormalMode {
+			internal.Client.AddSearchResultsToQueue(state.currentQueue, true)
+			state.currentQueue = []*platune.LookupEntry{}
+		}
 		return
 	}
 
@@ -27,28 +31,31 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 }
 
 func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
-	switch state.mode {
+	switch state.mode[len(state.mode)-1] {
 	case SetQueueMode:
 		if strings.Trim(in, " ") == "" {
-			internal.Client.SetQueue(state.currentQueue)
-			state.currentQueue = []string{}
-			state.mode = NormalMode
+			state.mode = []Mode{NormalMode}
 		} else {
-			in, err := expandFile(in)
-			if err != nil {
-				fmt.Println(err)
-				return
+			searchResult := selected.Metadata.(*platune.SearchResult)
+			lookupResult := internal.Client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
+			switch searchResult.EntryType {
+			case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
+				state.mode = append(state.mode, AlbumMode)
+				state.lookupResult = lookupResult.Entries
+			case platune.EntryType_ALBUM:
+				state.mode = append(state.mode, SongMode)
+				state.lookupResult = lookupResult.Entries
+			case platune.EntryType_SONG:
+				state.mode = []Mode{SetQueueMode}
+				state.currentQueue = append(state.currentQueue, lookupResult.Entries...)
 			}
-
-			state.currentQueue = append(state.currentQueue, in)
-			fmt.Println(internal.PrettyPrintList(state.currentQueue))
 		}
 
 	case AlbumMode:
 		if checkSpecialOptions(selected) {
 			return
 		}
-		state.mode = SongMode
+		state.mode = append(state.mode, SongMode)
 		newResults := []*platune.LookupEntry{}
 		for _, r := range state.lookupResult {
 			album := r.Album
@@ -65,9 +72,11 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		if checkSpecialOptions(selected) {
 			return
 		}
-		state.mode = NormalMode
+		newMode := state.mode[0]
 		lookupResponse := selected.Metadata.(*platune.LookupEntry)
-		internal.Client.AddToQueue([]string{lookupResponse.Path}, true)
+		state.mode = []Mode{newMode}
+		state.currentQueue = append(state.currentQueue, lookupResponse)
+
 		return
 	}
 }
@@ -77,7 +86,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 	case setQueueCmdText:
 		fmt.Println("Enter file paths or urls to add to the queue.")
 		fmt.Println("Enter a blank line when done.")
-		state.mode = SetQueueMode
+		state.mode = []Mode{SetQueueMode}
 		return
 	case addQueueCmdText:
 		if len(cmds) < 2 {
@@ -90,13 +99,13 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			lookupResult := internal.Client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 			switch searchResult.EntryType {
 			case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
-				state.mode = AlbumMode
+				state.mode = append(state.mode, AlbumMode)
 				state.lookupResult = lookupResult.Entries
 			case platune.EntryType_ALBUM:
-				state.mode = SongMode
+				state.mode = append(state.mode, SongMode)
 				state.lookupResult = lookupResult.Entries
 			case platune.EntryType_SONG:
-				state.mode = NormalMode
+				state.mode = []Mode{NormalMode}
 				internal.Client.AddSearchResultsToQueue(lookupResult.Entries, true)
 			}
 
@@ -197,13 +206,13 @@ func checkSpecialOptions(selected *prompt.Suggest) bool {
 	case selectAll:
 		results, ok := selected.Metadata.([]*platune.LookupEntry)
 		if ok {
-			internal.Client.AddSearchResultsToQueue(results, true)
-			state.mode = NormalMode
+			state.currentQueue = append(state.currentQueue, results...)
+			state.mode = []Mode{state.mode[0]}
 			return true
 		}
 	case back:
 		if selected.Metadata == nil {
-			state.mode = NormalMode
+			state.mode = []Mode{state.mode[0]}
 			return true
 		}
 	default:

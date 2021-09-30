@@ -26,11 +26,10 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 	} else {
 		state.unsetMaxWidths()
 	}
-
-	if state.mode != NormalMode {
+	before := strings.Split(in.TextBeforeCursor(), " ")
+	if state.mode[len(state.mode)-1] != NormalMode {
 		return state.completerMode(in)
 	}
-	before := strings.Split(in.TextBeforeCursor(), " ")
 
 	if len(before) > 1 {
 		return state.completerCmd(in, before)
@@ -45,9 +44,9 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 		state.updateMaxWidths(in, 1.)
 	}
 
-	switch state.mode {
+	switch state.mode[len(state.mode)-1] {
 	case SetQueueMode:
-		return filePathCompleter.Complete(in, false)
+		return dbCompleter(in, in.TextBeforeCursor(), false)
 	case AlbumMode:
 		suggestionMap := map[string]prompt.Suggest{}
 		for _, r := range state.lookupResult {
@@ -89,54 +88,15 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 }
 
 func (state *cmdState) completerCmd(in prompt.Document, before []string) []prompt.Suggest {
-	suggestions := []prompt.Suggest{}
-
 	first := before[0]
 	switch first {
-
 	case addFolderCmdText, setMountCmdText:
 		return filePathCompleter.Complete(in, true)
 	case addQueueCmdText:
-		state.updateMaxWidths(in, 1./3)
-		if searchClient == nil {
-			searchClient = internal.Client.Search()
-		}
 		rest := strings.Join(before[1:], " ")
-
-		if strings.HasPrefix(rest, "http://") || strings.HasPrefix(rest, "https://") {
-			return []prompt.Suggest{}
-		}
-
-		suggestions = filePathCompleter.Complete(in, true)
-		if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
-			prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
-			return suggestions
-		}
-
-		sendErr := searchClient.Send(&platune.SearchRequest{
-			Query: rest,
-		})
-		if sendErr != nil {
-			fmt.Println("send error", sendErr)
-			return []prompt.Suggest{}
-		}
-		res, recvErr := searchClient.Recv()
-		if recvErr != nil {
-			fmt.Println("recv error", recvErr)
-			return []prompt.Suggest{}
-		}
-
-		for _, r := range res.Results {
-			suggestions = append(suggestions, prompt.Suggest{
-				Text:        r.Entry,
-				Description: r.Description,
-				Metadata:    r,
-			})
-		}
-		prompt.OptionCompletionWordSeparator([]string{addQueueCmdText + " "})(state.curPrompt)
-		return suggestions
+		return dbCompleter(in, rest, true)
 	default:
-		return suggestions
+		return []prompt.Suggest{}
 	}
 }
 
@@ -194,4 +154,45 @@ func getAvailableWidth(currentCol int) int {
 
 func isWindows() bool {
 	return runtime.GOOS == "windows"
+}
+
+func dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prompt.Suggest {
+	state.updateMaxWidths(in, 1./3)
+	if searchClient == nil {
+		searchClient = internal.Client.Search()
+	}
+
+	if strings.HasPrefix(rest, "http://") || strings.HasPrefix(rest, "https://") {
+		return []prompt.Suggest{}
+	}
+
+	suggestions := filePathCompleter.Complete(in, filePathSkipFirst)
+	if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
+
+		prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
+		return suggestions
+	}
+
+	sendErr := searchClient.Send(&platune.SearchRequest{
+		Query: rest,
+	})
+	if sendErr != nil {
+		fmt.Println("send error", sendErr)
+		return []prompt.Suggest{}
+	}
+	res, recvErr := searchClient.Recv()
+	if recvErr != nil {
+		fmt.Println("recv error", recvErr)
+		return []prompt.Suggest{}
+	}
+
+	for _, r := range res.Results {
+		suggestions = append(suggestions, prompt.Suggest{
+			Text:        r.Entry,
+			Description: r.Description,
+			Metadata:    r,
+		})
+	}
+	prompt.OptionCompletionWordSeparator([]string{addQueueCmdText + " "})(state.curPrompt)
+	return suggestions
 }
