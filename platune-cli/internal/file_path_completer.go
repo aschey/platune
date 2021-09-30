@@ -93,13 +93,18 @@ func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt
 		fmt.Println("completer: cannot read directory items:" + err.Error())
 		return nil
 	}
+	filePath, err := filepath.Abs(dir)
+	if err != nil {
+		fmt.Println("Error getting path", err)
+		return nil
+	}
 
 	suggests := make([]prompt.Suggest, 0, len(files))
 	for _, f := range files {
 		if c.Filter != nil && !c.Filter(f) {
 			continue
 		}
-		suggests = append(suggests, prompt.Suggest{Text: f.Name()})
+		suggests = append(suggests, prompt.Suggest{Text: f.Name(), Metadata: filepath.Join(filePath, f.Name())})
 	}
 	c.fileListCache[dir] = suggests
 	return c.adjustCompletions(suggests, base)
