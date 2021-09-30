@@ -36,6 +36,11 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
+func (p *PlatuneClient) SetQueueFromSearchResults(entries []*platune.LookupEntry) {
+	paths := p.getPathsFromLookup(entries)
+	p.SetQueue(paths)
+}
+
 func (p *PlatuneClient) AddSearchResultsToQueue(entries []*platune.LookupEntry, printMsg bool) {
 	paths := p.getPathsFromLookup(entries)
 	p.AddToQueue(paths, printMsg)

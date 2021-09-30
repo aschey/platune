@@ -406,6 +406,19 @@ func TestAddFolderCompleter(t *testing.T) {
 
 func TestSetQueueCompleter(t *testing.T) {
 	initState()
+	searchClient = nil
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mgmtMock := test.NewMockManagementClient(ctrl)
+	stream := test.NewMockManagement_SearchClient(ctrl)
+	internal.Client = internal.NewTestClient(nil, mgmtMock)
+	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
+	stream.EXPECT().Send(gomock.Any()).Return(nil)
+
+	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
+
 	state.mode = []Mode{SetQueueMode}
 
 	buf := prompt.NewBuffer()
@@ -424,7 +437,7 @@ func TestSetQueueExecutor(t *testing.T) {
 	if state.mode[0] != setQueueCmdText+"> " {
 		t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
 	}
-	state.executor("root.go", nil)
+	state.executor("root.go", &prompt.Suggest{Text: "root.go", Metadata: "root.go"})
 	if len(state.currentQueue) != 1 {
 		t.Error("Should've added an item to the queue")
 	}

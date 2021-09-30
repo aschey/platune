@@ -13,6 +13,7 @@ import (
 )
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest) {
+	isSetQueueMode := state.mode[0] == SetQueueMode
 	if state.mode[len(state.mode)-1] != NormalMode {
 		state.executeMode(in, selected)
 	} else {
@@ -25,7 +26,12 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 	}
 
 	if state.mode[0] == NormalMode && len(state.currentQueue) > 0 {
-		internal.Client.AddSearchResultsToQueue(state.currentQueue, true)
+		if isSetQueueMode {
+			internal.Client.SetQueueFromSearchResults(state.currentQueue)
+		} else {
+			internal.Client.AddSearchResultsToQueue(state.currentQueue, true)
+		}
+
 		state.currentQueue = []*platune.LookupEntry{}
 	}
 }
