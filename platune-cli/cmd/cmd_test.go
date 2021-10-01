@@ -485,7 +485,7 @@ func TestSetQueueArtistSelectAll(t *testing.T) {
 	testArtistSelectAll(t, matcherFunc, "", false)
 }
 
-func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
+func testArtistSelectOneAlbum(t *testing.T, matcherFunc func(arg interface{}) bool, prefix string, isAddQueue bool) {
 	searchResults := []*platune.SearchResult{
 		{Entry: "artist name", EntryType: platune.EntryType_ARTIST, CorrelationIds: []int32{1}, Description: "artist desc"},
 	}
@@ -496,19 +496,37 @@ func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
 		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
 		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
 	}
+
+	steps := []completionCase{
+		{in: prefix + "artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
+		{in: "album 2", outLength: 1, choiceText: "album 2", choiceIndex: 0},
+		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
+	}
+	initState()
+	if !isAddQueue {
+		initSetQueuePrompt(t)
+	}
+	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue)
+}
+
+func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		req := arg.(*platune.AddToQueueRequest)
 		return len(req.Songs) == 2 &&
 			req.Songs[0] == "/test/path/3" &&
 			req.Songs[1] == "/test/path/4"
 	}
-	steps := []completionCase{
-		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
-		{in: "album 2", outLength: 1, choiceText: "album 2", choiceIndex: 0},
-		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
+	testArtistSelectOneAlbum(t, matcherFunc, addQueueCmdText+" ", true)
+}
+
+func TestSetQueueArtistSelectOneAlbum(t *testing.T) {
+	matcherFunc := func(arg interface{}) bool {
+		req := arg.(*platune.QueueRequest)
+		return len(req.Queue) == 2 &&
+			req.Queue[0] == "/test/path/3" &&
+			req.Queue[1] == "/test/path/4"
 	}
-	initState()
-	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, true)
+	testArtistSelectOneAlbum(t, matcherFunc, "", false)
 }
 
 func TestAddFolderCompleter(t *testing.T) {
