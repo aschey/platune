@@ -247,6 +247,17 @@ func TestSetMount(t *testing.T) {
 	}, setMountCmdText, folder)
 }
 
+func TestSetVolume(t *testing.T) {
+	volume := 0.5
+	runPlayerTest(t, "Set\n", func(expect *test.MockPlayerClientMockRecorder) {
+		matcher := test.NewMatcher(func(arg interface{}) bool {
+			volumeArg := arg.(*platune.SetVolumeRequest).Volume
+			return volumeArg == float32(volume)
+		})
+		expect.SetVolume(gomock.Any(), matcher)
+	}, setVolumeCmdText, fmt.Sprintf("%f", volume))
+}
+
 func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 	initState()
 	searchClient = nil
