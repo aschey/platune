@@ -13,7 +13,7 @@ import (
 
 const addQueueDescription = "Adds a song to the end of the queue"
 const addQueueCmdText = "add-queue"
-const addQueueExampleText = "fileOrUrl"
+const addQueueExampleText = "<file, url or db entry>"
 
 var addQueueCmd = &cobra.Command{
 	Use:   fmt.Sprintf("%s %s", addQueueCmdText, addQueueExampleText),

@@ -122,18 +122,18 @@ func (state *cmdState) unsetMaxWidths() {
 func completerDefault(in prompt.Document) []prompt.Suggest {
 	cmds := []prompt.Suggest{
 		{Text: setQueueCmdText, Description: setQueueDescription},
-		{Text: addQueueCmdText, Description: addQueueDescription},
+		{Text: addQueueCmdText, Description: addQueueDescription, Placeholder: addQueueExampleText},
 		{Text: pauseCmdText, Description: pauseDescription},
 		{Text: resumeCmdText, Description: resumeDescription},
-		{Text: seekCmdText, Description: seekDescription},
+		{Text: seekCmdText, Description: seekDescription, Placeholder: seekExampleText},
 		{Text: nextCmdText, Description: nextDescription},
 		{Text: previousCmdText, Description: previousDescription},
 		{Text: stopCmdText, Description: stopDescription},
 		{Text: syncCmdText, Description: syncDescription},
 		{Text: getAllFoldersCmdText, Description: getAllFoldersDescription},
-		{Text: addFolderCmdText, Description: addFolderDescription},
-		{Text: setMountCmdText, Description: setMountDescription},
-		{Text: setVolumeCmdText, Description: setVolumeDescription},
+		{Text: addFolderCmdText, Description: addFolderDescription, Placeholder: addFolderExampleText},
+		{Text: setMountCmdText, Description: setMountDescription, Placeholder: setMountExampleText},
+		{Text: setVolumeCmdText, Description: setVolumeDescription, Placeholder: setVolumeExampleText},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 

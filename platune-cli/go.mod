@@ -3,7 +3,7 @@ module github.com/aschey/platune/cli/v2
 go 1.16
 
 require (
-	github.com/aschey/go-prompt v0.2.7-0.20210927010929-32dd49abc9f8
+	github.com/aschey/go-prompt v0.2.7-0.20211001062905-5882bc468ce1
 	github.com/aschey/platune/client v0.0.0
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/bubbles v0.9.0

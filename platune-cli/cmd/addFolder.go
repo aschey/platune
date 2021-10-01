@@ -9,7 +9,7 @@ import (
 
 const addFolderDescription = "Adds a folder to the library"
 const addFolderCmdText = "add-folder"
-const addFolderExampleText = "path"
+const addFolderExampleText = "<path>"
 
 var addFolderCmd = &cobra.Command{
 	Use:   fmt.Sprintf("%s %s", addFolderCmdText, addFolderExampleText),

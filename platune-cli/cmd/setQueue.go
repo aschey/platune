@@ -9,7 +9,7 @@ import (
 
 const setQueueDescription = "Sets the queue and starts playback. Resets the queue if playback has already started."
 const setQueueCmdText = "set-queue"
-const setQueueExampleText = "fileOrUrl1 fileOrUrl2 fileOrUrl3 ..."
+const setQueueExampleText = "<file> ..."
 
 var setQueueCmd = &cobra.Command{
 	Use:   fmt.Sprintf("%s %s", setQueueCmdText, setQueueExampleText),

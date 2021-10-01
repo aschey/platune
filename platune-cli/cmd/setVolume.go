@@ -10,7 +10,7 @@ import (
 
 const setVolumeDescription = "Set the volume"
 const setVolumeCmdText = "set-volume"
-const setVolumeExampleText = "<volume>"
+const setVolumeExampleText = "<value between 0 and 1>"
 
 var setVolumeUsage = fmt.Sprintf("%s %s", setVolumeCmdText, setVolumeExampleText)
 

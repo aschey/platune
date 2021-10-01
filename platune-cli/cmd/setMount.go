@@ -9,7 +9,7 @@ import (
 
 const setMountDescription = "Set the mount point for the library"
 const setMountCmdText = "set-mount"
-const setMountExampleText = "path"
+const setMountExampleText = "<path>"
 
 var setMountCmd = &cobra.Command{
 	Use:   fmt.Sprintf("%s %s", setMountCmdText, setMountExampleText),
