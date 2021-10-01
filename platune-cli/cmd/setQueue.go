@@ -2,8 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/aschey/platune/cli/v2/internal"
+	platune "github.com/aschey/platune/client"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +22,27 @@ var setQueueCmd = &cobra.Command{
 
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.Client.SetQueue(args)
+		allArgs := strings.Join(args, " ")
+		_, err := os.Stat(allArgs)
+		if err == nil {
+			full, err := filepath.Abs(allArgs)
+			if err != nil {
+				fmt.Println(err)
+			}
+			internal.Client.SetQueue([]string{full})
+		} else {
+			searchClient = internal.Client.Search()
+			err := searchClient.Send(&platune.SearchRequest{Query: allArgs})
+			if err != nil {
+				fmt.Println(err)
+			}
+			results, err := searchClient.Recv()
+			if err != nil {
+				fmt.Println(err)
+			}
+			internal.RenderSearchResults(results, func(entries []*platune.LookupEntry) { internal.Client.SetQueueFromSearchResults(entries) })
+		}
+
 	},
 }
 

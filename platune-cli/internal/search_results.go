@@ -24,8 +24,9 @@ var (
 )
 
 type model struct {
-	list   list.Model
-	choice item
+	list     list.Model
+	choice   item
+	callback func(entries []*platune.LookupEntry)
 }
 
 func (i item) FilterValue() string { return i.searchResult.Entry }
@@ -69,7 +70,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			i := m.list.SelectedItem().(item)
 			lookupResults := Client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
-			Client.AddSearchResultsToQueue(lookupResults.Entries, false)
+			m.callback(lookupResults.Entries)
 			m.choice = i
 
 			return m, tea.Quit
@@ -97,7 +98,7 @@ func (m model) View() string {
 	return m.list.View()
 }
 
-func RenderSearchResults(results *platune.SearchResponse) {
+func RenderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
 	items := []list.Item{}
 	for _, result := range results.Results {
 		items = append(items, item{searchResult: *result})
@@ -112,7 +113,7 @@ func RenderSearchResults(results *platune.SearchResponse) {
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l}
+	m := model{list: l, callback: callback}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)

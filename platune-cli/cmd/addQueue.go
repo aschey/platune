@@ -40,7 +40,7 @@ var addQueueCmd = &cobra.Command{
 			if err != nil {
 				fmt.Println(err)
 			}
-			internal.RenderSearchResults(results)
+			internal.RenderSearchResults(results, func(entries []*platune.LookupEntry) { internal.Client.AddSearchResultsToQueue(entries, false) })
 		}
 
 	},
