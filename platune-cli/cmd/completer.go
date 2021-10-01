@@ -133,6 +133,7 @@ func completerDefault(in prompt.Document) []prompt.Suggest {
 		{Text: getAllFoldersCmdText, Description: getAllFoldersDescription},
 		{Text: addFolderCmdText, Description: addFolderDescription},
 		{Text: setMountCmdText, Description: setMountDescription},
+		{Text: setVolumeCmdText, Description: setVolumeDescription},
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 

@@ -105,6 +105,11 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			return
 		}
 		internal.Client.Seek(cmds[1])
+	case setVolumeCmdText:
+		if len(cmds) < 2 {
+			fmt.Println("Usage: " + setVolumeUsage)
+		}
+		runSetVolume(cmds[1:])
 	case pauseCmdText:
 		internal.Client.Pause()
 	case resumeCmdText:
@@ -116,7 +121,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 	case previousCmdText:
 		internal.Client.Previous()
 	case syncCmdText:
-		SyncProgress()
+		syncProgress()
 		fmt.Println()
 	case getAllFoldersCmdText:
 		internal.Client.GetAllFolders()

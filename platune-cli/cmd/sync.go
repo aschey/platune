@@ -20,11 +20,11 @@ var syncCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		SyncProgress()
+		syncProgress()
 	},
 }
 
-func SyncProgress() {
+func syncProgress() {
 	sync, cancel := internal.Client.Sync()
 	defer cancel()
 	if sync != nil {

@@ -162,6 +162,12 @@ func (p *PlatuneClient) SetMount(mount string) {
 	})
 }
 
+func (p *PlatuneClient) SetVolume(volume float32) {
+	p.runCommand("Set", func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.SetVolume(ctx, &platune.SetVolumeRequest{Volume: volume})
+	})
+}
+
 func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := cmdFunc(ctx)
