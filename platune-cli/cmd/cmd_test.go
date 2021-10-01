@@ -87,7 +87,7 @@ func executeInteractive(t *testing.T, steps []completionCase) {
 
 func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.SearchResult,
 	lookupRequest *platune.LookupRequest, lookupEntries []*platune.LookupEntry,
-	matcherFunc func(arg *platune.AddToQueueRequest) bool, steps []completionCase) {
+	matcherFunc func(arg interface{}) bool, steps []completionCase, isAddQueue bool) {
 	searchClient = nil
 
 	ctrl := gomock.NewController(t)
@@ -105,14 +105,20 @@ func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.
 		Lookup(gomock.Any(), lookupRequest).
 		Return(&platune.LookupResponse{Entries: lookupEntries}, nil)
 	matcher := test.NewMatcher(func(arg interface{}) bool {
-		return matcherFunc(arg.(*platune.AddToQueueRequest))
+		return matcherFunc(arg)
 	})
-	playerMock.EXPECT().AddToQueue(gomock.Any(), matcher)
+	if isAddQueue {
+		playerMock.EXPECT().AddToQueue(gomock.Any(), matcher)
+	} else {
+		playerMock.EXPECT().SetQueue(gomock.Any(), matcher)
+	}
 
 	internal.Client = internal.NewTestClient(playerMock, mgmtMock)
-	initState()
 
 	executeInteractive(t, steps)
+	if !isAddQueue {
+		state.executor("", nil)
+	}
 }
 
 func TestAddQueue(t *testing.T) {
@@ -234,10 +240,11 @@ func TestSetMount(t *testing.T) {
 	}, setMountCmdText, folder)
 }
 
-func TestAddQueueFileCompleter(t *testing.T) {
+func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
+	initState()
 	searchClient = nil
 	buf := prompt.NewBuffer()
-	buf.InsertText(addQueueCmdText+" root", false, true)
+	buf.InsertText(prefix+"root", false, true)
 	doc := buf.Document()
 
 	ctrl := gomock.NewController(t)
@@ -250,7 +257,11 @@ func TestAddQueueFileCompleter(t *testing.T) {
 
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	internal.Client = internal.NewTestClient(nil, mock)
-	initState()
+
+	if !isAddQueue {
+		state.mode = []Mode{SetQueueMode}
+	}
+
 	results := state.completer(*doc)
 	if len(results) != 1 {
 		t.Error("Should've found one result")
@@ -260,7 +271,15 @@ func TestAddQueueFileCompleter(t *testing.T) {
 	}
 }
 
-func TestAddQueueSongSelection(t *testing.T) {
+func TestSetQueueFileCompleter(t *testing.T) {
+	testFileCompleter(t, "", false)
+}
+
+func TestAddQueueFileCompleter(t *testing.T) {
+	testFileCompleter(t, "add-queue ", true)
+}
+
+func testSongSelection(t *testing.T, matcherFunc func(arg interface{}) bool, prefix string, isAddQueue bool) {
 	artist := "blah"
 	searchResults := []*platune.SearchResult{
 		{Entry: "song name", EntryType: platune.EntryType_SONG, Artist: &artist, CorrelationIds: []int32{1}, Description: "song desc"},
@@ -269,13 +288,32 @@ func TestAddQueueSongSelection(t *testing.T) {
 	lookupEntries := []*platune.LookupEntry{
 		{Artist: "artist name", Album: "album 1", Song: "song name", Path: "/test/path/1", Track: 1},
 	}
-	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return arg.Songs[0] == "/test/path/1"
-	}
+
 	steps := []completionCase{
-		{in: addQueueCmdText + " song name", outLength: 1, choiceText: "song name", choiceIndex: 0},
+		{in: prefix + "song name", outLength: 1, choiceText: "song name", choiceIndex: 0},
 	}
-	testInteractive(t, "song name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+	initState()
+	if !isAddQueue {
+		state.executor(setQueueCmdText, nil)
+		if state.mode[0] != setQueueCmdText+"> " {
+			t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
+		}
+	}
+	testInteractive(t, "song name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue)
+}
+
+func TestAddQueueSongSelection(t *testing.T) {
+	matcherFunc := func(arg interface{}) bool {
+		return arg.(*platune.AddToQueueRequest).Songs[0] == "/test/path/1"
+	}
+	testSongSelection(t, matcherFunc, "add-queue ", true)
+}
+
+func TestSetQueueSongSelection(t *testing.T) {
+	matcherFunc := func(arg interface{}) bool {
+		return arg.(*platune.QueueRequest).Queue[0] == "/test/path/1"
+	}
+	testSongSelection(t, matcherFunc, "", false)
 }
 
 func TestAddQueueAlbumSelection(t *testing.T) {
@@ -288,14 +326,16 @@ func TestAddQueueAlbumSelection(t *testing.T) {
 		{Artist: "artist name", Album: "album name", Song: "track 1", Path: "/test/path/1", Track: 1},
 		{Artist: "artist name", Album: "album name", Song: "track 2", Path: "/test/path/2", Track: 2},
 	}
-	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return len(arg.Songs) == 1 && arg.Songs[0] == "/test/path/1"
+	matcherFunc := func(arg interface{}) bool {
+		req := arg.(*platune.AddToQueueRequest)
+		return len(req.Songs) == 1 && req.Songs[0] == "/test/path/1"
 	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " album name", outLength: 1, choiceText: "album name", choiceIndex: 0},
 		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
 	}
-	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+	initState()
+	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, true)
 }
 
 func TestAddQueueAlbumSelectAll(t *testing.T) {
@@ -308,14 +348,16 @@ func TestAddQueueAlbumSelectAll(t *testing.T) {
 		{Artist: "artist name", Album: "album name", Song: "track 1", Path: "/test/path/1", Track: 1},
 		{Artist: "artist name", Album: "album name", Song: "track 2", Path: "/test/path/2", Track: 2},
 	}
-	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return len(arg.Songs) == 2 && arg.Songs[0] == "/test/path/1" && arg.Songs[1] == "/test/path/2"
+	matcherFunc := func(arg interface{}) bool {
+		req := arg.(*platune.AddToQueueRequest)
+		return len(req.Songs) == 2 && req.Songs[0] == "/test/path/1" && req.Songs[1] == "/test/path/2"
 	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " album name", outLength: 1, choiceText: "album name", choiceIndex: 0},
 		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
-	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+	initState()
+	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, true)
 }
 
 func TestAddQueueArtistSelection(t *testing.T) {
@@ -329,15 +371,17 @@ func TestAddQueueArtistSelection(t *testing.T) {
 		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
 		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
 	}
-	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return len(arg.Songs) == 1 && arg.Songs[0] == "/test/path/1"
+	matcherFunc := func(arg interface{}) bool {
+		req := arg.(*platune.AddToQueueRequest)
+		return len(req.Songs) == 1 && req.Songs[0] == "/test/path/1"
 	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
 		{in: "album 1", outLength: 1, choiceText: "album 1", choiceIndex: 0},
 		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
 	}
-	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+	initState()
+	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, true)
 }
 
 func TestAddQueueArtistSelectAll(t *testing.T) {
@@ -351,18 +395,20 @@ func TestAddQueueArtistSelectAll(t *testing.T) {
 		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
 		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
 	}
-	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return len(arg.Songs) == 4 &&
-			arg.Songs[0] == "/test/path/1" &&
-			arg.Songs[1] == "/test/path/2" &&
-			arg.Songs[2] == "/test/path/3" &&
-			arg.Songs[3] == "/test/path/4"
+	matcherFunc := func(arg interface{}) bool {
+		req := arg.(*platune.AddToQueueRequest)
+		return len(req.Songs) == 4 &&
+			req.Songs[0] == "/test/path/1" &&
+			req.Songs[1] == "/test/path/2" &&
+			req.Songs[2] == "/test/path/3" &&
+			req.Songs[3] == "/test/path/4"
 	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
 		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
-	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+	initState()
+	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, true)
 }
 
 func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
@@ -376,17 +422,19 @@ func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
 		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
 		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
 	}
-	matcherFunc := func(arg *platune.AddToQueueRequest) bool {
-		return len(arg.Songs) == 2 &&
-			arg.Songs[0] == "/test/path/3" &&
-			arg.Songs[1] == "/test/path/4"
+	matcherFunc := func(arg interface{}) bool {
+		req := arg.(*platune.AddToQueueRequest)
+		return len(req.Songs) == 2 &&
+			req.Songs[0] == "/test/path/3" &&
+			req.Songs[1] == "/test/path/4"
 	}
 	steps := []completionCase{
 		{in: addQueueCmdText + " artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
 		{in: "album 2", outLength: 1, choiceText: "album 2", choiceIndex: 0},
 		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
-	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps)
+	initState()
+	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, true)
 }
 
 func TestAddFolderCompleter(t *testing.T) {
@@ -401,33 +449,6 @@ func TestAddFolderCompleter(t *testing.T) {
 	}
 	if results[0].Text != "root.go" {
 		t.Error("Result should be root.go")
-	}
-}
-
-func TestSetQueueCompleter(t *testing.T) {
-	initState()
-	searchClient = nil
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mgmtMock := test.NewMockManagementClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	internal.Client = internal.NewTestClient(nil, mgmtMock)
-	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
-	stream.EXPECT().Send(gomock.Any()).Return(nil)
-
-	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
-
-	state.mode = []Mode{SetQueueMode}
-
-	buf := prompt.NewBuffer()
-	buf.InsertText("root", false, true)
-	doc := buf.Document()
-
-	results := state.completer(*doc)
-	if len(results) != 1 {
-		t.Error("Should've found one result")
 	}
 }
 
