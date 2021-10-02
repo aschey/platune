@@ -164,7 +164,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_add_folders() {
         let tempdir = TempDir::new().unwrap();
-        let (_, mut config) = setup(&tempdir).await;
+        let (db, mut config) = setup(&tempdir).await;
         config.delim = r"\";
 
         config.add_folder(r"test1\").await;
@@ -173,13 +173,16 @@ mod tests {
         config.add_folder(r"test2\\").await;
         let folders = config.get_all_folders().await;
 
+        db.close().await;
+        tempdir.close().unwrap();
+
         assert_eq!(vec![r"test1\", r"test2\"], folders);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_change_mount() {
         let tempdir = TempDir::new().unwrap();
-        let (_, mut manager) = setup(&tempdir).await;
+        let (db, mut manager) = setup(&tempdir).await;
         manager.delim = r"\";
         manager.validate_paths = false;
 
@@ -190,6 +193,9 @@ mod tests {
         manager.register_drive(r"D:\").await.unwrap();
         let folders2 = manager.get_all_folders().await;
 
+        db.close().await;
+        tempdir.close().unwrap();
+
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
     }
@@ -197,7 +203,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_change_mount_after() {
         let tempdir = TempDir::new().unwrap();
-        let (_, mut manager) = setup(&tempdir).await;
+        let (db, mut manager) = setup(&tempdir).await;
         manager.delim = r"\";
         manager.validate_paths = false;
 
@@ -207,6 +213,9 @@ mod tests {
         let folders1 = manager.get_all_folders().await;
         manager.register_drive(r"D:\").await.unwrap();
         let folders2 = manager.get_all_folders().await;
+
+        db.close().await;
+        tempdir.close().unwrap();
 
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
@@ -230,6 +239,9 @@ mod tests {
         let folders1 = manager.get_all_folders().await;
         manager2.register_drive(r"D:\").await.unwrap();
         let folders2 = manager2.get_all_folders().await;
+
+        db.close().await;
+        tempdir.close().unwrap();
 
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
@@ -263,17 +275,27 @@ mod tests {
         manager2.register_drive(r"C:\").await.unwrap();
 
         let folders = manager2.get_all_folders().await;
+
+        db.close().await;
+        db2.close().await;
+        tempdir.close().unwrap();
+        tempdir2.close().unwrap();
+
         assert_eq!(vec![r"C:\test\"], folders);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
     pub async fn test_validate_path() {
         let tempdir = TempDir::new().unwrap();
-        let (_, mut manager) = setup(&tempdir).await;
+        let (db, mut manager) = setup(&tempdir).await;
 
         manager.delim = r"\";
 
         let res = manager.register_drive(r"/some/invalid/path").await;
+
+        db.close().await;
+        tempdir.close().unwrap();
+
         assert!(res.is_err());
     }
 
