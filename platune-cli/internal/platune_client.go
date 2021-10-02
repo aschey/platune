@@ -36,24 +36,14 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
-func (p *PlatuneClient) SetQueueFromSearchResults(entries []*platune.LookupEntry) {
+func (p *PlatuneClient) SetQueueFromSearchResults(entries []*platune.LookupEntry, printMsg bool) {
 	paths := p.getPathsFromLookup(entries)
-	p.SetQueue(paths)
+	p.SetQueue(paths, printMsg)
 }
 
 func (p *PlatuneClient) AddSearchResultsToQueue(entries []*platune.LookupEntry, printMsg bool) {
 	paths := p.getPathsFromLookup(entries)
 	p.AddToQueue(paths, printMsg)
-}
-
-func (p *PlatuneClient) AddToQueue(songs []string, printMsg bool) {
-	msg := ""
-	if printMsg {
-		msg = "Added"
-	}
-	p.runCommand(msg, func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Songs: songs})
-	})
 }
 
 func (p *PlatuneClient) Pause() {
@@ -86,8 +76,22 @@ func (p *PlatuneClient) Resume() {
 	})
 }
 
-func (p *PlatuneClient) SetQueue(queue []string) {
-	p.runCommand("Queue Set", func(ctx context.Context) (*emptypb.Empty, error) {
+func (p *PlatuneClient) AddToQueue(songs []string, printMsg bool) {
+	msg := ""
+	if printMsg {
+		msg = "Added"
+	}
+	p.runCommand(msg, func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Songs: songs})
+	})
+}
+
+func (p *PlatuneClient) SetQueue(queue []string, printMsg bool) {
+	msg := ""
+	if printMsg {
+		msg = "Queue Set"
+	}
+	p.runCommand(msg, func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.SetQueue(ctx, &platune.QueueRequest{Queue: queue})
 	})
 }

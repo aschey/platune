@@ -27,7 +27,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 
 	if state.mode[0] == NormalMode && len(state.currentQueue) > 0 {
 		if isSetQueueMode {
-			internal.Client.SetQueueFromSearchResults(state.currentQueue)
+			internal.Client.SetQueueFromSearchResults(state.currentQueue, true)
 		} else {
 			internal.Client.AddSearchResultsToQueue(state.currentQueue, true)
 		}

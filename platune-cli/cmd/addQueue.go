@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/aschey/platune/cli/v2/internal"
 	platune "github.com/aschey/platune/client"
@@ -13,7 +10,7 @@ import (
 
 const addQueueDescription = "Adds a song to the end of the queue"
 const addQueueCmdText = "add-queue"
-const addQueueExampleText = "<file, url or db entry>"
+const addQueueExampleText = "<file, url, or db entry>"
 
 var addQueueCmd = &cobra.Command{
 	Use:   fmt.Sprintf("%s %s", addQueueCmdText, addQueueExampleText),
@@ -22,27 +19,9 @@ var addQueueCmd = &cobra.Command{
 
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		allArgs := strings.Join(args, " ")
-		_, err := os.Stat(allArgs)
-		if err == nil {
-			full, err := filepath.Abs(allArgs)
-			if err != nil {
-				fmt.Println(err)
-			}
-			internal.Client.AddToQueue([]string{full}, true)
-		} else {
-			searchClient = internal.Client.Search()
-			err := searchClient.Send(&platune.SearchRequest{Query: allArgs})
-			if err != nil {
-				fmt.Println(err)
-			}
-			results, err := searchClient.Recv()
-			if err != nil {
-				fmt.Println(err)
-			}
-			internal.RenderSearchResults(results, func(entries []*platune.LookupEntry) { internal.Client.AddSearchResultsToQueue(entries, false) })
-		}
-
+		internal.ProcessSearchResults(args,
+			func(file string) { internal.Client.AddToQueue([]string{file}, false) },
+			func(entries []*platune.LookupEntry) { internal.Client.AddSearchResultsToQueue(entries, false) })
 	},
 }
 

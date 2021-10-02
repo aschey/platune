@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/bubbles/list"
@@ -29,9 +31,43 @@ type model struct {
 	callback func(entries []*platune.LookupEntry)
 }
 
-func (i item) FilterValue() string { return i.searchResult.Entry }
-
 type itemDelegate struct{}
+
+func ProcessSearchResults(args []string, filesystemCallback func(file string), dbCallback func(entries []*platune.LookupEntry)) {
+	allArgs := strings.Join(args, " ")
+	_, err := os.Stat(allArgs)
+	if err == nil {
+		full, err := filepath.Abs(allArgs)
+		if err != nil {
+			fmt.Println(err)
+		}
+		filesystemCallback(full)
+	} else {
+		searchClient := Client.Search()
+		err := searchClient.Send(&platune.SearchRequest{Query: allArgs})
+		if err != nil {
+			fmt.Println(err)
+		}
+		results, err := searchClient.Recv()
+		if err != nil {
+			fmt.Println(err)
+		}
+		if len(results.Results) == 0 {
+			fmt.Println("No results")
+			return
+		} else if len(results.Results) == 1 {
+			result := results.Results[0]
+			lookupResults := Client.Lookup(result.EntryType, result.CorrelationIds)
+
+			Client.AddSearchResultsToQueue(lookupResults.Entries, false)
+			return
+		}
+
+		renderSearchResults(results, dbCallback)
+	}
+}
+
+func (i item) FilterValue() string { return i.searchResult.Entry }
 
 func (d itemDelegate) Height() int                               { return 1 }
 func (d itemDelegate) Spacing() int                              { return 0 }
@@ -98,7 +134,7 @@ func (m model) View() string {
 	return m.list.View()
 }
 
-func RenderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
+func renderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
 	items := []list.Item{}
 	for _, result := range results.Results {
 		items = append(items, item{searchResult: *result})
