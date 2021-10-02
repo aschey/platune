@@ -8,7 +8,7 @@ import (
 )
 
 const seekExampleText = "[hh:][mm:]ss"
-const seekDescription = "Seek to a specific time. Input should be formatted like " + seekExampleText
+const seekDescription = "Seek to a specific time"
 const seekCmdText = "seek"
 
 var seekCmd = &cobra.Command{

@@ -33,6 +33,8 @@ type model struct {
 
 type itemDelegate struct{}
 
+var noResultsStr string = "No results"
+
 func ProcessSearchResults(args []string, filesystemCallback func(file string), dbCallback func(entries []*platune.LookupEntry)) {
 	allArgs := strings.Join(args, " ")
 	_, err := os.Stat(allArgs)
@@ -40,6 +42,7 @@ func ProcessSearchResults(args []string, filesystemCallback func(file string), d
 		full, err := filepath.Abs(allArgs)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 		filesystemCallback(full)
 	} else {
@@ -47,19 +50,21 @@ func ProcessSearchResults(args []string, filesystemCallback func(file string), d
 		err := searchClient.Send(&platune.SearchRequest{Query: allArgs})
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 		results, err := searchClient.Recv()
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 		if len(results.Results) == 0 {
-			fmt.Println("No results")
+			fmt.Println(noResultsStr)
 			return
 		} else if len(results.Results) == 1 {
 			result := results.Results[0]
 			lookupResults := Client.Lookup(result.EntryType, result.CorrelationIds)
 
-			Client.AddSearchResultsToQueue(lookupResults.Entries, false)
+			dbCallback(lookupResults.Entries)
 			return
 		}
 
@@ -73,10 +78,7 @@ func (d itemDelegate) Height() int                               { return 1 }
 func (d itemDelegate) Spacing() int                              { return 0 }
 func (d itemDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
 func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(item)
-	if !ok {
-		return
-	}
+	i := listItem.(item)
 
 	str := fmt.Sprintf("%s - %s", i.searchResult.Entry, i.searchResult.Description)
 
@@ -134,15 +136,20 @@ func (m model) View() string {
 	return m.list.View()
 }
 
-func renderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
+func getItems(results []*platune.SearchResult) []list.Item {
 	items := []list.Item{}
-	for _, result := range results.Results {
+	for _, result := range results {
 		items = append(items, item{searchResult: *result})
 	}
+
+	return items
+}
+
+func renderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
 	const defaultWidth = 20
 	const defaultHeight = 14
 
-	l := list.NewModel(items, itemDelegate{}, defaultWidth, defaultHeight)
+	l := list.NewModel(getItems(results.Results), itemDelegate{}, defaultWidth, defaultHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowTitle(false)
