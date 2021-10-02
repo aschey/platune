@@ -20,7 +20,7 @@ var setQueueCmd = &cobra.Command{
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		internal.ProcessSearchResults(args,
-			func(file string) { internal.Client.SetQueue([]string{file}, false) },
+			func(file string) { internal.Client.SetQueue([]string{file}, true) },
 			func(entries []*platune.LookupEntry) { internal.Client.SetQueueFromSearchResults(entries, false) })
 	},
 }

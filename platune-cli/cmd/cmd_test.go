@@ -140,15 +140,15 @@ func TestAddQueue(t *testing.T) {
 }
 
 func TestSetQueue(t *testing.T) {
-	testSong1 := "test1"
-	testSong2 := "test2"
+	testSong := "root.go"
 	runPlayerTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			queue := arg.(*platune.QueueRequest).Queue
-			return queue[0] == testSong1 && queue[1] == testSong2
+			path, _ := filepath.Abs(testSong)
+			return queue[0] == path
 		})
 		expect.SetQueue(gomock.Any(), matcher)
-	}, setQueueCmdText, testSong1, testSong2)
+	}, setQueueCmdText, testSong)
 }
 
 func TestSeek(t *testing.T) {
