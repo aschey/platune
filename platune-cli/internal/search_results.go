@@ -45,6 +45,9 @@ func ProcessSearchResults(args []string, filesystemCallback func(file string), d
 			return
 		}
 		filesystemCallback(full)
+	} else if strings.HasPrefix(allArgs, "http://") || strings.HasPrefix(allArgs, "https://") {
+		filesystemCallback(allArgs)
+		return
 	} else {
 		searchClient := Client.Search()
 		err := searchClient.Send(&platune.SearchRequest{Query: allArgs})

@@ -128,7 +128,7 @@ func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.
 	}
 }
 
-func TestAddQueue(t *testing.T) {
+func TestAddQueueFile(t *testing.T) {
 	testSong := "root.go"
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
@@ -139,13 +139,34 @@ func TestAddQueue(t *testing.T) {
 	}, addQueueCmdText, testSong)
 }
 
-func TestSetQueue(t *testing.T) {
+func TestAddQueueUrl(t *testing.T) {
+	testSong := "http://test.com/blah.mp3"
+	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
+		matcher := test.NewMatcher(func(arg interface{}) bool {
+			return arg.(*platune.AddToQueueRequest).Songs[0] == testSong
+		})
+		expect.AddToQueue(gomock.Any(), matcher)
+	}, addQueueCmdText, testSong)
+}
+
+func TestSetQueueFile(t *testing.T) {
 	testSong := "root.go"
 	runPlayerTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			queue := arg.(*platune.QueueRequest).Queue
 			path, _ := filepath.Abs(testSong)
 			return queue[0] == path
+		})
+		expect.SetQueue(gomock.Any(), matcher)
+	}, setQueueCmdText, testSong)
+}
+
+func TestSetQueueUrl(t *testing.T) {
+	testSong := "http://test.com/blah.mp3"
+	runPlayerTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
+		matcher := test.NewMatcher(func(arg interface{}) bool {
+			queue := arg.(*platune.QueueRequest).Queue
+			return queue[0] == testSong
 		})
 		expect.SetQueue(gomock.Any(), matcher)
 	}, setQueueCmdText, testSong)

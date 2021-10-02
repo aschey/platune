@@ -163,13 +163,8 @@ func dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prom
 		searchClient = internal.Client.Search()
 	}
 
-	if strings.HasPrefix(rest, "http://") || strings.HasPrefix(rest, "https://") {
-		return []prompt.Suggest{}
-	}
-
 	suggestions := filePathCompleter.Complete(in, filePathSkipFirst)
 	if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
-
 		prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
 		return suggestions
 	}

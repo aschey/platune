@@ -41,8 +41,10 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 	case SetQueueMode:
 		if strings.Trim(in, " ") == "" {
 			state.mode = []Mode{NormalMode}
-		} else {
+		} else if selected != nil {
 			executeEntryType(selected, SetQueueMode)
+		} else {
+			state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: in})
 		}
 
 	case AlbumMode:
@@ -176,10 +178,6 @@ func executeEntryType(selected *prompt.Suggest, defaultMode Mode) {
 }
 
 func expandPath(song string) (string, fs.FileInfo, error) {
-	if strings.HasPrefix(song, "http") {
-		return song, nil, nil
-	}
-
 	dir, base, err := internal.CleanFilePath(song)
 
 	if err != nil {
@@ -192,6 +190,9 @@ func expandPath(song string) (string, fs.FileInfo, error) {
 }
 
 func expandFile(song string) (string, error) {
+	if strings.HasPrefix(song, "http://") || strings.HasPrefix(song, "https://") {
+		return song, nil
+	}
 	full, stat, err := expandPath(song)
 
 	if stat != nil && stat.Mode().IsDir() {

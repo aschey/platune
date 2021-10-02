@@ -22,6 +22,10 @@ func CleanFilePath(path string) (dir, base string, err error) {
 		return ".", "", nil
 	}
 
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return path, "", nil
+	}
+
 	var endsWithSeparator bool
 	if len(path) >= 1 && equalsSeparator(path[len(path)-1]) {
 		endsWithSeparator = true
@@ -53,7 +57,6 @@ func (c *FilePathCompleter) adjustCompletions(completions []prompt.Suggest, sub 
 	tokens := strings.Split(sub, " ")
 	filteredCompletions := prompt.FilterHasPrefix(completions, sub, c.IgnoreCase)
 	if len(tokens) > 1 {
-
 		allExceptLast := strings.Join(tokens[0:len(tokens)-1], " ")
 		newCompletions := []prompt.Suggest{}
 		for _, completion := range filteredCompletions {
@@ -76,6 +79,7 @@ func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt
 	if skipFirst {
 		path = strings.SplitN(path, " ", 2)[1]
 	}
+
 	dir, base, err := CleanFilePath(path)
 	if err != nil {
 		fmt.Println("completer: cannot get current user:" + err.Error())
@@ -87,10 +91,7 @@ func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt
 	}
 
 	files, err := os.ReadDir(dir)
-	if err != nil && os.IsNotExist(err) {
-		return nil
-	} else if err != nil {
-		fmt.Println("completer: cannot read directory items:" + err.Error())
+	if err != nil {
 		return nil
 	}
 	filePath, err := filepath.Abs(dir)
