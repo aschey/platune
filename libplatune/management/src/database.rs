@@ -571,6 +571,18 @@ impl Database {
             search: last,
             score: 0.,
         });
+
+        // Searching for an excessive amount of terms can be a big performance hit
+        // If there are a lot of results, we can ignore lower-scored suggestions
+        if spellfix_res.len() > 20 {
+            spellfix_res = spellfix_res
+                .into_iter()
+                .sorted_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
+                .take(20)
+                .sorted_by(|a, b| a.search.cmp(&b.search))
+                .collect_vec();
+        }
+
         let weights = spellfix_res
             .iter()
             .map(|s| (s.word.to_owned(), s.score))
