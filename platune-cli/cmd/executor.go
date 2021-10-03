@@ -14,6 +14,21 @@ import (
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 	isSetQueueMode := state.mode[0] == SetQueueMode
+	if selected == nil {
+		// User did not explicitly choose a result
+		// See if we can find a match instead
+		text := strings.Trim(strings.ToLower(in), " ")
+		if strings.HasPrefix(text, addQueueCmdText) {
+			cmds := strings.SplitN(text, " ", 2)
+			text = strings.Trim(cmds[len(cmds)-1], " ")
+		}
+		for _, suggestion := range state.suggestions {
+			if strings.ToLower(suggestion.Text) == text {
+				selected = &suggestion
+				break
+			}
+		}
+	}
 	if state.mode[len(state.mode)-1] != NormalMode {
 		state.executeMode(in, selected)
 	} else {

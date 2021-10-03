@@ -10,6 +10,7 @@ type cmdState struct {
 	currentQueue []*platune.LookupEntry
 	lookupResult []*platune.LookupEntry
 	curPrompt    *prompt.Prompt
+	suggestions  []prompt.Suggest
 }
 
 type Mode string
@@ -26,7 +27,7 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 }
 
 func initState() {
-	state = cmdState{mode: []Mode{NormalMode}, currentQueue: []*platune.LookupEntry{}}
+	state = cmdState{mode: []Mode{NormalMode}, currentQueue: []*platune.LookupEntry{}, suggestions: []prompt.Suggest{}}
 	state.curPrompt = prompt.New(
 		state.executor,
 		state.completer,

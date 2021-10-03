@@ -29,13 +29,11 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 	before := strings.Split(in.TextBeforeCursor(), " ")
 	if state.mode[len(state.mode)-1] != NormalMode {
 		return state.completerMode(in)
-	}
-
-	if len(before) > 1 {
+	} else if len(before) > 1 {
 		return state.completerCmd(in, before)
+	} else {
+		return completerDefault(in)
 	}
-
-	return completerDefault(in)
 }
 
 func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
@@ -67,6 +65,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 			{Text: selectAll, Metadata: state.lookupResult},
 			{Text: back},
 		}, suggestions...)
+		state.suggestions = suggestions
 
 	case SongMode:
 		suggestions = []prompt.Suggest{
@@ -83,6 +82,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 				CompletionText: completionText,
 				Metadata:       r})
 		}
+		state.suggestions = suggestions
 	}
 	return prompt.FilterHasPrefix(suggestions, in.CurrentLineBeforeCursor(), true)
 }
@@ -103,6 +103,9 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 func (state *cmdState) updateMaxWidths(in prompt.Document, titleRatio float32) {
 	col := in.CursorPositionCol()
 	base := float32(getAvailableWidth(col))
+	if isWindows() {
+		base -= 10
+	}
 
 	titleMaxLength := int(base * titleRatio)
 	descriptionMaxLength := int(base * (1 - titleRatio))
@@ -182,13 +185,17 @@ func dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prom
 		return []prompt.Suggest{}
 	}
 
-	for _, r := range res.Results {
-		suggestions = append(suggestions, prompt.Suggest{
-			Text:        r.Entry,
-			Description: r.Description,
-			Metadata:    r,
-		})
+	if len(res.Results) > 0 {
+		for _, r := range res.Results {
+			suggestions = append(suggestions, prompt.Suggest{
+				Text:        r.Entry,
+				Description: r.Description,
+				Metadata:    r,
+			})
+		}
+		state.suggestions = suggestions
 	}
 	prompt.OptionCompletionWordSeparator([]string{addQueueCmdText + " "})(state.curPrompt)
+
 	return suggestions
 }
