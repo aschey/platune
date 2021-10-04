@@ -3,7 +3,7 @@ module github.com/aschey/platune/cli/v2
 go 1.16
 
 require (
-	github.com/aschey/go-prompt v0.2.7-0.20211002032824-88af1177c4e8
+	github.com/aschey/go-prompt v0.2.7-0.20211004044345-9f70ca2dd8a6
 	github.com/aschey/platune/client v0.0.0
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/bubbles v0.9.0
@@ -18,7 +18,7 @@ require (
 	github.com/superhawk610/bar v0.0.2
 	github.com/superhawk610/terminal v0.1.0 // indirect
 	golang.org/x/net v0.0.0-20210929193557-e81a3d93ecf6 // indirect
-	golang.org/x/sys v0.0.0-20211001092434-39dca1131b70 // indirect
+	golang.org/x/sys v0.0.0-20211003122950-b1ebd4e1001c // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20210930144712-2e2e1008e8a3 // indirect
