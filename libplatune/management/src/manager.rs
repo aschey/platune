@@ -1,12 +1,14 @@
+pub use crate::entry_type::EntryType;
+pub use crate::search::search_options::SearchOptions;
+pub use crate::search::search_result::SearchResult;
+use crate::{
+    config::Config,
+    database::{Database, LookupEntry},
+};
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 use tokio::sync::mpsc;
-
-use crate::{
-    config::Config,
-    database::{Database, EntryType, LookupEntry, SearchOptions, SearchRes},
-};
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
@@ -134,7 +136,7 @@ impl Manager {
         res
     }
 
-    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
+    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchResult> {
         self.db.search(query, options).await
     }
 

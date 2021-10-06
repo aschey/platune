@@ -2,10 +2,9 @@ use crate::management_server::Management;
 use crate::rpc::*;
 use futures::StreamExt;
 use libplatune_management::config::Config;
-use libplatune_management::database;
 use libplatune_management::database::Database;
-use libplatune_management::database::SearchOptions;
-use libplatune_management::manager::Manager;
+use libplatune_management::manager;
+use libplatune_management::manager::{Manager, SearchOptions};
 use std::pin::Pin;
 use tokio::sync::mpsc;
 use tonic::Request;
@@ -92,10 +91,10 @@ impl Management for ManagementImpl {
             .lookup(
                 request.correlation_ids,
                 match EntryType::from_i32(request.entry_type).unwrap() {
-                    EntryType::Song => database::EntryType::Song,
-                    EntryType::Album => database::EntryType::Album,
-                    EntryType::AlbumArtist => database::EntryType::AlbumArtist,
-                    EntryType::Artist => database::EntryType::Artist,
+                    EntryType::Song => manager::EntryType::Song,
+                    EntryType::Album => manager::EntryType::Album,
+                    EntryType::AlbumArtist => manager::EntryType::AlbumArtist,
+                    EntryType::Artist => manager::EntryType::Artist,
                 },
             )
             .await
@@ -148,10 +147,10 @@ impl Management for ManagementImpl {
                         description: res.description,
                         entry: res.entry,
                         entry_type: (match res.entry_type {
-                            database::EntryType::Song => EntryType::Song,
-                            database::EntryType::Artist => EntryType::Artist,
-                            database::EntryType::AlbumArtist => EntryType::AlbumArtist,
-                            database::EntryType::Album => EntryType::Album,
+                            manager::EntryType::Song => EntryType::Song,
+                            manager::EntryType::Artist => EntryType::Artist,
+                            manager::EntryType::AlbumArtist => EntryType::AlbumArtist,
+                            manager::EntryType::Album => EntryType::Album,
                         })
                         .into(),
                         artist: res.artist,

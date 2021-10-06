@@ -1,80 +1,24 @@
+use crate::consts::{MIN_LEN, MIN_WORDS};
+use crate::entry_type::EntryType;
+use crate::search::search_engine::SearchEngine;
+use crate::search::search_options::SearchOptions;
+use crate::search::search_result::SearchResult;
+use crate::spellfix::{acquire_with_spellfix, load_spellfix};
 use itertools::Itertools;
 use katatsuki::Track;
-use libsqlite3_sys::{sqlite3, sqlite3_load_extension};
 use log::LevelFilter;
 use regex::Regex;
-use sqlx::{
-    pool::PoolConnection, sqlite::SqliteConnectOptions, ConnectOptions, Pool, Row, Sqlite,
-    SqliteConnection, SqlitePool,
-};
-use std::{
-    cmp::Ordering,
-    collections::HashMap,
-    ffi::{CStr, CString},
-    iter::Sum,
-    os::raw::c_char,
-    ptr,
-    str::FromStr,
-};
+use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::{
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
-use strum::EnumString;
 use tokio::{sync::mpsc, task::JoinHandle, time::timeout};
-
-const MIN_WORDS: usize = 3;
-const MIN_LEN: usize = 20;
-
 #[derive(Clone)]
 pub struct Database {
     pool: Pool<Sqlite>,
+    search_engine: SearchEngine,
     opts: SqliteConnectOptions,
-}
-
-pub struct SearchOptions<'a> {
-    pub start_highlight: &'a str,
-    pub end_highlight: &'a str,
-    pub limit: i32,
-    pub restrict_entry_type: Vec<&'a str>,
-}
-
-impl<'a> Default for SearchOptions<'a> {
-    fn default() -> Self {
-        Self {
-            start_highlight: "",
-            end_highlight: "",
-            limit: 10,
-            restrict_entry_type: vec![],
-        }
-    }
-}
-
-#[derive(Debug, EnumString)]
-#[strum(ascii_case_insensitive)]
-pub enum EntryType {
-    Song,
-    Artist,
-    #[strum(serialize = "album_artist")]
-    AlbumArtist,
-    Album,
-}
-
-#[derive(Debug)]
-pub struct SearchRes {
-    pub entry: String,
-    pub entry_type: EntryType,
-    pub description: String,
-    pub artist: Option<String>,
-    pub correlation_ids: Vec<i32>,
-}
-
-#[derive(Debug)]
-struct ResultScore {
-    match_len_score: usize,
-    full_len_score: usize,
-    weighted_score: f32,
-    full_entry: String,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -87,181 +31,6 @@ pub struct LookupEntry {
     pub track: i64,
 }
 
-impl Sum for ResultScore {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.reduce(|a, b| ResultScore {
-            weighted_score: a.weighted_score + b.weighted_score,
-            match_len_score: a.match_len_score + b.match_len_score,
-            full_len_score: a.full_len_score,
-            full_entry: a.full_entry,
-        })
-        .unwrap()
-    }
-}
-
-impl PartialEq for ResultScore {
-    fn eq(&self, other: &Self) -> bool {
-        self.weighted_score.partial_cmp(&other.weighted_score) == Some(Ordering::Equal)
-            && self.full_len_score.cmp(&other.full_len_score) == Ordering::Equal
-    }
-}
-
-impl PartialOrd for ResultScore {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let weighted_ord = self.weighted_score.partial_cmp(&other.weighted_score);
-        if weighted_ord != Some(Ordering::Equal) && weighted_ord != None {
-            return weighted_ord;
-        }
-        let len_ord = self.match_len_score.cmp(&other.match_len_score);
-        if len_ord != Ordering::Equal {
-            return Some(len_ord);
-        }
-        let full_len_ord = self.full_len_score.cmp(&other.full_len_score);
-        if full_len_ord != Ordering::Equal {
-            return Some(full_len_ord);
-        }
-        return self.full_entry.partial_cmp(&other.full_entry);
-    }
-}
-
-#[derive(Debug)]
-struct SearchEntry {
-    entry: String,
-    pub entry_type: String,
-    pub artist: Option<String>,
-    pub album: Option<String>,
-    pub correlation_id: i32,
-    original_query: String,
-    start_highlight: String,
-    end_highlight: String,
-    weights: HashMap<String, f32>,
-}
-
-impl SearchEntry {
-    fn score_match(&self) -> ResultScore {
-        let entry = self.entry.to_lowercase();
-        let count = entry.matches(r"{startmatch}").count();
-        let re = Regex::new(&r"(?:\{startmatch\}(.*?)\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
-        let caps = re.captures(&entry).unwrap();
-
-        let mut score: ResultScore = caps
-            .iter()
-            .skip(1)
-            .map(|c| match c.map(|c| c.as_str()) {
-                Some(cap) => match self.weights.get(&cap.to_lowercase()) {
-                    Some(weight) => ResultScore {
-                        weighted_score: *weight,
-                        match_len_score: cap.len(),
-                        full_len_score: entry.len(),
-                        full_entry: entry.to_owned(),
-                    },
-                    None => ResultScore {
-                        weighted_score: 0.,
-                        match_len_score: cap.len(),
-                        full_len_score: entry.len(),
-                        full_entry: entry.to_owned(),
-                    },
-                },
-                None => ResultScore {
-                    weighted_score: 0.,
-                    match_len_score: 0,
-                    full_len_score: entry.len(),
-                    full_entry: entry.to_owned(),
-                },
-            })
-            .sum();
-
-        if score.weighted_score == 0.
-            && score.match_len_score + count >= MIN_LEN
-            && count >= MIN_WORDS
-            && self.original_query.len() == count
-        {
-            score.match_len_score = self.original_query.len();
-        }
-
-        return score;
-    }
-
-    pub fn get_description(&self) -> String {
-        match &self.entry_type[..] {
-            "song" => format!(
-                "Song from {} by {}",
-                self.album.to_owned().unwrap(),
-                self.artist.to_owned().unwrap(),
-            ),
-            "album" => format!("Album by {}", self.artist.to_owned().unwrap()),
-            "artist" => "Artist".to_owned(),
-            "album_artist" => "Album Artist".to_owned(),
-            _ => "".to_owned(),
-        }
-    }
-
-    pub fn get_formatted_entry(&self) -> String {
-        self.entry
-            .replace("{startmatch}", &self.start_highlight)
-            .replace("{endmatch}", &self.end_highlight)
-    }
-}
-
-impl Ord for SearchEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
-    }
-}
-
-impl PartialOrd for SearchEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let self_score = self.score_match();
-        let other_score = other.score_match();
-
-        self_score.partial_cmp(&other_score)
-    }
-}
-
-impl Eq for SearchEntry {}
-
-impl PartialEq for SearchEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == Ordering::Equal
-    }
-}
-
-#[derive(Debug, sqlx::FromRow)]
-struct SpellfixRes {
-    word: String,
-    search: String,
-    score: f32,
-}
-
-#[cfg(not(unix))]
-fn path_to_cstring<P: AsRef<Path>>(p: &P) -> CString {
-    let s = p.as_ref().to_str().unwrap();
-    CString::new(s).unwrap()
-}
-
-#[cfg(unix)]
-fn path_to_cstring<P: AsRef<Path>>(p: &P) -> CString {
-    use std::os::unix::ffi::OsStrExt;
-    CString::new(p.as_ref().as_os_str().as_bytes()).unwrap()
-}
-
-unsafe fn errmsg_to_string(errmsg: *const c_char) -> String {
-    let c_slice = CStr::from_ptr(errmsg).to_bytes();
-    String::from_utf8_lossy(c_slice).into_owned()
-}
-
-fn load_extension<P: AsRef<Path>>(db: *mut sqlite3, dylib_path: &P) {
-    let dylib_str = path_to_cstring(dylib_path);
-    unsafe {
-        let mut errmsg: *mut c_char = ptr::null_mut();
-
-        let res = sqlite3_load_extension(db, dylib_str.as_ptr(), ptr::null(), &mut errmsg);
-        if res != 0 {
-            println!("{}", errmsg_to_string(errmsg));
-        }
-    }
-}
-
 impl Database {
     pub async fn connect(path: impl AsRef<Path>, create_if_missing: bool) -> Self {
         let opts = SqliteConnectOptions::new()
@@ -272,18 +41,15 @@ impl Database {
             .to_owned();
 
         let pool = SqlitePool::connect_with(opts.clone()).await.unwrap();
-
-        Self { pool, opts }
-    }
-
-    async fn acquire_with_spellfix(&self) -> PoolConnection<Sqlite> {
-        let mut con = self.pool.acquire().await.unwrap();
-        load_spellfix(&mut con);
-        con
+        Self {
+            search_engine: SearchEngine::new(pool.clone()),
+            pool,
+            opts,
+        }
     }
 
     pub async fn migrate(&self) {
-        let mut con = self.acquire_with_spellfix().await;
+        let mut con = acquire_with_spellfix(&self.pool).await;
 
         sqlx::migrate!("./migrations").run(&mut con).await.unwrap();
 
@@ -292,6 +58,14 @@ impl Database {
 
     pub async fn close(&self) {
         self.pool.close().await;
+    }
+
+    pub(crate) async fn search(
+        &self,
+        query: &str,
+        options: SearchOptions<'_>,
+    ) -> Vec<SearchResult> {
+        self.search_engine.search(query, options).await
     }
 
     pub(crate) async fn lookup(
@@ -383,294 +157,6 @@ impl Database {
         .fetch_all(&self.pool)
         .await
         .unwrap()
-    }
-
-    async fn run_search(
-        &self,
-        query: &str,
-        original_query: &str,
-        weights: HashMap<String, f32>,
-        options: &SearchOptions<'_>,
-        artist_filter: &Vec<String>,
-        con: &mut PoolConnection<Sqlite>,
-    ) -> Vec<SearchEntry> {
-        let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
-        let mut artist_filter_clause = "".to_owned();
-        let num_base_args = 5;
-        let mut num_extra_args = 0;
-        if artist_filter.len() > 0 {
-            let start = num_base_args + num_extra_args + 1;
-            let artist_list = (start..start + artist_filter.len())
-                .map(|i| "$".to_owned() + &i.to_string())
-                .collect_vec()
-                .join(",");
-            artist_filter_clause = format!("WHERE {} in ({})", artist_select, artist_list);
-            num_extra_args += artist_filter.len();
-        }
-        let mut type_filter = "".to_owned();
-        if !options.restrict_entry_type.is_empty() {
-            let start = num_base_args + num_extra_args + 1;
-            let in_list = (start..start + options.restrict_entry_type.len())
-                .map(|i| "$".to_owned() + &i.to_string())
-                .collect_vec()
-                .join(",");
-
-            type_filter = format!("AND entry_type in ({})", &in_list);
-        }
-        let full_query = format!("
-        WITH CTE AS (
-            SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight, assoc_id correlation_id,
-            {0} artist,
-            al2.album_name album,
-            ROW_NUMBER() OVER (PARTITION BY 
-                entry_value, 
-                {0}, 
-                CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
-                CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
-                ORDER BY entry_type DESC) row_num
-            FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match $3 {2}) a
-            LEFT OUTER JOIN song s on s.song_id = assoc_id
-            LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
-            LEFT OUTER JOIN album al on al.album_id = assoc_id
-            LEFT OUTER JOIN album al2 on al2.album_id = s.album_id
-            LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
-            LEFT OUTER JOIN artist ar2 on ar2.artist_id = assoc_id
-            LEFT OUTER JOIN album_artist aa2 on aa2.album_artist_id = assoc_id
-            {1}
-            ORDER BY rank
-            LIMIT $4
-        )
-        SELECT entry, entry_type, artist, album, correlation_id, start_highlight, end_highlight FROM cte
-        WHERE row_num = 1
-        ORDER BY rank
-        LIMIT $5", artist_select, artist_filter_clause, type_filter);
-        let mut sql_query = sqlx::query(&full_query)
-            .bind(options.start_highlight)
-            .bind(options.end_highlight)
-            .bind(query.to_owned())
-            .bind(options.limit * 2)
-            .bind(options.limit);
-
-        for artist in artist_filter {
-            sql_query = sql_query.bind(artist.to_owned());
-        }
-        for entry_type in &options.restrict_entry_type {
-            sql_query = sql_query.bind(entry_type.to_owned());
-        }
-        let res = sql_query
-            .map(|row| SearchEntry {
-                entry: row.try_get("entry").unwrap(),
-                entry_type: row.try_get("entry_type").unwrap(),
-                artist: row.try_get("artist").unwrap(),
-                album: row.try_get("album").unwrap(),
-                original_query: original_query.to_owned(),
-                correlation_id: row.try_get("correlation_id").unwrap(),
-                start_highlight: row.try_get("start_highlight").unwrap(),
-                end_highlight: row.try_get("end_highlight").unwrap(),
-                weights: weights.clone(),
-            })
-            .fetch_all(con)
-            .await
-            .unwrap();
-
-        return res;
-    }
-
-    fn replace_ampersand(&self, string: &str) -> String {
-        string.replace(" & ", " and ").replace("&", " ")
-    }
-
-    fn convert_res(&self, mut res: Vec<SearchEntry>) -> Vec<SearchRes> {
-        res.sort();
-        let grouped = res
-            .into_iter()
-            .group_by(|key| (key.get_formatted_entry(), key.get_description()))
-            .into_iter()
-            .map(|(key, group)| {
-                let group = group.collect_vec();
-                let first = group.get(0).unwrap();
-                SearchRes {
-                    entry: key.0,
-                    entry_type: EntryType::from_str(&first.entry_type).unwrap(),
-                    artist: first.artist.to_owned(),
-                    description: key.1,
-                    correlation_ids: group.iter().map(|v| v.correlation_id).collect(),
-                }
-            })
-            .collect_vec();
-
-        return grouped;
-    }
-
-    async fn search_helper(
-        &self,
-        query: &str,
-        original_query: &str,
-        options: SearchOptions<'_>,
-        artist_filter: Vec<String>,
-    ) -> Vec<SearchRes> {
-        let special_chars = Regex::new(r"[^A-Za-z0-9&\*\s]").unwrap();
-        let mut query = special_chars.replace_all(&query, " ").trim().to_string();
-        if query.is_empty() {
-            return vec![];
-        }
-        if !query.ends_with("*") {
-            query += "*";
-        }
-
-        let mut con = self.acquire_with_spellfix().await;
-        let mut res = self
-            .run_search(
-                &(self.replace_ampersand(&query)),
-                original_query,
-                HashMap::new(),
-                &options,
-                &artist_filter,
-                &mut con,
-            )
-            .await;
-
-        if res.len() == options.limit as usize {
-            return self.convert_res(res);
-        }
-        let re = Regex::new(r"\s+").unwrap();
-        let terms = re.split(&query).collect_vec();
-        let last = terms.last().unwrap().to_owned().to_owned();
-        let spellfix_query = terms
-            .iter()
-            .enumerate()
-            .map(|(i, _)| {
-                let score_clause = format!("case 
-                when word like '% %' then (distance * 1.0 / (length(word) - length(replace(word, ' ', '')))) * 3.5 
-                else editdist3(${0}, word) * 1.0 / length(word) end", i + 1);
-                format!(
-                    "
-                    select * from (
-                        select distinct word, ${0} search, {1} score
-                        from search_spellfix 
-                        where word match replace(${0}, '*', '')
-                        and ({1}) <= 50
-                        order by {1}
-                        limit 5
-                    )
-                    ",
-                    i + 1, score_clause
-                )
-            })
-            .collect_vec()
-            .join(" union all ");
-
-        let mut corrected = sqlx::query_as::<_, SpellfixRes>(&spellfix_query);
-        for term in terms {
-            corrected = corrected.bind(term);
-        }
-        let mut spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
-
-        spellfix_res.push(SpellfixRes {
-            word: last.to_owned(),
-            search: last,
-            score: 0.,
-        });
-
-        // Searching for an excessive amount of terms can be a big performance hit
-        // If there are a lot of results, we can ignore lower-scored suggestions
-        if spellfix_res.len() > 20 {
-            spellfix_res = spellfix_res
-                .into_iter()
-                .sorted_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
-                .take(20)
-                .sorted_by(|a, b| a.search.cmp(&b.search))
-                .collect_vec();
-        }
-
-        let weights = spellfix_res
-            .iter()
-            .map(|s| (s.word.to_owned(), s.score))
-            .collect::<HashMap<_, _>>();
-        let mut corrected_search = spellfix_res
-            .into_iter()
-            .group_by(|row| row.search.to_owned())
-            .into_iter()
-            .map(|(_, val)| val.map(|v| v.word + " ").collect_vec())
-            .fold(vec!["".to_owned()], |a, b| {
-                a.into_iter()
-                    .flat_map(|x| b.iter().map(move |y| x.clone() + &y))
-                    .collect_vec()
-            })
-            .iter()
-            .map(|s| self.replace_ampersand(s))
-            .unique()
-            .join("OR ")
-            .trim()
-            .to_owned();
-        if corrected_search.is_empty() {
-            return vec![];
-        }
-        corrected_search = special_chars
-            .replace_all(&corrected_search, " ")
-            .to_string();
-
-        let rest = self
-            .run_search(
-                &corrected_search,
-                original_query,
-                weights.clone(),
-                &options,
-                &artist_filter,
-                &mut con,
-            )
-            .await;
-
-        for mut r in &mut res {
-            r.weights = weights.clone();
-        }
-        res.extend(rest);
-        let res = res
-            .into_iter()
-            .unique_by(|r| {
-                r.entry
-                    .clone()
-                    .replace("{startmatch}", "")
-                    .replace("{endmatch}", "")
-                    + "-"
-                    + &r.entry_type
-                    + &r.correlation_id.to_string()
-            })
-            .take(options.limit as usize)
-            .collect_vec();
-
-        return self.convert_res(res);
-    }
-
-    pub(crate) async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchRes> {
-        let mut query = query.to_owned();
-        let artist_split = query.split("artist:").collect_vec();
-        let mut artist_filter: Vec<String> = vec![];
-        if artist_split.len() > 1 {
-            let _query = artist_split.get(0).unwrap().to_string();
-            let _artist_filter = artist_split.get(1).unwrap().to_string();
-
-            artist_filter = self
-                .search_helper(
-                    &_artist_filter,
-                    &query,
-                    SearchOptions {
-                        restrict_entry_type: vec!["artist", "album_artist"],
-                        ..Default::default()
-                    },
-                    vec![],
-                )
-                .await
-                .into_iter()
-                .map(|r| r.entry)
-                .collect_vec();
-
-            query = _query;
-        }
-
-        return self
-            .search_helper(&query, &query, options, artist_filter)
-            .await;
     }
 
     pub(crate) async fn sync(
@@ -1097,19 +583,6 @@ async fn tags_task(
         tran.commit().await.unwrap();
         println!("done");
     })
-}
-
-fn load_spellfix(con: &mut SqliteConnection) {
-    let handle = con.as_raw_handle();
-    let spellfix_lib = match std::env::var("SPELLFIX_LIB") {
-        Ok(res) => res,
-        #[cfg(target_os = "linux")]
-        Err(_) => "./assets/linux/spellfix.o".to_owned(),
-        #[cfg(target_os = "windows")]
-        Err(_) => "./assets/windows/spellfix.dll".to_owned(),
-    };
-
-    load_extension(handle, &spellfix_lib);
 }
 
 fn spawn_task(
