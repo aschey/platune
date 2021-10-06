@@ -48,12 +48,40 @@
       ]
     }
   },
+  "076eeae1153eca01ddef8854ccfa2293394a38183ea4050ab853bee045c2430f": {
+    "query": "\n        select entry_value as \"entry_value: String\"\n        from search_index\n        where length(entry_value) >= $1\n        and entry_type != 'song'\n        ",
+    "describe": {
+      "columns": [
+        {
+          "name": "entry_value: String",
+          "ordinal": 0,
+          "type_info": "Null"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        true
+      ]
+    }
+  },
   "07e8ac7262b424e460550c5ceb3f937da0317a36913c51214f4048e7f19734ea": {
     "query": "update folder set folder_path = ? where folder_path = ?",
     "describe": {
       "columns": [],
       "parameters": {
         "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "3cfaf525265ca026cece11166487b3db8577aa0194c3666244d3e8744ced8eb6": {
+    "query": "\n                        insert or ignore into album(album_name, album_artist_id, created_date) \n                        values(?, (select album_artist_id from album_artist where album_artist_name = ?), ?);",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 3
       },
       "nullable": []
     }
@@ -86,22 +114,12 @@
       "nullable": []
     }
   },
-  "49eb5e4fa1894ef73affd7bb7d81bd34772f99797f50ebc39f625d995e24c3ad": {
-    "query": "\n                        insert into song(\n                            song_path,\n                            modified_date,\n                            created_date,\n                            last_scanned_date,\n                            artist_id,\n                            song_title,\n                            album_id,\n                            track_number,\n                            disc_number,\n                            song_year,\n                            song_month,\n                            song_day,\n                            duration,\n                            sample_rate,\n                            bit_rate,\n                            album_art_path,\n                            fingerprint\n                            )\n                            values\n                            (\n                                ?, ?, ?, ?,\n                                (select artist_id from artist where artist_name = ?), \n                                ?, \n                                (\n                                    select album_id from album a\n                                    inner join album_artist aa on a.album_artist_id = aa.album_artist_id\n                                    where a.album_name = ? and aa.album_artist_name = ?\n                                ), \n                                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n                            )\n                            on conflict(song_path) do update\n                            set last_scanned_date = ?;\n                        ",
+  "7d5001ca01374fc13988fa2e9c2d1f57c3c97641b5ff04acc1b10c41d5111ae1": {
+    "query": "\n                    insert into song(\n                        song_path,\n                        modified_date,\n                        created_date,\n                        last_scanned_date,\n                        artist_id,\n                        song_title,\n                        album_id,\n                        track_number,\n                        disc_number,\n                        song_year,\n                        song_month,\n                        song_day,\n                        duration,\n                        sample_rate,\n                        bit_rate,\n                        album_art_path,\n                        fingerprint\n                        )\n                        values\n                        (\n                            ?, ?, ?, ?,\n                            (select artist_id from artist where artist_name = ?), \n                            ?, \n                            (\n                                select album_id from album a\n                                inner join album_artist aa on a.album_artist_id = aa.album_artist_id\n                                where a.album_name = ? and aa.album_artist_name = ?\n                            ), \n                            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n                        )\n                        on conflict(song_path) do update\n                        set last_scanned_date = ?;\n                    ",
     "describe": {
       "columns": [],
       "parameters": {
         "Right": 19
-      },
-      "nullable": []
-    }
-  },
-  "6862d38b4635423116fef1a7f39c921bb3aabc77535b08bd1e1ca090123cc40b": {
-    "query": "\n                        update song\n                            set modified_date = $2,\n                            artist_id = (select artist_id from artist where artist_name = $3),\n                            song_title = $4,\n                            album_id = (select album_id from album where album_name = $5),\n                            track_number = $6,\n                            disc_number = $7,\n                            song_year = $8,\n                            song_month = $9,\n                            song_day = $10,\n                            duration = $11,\n                            sample_rate = $12,\n                            bit_rate = $13,\n                            album_art_path = $14,\n                            fingerprint = $15\n                        where song_path = $1 and fingerprint != $15;\n                        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 15
       },
       "nullable": []
     }
@@ -382,16 +400,6 @@
       "nullable": []
     }
   },
-  "d0e22ce22b91af35e2a3fcd937b518f52598d6e69a41f52cad6db8c6887b01e1": {
-    "query": "\n                            insert or ignore into album(album_name, album_artist_id, created_date) \n                            values(?, (select album_artist_id from album_artist where album_artist_name = ?), ?);",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 3
-      },
-      "nullable": []
-    }
-  },
   "d258adbf66d199908c47ec323d63e699025b02deeb37e415b0de8e8f8771025f": {
     "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track \n            from album al\n            inner join album_artist aa on aa.album_artist_id = al.album_artist_id\n            inner join song s on s.album_id = al.album_id\n            inner join artist ar on ar.artist_id = s.artist_id\n            where al.album_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number\n            ",
     "describe": {
@@ -458,22 +466,14 @@
       ]
     }
   },
-  "eaa96754639349a4acb343d03863bacc44fbacf7a2d1aa7d0511ac2201e8f64a": {
-    "query": "\n            select entry_value as \"entry_value: String\"\n            from search_index\n            where length(entry_value) >= $1\n            and entry_type != 'song'\n            ",
+  "f204590fc526785516f3eb21f49f588bb420da896927f4d59719106bd1c419e4": {
+    "query": "\n                    update song\n                        set modified_date = $2,\n                        artist_id = (select artist_id from artist where artist_name = $3),\n                        song_title = $4,\n                        album_id = (select album_id from album where album_name = $5),\n                        track_number = $6,\n                        disc_number = $7,\n                        song_year = $8,\n                        song_month = $9,\n                        song_day = $10,\n                        duration = $11,\n                        sample_rate = $12,\n                        bit_rate = $13,\n                        album_art_path = $14,\n                        fingerprint = $15\n                    where song_path = $1 and fingerprint != $15;\n                    ",
     "describe": {
-      "columns": [
-        {
-          "name": "entry_value: String",
-          "ordinal": 0,
-          "type_info": "Null"
-        }
-      ],
+      "columns": [],
       "parameters": {
-        "Right": 1
+        "Right": 15
       },
-      "nullable": [
-        true
-      ]
+      "nullable": []
     }
   },
   "fcaeb39c84f53ae4f8f9c7acad669037db9fb983136598c7cef727ff40a84fc7": {
