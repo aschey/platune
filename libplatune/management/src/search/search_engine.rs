@@ -101,6 +101,53 @@ impl SearchEngine {
         )
     }
 
+    fn get_full_spellfix_query(&self, terms: &Vec<&str>) -> String {
+        let full_query = terms
+            .iter()
+            .enumerate()
+            .map(|(i, _)| self.get_spellfix_query(i + 1))
+            .collect_vec()
+            .join(" union all ");
+
+        full_query
+    }
+
+    fn restrict_num_terms(&self, spellfix_results: Vec<SpellfixResult>) -> Vec<SpellfixResult> {
+        let updated_results = spellfix_results
+            .into_iter()
+            .sorted_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
+            .take(MAX_TERMS)
+            .sorted_by(|a, b| a.search.cmp(&b.search))
+            .collect_vec();
+        updated_results
+    }
+
+    async fn run_spellfix_query(
+        &self,
+        spellfix_query: &str,
+        terms: &Vec<&str>,
+        conn: &mut PoolConnection<Sqlite>,
+    ) -> Vec<SpellfixResult> {
+        let mut corrected = sqlx::query_as::<_, SpellfixResult>(&spellfix_query);
+        for term in terms {
+            corrected = corrected.bind(term);
+        }
+        let mut spellfix_results = corrected.fetch_all(conn).await.unwrap();
+        let last = terms.last().unwrap().to_string();
+        spellfix_results.push(SpellfixResult {
+            word: last.to_owned(),
+            search: last,
+            score: 0.,
+        });
+
+        // Searching for an excessive amount of terms can be a big performance hit
+        // If there are a lot of results, we can ignore lower-scored suggestions
+        if spellfix_results.len() > MAX_TERMS {
+            return self.restrict_num_terms(spellfix_results);
+        }
+        spellfix_results
+    }
+
     fn get_search_query(
         &self,
         artist_filter: &Vec<String>,
@@ -191,42 +238,17 @@ impl SearchEngine {
         }
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(&query).collect_vec();
-        let last = terms.last().unwrap().to_owned().to_owned();
-        let spellfix_query = terms
-            .iter()
-            .enumerate()
-            .map(|(i, _)| self.get_spellfix_query(i + 1))
-            .collect_vec()
-            .join(" union all ");
+        let spellfix_query = self.get_full_spellfix_query(&terms);
 
-        let mut corrected = sqlx::query_as::<_, SpellfixResult>(&spellfix_query);
-        for term in terms {
-            corrected = corrected.bind(term);
-        }
-        let mut spellfix_res = corrected.fetch_all(&mut conn).await.unwrap();
+        let spellfix_results = self
+            .run_spellfix_query(&spellfix_query, &terms, &mut conn)
+            .await;
 
-        spellfix_res.push(SpellfixResult {
-            word: last.to_owned(),
-            search: last,
-            score: 0.,
-        });
-
-        // Searching for an excessive amount of terms can be a big performance hit
-        // If there are a lot of results, we can ignore lower-scored suggestions
-        if spellfix_res.len() > MAX_TERMS {
-            spellfix_res = spellfix_res
-                .into_iter()
-                .sorted_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
-                .take(20)
-                .sorted_by(|a, b| a.search.cmp(&b.search))
-                .collect_vec();
-        }
-
-        let weights = spellfix_res
+        let weights = spellfix_results
             .iter()
             .map(|s| (s.word.to_owned(), s.score))
             .collect::<HashMap<_, _>>();
-        let mut corrected_search = spellfix_res
+        let mut corrected_search = spellfix_results
             .into_iter()
             .group_by(|row| row.search.to_owned())
             .into_iter()
