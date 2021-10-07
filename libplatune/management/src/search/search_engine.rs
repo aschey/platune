@@ -15,6 +15,10 @@ pub(crate) struct SearchEngine {
     pool: Pool<Sqlite>,
 }
 
+const MAX_TERMS: usize = 20;
+const START_MATCH_TEXT: &str = "{startmatch}";
+const END_MATCH_TEXT: &str = "{endmatch}";
+
 impl SearchEngine {
     pub(crate) fn new(pool: Pool<Sqlite>) -> Self {
         Self { pool }
@@ -25,38 +29,57 @@ impl SearchEngine {
         query: &str,
         options: SearchOptions<'_>,
     ) -> Vec<SearchResult> {
-        let mut query = query.to_owned();
-        let artist_split = query.split("artist:").collect_vec();
-        let mut artist_filter: Vec<String> = vec![];
-        if artist_split.len() > 1 {
-            let _query = artist_split.get(0).unwrap().to_string();
-            let _artist_filter = artist_split.get(1).unwrap().to_string();
-
-            artist_filter = self
-                .search_helper(
-                    &_artist_filter,
-                    &query,
-                    SearchOptions {
-                        restrict_entry_type: vec!["artist", "album_artist"],
-                        ..Default::default()
-                    },
-                    vec![],
-                )
-                .await
-                .into_iter()
-                .map(|r| r.entry)
-                .collect_vec();
-
-            query = _query;
-        }
+        // Parse out artist filter if it was supplied
+        let (adj_query, artist_filter) = self.split_artist_filter(query).await;
 
         return self
-            .search_helper(&query, &query, options, artist_filter)
+            .search_helper(&adj_query, &adj_query, options, artist_filter)
             .await;
+    }
+
+    async fn split_artist_filter(&self, query: &str) -> (String, Vec<String>) {
+        let artist_split = query.split("artist:").collect_vec();
+
+        match *artist_split.as_slice() {
+            [] => return ("".to_owned(), vec![]),
+            [query] => return (query.to_owned(), vec![]),
+            [query, artist, ..] => {
+                let artist_filter = self
+                    .search_helper(
+                        &artist,
+                        &query,
+                        SearchOptions {
+                            restrict_entry_type: vec!["artist", "album_artist"],
+                            ..Default::default()
+                        },
+                        vec![],
+                    )
+                    .await
+                    .into_iter()
+                    .map(|r| r.entry)
+                    .collect_vec();
+                return (query.to_owned(), artist_filter);
+            }
+        }
     }
 
     fn replace_ampersand(&self, string: &str) -> String {
         string.replace(" & ", " and ").replace("&", " ")
+    }
+
+    fn replace_special_chars(&self, query: &str) -> String {
+        // Replace all special characters with whitespace because they cause sqlite to error
+        let special_chars = Regex::new(r"[^A-Za-z0-9&\*\s]").unwrap();
+        return special_chars.replace_all(query, " ").trim().to_owned();
+    }
+
+    fn clean_query(&self, query: &str) -> String {
+        let query = self.replace_special_chars(query);
+        if query.is_empty() || query.ends_with("*") {
+            return query;
+        }
+        // Add wildcard to the end to do a prefix search
+        return query + "*";
     }
 
     async fn search_helper(
@@ -66,29 +89,25 @@ impl SearchEngine {
         options: SearchOptions<'_>,
         artist_filter: Vec<String>,
     ) -> Vec<SearchResult> {
-        let special_chars = Regex::new(r"[^A-Za-z0-9&\*\s]").unwrap();
-        let mut query = special_chars.replace_all(&query, " ").trim().to_string();
+        let query = self.clean_query(query);
         if query.is_empty() {
             return vec![];
         }
-        if !query.ends_with("*") {
-            query += "*";
-        }
 
-        let mut con = acquire_with_spellfix(&self.pool).await;
-        let mut res = self
+        let mut conn = acquire_with_spellfix(&self.pool).await;
+        let mut search_entries = self
             .run_search(
                 &(self.replace_ampersand(&query)),
                 original_query,
                 HashMap::new(),
                 &options,
                 &artist_filter,
-                &mut con,
+                &mut conn,
             )
             .await;
 
-        if res.len() == options.limit as usize {
-            return self.convert_res(res);
+        if search_entries.len() == options.limit as usize {
+            return self.convert_entries(search_entries);
         }
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(&query).collect_vec();
@@ -121,7 +140,7 @@ impl SearchEngine {
         for term in terms {
             corrected = corrected.bind(term);
         }
-        let mut spellfix_res = corrected.fetch_all(&mut con).await.unwrap();
+        let mut spellfix_res = corrected.fetch_all(&mut conn).await.unwrap();
 
         spellfix_res.push(SpellfixResult {
             word: last.to_owned(),
@@ -131,7 +150,7 @@ impl SearchEngine {
 
         // Searching for an excessive amount of terms can be a big performance hit
         // If there are a lot of results, we can ignore lower-scored suggestions
-        if spellfix_res.len() > 20 {
+        if spellfix_res.len() > MAX_TERMS {
             spellfix_res = spellfix_res
                 .into_iter()
                 .sorted_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
@@ -163,9 +182,7 @@ impl SearchEngine {
         if corrected_search.is_empty() {
             return vec![];
         }
-        corrected_search = special_chars
-            .replace_all(&corrected_search, " ")
-            .to_string();
+        corrected_search = self.replace_special_chars(&corrected_search);
 
         let rest = self
             .run_search(
@@ -174,21 +191,21 @@ impl SearchEngine {
                 weights.clone(),
                 &options,
                 &artist_filter,
-                &mut con,
+                &mut conn,
             )
             .await;
 
-        for mut r in &mut res {
+        for mut r in &mut search_entries {
             r.weights = weights.clone();
         }
-        res.extend(rest);
-        let res = res
+        search_entries.extend(rest);
+        let search_entries = search_entries
             .into_iter()
             .unique_by(|r| {
                 r.entry
                     .clone()
-                    .replace("{startmatch}", "")
-                    .replace("{endmatch}", "")
+                    .replace(START_MATCH_TEXT, "")
+                    .replace(END_MATCH_TEXT, "")
                     + "-"
                     + &r.entry_type
                     + &r.correlation_id.to_string()
@@ -196,7 +213,7 @@ impl SearchEngine {
             .take(options.limit as usize)
             .collect_vec();
 
-        return self.convert_res(res);
+        return self.convert_entries(search_entries);
     }
 
     async fn run_search(
@@ -242,7 +259,7 @@ impl SearchEngine {
             CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
             CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
             ORDER BY entry_type DESC) row_num
-        FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{{startmatch}}', '{{endmatch}}') entry, rank from search_index where entry_value match $3 {2}) a
+        FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{3}', '{4}') entry, rank from search_index where entry_value match $3 {2}) a
         LEFT OUTER JOIN song s on s.song_id = assoc_id
         LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
         LEFT OUTER JOIN album al on al.album_id = assoc_id
@@ -257,7 +274,7 @@ impl SearchEngine {
     SELECT entry, entry_type, artist, album, correlation_id, start_highlight, end_highlight FROM cte
     WHERE row_num = 1
     ORDER BY rank
-    LIMIT $5", artist_select, artist_filter_clause, type_filter);
+    LIMIT $5", artist_select, artist_filter_clause, type_filter, START_MATCH_TEXT, END_MATCH_TEXT);
         let mut sql_query = sqlx::query(&full_query)
             .bind(options.start_highlight)
             .bind(options.end_highlight)
@@ -290,7 +307,7 @@ impl SearchEngine {
         return res;
     }
 
-    fn convert_res(&self, mut res: Vec<SearchEntry>) -> Vec<SearchResult> {
+    fn convert_entries(&self, mut res: Vec<SearchEntry>) -> Vec<SearchResult> {
         res.sort();
         let grouped = res
             .into_iter()
