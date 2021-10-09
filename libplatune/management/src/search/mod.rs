@@ -1,3 +1,4 @@
+pub(crate) mod queries;
 mod result_score;
 pub(crate) mod search_engine;
 mod search_entry;
