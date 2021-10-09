@@ -39,13 +39,17 @@ pub(crate) fn get_search_query(
         SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight, assoc_id correlation_id,
         {0} artist,
         al2.album_name album,
+        -- Partition results to prevent returning the same value for artist and album artist
+        -- Only return the album artist if there is no equivalent artist entry
+        -- Also ensure multiple songs on different albums by the same artist are returned and 
+        -- if there are multiple results only differing by and/&, both are returned
         ROW_NUMBER() OVER (PARTITION BY 
             entry_value, 
             {0}, 
             CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
             CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
             ORDER BY entry_type DESC) row_num
-        FROM (select entry_type, assoc_id, entry_value, highlight(search_index, 0, '{3}', '{4}') entry, rank from search_index where entry_value match $3 {2}) a
+        FROM (SELECT entry_type, assoc_id, entry_value, highlight(search_index, 0, '{3}', '{4}') entry, rank FROM search_index WHERE entry_value match $3 {2}) search_query
         LEFT OUTER JOIN song s on s.song_id = assoc_id
         LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
         LEFT OUTER JOIN album al on al.album_id = assoc_id
@@ -66,6 +70,7 @@ pub(crate) fn get_search_query(
 }
 
 pub(crate) fn get_full_spellfix_query(terms: &Vec<&str>) -> String {
+    // Union all queries together to avoid multiple trips to the database
     let full_query = terms
         .iter()
         .enumerate()
@@ -76,7 +81,7 @@ pub(crate) fn get_full_spellfix_query(terms: &Vec<&str>) -> String {
     full_query
 }
 
-pub(crate) fn correct_search(spellfix_results: Vec<SpellfixResult>) -> String {
+pub(crate) fn combine_spellfix_results(spellfix_results: Vec<SpellfixResult>) -> String {
     // Group spellfix results by their correpsonding search input
     let spellfix_groups = spellfix_results
         .into_iter()
@@ -98,10 +103,10 @@ pub(crate) fn correct_search(spellfix_results: Vec<SpellfixResult>) -> String {
         .unique();
 
     // Join all combinations togeter into one search string
-    let corrected_search = search_combinations.join("OR ").trim().to_owned();
+    let mut combined_query = search_combinations.join("OR ").trim().to_owned();
+    combined_query = replace_special_chars(&combined_query);
 
-    let corrected_search = replace_special_chars(&corrected_search);
-    corrected_search
+    combined_query
 }
 
 pub(crate) fn clean_query(query: &str) -> String {
@@ -133,9 +138,16 @@ fn generate_parameterized_bindings(start: usize, count: usize) -> String {
 }
 
 fn get_spellfix_query(index: usize) -> String {
+    // This was obtained very unscientifically through trial and error
+    let word_normalization_factor = 3.5;
+
+    // If the word contains whitespace, it must be a special entry we added explicitly like an abbreviation
+    // Need to calculate these two cases differently and attempt to normalize them
+    // Divide by word length to normalize total error over number of letters
+    // Note: multiplying by 1.0 is the way to coerce an int to a float
     let score_clause = format!("case 
-    when word like '% %' then (distance * 1.0 / (length(word) - length(replace(word, ' ', '')))) * 3.5 
-    else editdist3(${0}, word) * 1.0 / length(word) end", index);
+    when word like '% %' then (distance * 1.0 / (length(word) - length(replace(word, ' ', '')))) * {1} 
+    else editdist3(${0}, word) * 1.0 / length(word) end", index, word_normalization_factor);
     format!(
         "
         select * from (
@@ -147,6 +159,6 @@ fn get_spellfix_query(index: usize) -> String {
             limit 5
         )
         ",
-        index, score_clause
+        index, score_clause,
     )
 }

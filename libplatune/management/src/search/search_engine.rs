@@ -1,7 +1,7 @@
 use std::{collections::HashMap, str::FromStr};
 
 use super::{
-    queries::{clean_query, correct_search, get_search_query, replace_ampersand},
+    queries::{clean_query, combine_spellfix_results, get_search_query, replace_ampersand},
     search_options::SearchOptions,
     search_result::SearchResult,
 };
@@ -129,9 +129,11 @@ impl SearchEngine {
             )
             .await;
 
+        // Already generated enough results, don't need to attempt spellfix
         if search_entries.len() == options.limit as usize {
             return self.convert_entries(search_entries);
         }
+
         let re = Regex::new(r"\s+").unwrap();
         let terms = re.split(&query).collect_vec();
         let spellfix_query = get_full_spellfix_query(&terms);
@@ -144,15 +146,15 @@ impl SearchEngine {
             .iter()
             .map(|s| (s.word.to_owned(), s.score))
             .collect::<HashMap<_, _>>();
-        let corrected_search = correct_search(spellfix_results);
+        let combined_results = combine_spellfix_results(spellfix_results);
 
-        if corrected_search.is_empty() {
+        if combined_results.is_empty() {
             return vec![];
         }
 
         let rest = self
             .run_search(
-                &corrected_search,
+                &combined_results,
                 original_query,
                 weights.clone(),
                 &options,
