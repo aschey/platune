@@ -3,7 +3,6 @@ use crate::rpc::*;
 use std::pin::Pin;
 
 use libplatune_player::platune_player::*;
-use tokio::sync::broadcast;
 use tonic::{Request, Response, Status};
 
 pub struct PlayerImpl {

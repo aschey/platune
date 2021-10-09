@@ -2,7 +2,7 @@ mod management;
 mod player;
 use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
-use flexi_logger::{style, DeferredNow, FileSpec, Logger, Record};
+use flexi_logger::{style, DeferredNow, Logger, Record};
 use management::ManagementImpl;
 use player::PlayerImpl;
 use rpc::*;

@@ -55,7 +55,7 @@ impl SearchEngine {
                         &artist,
                         &query,
                         SearchOptions {
-                            restrict_entry_type: vec!["artist", "album_artist"],
+                            valid_entry_types: vec!["artist", "album_artist"],
                             ..Default::default()
                         },
                         vec![],
@@ -191,7 +191,7 @@ impl SearchEngine {
         artist_filter: &Vec<String>,
         con: &mut PoolConnection<Sqlite>,
     ) -> Vec<SearchEntry> {
-        let full_query = get_search_query(artist_filter, &options.restrict_entry_type);
+        let full_query = get_search_query(artist_filter, &options.valid_entry_types);
 
         let mut sql_query = sqlx::query(&full_query)
             .bind(options.start_highlight)
@@ -203,7 +203,7 @@ impl SearchEngine {
         for artist in artist_filter {
             sql_query = sql_query.bind(artist.to_owned());
         }
-        for entry_type in &options.restrict_entry_type {
+        for entry_type in &options.valid_entry_types {
             sql_query = sql_query.bind(entry_type.to_owned());
         }
         let res = sql_query

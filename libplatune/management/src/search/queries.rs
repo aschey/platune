@@ -7,32 +7,32 @@ pub(crate) const END_MATCH_TEXT: &str = "{endmatch}";
 
 pub(crate) fn get_search_query(
     artist_filter: &Vec<String>,
-    restrict_entry_type: &Vec<&str>,
+    allowed_entry_types: &Vec<&str>,
 ) -> String {
-    let artist_select = "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
-
-    let mut artist_filter_clause = "".to_owned();
     let num_base_args = 5;
-    let mut num_extra_args = 0;
-    if artist_filter.len() > 0 {
-        let start = num_base_args + num_extra_args + 1;
-        let artist_list = (start..start + artist_filter.len())
-            .map(|i| "$".to_owned() + &i.to_string())
-            .collect_vec()
-            .join(",");
-        artist_filter_clause = format!("WHERE {} in ({})", artist_select, artist_list);
-        num_extra_args += artist_filter.len();
-    }
-    let mut type_filter = "".to_owned();
-    if !restrict_entry_type.is_empty() {
-        let start = num_base_args + num_extra_args + 1;
-        let in_list = (start..start + restrict_entry_type.len())
-            .map(|i| "$".to_owned() + &i.to_string())
-            .collect_vec()
-            .join(",");
+    let num_artists = artist_filter.len();
+    let artist_select =
+        "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
 
-        type_filter = format!("AND entry_type in ({})", &in_list);
-    }
+    let artist_filter_clause = if artist_filter.is_empty() {
+        "".to_owned()
+    } else {
+        //  WHERE clause with parameterized bindings for each artist in the list
+        let start = num_base_args + 1;
+        let artist_list = generate_parameterized_bindings(start, num_artists);
+
+        format!("WHERE {} in ({})", artist_select, artist_list)
+    };
+
+    let type_filter = if allowed_entry_types.is_empty() {
+        "".to_owned()
+    } else {
+        // AND clause for the search_index search if allowed_entry_types was supplied
+        let start = num_base_args + num_artists + 1;
+        let in_list = generate_parameterized_bindings(start, allowed_entry_types.len());
+
+        format!("AND entry_type in ({})", &in_list)
+    };
 
     let full_query = format!("
     WITH CTE AS (
@@ -121,6 +121,15 @@ fn replace_special_chars(query: &str) -> String {
     // Replace all special characters with whitespace because they cause sqlite to error
     let special_chars = Regex::new(r"[^A-Za-z0-9&\*\s]").unwrap();
     return special_chars.replace_all(query, " ").trim().to_owned();
+}
+
+fn generate_parameterized_bindings(start: usize, count: usize) -> String {
+    let binding_list = (start..start + count)
+        .map(|i| "$".to_owned() + &i.to_string())
+        .collect_vec()
+        .join(",");
+
+    binding_list
 }
 
 fn get_spellfix_query(index: usize) -> String {

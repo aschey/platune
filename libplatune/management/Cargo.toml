@@ -8,10 +8,6 @@ version = "0.1.0"
 name = "libplatune_management"
 path = "src/lib.rs"
 
-[[bin]]
-name = "main"
-path = "src/main.rs"
-
 [[bench]]
 harness = false
 name = "bench"
