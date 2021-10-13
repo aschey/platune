@@ -22,7 +22,6 @@ pub mod rpc {
 #[cfg(windows)]
 mod service {
     use std::{
-        env,
         ffi::{OsStr, OsString},
         time::Duration,
     };
