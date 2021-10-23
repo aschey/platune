@@ -1,3 +1,2 @@
 [workspace]
 members = ["platuned/server", "platuned/client/rust", "libplatune/player", "libplatune/management", "platune-tui"]
-resolver = "2"

@@ -1,6 +1,6 @@
 [package]
 authors = ["Austin Schey <aschey13@gmail.com>"]
-edition = "2018"
+edition = "2021"
 name = "libplatune-management"
 version = "0.1.0"
 
