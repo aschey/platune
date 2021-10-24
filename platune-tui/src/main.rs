@@ -1,9 +1,7 @@
 use argh::FromArgs;
 use crossterm::{
-    cursor,
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode, KeyEvent},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event as CEvent, KeyCode},
     execute,
-    style::Print,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::{
@@ -15,10 +13,10 @@ use std::{
 };
 use tui::{
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Corner, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans},
-    widgets::{Block, BorderType, Borders, Gauge, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Gauge, List, ListItem},
     Terminal,
 };
 
