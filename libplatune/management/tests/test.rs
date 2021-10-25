@@ -1,7 +1,11 @@
 use libplatune_management::{config::Config, database::Database, manager::Manager};
 use rstest::*;
-use std::fs::{self, create_dir, create_dir_all};
+use std::{
+    fs::{self, create_dir, create_dir_all},
+    time::Duration,
+};
 use tempfile::TempDir;
+use tokio::time::timeout;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_empty() {
@@ -16,7 +20,7 @@ pub async fn test_sync_empty() {
         msgs.push(msg);
     }
 
-    db.close().await;
+    timeout(Duration::from_secs(5), db.close()).await.unwrap();
     tempdir.close().unwrap();
 
     assert_eq!(vec![1.], msgs);
@@ -33,7 +37,7 @@ pub async fn test_sync_no_folder() {
         msgs.push(msg);
     }
 
-    db.close().await;
+    timeout(Duration::from_secs(5), db.close()).await.unwrap();
     tempdir.close().unwrap();
 
     assert_eq!(Vec::<f32>::new(), msgs);
@@ -71,7 +75,7 @@ pub async fn test_sync_basic() {
         msgs.push(msg);
     }
 
-    db.close().await;
+    timeout(Duration::from_secs(5), db.close()).await.unwrap();
     tempdir.close().unwrap();
 
     assert_eq!(vec![0., 1.], msgs);
@@ -599,7 +603,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         // }
     }
 
-    db.close().await;
+    timeout(Duration::from_secs(5), db.close()).await.unwrap();
     tempdir.close().unwrap();
 }
 

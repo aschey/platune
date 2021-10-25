@@ -158,8 +158,11 @@ impl Manager {
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use crate::{config::Config, database::Database};
     use tempfile::TempDir;
+    use tokio::time::timeout;
 
     use super::Manager;
 
@@ -175,7 +178,7 @@ mod tests {
         config.add_folder(r"test2\\").await;
         let folders = config.get_all_folders().await;
 
-        db.close().await;
+        timeout(Duration::from_secs(5), db.close()).await.unwrap();
         tempdir.close().unwrap();
 
         assert_eq!(vec![r"test1\", r"test2\"], folders);
@@ -195,7 +198,7 @@ mod tests {
         manager.register_drive(r"D:\").await.unwrap();
         let folders2 = manager.get_all_folders().await;
 
-        db.close().await;
+        timeout(Duration::from_secs(5), db.close()).await.unwrap();
         tempdir.close().unwrap();
 
         assert_eq!(vec![r"C:\test\"], folders1);
@@ -216,7 +219,7 @@ mod tests {
         manager.register_drive(r"D:\").await.unwrap();
         let folders2 = manager.get_all_folders().await;
 
-        db.close().await;
+        timeout(Duration::from_secs(5), db.close()).await.unwrap();
         tempdir.close().unwrap();
 
         assert_eq!(vec![r"C:\test\"], folders1);
@@ -242,7 +245,7 @@ mod tests {
         manager2.register_drive(r"D:\").await.unwrap();
         let folders2 = manager2.get_all_folders().await;
 
-        db.close().await;
+        timeout(Duration::from_secs(5), db.close()).await.unwrap();
         tempdir.close().unwrap();
 
         assert_eq!(vec![r"C:\test\"], folders1);
@@ -278,8 +281,8 @@ mod tests {
 
         let folders = manager2.get_all_folders().await;
 
-        db.close().await;
-        db2.close().await;
+        timeout(Duration::from_secs(5), db.close()).await.unwrap();
+        timeout(Duration::from_secs(5), db2.close()).await.unwrap();
         tempdir.close().unwrap();
         tempdir2.close().unwrap();
 
@@ -295,7 +298,7 @@ mod tests {
 
         let res = manager.register_drive(r"/some/invalid/path").await;
 
-        db.close().await;
+        timeout(Duration::from_secs(5), db.close()).await.unwrap();
         tempdir.close().unwrap();
 
         assert!(res.is_err());
