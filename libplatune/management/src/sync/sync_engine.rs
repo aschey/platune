@@ -143,34 +143,37 @@ impl SyncEngine {
             dal.get_missing_songs().await;
 
             dal.sync_spellfix().await;
-
-            let long_vals = dal.get_long_entries().await;
-
-            let re = Regex::new(r"[\s-]+").unwrap();
-            for entry_value in long_vals {
-                let words = re.split(&entry_value).collect_vec();
-                if words.len() < MIN_WORDS {
-                    continue;
-                }
-                let acronym = words
-                    .into_iter()
-                    .map(|w| {
-                        if w == "and" {
-                            "&".to_owned()
-                        } else {
-                            w.chars().next().unwrap().to_string().to_lowercase()
-                        }
-                    })
-                    .collect_vec()
-                    .join("");
-
-                dal.insert_alias(&entry_value, &acronym).await;
-            }
+            SyncEngine::add_search_aliases(&mut dal).await;
 
             info!("committing");
             dal.commit().await;
             info!("done");
         })
+    }
+
+    async fn add_search_aliases(dal: &mut SyncDAL<'_>) {
+        let long_vals = dal.get_long_entries().await;
+
+        let re = Regex::new(r"[\s-]+").unwrap();
+        for entry_value in long_vals {
+            let words = re.split(&entry_value).collect_vec();
+            if words.len() < MIN_WORDS {
+                continue;
+            }
+            let acronym = words
+                .into_iter()
+                .map(|w| {
+                    if w == "and" {
+                        "&".to_owned()
+                    } else {
+                        w.chars().next().unwrap().to_string().to_lowercase()
+                    }
+                })
+                .collect_vec()
+                .join("");
+
+            dal.insert_alias(&entry_value, &acronym).await;
+        }
     }
 
     fn spawn_task(&self, tags_tx: Sender<Option<(Track, String)>>) -> JoinHandle<()> {
@@ -182,47 +185,8 @@ impl SyncEngine {
             while let Ok(path) = dispatch_rx.recv().await {
                 match path {
                     Some(path) => {
-                        for dir_result in path.read_dir().unwrap() {
-                            let dir = dir_result.unwrap();
-
-                            if dir.file_type().unwrap().is_file() {
-                                let file_path = dir.path();
-                                let name = file_path.extension().unwrap_or_default();
-                                let _size = file_path.metadata().unwrap().len();
-                                let mut song_metadata: Option<Track> = None;
-                                match &name.to_str().unwrap_or_default().to_lowercase()[..] {
-                                    "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
-                                        let tag_result = Track::from_path(&file_path, None);
-                                        match tag_result {
-                                            Err(e) => {
-                                                println!("{:?}", e);
-                                            }
-                                            Ok(tag) => {
-                                                song_metadata = Some(tag);
-                                            }
-                                        }
-                                    }
-
-                                    _ => {}
-                                }
-                                if let Some(metadata) = song_metadata {
-                                    let mut file_path_str = file_path.to_str().unwrap().to_owned();
-                                    if cfg!(windows) {
-                                        file_path_str = file_path_str.replace(r"\", r"/");
-                                    }
-                                    if let Some(ref mount) = mount {
-                                        if file_path_str.starts_with(&mount[..]) {
-                                            file_path_str = file_path_str.replace(&mount[..], "");
-                                        }
-                                    }
-                                    tags_tx.send(Some((metadata, file_path_str))).await.unwrap();
-                                }
-                            } else {
-                                dispatch_tx.send(Some(dir.path())).await.unwrap();
-                                finished_tx.send(DirRead::Found).await.unwrap();
-                            }
-                        }
-                        finished_tx.send(DirRead::Completed).await.unwrap();
+                        SyncEngine::parse_dir(path, &mount, &tags_tx, &dispatch_tx, &finished_tx)
+                            .await;
                     }
                     None => {
                         break;
@@ -230,5 +194,68 @@ impl SyncEngine {
                 }
             }
         })
+    }
+
+    async fn parse_dir(
+        path: PathBuf,
+        mount: &Option<String>,
+        tags_tx: &Sender<Option<(Track, String)>>,
+        dispatch_tx: &async_channel::Sender<Option<PathBuf>>,
+        finished_tx: &Sender<DirRead>,
+    ) {
+        for dir_result in path.read_dir().unwrap() {
+            let dir = dir_result.unwrap();
+
+            if dir.file_type().unwrap().is_file() {
+                let file_path = dir.path();
+
+                if let Some(metadata) = SyncEngine::parse_metadata(&file_path) {
+                    let file_path_str = SyncEngine::clean_file_path(&file_path, &mount);
+                    tags_tx.send(Some((metadata, file_path_str))).await.unwrap();
+                }
+            } else {
+                dispatch_tx.send(Some(dir.path())).await.unwrap();
+                finished_tx.send(DirRead::Found).await.unwrap();
+            }
+        }
+        finished_tx.send(DirRead::Completed).await.unwrap();
+    }
+
+    fn parse_metadata(file_path: &PathBuf) -> Option<Track> {
+        let name = file_path.extension().unwrap_or_default();
+        let _size = file_path.metadata().unwrap().len();
+        let mut song_metadata: Option<Track> = None;
+        match &name.to_str().unwrap_or_default().to_lowercase()[..] {
+            "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
+                let tag_result = Track::from_path(&file_path, None);
+                match tag_result {
+                    Err(e) => {
+                        println!("{:?}", e);
+                    }
+                    Ok(tag) => {
+                        song_metadata = Some(tag);
+                    }
+                }
+            }
+
+            _ => {}
+        }
+
+        song_metadata
+    }
+
+    fn clean_file_path(file_path: &PathBuf, mount: &Option<String>) -> String {
+        let mut file_path_str = file_path.to_str().unwrap().to_owned();
+        if cfg!(windows) {
+            file_path_str = file_path_str.replace(r"\", r"/");
+        }
+
+        if let Some(ref mount) = mount {
+            if file_path_str.starts_with(&mount[..]) {
+                file_path_str = file_path_str.replace(&mount[..], "");
+            }
+        }
+
+        file_path_str
     }
 }
