@@ -8,7 +8,7 @@ version = "0.1.0"
 
 [dependencies]
 argh = "0.1.6"
-crossterm = "0.21.0"
+crossterm = "0.22.1"
 tui = {version = "0.16.0", features = ["crossterm"], default-features = false}
 
 [target.'cfg(windows)'.dependencies]
