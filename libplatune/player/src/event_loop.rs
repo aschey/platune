@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Receiver, Sender, SyncSender};
 
-use log::info;
 use tokio::sync::broadcast;
+use tracing::info;
 
 use crate::{
     enums::{Command, PlayerEvent},

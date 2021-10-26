@@ -2,14 +2,15 @@ mod management;
 mod player;
 use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
-use flexi_logger::{style, DeferredNow, Logger, Record};
 use management::ManagementImpl;
 use player::PlayerImpl;
 use rpc::*;
-
 use tokio::sync::mpsc::Receiver;
 use tonic::transport::Server;
-use yansi::{Color, Style};
+use tracing::info;
+use tracing_subscriber::fmt::time::LocalTime;
+use tracing_subscriber::fmt::Layer;
+use tracing_subscriber::layer::SubscriberExt;
 
 pub mod rpc {
     tonic::include_proto!("player_rpc");
@@ -146,14 +147,31 @@ mod service {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    Logger::try_with_str("info")
-        .unwrap()
-        .format_for_stdout(colored)
-        .log_to_stdout()
-        .set_palette("196;190;-;-;-".to_owned())
-        .start()
-        .unwrap();
+    let proj_dirs = directories::ProjectDirs::from("", "", "platune").unwrap();
+    let file_appender = tracing_appender::rolling::hourly(proj_dirs.cache_dir(), "platuned.log");
+    let (non_blocking_stdout, _stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
+    let (non_blocking_file, _file_guard) = tracing_appender::non_blocking(file_appender);
 
+    let collector = tracing_subscriber::registry()
+        .with(
+            Layer::new()
+                .with_timer(LocalTime::rfc_3339())
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .with_ansi(false)
+                .with_writer(non_blocking_file),
+        )
+        .with(
+            Layer::new()
+                .pretty()
+                .with_timer(LocalTime::rfc_3339())
+                .with_thread_ids(true)
+                .with_thread_names(true)
+                .with_writer(non_blocking_stdout),
+        );
+    tracing::subscriber::set_global_default(collector).expect("Unable to set a global collector");
+
+    info!("starting");
     os_main().await;
 
     Ok(())
@@ -207,22 +225,4 @@ async fn os_main() {
     }
     dotenv::from_path("./.env").unwrap();
     run_server(None).await;
-}
-
-pub fn colored(
-    w: &mut dyn std::io::Write,
-    now: &mut DeferredNow,
-    record: &Record,
-) -> core::result::Result<(), std::io::Error> {
-    let level = record.level();
-    write!(
-        w,
-        "[{} {}] {} [{}:{}] {}",
-        Style::new(Color::Cyan).paint(now.now().format("%Y-%m-%d %H:%M:%S%.6f")),
-        Style::new(Color::RGB(119, 102, 204)).paint(now.now().timestamp_nanos() as f64 / 1e9),
-        style(level).paint(format!("{}", level)),
-        Style::new(Color::Green).paint(record.file().unwrap_or_else(|| "<unnamed>")),
-        Style::new(Color::Green).paint(record.line().unwrap_or_else(|| 0)),
-        style(level).paint(format!("{}", record.args()))
-    )
 }

@@ -1,13 +1,11 @@
 use async_trait::async_trait;
 
-use flexi_logger::{style, DeferredNow, Logger, Record};
 use futures::Future;
 
 use rstest::*;
 use std::{env::current_dir, time::Duration};
 use tokio::sync::broadcast;
 use tokio::time::{error::Elapsed, timeout};
-use yansi::{Color, Style};
 
 use assert_matches::*;
 use libplatune_player::platune_player::PlatunePlayer;
@@ -43,33 +41,14 @@ impl SongVec for Vec<SongInfo> {
     }
 }
 
-fn colored(
-    w: &mut dyn std::io::Write,
-    now: &mut DeferredNow,
-    record: &Record,
-) -> core::result::Result<(), std::io::Error> {
-    let level = record.level();
-    write!(
-        w,
-        "[{} {}] {} [{}:{}] {}",
-        Style::new(Color::Cyan).paint(now.now().format("%Y-%m-%d %H:%M:%S%.6f")),
-        Style::new(Color::RGB(119, 102, 204)).paint(now.now().timestamp_nanos() as f64 / 1e9),
-        style(level).paint(format!("{}", level)),
-        Style::new(Color::Green).paint(record.file().unwrap_or_else(|| "<unnamed>")),
-        Style::new(Color::Green).paint(record.line().unwrap_or_else(|| 0)),
-        style(level).paint(format!("{}", record.args()))
-    )
-}
-
 #[ctor::ctor]
 fn init() {
-    Logger::try_with_str("info")
-        .unwrap()
-        .format_for_stdout(colored)
-        .log_to_stdout()
-        .set_palette("196;190;-;-;-".to_owned())
-        .start()
-        .unwrap();
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_thread_ids(true)
+        .with_thread_names(true)
+        .with_test_writer()
+        .init();
 }
 
 fn get_path(song: &str) -> String {

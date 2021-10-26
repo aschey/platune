@@ -7,6 +7,7 @@ use crate::sync::sync_controller::SyncController;
 use log::LevelFilter;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::{path::Path, time::Duration};
+use tracing::info;
 
 #[derive(Clone)]
 pub struct Database {
@@ -47,9 +48,9 @@ impl Database {
     pub async fn migrate(&self) {
         let mut con = acquire_with_spellfix(&self.pool).await;
 
+        info!("migrating");
         sqlx::migrate!("./migrations").run(&mut con).await.unwrap();
-
-        println!("done");
+        info!("done");
     }
 
     pub async fn close(&self) {

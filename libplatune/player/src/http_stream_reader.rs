@@ -10,7 +10,7 @@ use std::{
 use tempfile::{Builder, NamedTempFile};
 
 use futures_util::StreamExt;
-use log::info;
+use tracing::info;
 
 pub(crate) struct HttpStreamReader {
     output_reader: BufReader<NamedTempFile>,

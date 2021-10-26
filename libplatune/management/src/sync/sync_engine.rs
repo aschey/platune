@@ -2,7 +2,7 @@ use std::{path::PathBuf, time::Duration};
 
 use itertools::Itertools;
 use katatsuki::Track;
-use log::info;
+use tracing::info;
 use regex::Regex;
 use sqlx::{Pool, Sqlite};
 use tokio::{

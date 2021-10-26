@@ -5,9 +5,9 @@ use std::{
     time::Duration,
 };
 
-use log::info;
 use rodio::{Decoder, OutputStreamHandle, Sink as RodioSink};
 use tokio::sync::broadcast;
+use tracing::info;
 
 use crate::enums::PlayerEvent;
 #[cfg(feature = "runtime-tokio")]
