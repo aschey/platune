@@ -1,5 +1,6 @@
 use sled::IVec;
 use std::path::Path;
+use thiserror::Error;
 
 static CONFIG_NAMESPACE: &str = "platune-server";
 static DRIVE_ID: &str = "drive-id";
@@ -8,12 +9,18 @@ static DRIVE_ID: &str = "drive-id";
 pub struct Config {
     sled_db: sled::Db,
 }
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("Unable to locate a valid home directory")]
+    NoHomeDir,
+}
 
 impl Config {
-    pub fn new() -> Self {
-        let proj_dirs = directories::ProjectDirs::from("", "", "platune").unwrap();
+    pub fn try_new() -> Result<Self, ConfigError> {
+        let proj_dirs =
+            directories::ProjectDirs::from("", "", "platune").ok_or(ConfigError::NoHomeDir)?;
         let config_dir = proj_dirs.config_dir();
-        Config::new_from_path(config_dir)
+        Ok(Config::new_from_path(config_dir))
     }
 
     pub fn new_from_path<P: AsRef<Path>>(config_dir: P) -> Self {

@@ -1,5 +1,6 @@
 use crate::management_server::Management;
 use crate::rpc::*;
+use anyhow::Result;
 use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
@@ -16,13 +17,13 @@ pub struct ManagementImpl {
 }
 
 impl ManagementImpl {
-    pub async fn new() -> ManagementImpl {
+    pub async fn try_new() -> Result<ManagementImpl> {
         let path = std::env::var("DATABASE_URL").unwrap();
         let db = Database::connect(path, true).await;
         db.migrate().await;
-        let config = Config::new();
+        let config = Config::try_new()?;
         let manager = Manager::new(&db, &config);
-        ManagementImpl { manager }
+        Ok(ManagementImpl { manager })
     }
 }
 

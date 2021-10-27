@@ -1,12 +1,17 @@
 mod management;
 mod player;
+use std::panic;
+
 use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
+use anyhow::Context;
+use anyhow::Result;
 use management::ManagementImpl;
 use player::PlayerImpl;
 use rpc::*;
 use tokio::sync::mpsc::Receiver;
 use tonic::transport::Server;
+use tracing::error;
 use tracing::info;
 use tracing_subscriber::fmt::time::LocalTime;
 use tracing_subscriber::fmt::Layer;
@@ -22,11 +27,13 @@ pub mod rpc {
 
 #[cfg(windows)]
 mod service {
+    use anyhow::{Context, Result};
     use std::{
         ffi::{OsStr, OsString},
         time::Duration,
     };
     use tokio::runtime::Runtime;
+    use tracing::error;
     use windows_service::{
         service::{
             ServiceAccess, ServiceControl, ServiceControlAccept, ServiceErrorControl,
@@ -44,26 +51,29 @@ mod service {
     const SERVICE_NAME: &str = "platuned";
     const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
-    pub fn run() {
-        service_dispatcher::start(SERVICE_NAME, service_main).unwrap();
+    pub fn run() -> Result<()> {
+        Ok(service_dispatcher::start(SERVICE_NAME, service_main)
+            .with_context(|| "Error starting service")?)
     }
 
-    pub fn install() {
+    pub fn install() -> Result<()> {
         let manager_access = ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE;
-        let service_manager = ServiceManager::local_computer(None::<&str>, manager_access).unwrap();
+        let service_manager = ServiceManager::local_computer(None::<&str>, manager_access)
+            .with_context(|| "Error connecting to service database")?;
         let service_access =
             ServiceAccess::QUERY_STATUS | ServiceAccess::STOP | ServiceAccess::DELETE;
         if let Ok(service) = service_manager.open_service(SERVICE_NAME, service_access) {
-            if service.query_status().unwrap().current_state == ServiceState::Running {
-                service.stop().unwrap();
+            let status = service
+                .query_status()
+                .with_context(|| "Error querying service status")?;
+            if status.current_state == ServiceState::Running {
+                service.stop().with_context(|| "Error stopping service")?;
             }
-            service.delete().unwrap();
+            service.delete().with_context(|| "Error deleting service")?;
         }
 
-        // This example installs the service defined in `examples/ping_service.rs`.
-        // In the real world code you would set the executable path to point to your own binary
-        // that implements windows service.
-        let service_binary_path = ::std::env::current_exe().unwrap();
+        let service_binary_path =
+            ::std::env::current_exe().with_context(|| "Error getting current exe path")?;
 
         let service_info = ServiceInfo {
             name: OsString::from(SERVICE_NAME),
@@ -77,14 +87,18 @@ mod service {
             account_name: None, // run as System
             account_password: None,
         };
-        let service = service_manager
-            .create_service(
-                &service_info,
-                ServiceAccess::CHANGE_CONFIG | ServiceAccess::START,
-            )
-            .unwrap();
-        service.set_description("platune service").unwrap();
-        service.start(&[OsStr::new("Started")]).unwrap();
+        let service = service_manager.create_service(
+            &service_info,
+            ServiceAccess::CHANGE_CONFIG | ServiceAccess::START,
+        )?;
+        service
+            .set_description("platune service")
+            .with_context(|| "Unable to set service description")?;
+        service
+            .start(&[OsStr::new("Started")])
+            .with_context(|| "Unable to start service")?;
+
+        Ok(())
     }
 
     pub fn handle_service_main(_arguments: Vec<OsString>) {
@@ -99,7 +113,9 @@ mod service {
 
                 // Handle stop
                 ServiceControl::Stop => {
-                    event_tx.try_send(()).unwrap();
+                    if let Err(e) = event_tx.try_send(()) {
+                        error!("Error sending stop signal {:?}", e);
+                    }
                     ServiceControlHandlerResult::NoError
                 }
 
@@ -109,45 +125,70 @@ mod service {
 
         // Register system service event handler.
         // The returned status handle should be used to report service status changes to the system.
-        let status_handle = service_control_handler::register(SERVICE_NAME, event_handler).unwrap();
+        let status_handle = match service_control_handler::register(SERVICE_NAME, event_handler) {
+            Ok(handle) => handle,
+            Err(e) => {
+                error!("Error registering service control handler {:?}", e);
+                return;
+            }
+        };
+
+        let rt = match Runtime::new() {
+            Ok(rt) => rt,
+            Err(e) => {
+                error!("Error starting tokio runtime {:?}", e);
+                return;
+            }
+        };
 
         // Tell the system that service is running
-        status_handle
-            .set_service_status(ServiceStatus {
-                service_type: SERVICE_TYPE,
-                current_state: ServiceState::Running,
-                controls_accepted: ServiceControlAccept::STOP,
-                exit_code: ServiceExitCode::Win32(0),
-                checkpoint: 0,
-                wait_hint: Duration::default(),
-                process_id: None,
-            })
-            .unwrap();
+        if let Err(e) = status_handle.set_service_status(ServiceStatus {
+            service_type: SERVICE_TYPE,
+            current_state: ServiceState::Running,
+            controls_accepted: ServiceControlAccept::STOP,
+            exit_code: ServiceExitCode::Win32(0),
+            checkpoint: 0,
+            wait_hint: Duration::default(),
+            process_id: None,
+        }) {
+            error!("Error changing service status to 'running' {:?}", e);
+            return;
+        }
 
-        let rt = Runtime::new().unwrap();
-
-        rt.block_on(async {
-            run_server(Some(event_rx)).await;
-        });
+        let exit_code = match rt.block_on(async { run_server(Some(event_rx)).await }) {
+            Ok(()) => 0,
+            Err(e) => {
+                error!("Error running server {:?}", e);
+                1
+            }
+        };
 
         // Tell the system that service has stopped.
-        status_handle
-            .set_service_status(ServiceStatus {
-                service_type: SERVICE_TYPE,
-                current_state: ServiceState::Stopped,
-                controls_accepted: ServiceControlAccept::empty(),
-                exit_code: ServiceExitCode::Win32(0),
-                checkpoint: 0,
-                wait_hint: Duration::default(),
-                process_id: None,
-            })
-            .unwrap();
+        if let Err(e) = status_handle.set_service_status(ServiceStatus {
+            service_type: SERVICE_TYPE,
+            current_state: ServiceState::Stopped,
+            controls_accepted: ServiceControlAccept::empty(),
+            exit_code: ServiceExitCode::Win32(exit_code),
+            checkpoint: 0,
+            wait_hint: Duration::default(),
+            process_id: None,
+        }) {
+            error!("Unable to stop service {:?}", e);
+        }
     }
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let proj_dirs = directories::ProjectDirs::from("", "", "platune").unwrap();
+async fn main() {
+    panic::set_hook(Box::new(|panic_info| {
+        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            error!("panic occurred: {:?}", s);
+        } else {
+            error!("panic occurred");
+        }
+    }));
+    let proj_dirs = directories::ProjectDirs::from("", "", "platune")
+        .expect("Unable to find a valid home directory");
     let file_appender = tracing_appender::rolling::hourly(proj_dirs.cache_dir(), "platuned.log");
     let (non_blocking_stdout, _stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
     let (non_blocking_file, _file_guard) = tracing_appender::non_blocking(file_appender);
@@ -169,60 +210,68 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .with_thread_names(true)
                 .with_writer(non_blocking_stdout),
         );
-    tracing::subscriber::set_global_default(collector).expect("Unable to set a global collector");
+    tracing::subscriber::set_global_default(collector)
+        .expect("Unable to set global tracing subscriber");
 
     info!("starting");
-    os_main().await;
-
-    Ok(())
+    if let Err(e) = os_main().await {
+        error!("{:?}", e);
+        std::process::exit(1);
+    }
 }
 
-async fn run_server(rx: Option<Receiver<()>>) {
+async fn run_server(rx: Option<Receiver<()>>) -> Result<()> {
     let service = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
         .build()
-        .unwrap();
+        .with_context(|| "Error building tonic server")?;
+
     let addr = "0.0.0.0:50051".parse().unwrap();
 
     let player = PlayerImpl::new();
-    let management = ManagementImpl::new().await;
+    let management = ManagementImpl::try_new().await?;
     let builder = Server::builder()
         .add_service(service)
         .add_service(PlayerServer::new(player))
         .add_service(ManagementServer::new(management));
     match rx {
-        Some(mut rx) => builder
+        Some(mut rx) => Ok(builder
             .serve_with_shutdown(addr, async { rx.recv().await.unwrap_or_default() })
             .await
-            .unwrap(),
-        None => builder.serve(addr).await.unwrap(),
+            .with_context(|| "Error running server")?),
+
+        None => Ok(builder
+            .serve(addr)
+            .await
+            .with_context(|| "Error running server")?),
     }
 }
 
 #[cfg(windows)]
-async fn os_main() {
+async fn os_main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() > 1 && args[1] == "-i" {
-        service::install();
-        return;
+        service::install()?;
+    } else if args.len() > 1 && args[1] == "-s" {
+        dotenv::from_path(r"C:\Users\asche\code\platune\platuned\server\.env").unwrap();
+        service::run()?;
+    } else {
+        dotenv::from_path("./.env").unwrap();
+        run_server(None).await?;
     }
 
-    if args.len() > 1 && args[1] == "-s" {
-        dotenv::from_path(r"C:\Users\asche\code\platune\platuned\server\.env").unwrap();
-        service::run();
-        return;
-    }
-    dotenv::from_path("./.env").unwrap();
-    run_server(None).await;
+    Ok(())
 }
 
 #[cfg(not(windows))]
-async fn os_main() {
+async fn os_main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() > 1 && args[1] == "-s" {
         run_server(None).await;
-        return;
+    } else {
+        dotenv::from_path("./.env").unwrap();
+        run_server(None).await;
     }
-    dotenv::from_path("./.env").unwrap();
-    run_server(None).await;
+
+    Ok(())
 }

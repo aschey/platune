@@ -2022,6 +2022,7 @@ dependencies = [
 name = "platuned"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "directories",
  "dotenv",
  "futures",
