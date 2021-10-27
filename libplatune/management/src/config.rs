@@ -1,18 +1,27 @@
-use sled::IVec;
-use std::path::Path;
+use anyhow::{Context, Result};
+use std::{
+    fs::{self, File},
+    io::{Error, Read, Write},
+    path::Path,
+};
 use thiserror::Error;
 
-static CONFIG_NAMESPACE: &str = "platune-server";
-static DRIVE_ID: &str = "drive-id";
+static CONFIG_FILE: &str = "drive_id";
 
 #[derive(Clone)]
 pub struct Config {
-    sled_db: sled::Db,
+    config_path: String,
 }
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("Unable to locate a valid home directory")]
     NoHomeDir,
+    #[error("Failed to create file {0}: {1}")]
+    FileCreationFailed(String, Error),
+    #[error("{0} is not a file")]
+    NotAFile(String),
+    #[error("{0} contains invalid unicode")]
+    InvalidUnicode(String),
 }
 
 impl Config {
@@ -20,41 +29,49 @@ impl Config {
         let proj_dirs =
             directories::ProjectDirs::from("", "", "platune").ok_or(ConfigError::NoHomeDir)?;
         let config_dir = proj_dirs.config_dir();
-        Ok(Config::new_from_path(config_dir))
+        Config::new_from_path(config_dir.join(CONFIG_FILE))
     }
 
-    pub fn new_from_path<P: AsRef<Path>>(config_dir: P) -> Self {
-        let sled_db = sled::open(config_dir).unwrap();
-
-        Self { sled_db }
-    }
-
-    pub fn set<K: AsRef<[u8]>, N: AsRef<[u8]>, V: Into<IVec>>(
-        &self,
-        namespace: N,
-        key: K,
-        value: V,
-    ) {
-        self.sled_db
-            .open_tree(namespace)
-            .unwrap()
-            .insert(key, value)
-            .unwrap();
-    }
-
-    pub fn get<K: AsRef<[u8]>, N: AsRef<[u8]>>(&self, namespace: N, key: K) -> Option<String> {
-        let val = self.sled_db.open_tree(namespace).unwrap().get(key).unwrap();
-        match val {
-            None => None,
-            Some(val) => Some(std::str::from_utf8(&val).unwrap().to_owned()),
+    pub fn new_from_path<P: AsRef<Path>>(config_path: P) -> Result<Self, ConfigError> {
+        let config_path_ref = config_path.as_ref();
+        let config_string = config_path_ref.to_string_lossy().to_string();
+        if config_path_ref.to_str().is_none() {
+            return Err(ConfigError::InvalidUnicode(config_string));
         }
+
+        if config_path_ref.is_dir() {
+            return Err(ConfigError::NotAFile(config_string));
+        }
+
+        if !config_path_ref.exists() {
+            if let Some(parent) = config_path_ref.parent() {
+                if let Err(e) = fs::create_dir_all(parent) {
+                    return Err(ConfigError::FileCreationFailed(config_string, e));
+                }
+            }
+
+            if let Err(e) = File::create(&config_path_ref) {
+                return Err(ConfigError::FileCreationFailed(config_string, e));
+            }
+        }
+        Ok(Self {
+            config_path: config_string,
+        })
     }
 
-    pub(crate) fn get_drive_id(&self) -> Option<String> {
-        self.get(CONFIG_NAMESPACE, DRIVE_ID)
+    pub(crate) fn get_drive_id(&self) -> Option<i64> {
+        let mut file = File::open(&self.config_path).ok()?;
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).ok()?;
+
+        Some(contents.parse::<i64>().ok()?)
     }
 
-    pub(crate) fn set_drive_id(&self, id: &str) {
-        self.set(CONFIG_NAMESPACE, DRIVE_ID, id);
+    pub(crate) fn set_drive_id(&self, id: i64) -> Result<()> {
+        let mut file =
+            File::create(&self.config_path).with_context(|| "Error opening file for writing")?;
+
+        Ok(write!(file, "{:?}", id)
+            .with_context(|| format!("Error writing to config file {:?}", self.config_path))?)
     }
 }

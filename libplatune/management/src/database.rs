@@ -196,7 +196,7 @@ impl Database {
             .collect()
     }
 
-    pub(crate) async fn get_mount(&self, mount_id: String) -> Option<String> {
+    pub(crate) async fn get_mount(&self, mount_id: i64) -> Option<String> {
         match sqlx::query!("select mount_path from mount where mount_id = ?", mount_id)
             .fetch_one(&self.pool)
             .await
@@ -220,7 +220,7 @@ impl Database {
         return res.mount_id;
     }
 
-    pub(crate) async fn update_mount(&self, mount_id: String, path: &str) -> u64 {
+    pub(crate) async fn update_mount(&self, mount_id: i64, path: &str) -> u64 {
         let res = sqlx::query!(
             "update mount set mount_path = ? where mount_id = ?",
             path,

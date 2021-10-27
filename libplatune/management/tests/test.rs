@@ -20,8 +20,9 @@ pub async fn test_sync_empty() {
         msgs.push(msg);
     }
 
-    timeout(Duration::from_secs(5), db.close()).await.unwrap();
-    tempdir.close().unwrap();
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
 
     assert_eq!(vec![1.], msgs);
 }
@@ -37,8 +38,9 @@ pub async fn test_sync_no_folder() {
         msgs.push(msg);
     }
 
-    timeout(Duration::from_secs(5), db.close()).await.unwrap();
-    tempdir.close().unwrap();
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
 
     assert_eq!(Vec::<f32>::new(), msgs);
 }
@@ -75,8 +77,9 @@ pub async fn test_sync_basic() {
         msgs.push(msg);
     }
 
-    timeout(Duration::from_secs(5), db.close()).await.unwrap();
-    tempdir.close().unwrap();
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
 
     assert_eq!(vec![0., 1.], msgs);
 }
@@ -603,8 +606,9 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         // }
     }
 
-    timeout(Duration::from_secs(5), db.close()).await.unwrap();
-    tempdir.close().unwrap();
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
 }
 
 async fn setup(tempdir: &TempDir) -> (Database, Manager) {
@@ -612,7 +616,7 @@ async fn setup(tempdir: &TempDir) -> (Database, Manager) {
     let config_path = tempdir.path().join("platuneconfig");
     let db = Database::connect(sql_path, true).await;
     db.migrate().await;
-    let config = Config::new_from_path(config_path);
+    let config = Config::new_from_path(config_path).unwrap();
     let manager = Manager::new(&db, &config);
     (db, manager)
 }

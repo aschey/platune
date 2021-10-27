@@ -152,7 +152,7 @@ impl Manager {
 
     async fn set_drive(&self, path: &str) {
         let id = self.db.add_mount(path).await;
-        self.config.set_drive_id(&id.to_string()[..]);
+        self.config.set_drive_id(id).unwrap();
     }
 }
 
@@ -178,8 +178,9 @@ mod tests {
         config.add_folder(r"test2\\").await;
         let folders = config.get_all_folders().await;
 
-        timeout(Duration::from_secs(5), db.close()).await.unwrap();
-        tempdir.close().unwrap();
+        timeout(Duration::from_secs(5), db.close())
+            .await
+            .unwrap_or_default();
 
         assert_eq!(vec![r"test1\", r"test2\"], folders);
     }
@@ -198,8 +199,9 @@ mod tests {
         manager.register_drive(r"D:\").await.unwrap();
         let folders2 = manager.get_all_folders().await;
 
-        timeout(Duration::from_secs(5), db.close()).await.unwrap();
-        tempdir.close().unwrap();
+        timeout(Duration::from_secs(5), db.close())
+            .await
+            .unwrap_or_default();
 
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
@@ -219,8 +221,9 @@ mod tests {
         manager.register_drive(r"D:\").await.unwrap();
         let folders2 = manager.get_all_folders().await;
 
-        timeout(Duration::from_secs(5), db.close()).await.unwrap();
-        tempdir.close().unwrap();
+        timeout(Duration::from_secs(5), db.close())
+            .await
+            .unwrap_or_default();
 
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
@@ -231,7 +234,7 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let (db, mut manager) = setup(&tempdir).await;
         let config_path2 = tempdir.path().join("platuneconfig2");
-        let config2 = Config::new_from_path(config_path2);
+        let config2 = Config::new_from_path(config_path2).unwrap();
         let mut manager2 = Manager::new(&db, &config2);
         manager.delim = r"\";
         manager.validate_paths = false;
@@ -245,8 +248,9 @@ mod tests {
         manager2.register_drive(r"D:\").await.unwrap();
         let folders2 = manager2.get_all_folders().await;
 
-        timeout(Duration::from_secs(5), db.close()).await.unwrap();
-        tempdir.close().unwrap();
+        timeout(Duration::from_secs(5), db.close())
+            .await
+            .unwrap_or_default();
 
         assert_eq!(vec![r"C:\test\"], folders1);
         assert_eq!(vec![r"D:\test\"], folders2);
@@ -259,7 +263,7 @@ mod tests {
         let config_path = tempdir.path().join("platuneconfig");
         let db = Database::connect(sql_path, true).await;
         db.migrate().await;
-        let config = Config::new_from_path(config_path.clone());
+        let config = Config::new_from_path(config_path.clone()).unwrap();
         let mut manager = Manager::new(&db, &config);
         manager.delim = r"\";
         manager.validate_paths = false;
@@ -281,10 +285,12 @@ mod tests {
 
         let folders = manager2.get_all_folders().await;
 
-        timeout(Duration::from_secs(5), db.close()).await.unwrap();
-        timeout(Duration::from_secs(5), db2.close()).await.unwrap();
-        tempdir.close().unwrap();
-        tempdir2.close().unwrap();
+        timeout(Duration::from_secs(5), db.close())
+            .await
+            .unwrap_or_default();
+        timeout(Duration::from_secs(5), db2.close())
+            .await
+            .unwrap_or_default();
 
         assert_eq!(vec![r"C:\test\"], folders);
     }
@@ -298,8 +304,9 @@ mod tests {
 
         let res = manager.register_drive(r"/some/invalid/path").await;
 
-        timeout(Duration::from_secs(5), db.close()).await.unwrap();
-        tempdir.close().unwrap();
+        timeout(Duration::from_secs(5), db.close())
+            .await
+            .unwrap_or_default();
 
         assert!(res.is_err());
     }
@@ -309,7 +316,7 @@ mod tests {
         let config_path = tempdir.path().join("platuneconfig");
         let db = Database::connect(sql_path, true).await;
         db.migrate().await;
-        let config = Config::new_from_path(config_path);
+        let config = Config::new_from_path(config_path).unwrap();
         let manager = Manager::new(&db, &config);
         (db, manager)
     }
