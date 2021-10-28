@@ -12,9 +12,13 @@ use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
 
 #[derive(Error, Debug)]
-pub enum ConfigError {
+pub enum ManagerError {
     #[error("{0} is not a valid path")]
     InvalidPath(PathBuf),
+    #[error("Error writing file: {0}")]
+    WriteError(String),
+    #[error(transparent)]
+    DbError(DbError),
 }
 
 #[derive(Clone)]
@@ -35,53 +39,64 @@ impl Manager {
         }
     }
 
-    pub async fn register_drive<P: AsRef<Path>>(&self, path: P) -> Result<(), ConfigError> {
+    pub async fn register_drive<P: AsRef<Path>>(&self, path: P) -> Result<(), ManagerError> {
         let path = path.as_ref();
         if self.validate_paths && !path.exists() {
-            return Err(ConfigError::InvalidPath(path.to_owned()));
+            return Err(ManagerError::InvalidPath(path.to_owned()));
         }
 
         let path = self.clean_path(&path.to_string_lossy().into_owned());
 
         match self.config.get_drive_id() {
             Some(drive_id) => {
-                let rows = self.db.update_mount(drive_id, &path).await;
+                let rows = self
+                    .db
+                    .update_mount(drive_id, &path)
+                    .await
+                    .map_err(ManagerError::DbError)?;
                 if rows == 0 {
-                    self.set_drive(&path).await;
+                    self.set_drive(&path).await?;
                 }
             }
             None => {
-                self.set_drive(&path).await;
+                self.set_drive(&path).await?;
             }
         };
 
-        let folders = self.db.get_all_folders().await;
+        let folders = self
+            .db
+            .get_all_folders()
+            .await
+            .map_err(ManagerError::DbError)?;
         for folder in folders {
             let new_folder = folder.replacen(&path, "", 1);
-            self.db.update_folder(folder, new_folder).await;
+            self.db
+                .update_folder(folder, new_folder)
+                .await
+                .map_err(ManagerError::DbError)?;
         }
 
         Ok(())
     }
 
-    pub async fn add_folder(&self, path: &str) {
-        self.add_folders(vec![path]).await;
+    pub async fn add_folder(&self, path: &str) -> Result<(), DbError> {
+        self.add_folders(vec![path]).await
     }
 
-    pub async fn add_folders(&self, paths: Vec<&str>) {
+    pub async fn add_folders(&self, paths: Vec<&str>) -> Result<(), DbError> {
         let new_paths = self.replace_prefix(paths).await;
-        self.db.add_folders(new_paths).await;
+        self.db.add_folders(new_paths).await
     }
 
-    pub async fn get_all_folders(&self) -> Vec<String> {
-        let folders = self.db.get_all_folders().await;
-        self.expand_paths(folders).await
+    pub async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
+        let folders = self.db.get_all_folders().await?;
+        Ok(self.expand_paths(folders).await)
     }
 
-    pub async fn sync(&self) -> Receiver<Result<f32, DbError>> {
-        let folders = self.get_all_folders().await;
+    pub async fn sync(&self) -> Result<Receiver<Result<f32, DbError>>, DbError> {
+        let folders = self.get_all_folders().await?;
         let mount = self.get_registered_mount().await;
-        self.db.sync(folders, mount).await
+        Ok(self.db.sync(folders, mount).await)
     }
 
     async fn replace_prefix(&self, paths: Vec<&str>) -> Vec<String> {
@@ -156,9 +171,16 @@ impl Manager {
         path
     }
 
-    async fn set_drive(&self, path: &str) {
-        let id = self.db.add_mount(path).await;
-        self.config.set_drive_id(id).unwrap();
+    async fn set_drive(&self, path: &str) -> Result<(), ManagerError> {
+        let id = self
+            .db
+            .add_mount(path)
+            .await
+            .map_err(ManagerError::DbError)?;
+
+        self.config
+            .set_drive_id(id)
+            .map_err(|e| ManagerError::WriteError(e.to_string()))
     }
 }
 
@@ -178,11 +200,11 @@ mod tests {
         let (db, mut config) = setup(&tempdir).await;
         config.delim = r"\";
 
-        config.add_folder(r"test1\").await;
-        config.add_folder("test1").await;
-        config.add_folder("test2").await;
-        config.add_folder(r"test2\\").await;
-        let folders = config.get_all_folders().await;
+        config.add_folder(r"test1\").await.unwrap();
+        config.add_folder("test1").await.unwrap();
+        config.add_folder("test2").await.unwrap();
+        config.add_folder(r"test2\\").await.unwrap();
+        let folders = config.get_all_folders().await.unwrap();
 
         timeout(Duration::from_secs(5), db.close())
             .await
@@ -199,11 +221,11 @@ mod tests {
         manager.validate_paths = false;
 
         manager.register_drive(r"C:\\").await.unwrap();
-        manager.add_folder(r"C:\test").await;
-        manager.add_folder(r"C:\\test\\").await;
-        let folders1 = manager.get_all_folders().await;
+        manager.add_folder(r"C:\test").await.unwrap();
+        manager.add_folder(r"C:\\test\\").await.unwrap();
+        let folders1 = manager.get_all_folders().await.unwrap();
         manager.register_drive(r"D:\").await.unwrap();
-        let folders2 = manager.get_all_folders().await;
+        let folders2 = manager.get_all_folders().await.unwrap();
 
         timeout(Duration::from_secs(5), db.close())
             .await
@@ -220,12 +242,12 @@ mod tests {
         manager.delim = r"\";
         manager.validate_paths = false;
 
-        manager.add_folder(r"C:\test").await;
-        manager.add_folder(r"C:\\test\\").await;
+        manager.add_folder(r"C:\test").await.unwrap();
+        manager.add_folder(r"C:\\test\\").await.unwrap();
         manager.register_drive(r"C:\").await.unwrap();
-        let folders1 = manager.get_all_folders().await;
+        let folders1 = manager.get_all_folders().await.unwrap();
         manager.register_drive(r"D:\").await.unwrap();
-        let folders2 = manager.get_all_folders().await;
+        let folders2 = manager.get_all_folders().await.unwrap();
 
         timeout(Duration::from_secs(5), db.close())
             .await
@@ -247,12 +269,12 @@ mod tests {
         manager2.delim = r"\";
         manager2.validate_paths = false;
 
-        manager.add_folder(r"C:\test").await;
-        manager.add_folder(r"C:\\test\\").await;
+        manager.add_folder(r"C:\test").await.unwrap();
+        manager.add_folder(r"C:\\test\\").await.unwrap();
         manager.register_drive(r"C:\").await.unwrap();
-        let folders1 = manager.get_all_folders().await;
+        let folders1 = manager.get_all_folders().await.unwrap();
         manager2.register_drive(r"D:\").await.unwrap();
-        let folders2 = manager2.get_all_folders().await;
+        let folders2 = manager2.get_all_folders().await.unwrap();
 
         timeout(Duration::from_secs(5), db.close())
             .await
@@ -274,7 +296,7 @@ mod tests {
         manager.delim = r"\";
         manager.validate_paths = false;
 
-        manager.add_folder(r"C:\test").await;
+        manager.add_folder(r"C:\test").await.unwrap();
         manager.register_drive(r"C:\").await.unwrap();
 
         let tempdir2 = TempDir::new().unwrap();
@@ -286,10 +308,10 @@ mod tests {
         manager2.delim = r"\";
         manager2.validate_paths = false;
 
-        manager2.add_folder(r"C:\test").await;
+        manager2.add_folder(r"C:\test").await.unwrap();
         manager2.register_drive(r"C:\").await.unwrap();
 
-        let folders = manager2.get_all_folders().await;
+        let folders = manager2.get_all_folders().await.unwrap();
 
         timeout(Duration::from_secs(5), db.close())
             .await

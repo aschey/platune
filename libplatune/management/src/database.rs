@@ -5,6 +5,7 @@ use crate::spellfix::acquire_with_spellfix;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
+use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::{path::Path, time::Duration};
 use tokio::sync::mpsc::Receiver;
@@ -70,7 +71,7 @@ impl Database {
         query: &str,
         options: SearchOptions<'_>,
     ) -> Result<Vec<SearchResult>, DbError> {
-        Ok(self.search_engine.search(query, options).await?)
+        self.search_engine.search(query, options).await
     }
 
     pub(crate) async fn sync(
@@ -95,7 +96,7 @@ impl Database {
     }
 
     async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
-        Ok(sqlx::query_as!(
+        sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -110,14 +111,14 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)?)
+        .map_err(DbError::DbError)
     }
 
     async fn all_by_album_artists(
         &self,
         album_artist_ids: Vec<i32>,
     ) -> Result<Vec<LookupEntry>, DbError> {
-        Ok(sqlx::query_as!(
+        sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -132,11 +133,11 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)?)
+        .map_err(DbError::DbError)
     }
 
     async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
-        Ok(sqlx::query_as!(
+        sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -152,11 +153,11 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)?)
+        .map_err(DbError::DbError)
     }
 
     async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
-        Ok(sqlx::query_as!(
+        sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -172,21 +173,25 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)?)
+        .map_err(DbError::DbError)
     }
 
-    pub(crate) async fn add_folders(&self, paths: Vec<String>) {
-        let mut tran = self.pool.begin().await.unwrap();
+    pub(crate) async fn add_folders(&self, paths: Vec<String>) -> Result<(), DbError> {
+        let mut tran = self.pool.begin().await.map_err(DbError::DbError)?;
         for path in paths {
             sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
                 .execute(&mut tran)
                 .await
-                .unwrap();
+                .map_err(DbError::DbError)?;
         }
-        tran.commit().await.unwrap();
+        tran.commit().await.map_err(DbError::DbError)
     }
 
-    pub(crate) async fn update_folder(&self, old_path: String, new_path: String) {
+    pub(crate) async fn update_folder(
+        &self,
+        old_path: String,
+        new_path: String,
+    ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
             "update folder set folder_path = ? where folder_path = ?",
             new_path,
@@ -194,17 +199,17 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)
     }
 
-    pub(crate) async fn get_all_folders(&self) -> Vec<String> {
-        sqlx::query!("select folder_path from folder")
+    pub(crate) async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
+        Ok(sqlx::query!("select folder_path from folder")
             .fetch_all(&self.pool)
             .await
-            .unwrap()
+            .map_err(DbError::DbError)?
             .into_iter()
             .map(|r| r.folder_path)
-            .collect()
+            .collect())
     }
 
     pub(crate) async fn get_mount(&self, mount_id: i64) -> Option<String> {
@@ -217,21 +222,21 @@ impl Database {
         }
     }
 
-    pub(crate) async fn add_mount(&self, path: &str) -> i64 {
+    pub(crate) async fn add_mount(&self, path: &str) -> Result<i64, DbError> {
         sqlx::query!(r"insert or ignore into mount(mount_path) values(?)", path)
             .execute(&self.pool)
             .await
-            .unwrap();
+            .map_err(DbError::DbError)?;
 
         let res = sqlx::query!(r"select mount_id from mount where mount_path = ?", path)
             .fetch_one(&self.pool)
             .await
-            .unwrap();
+            .map_err(DbError::DbError)?;
 
-        res.mount_id
+        Ok(res.mount_id)
     }
 
-    pub(crate) async fn update_mount(&self, mount_id: i64, path: &str) -> u64 {
+    pub(crate) async fn update_mount(&self, mount_id: i64, path: &str) -> Result<u64, DbError> {
         let res = sqlx::query!(
             "update mount set mount_path = ? where mount_id = ?",
             path,
@@ -239,8 +244,8 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)?;
 
-        res.rows_affected()
+        Ok(res.rows_affected())
     }
 }

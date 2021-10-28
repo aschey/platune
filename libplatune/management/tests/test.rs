@@ -13,8 +13,11 @@ pub async fn test_sync_empty() {
     let (db, config) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
     create_dir(music_dir.clone()).unwrap();
-    config.add_folder(music_dir.to_str().unwrap()).await;
-    let mut receiver = config.sync().await;
+    config
+        .add_folder(music_dir.to_str().unwrap())
+        .await
+        .unwrap();
+    let mut receiver = config.sync().await.unwrap();
     let mut msgs = vec![];
     while let Some(msg) = receiver.recv().await {
         msgs.push(msg.unwrap());
@@ -32,7 +35,7 @@ pub async fn test_sync_no_folder() {
     let tempdir = TempDir::new().unwrap();
     let (db, config) = setup(&tempdir).await;
 
-    let mut receiver = config.sync().await;
+    let mut receiver = config.sync().await.unwrap();
     let mut msgs = vec![];
     while let Some(msg) = receiver.recv().await {
         msgs.push(msg.unwrap());
@@ -69,8 +72,11 @@ pub async fn test_sync_basic() {
     )
     .unwrap();
 
-    config.add_folder(music_dir.to_str().unwrap()).await;
-    let mut receiver = config.sync().await;
+    config
+        .add_folder(music_dir.to_str().unwrap())
+        .await
+        .unwrap();
+    let mut receiver = config.sync().await.unwrap();
 
     let mut msgs = vec![];
     while let Some(msg) = receiver.recv().await {
@@ -585,8 +591,11 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         t.save();
     }
 
-    manager.add_folder(music_dir.to_str().unwrap()).await;
-    let mut receiver = manager.sync().await;
+    manager
+        .add_folder(music_dir.to_str().unwrap())
+        .await
+        .unwrap();
+    let mut receiver = manager.sync().await.unwrap();
 
     while receiver.recv().await.is_some() {}
 

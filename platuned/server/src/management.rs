@@ -32,27 +32,32 @@ impl ManagementImpl {
     }
 }
 
+fn format_error(msg: String) -> Status {
+    error!("{:?}", msg);
+    Status::internal(msg)
+}
+
 #[tonic::async_trait]
 impl Management for ManagementImpl {
     type SyncStream =
         Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
 
     async fn sync(&self, _: Request<()>) -> Result<Response<Self::SyncStream>, Status> {
-        let rx = self.manager.sync().await;
+        let rx = match self.manager.sync().await {
+            Ok(rx) => rx,
+            Err(e) => return Err(format_error(format!("Error syncing files {:?}", e))),
+        };
         Ok(Response::new(Box::pin(ReceiverStream::new(rx).map(
             |progress_result| match progress_result {
                 Ok(percentage) => Ok(Progress { percentage }),
-                Err(e) => {
-                    let msg = format!("Error syncing files {:?}", e);
-                    error!("{}", msg);
-                    Err(Status::internal(msg))
-                }
+                Err(e) => Err(format_error(format!("Error syncing files {:?}", e))),
             },
         ))))
     }
 
     async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
-        self.manager
+        if let Err(e) = self
+            .manager
             .add_folders(
                 request
                     .into_inner()
@@ -61,12 +66,20 @@ impl Management for ManagementImpl {
                     .map(|s| &s[..])
                     .collect(),
             )
-            .await;
+            .await
+        {
+            return Err(format_error(format!("Error adding folders {:?}", e)));
+        };
         Ok(Response::new(()))
     }
 
     async fn get_all_folders(&self, _: Request<()>) -> Result<Response<FoldersMessage>, Status> {
-        let folders = self.manager.get_all_folders().await;
+        let folders = match self.manager.get_all_folders().await {
+            Ok(f) => f,
+            Err(e) => {
+                return Err(format_error(format!("Error syncing files {:?}", e)));
+            }
+        };
         Ok(Response::new(FoldersMessage { folders }))
     }
 
@@ -114,9 +127,10 @@ impl Management for ManagementImpl {
         {
             Ok(entries) => entries,
             Err(e) => {
-                let msg = format!("Error sending lookup request {:?}", e);
-                error!("{}", &msg);
-                return Err(Status::internal(msg));
+                return Err(format_error(format!(
+                    "Error sending lookup request {:?}",
+                    e
+                )));
             }
         };
         let entries = lookup_result
