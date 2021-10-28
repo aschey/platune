@@ -4,6 +4,7 @@ pub use crate::search::search_result::SearchResult;
 use crate::{
     config::Config,
     database::{Database, LookupEntry},
+    db_error::DbError,
 };
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -121,8 +122,8 @@ impl Manager {
         &self,
         correlation_ids: Vec<i32>,
         entry_type: EntryType,
-    ) -> Vec<LookupEntry> {
-        let mut res = self.db.lookup(correlation_ids, entry_type).await;
+    ) -> Result<Vec<LookupEntry>, DbError> {
+        let mut res = self.db.lookup(correlation_ids, entry_type).await?;
         if let Some(mount) = self.get_registered_mount().await {
             let mount = Path::new(&mount);
             for entry in &mut res {
@@ -133,11 +134,15 @@ impl Manager {
                     .to_owned()
             }
         }
-        res
+        Ok(res)
     }
 
-    pub async fn search(&self, query: &str, options: SearchOptions<'_>) -> Vec<SearchResult> {
-        self.db.search(query, options).await
+    pub async fn search(
+        &self,
+        query: &str,
+        options: SearchOptions<'_>,
+    ) -> Result<Vec<SearchResult>, DbError> {
+        Ok(self.db.search(query, options).await?)
     }
 
     fn clean_path(&self, path: &str) -> String {
@@ -261,8 +266,8 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
         let sql_path = tempdir.path().join("platune.db");
         let config_path = tempdir.path().join("platuneconfig");
-        let db = Database::connect(sql_path, true).await;
-        db.migrate().await;
+        let db = Database::connect(sql_path, true).await.unwrap();
+        db.migrate().await.unwrap();
         let config = Config::new_from_path(config_path.clone()).unwrap();
         let mut manager = Manager::new(&db, &config);
         manager.delim = r"\";
@@ -273,8 +278,8 @@ mod tests {
 
         let tempdir2 = TempDir::new().unwrap();
         let sql_path2 = tempdir2.path().join("platune.db");
-        let db2 = Database::connect(sql_path2, true).await;
-        db2.migrate().await;
+        let db2 = Database::connect(sql_path2, true).await.unwrap();
+        db2.migrate().await.unwrap();
 
         let mut manager2 = Manager::new(&db2, &config);
         manager2.delim = r"\";
@@ -314,8 +319,8 @@ mod tests {
     async fn setup(tempdir: &TempDir) -> (Database, Manager) {
         let sql_path = tempdir.path().join("platune.db");
         let config_path = tempdir.path().join("platuneconfig");
-        let db = Database::connect(sql_path, true).await;
-        db.migrate().await;
+        let db = Database::connect(sql_path, true).await.unwrap();
+        db.migrate().await.unwrap();
         let config = Config::new_from_path(config_path).unwrap();
         let manager = Manager::new(&db, &config);
         (db, manager)

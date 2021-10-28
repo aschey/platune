@@ -1,9 +1,9 @@
-use crate::entry_type::EntryType;
 use crate::search::search_engine::SearchEngine;
 use crate::search::search_options::SearchOptions;
 use crate::search::search_result::SearchResult;
 use crate::spellfix::acquire_with_spellfix;
 use crate::sync::sync_controller::SyncController;
+use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::{path::Path, time::Duration};
@@ -28,7 +28,7 @@ pub struct LookupEntry {
 }
 
 impl Database {
-    pub async fn connect(path: impl AsRef<Path>, create_if_missing: bool) -> Self {
+    pub async fn connect(path: impl AsRef<Path>, create_if_missing: bool) -> Result<Self, DbError> {
         let opts = SqliteConnectOptions::new()
             .filename(path.as_ref())
             .create_if_missing(create_if_missing)
@@ -36,21 +36,28 @@ impl Database {
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
             .to_owned();
 
-        let pool = SqlitePool::connect_with(opts.clone()).await.unwrap();
-        Self {
+        let pool = SqlitePool::connect_with(opts.clone())
+            .await
+            .map_err(|e| DbError::DbError(e))?;
+        Ok(Self {
             search_engine: SearchEngine::new(pool.clone()),
             sync_controller: SyncController::new(pool.clone()),
             pool,
             opts,
-        }
+        })
     }
 
-    pub async fn migrate(&self) {
-        let mut con = acquire_with_spellfix(&self.pool).await;
+    pub async fn migrate(&self) -> Result<(), DbError> {
+        let mut con = acquire_with_spellfix(&self.pool).await?;
 
         info!("migrating");
-        sqlx::migrate!("./migrations").run(&mut con).await.unwrap();
+        sqlx::migrate!("./migrations")
+            .run(&mut con)
+            .await
+            .map_err(|e| DbError::MigrateError(e))?;
         info!("done");
+
+        Ok(())
     }
 
     pub async fn close(&self) {
@@ -61,8 +68,8 @@ impl Database {
         &self,
         query: &str,
         options: SearchOptions<'_>,
-    ) -> Vec<SearchResult> {
-        self.search_engine.search(query, options).await
+    ) -> Result<Vec<SearchResult>, DbError> {
+        Ok(self.search_engine.search(query, options).await?)
     }
 
     pub(crate) async fn sync(
@@ -77,7 +84,7 @@ impl Database {
         &self,
         correlation_ids: Vec<i32>,
         entry_type: EntryType,
-    ) -> Vec<LookupEntry> {
+    ) -> Result<Vec<LookupEntry>, DbError> {
         match entry_type {
             EntryType::Album => self.all_by_albums(correlation_ids).await,
             EntryType::Song => self.all_by_ids(correlation_ids).await,
@@ -86,8 +93,8 @@ impl Database {
         }
     }
 
-    async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Vec<LookupEntry> {
-        sqlx::query_as!(
+    async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+        Ok(sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -102,11 +109,14 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .unwrap()
+        .map_err(|e| DbError::DbError(e))?)
     }
 
-    async fn all_by_album_artists(&self, album_artist_ids: Vec<i32>) -> Vec<LookupEntry> {
-        sqlx::query_as!(
+    async fn all_by_album_artists(
+        &self,
+        album_artist_ids: Vec<i32>,
+    ) -> Result<Vec<LookupEntry>, DbError> {
+        Ok(sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -121,11 +131,11 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .unwrap()
+        .map_err(|e| DbError::DbError(e))?)
     }
 
-    async fn all_by_albums(&self, album_ids: Vec<i32>) -> Vec<LookupEntry> {
-        sqlx::query_as!(
+    async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+        Ok(sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -141,11 +151,11 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .unwrap()
+        .map_err(|e| DbError::DbError(e))?)
     }
 
-    async fn all_by_ids(&self, song_ids: Vec<i32>) -> Vec<LookupEntry> {
-        sqlx::query_as!(
+    async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+        Ok(sqlx::query_as!(
             LookupEntry,
             "
             select ar.artist_name artist, s.song_title song, s.song_path path, 
@@ -161,7 +171,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .unwrap()
+        .map_err(|e| DbError::DbError(e))?)
     }
 
     pub(crate) async fn add_folders(&self, paths: Vec<String>) {

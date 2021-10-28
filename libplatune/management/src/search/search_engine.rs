@@ -6,6 +6,7 @@ use super::{
     search_result::SearchResult,
 };
 use crate::{
+    db_error::DbError,
     entry_type::EntryType,
     search::{
         queries::{get_full_spellfix_query, END_MATCH_TEXT, START_MATCH_TEXT},
@@ -34,21 +35,21 @@ impl SearchEngine {
         &self,
         query: &str,
         options: SearchOptions<'_>,
-    ) -> Vec<SearchResult> {
+    ) -> Result<Vec<SearchResult>, DbError> {
         // Parse out artist filter if it was supplied
-        let (adj_query, artist_filter) = self.split_artist_filter(query).await;
+        let (adj_query, artist_filter) = self.split_artist_filter(query).await?;
 
-        return self
+        Ok(self
             .search_helper(&adj_query, &adj_query, options, artist_filter)
-            .await;
+            .await?)
     }
 
-    async fn split_artist_filter(&self, query: &str) -> (String, Vec<String>) {
+    async fn split_artist_filter(&self, query: &str) -> Result<(String, Vec<String>), DbError> {
         let artist_split = query.split("artist:").collect_vec();
 
         match *artist_split.as_slice() {
-            [] => return ("".to_owned(), vec![]),
-            [query] => return (query.to_owned(), vec![]),
+            [] => Ok(("".to_owned(), vec![])),
+            [query] => Ok((query.to_owned(), vec![])),
             [query, artist, ..] => {
                 let artist_filter = self
                     .search_helper(
@@ -60,11 +61,11 @@ impl SearchEngine {
                         },
                         vec![],
                     )
-                    .await
+                    .await?
                     .into_iter()
                     .map(|r| r.entry)
                     .collect_vec();
-                return (query.to_owned(), artist_filter);
+                Ok((query.to_owned(), artist_filter))
             }
         }
     }
@@ -111,13 +112,13 @@ impl SearchEngine {
         original_query: &str,
         options: SearchOptions<'_>,
         artist_filter: Vec<String>,
-    ) -> Vec<SearchResult> {
+    ) -> Result<Vec<SearchResult>, DbError> {
         let query = clean_query(query);
         if query.is_empty() {
-            return vec![];
+            return Ok(vec![]);
         }
 
-        let mut conn = acquire_with_spellfix(&self.pool).await;
+        let mut conn = acquire_with_spellfix(&self.pool).await?;
         let mut search_entries = self
             .run_search(
                 &replace_ampersand(&query),
@@ -131,7 +132,7 @@ impl SearchEngine {
 
         // Already generated enough results, don't need to attempt spellfix
         if search_entries.len() == options.limit as usize {
-            return self.convert_entries(search_entries);
+            return Ok(self.convert_entries(search_entries));
         }
 
         let re = Regex::new(r"\s+").unwrap();
@@ -149,7 +150,7 @@ impl SearchEngine {
         let combined_results = combine_spellfix_results(spellfix_results);
 
         if combined_results.is_empty() {
-            return vec![];
+            return Ok(vec![]);
         }
 
         let rest = self
@@ -181,7 +182,7 @@ impl SearchEngine {
             .take(options.limit as usize)
             .collect_vec();
 
-        return self.convert_entries(search_entries);
+        return Ok(self.convert_entries(search_entries));
     }
 
     async fn run_search(

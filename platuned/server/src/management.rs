@@ -1,6 +1,6 @@
 use crate::management_server::Management;
 use crate::rpc::*;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use futures::StreamExt;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
@@ -11,6 +11,7 @@ use tokio::sync::mpsc;
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
+use tracing::{error, warn};
 
 pub struct ManagementImpl {
     manager: Manager,
@@ -18,9 +19,12 @@ pub struct ManagementImpl {
 
 impl ManagementImpl {
     pub async fn try_new() -> Result<ManagementImpl> {
-        let path = std::env::var("DATABASE_URL").unwrap();
-        let db = Database::connect(path, true).await;
-        db.migrate().await;
+        let path = std::env::var("DATABASE_URL")
+            .with_context(|| "DATABASE_URL environment variable not set")?;
+        let db = Database::connect(path, true).await?;
+        db.migrate()
+            .await
+            .with_context(|| "Error migrating database")?;
         let config = Config::try_new()?;
         let manager = Manager::new(&db, &config);
         Ok(ManagementImpl { manager })
@@ -87,7 +91,7 @@ impl Management for ManagementImpl {
         request: Request<LookupRequest>,
     ) -> Result<Response<LookupResponse>, Status> {
         let request = request.into_inner();
-        let entries = self
+        let lookup_result = match self
             .manager
             .lookup(
                 request.correlation_ids,
@@ -99,6 +103,15 @@ impl Management for ManagementImpl {
                 },
             )
             .await
+        {
+            Ok(entries) => entries,
+            Err(e) => {
+                let msg = format!("Error sending lookup request {:?}", e);
+                error!("{}", &msg);
+                return Err(Status::internal(msg));
+            }
+        };
+        let entries = lookup_result
             .into_iter()
             .map(|e| LookupEntry {
                 artist: e.artist,
@@ -131,9 +144,9 @@ impl Management for ManagementImpl {
                         let options = SearchOptions {
                             ..Default::default()
                         };
-                        tx.send(manager.search(&msg.query, options).await)
-                            .await
-                            .unwrap();
+                        if let Err(e) = tx.send(manager.search(&msg.query, options).await).await {
+                            warn!("Error sending message to response stream {:?}", e);
+                        }
                     }
                     Err(_) => break,
                 }
@@ -142,7 +155,14 @@ impl Management for ManagementImpl {
 
         Ok(Response::new(Box::pin({
             tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| {
-                let results = r
+                let search_results = match r {
+                    Ok(results) => results,
+                    Err(e) => {
+                        let msg = format!("Error sending search request {:?}", e);
+                        return Err(Status::internal(msg));
+                    }
+                };
+                let results = search_results
                     .into_iter()
                     .map(|res| SearchResult {
                         description: res.description,

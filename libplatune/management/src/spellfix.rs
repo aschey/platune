@@ -7,13 +7,17 @@ use std::{
     ptr,
 };
 
-pub(crate) async fn acquire_with_spellfix(pool: &Pool<Sqlite>) -> PoolConnection<Sqlite> {
-    let mut con = pool.acquire().await.unwrap();
-    load_spellfix(&mut con);
-    con
+use crate::db_error::DbError;
+
+pub(crate) async fn acquire_with_spellfix(
+    pool: &Pool<Sqlite>,
+) -> Result<PoolConnection<Sqlite>, DbError> {
+    let mut con = pool.acquire().await.map_err(|e| DbError::DbError(e))?;
+    load_spellfix(&mut con).map_err(|e| DbError::SpellfixLoadError(e))?;
+    Ok(con)
 }
 
-pub(crate) fn load_spellfix(con: &mut SqliteConnection) {
+pub(crate) fn load_spellfix(con: &mut SqliteConnection) -> Result<(), String> {
     let handle = con.as_raw_handle();
     let spellfix_lib = match std::env::var("SPELLFIX_LIB") {
         Ok(res) => res,
@@ -23,12 +27,12 @@ pub(crate) fn load_spellfix(con: &mut SqliteConnection) {
         Err(_) => "./assets/windows/spellfix.dll".to_owned(),
     };
 
-    load_extension(handle, &spellfix_lib);
+    Ok(load_extension(handle, &spellfix_lib)?)
 }
 
 #[cfg(not(unix))]
 fn path_to_cstring<P: AsRef<Path>>(p: &P) -> CString {
-    let s = p.as_ref().to_str().unwrap();
+    let s = p.as_ref().to_string_lossy().to_string();
     CString::new(s).unwrap()
 }
 
@@ -43,14 +47,16 @@ unsafe fn errmsg_to_string(errmsg: *const c_char) -> String {
     String::from_utf8_lossy(c_slice).into_owned()
 }
 
-fn load_extension<P: AsRef<Path>>(db: *mut sqlite3, dylib_path: &P) {
+fn load_extension<P: AsRef<Path>>(db: *mut sqlite3, dylib_path: &P) -> Result<(), String> {
     let dylib_str = path_to_cstring(dylib_path);
     unsafe {
         let mut errmsg: *mut c_char = ptr::null_mut();
 
         let res = sqlite3_load_extension(db, dylib_str.as_ptr(), ptr::null(), &mut errmsg);
         if res != 0 {
-            println!("{}", errmsg_to_string(errmsg));
+            return Err(errmsg_to_string(errmsg));
         }
+
+        Ok(())
     }
 }

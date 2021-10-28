@@ -590,7 +590,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
 
     while let Some(_) = receiver.recv().await {}
 
-    let res = manager.search(search, Default::default()).await;
+    let res = manager.search(search, Default::default()).await.unwrap();
     println!("res {:?}", res);
 
     assert!(res.len() == results.len());
@@ -614,8 +614,8 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
 async fn setup(tempdir: &TempDir) -> (Database, Manager) {
     let sql_path = tempdir.path().join("platune.db");
     let config_path = tempdir.path().join("platuneconfig");
-    let db = Database::connect(sql_path, true).await;
-    db.migrate().await;
+    let db = Database::connect(sql_path, true).await.unwrap();
+    db.migrate().await.unwrap();
     let config = Config::new_from_path(config_path).unwrap();
     let manager = Manager::new(&db, &config);
     (db, manager)

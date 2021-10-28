@@ -1,6 +1,7 @@
 pub mod config;
 mod consts;
 pub mod database;
+pub mod db_error;
 pub mod entry_type;
 pub mod manager;
 pub mod search;
