@@ -23,21 +23,20 @@ pub mod platune_player {
             for entry in std::env::temp_dir()
                 .read_dir()
                 .expect("read_dir call failed")
+                .flatten()
             {
-                if let Ok(entry) = entry {
-                    if entry
-                        .file_name()
-                        .to_str()
-                        .unwrap()
-                        .starts_with("platunecache")
-                    {
-                        remove_file(entry.path()).unwrap();
-                    }
+                if entry
+                    .file_name()
+                    .to_str()
+                    .unwrap()
+                    .starts_with("platunecache")
+                {
+                    remove_file(entry.path()).unwrap();
                 }
             }
             let (event_tx, _) = broadcast::channel(32);
             let (tx, rx) = std::sync::mpsc::channel();
-            let tx_ = tx.clone();
+            let tx_ = tx;
             let (finish_tx, finish_rx) = std::sync::mpsc::sync_channel(32);
             let finish_tx_ = finish_tx.clone();
 

@@ -53,7 +53,7 @@ fn init() {
 
 fn get_path(song: &str) -> String {
     let dir = current_dir().unwrap().to_str().unwrap().to_owned();
-    format!("{1}{0}tests{0}assets{0}{2}", SEPARATOR, dir, song).to_string()
+    format!("{1}{0}tests{0}assets{0}{2}", SEPARATOR, dir, song)
 }
 
 fn get_test_files(num_songs: usize) -> Vec<SongInfo> {

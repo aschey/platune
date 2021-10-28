@@ -64,14 +64,14 @@ impl Config {
         let mut contents = String::new();
         file.read_to_string(&mut contents).ok()?;
 
-        Some(contents.parse::<i64>().ok()?)
+        contents.parse::<i64>().ok()
     }
 
     pub(crate) fn set_drive_id(&self, id: i64) -> Result<()> {
         let mut file =
             File::create(&self.config_path).with_context(|| "Error opening file for writing")?;
 
-        Ok(write!(file, "{:?}", id)
-            .with_context(|| format!("Error writing to config file {:?}", self.config_path))?)
+        write!(file, "{:?}", id)
+            .with_context(|| format!("Error writing to config file {:?}", self.config_path))
     }
 }

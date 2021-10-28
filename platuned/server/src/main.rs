@@ -21,7 +21,7 @@ pub mod rpc {
     tonic::include_proto!("player_rpc");
     tonic::include_proto!("management_rpc");
 
-    pub(crate) const FILE_DESCRIPTOR_SET: &'static [u8] =
+    pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
         tonic::include_file_descriptor_set!("rpc_descriptor");
 }
 
@@ -52,8 +52,8 @@ mod service {
     const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
     pub fn run() -> Result<()> {
-        Ok(service_dispatcher::start(SERVICE_NAME, service_main)
-            .with_context(|| "Error starting service")?)
+        service_dispatcher::start(SERVICE_NAME, service_main)
+            .with_context(|| "Error starting service")
     }
 
     pub fn install() -> Result<()> {
