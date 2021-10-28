@@ -4,7 +4,7 @@ use itertools::Itertools;
 use katatsuki::Track;
 use sqlx::{Pool, Sqlite, Transaction};
 
-use crate::{consts::MIN_LEN, spellfix::load_spellfix};
+use crate::{consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix};
 
 pub(crate) struct SyncDAL<'a> {
     tran: Transaction<'a, Sqlite>,
@@ -12,16 +12,16 @@ pub(crate) struct SyncDAL<'a> {
 }
 
 impl<'a> SyncDAL<'a> {
-    pub(crate) async fn new(pool: Pool<Sqlite>) -> SyncDAL<'a> {
+    pub(crate) async fn try_new(pool: Pool<Sqlite>) -> Result<SyncDAL<'a>, DbError> {
         let mut tran = pool.begin().await.unwrap();
-        load_spellfix(&mut tran);
+        load_spellfix(&mut tran)?;
 
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs() as u32;
 
-        Self { tran, timestamp }
+        Ok(Self { tran, timestamp })
     }
 
     pub(crate) async fn add_artist(&mut self, artist: &str) {
@@ -77,7 +77,7 @@ impl<'a> SyncDAL<'a> {
         .map(|r| r.song_path)
         .collect_vec();
 
-        return paths;
+        paths
     }
 
     pub(crate) async fn sync_spellfix(&mut self) {
@@ -127,7 +127,7 @@ impl<'a> SyncDAL<'a> {
         .map(|r| r.entry_value.unwrap())
         .collect_vec();
 
-        return long_vals;
+        long_vals
     }
 
     pub(crate) async fn insert_alias(&mut self, entry_value: &str, acronym: &str) {
@@ -140,13 +140,13 @@ impl<'a> SyncDAL<'a> {
             )
         ",
         )
-        .bind(entry_value.clone())
-        .bind(acronym.clone())
+        .bind(entry_value)
+        .bind(acronym)
         .execute(&mut self.tran)
         .await
         .unwrap();
 
-        if acronym.contains("&") {
+        if acronym.contains('&') {
             let replaced = acronym.replace("&", "a");
             self.insert_alt_alias(entry_value, &replaced).await;
         }

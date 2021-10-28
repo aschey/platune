@@ -588,7 +588,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
     manager.add_folder(music_dir.to_str().unwrap()).await;
     let mut receiver = manager.sync().await;
 
-    while let Some(_) = receiver.recv().await {}
+    while receiver.recv().await.is_some() {}
 
     let res = manager.search(search, Default::default()).await.unwrap();
     println!("res {:?}", res);
@@ -599,7 +599,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         assert_eq!(&res[i].entry, result.entry);
         assert_eq!(&res[i].correlation_ids.len(), &result.correlation_ids.len());
         let mut ids = res[i].correlation_ids.clone();
-        ids.sort();
+        ids.sort_unstable();
         // TODO: re-enable after creating function to look up id
         // for (j, id) in result.correlation_ids.iter().enumerate() {
         //     assert_eq!(&ids[j], id);

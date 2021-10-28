@@ -1,8 +1,10 @@
-use std::{path::PathBuf, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 use itertools::Itertools;
 use katatsuki::Track;
-use tracing::info;
 use regex::Regex;
 use sqlx::{Pool, Sqlite};
 use tokio::{
@@ -10,8 +12,9 @@ use tokio::{
     task::JoinHandle,
     time::timeout,
 };
+use tracing::info;
 
-use crate::consts::MIN_WORDS;
+use crate::{consts::MIN_WORDS, db_error::DbError};
 
 use super::{dir_read::DirRead, sync_dal::SyncDAL};
 
@@ -47,9 +50,9 @@ impl SyncEngine {
         }
     }
 
-    pub(crate) async fn start(&mut self) {
+    pub(crate) async fn start(&mut self) -> Result<(), DbError> {
         let (tags_tx, tags_rx) = channel(100);
-        let tags_handle = self.tags_task(tags_rx).await;
+        let tags_handle = self.tags_task(tags_rx).await?;
 
         for path in &self.paths {
             self.dispatch_tx
@@ -61,6 +64,8 @@ impl SyncEngine {
 
         tags_tx.send(None).await.unwrap();
         tags_handle.await.unwrap();
+
+        Ok(())
     }
 
     async fn task_loop(&mut self, tags_tx: &Sender<Option<(Track, String)>>) {
@@ -72,27 +77,33 @@ impl SyncEngine {
             handles.push(self.spawn_task(tags_tx.clone()));
         }
 
-        let mut total_dirs = 0.;
-        let mut dirs_processed = 0.;
+        let mut total_dirs = 0;
+        let mut dirs_processed = 0;
         loop {
             match timeout(Duration::from_millis(1), self.finished_rx.recv()).await {
                 Ok(Some(DirRead::Completed)) => {
-                    dirs_processed += 1.;
+                    dirs_processed += 1;
 
                     // edge case - entire dir is empty
-                    if total_dirs == 0. {
+                    if total_dirs == 0 {
                         self.tx.send(1.).await.unwrap();
                         break;
                     }
-                    self.tx.send(dirs_processed / total_dirs).await.unwrap();
+                    self.tx
+                        .send((dirs_processed as f32) / (total_dirs as f32))
+                        .await
+                        .unwrap();
 
                     if total_dirs == dirs_processed {
                         break;
                     }
                 }
                 Ok(Some(DirRead::Found)) => {
-                    total_dirs += 1.;
-                    self.tx.send(dirs_processed / total_dirs).await.unwrap();
+                    total_dirs += 1;
+                    self.tx
+                        .send((dirs_processed as f32) / (total_dirs as f32))
+                        .await
+                        .unwrap();
                 }
                 Ok(None) => {
                     break;
@@ -115,11 +126,13 @@ impl SyncEngine {
         }
     }
 
-    async fn tags_task(&self, mut tags_rx: Receiver<Option<(Track, String)>>) -> JoinHandle<()> {
+    async fn tags_task(
+        &self,
+        mut tags_rx: Receiver<Option<(Track, String)>>,
+    ) -> Result<JoinHandle<()>, DbError> {
         let pool = self.pool.clone();
-        tokio::spawn(async move {
-            let mut dal = SyncDAL::new(pool).await;
-
+        let mut dal = SyncDAL::try_new(pool).await?;
+        Ok(tokio::spawn(async move {
             while let Some(metadata) = tags_rx.recv().await {
                 match metadata {
                     Some((metadata, path)) => {
@@ -148,7 +161,7 @@ impl SyncEngine {
             info!("committing");
             dal.commit().await;
             info!("done");
-        })
+        }))
     }
 
     async fn add_search_aliases(dal: &mut SyncDAL<'_>) {
@@ -210,7 +223,7 @@ impl SyncEngine {
                 let file_path = dir.path();
 
                 if let Some(metadata) = SyncEngine::parse_metadata(&file_path) {
-                    let file_path_str = SyncEngine::clean_file_path(&file_path, &mount);
+                    let file_path_str = SyncEngine::clean_file_path(&file_path, mount);
                     tags_tx.send(Some((metadata, file_path_str))).await.unwrap();
                 }
             } else {
@@ -221,13 +234,13 @@ impl SyncEngine {
         finished_tx.send(DirRead::Completed).await.unwrap();
     }
 
-    fn parse_metadata(file_path: &PathBuf) -> Option<Track> {
+    fn parse_metadata(file_path: &Path) -> Option<Track> {
         let name = file_path.extension().unwrap_or_default();
         let _size = file_path.metadata().unwrap().len();
         let mut song_metadata: Option<Track> = None;
         match &name.to_str().unwrap_or_default().to_lowercase()[..] {
             "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
-                let tag_result = Track::from_path(&file_path, None);
+                let tag_result = Track::from_path(file_path, None);
                 match tag_result {
                     Err(e) => {
                         println!("{:?}", e);
@@ -244,7 +257,7 @@ impl SyncEngine {
         song_metadata
     }
 
-    fn clean_file_path(file_path: &PathBuf, mount: &Option<String>) -> String {
+    fn clean_file_path(file_path: &Path, mount: &Option<String>) -> String {
         let mut file_path_str = file_path.to_str().unwrap().to_owned();
         if cfg!(windows) {
             file_path_str = file_path_str.replace(r"\", r"/");

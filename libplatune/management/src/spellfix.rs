@@ -12,12 +12,12 @@ use crate::db_error::DbError;
 pub(crate) async fn acquire_with_spellfix(
     pool: &Pool<Sqlite>,
 ) -> Result<PoolConnection<Sqlite>, DbError> {
-    let mut con = pool.acquire().await.map_err(|e| DbError::DbError(e))?;
-    load_spellfix(&mut con).map_err(|e| DbError::SpellfixLoadError(e))?;
+    let mut con = pool.acquire().await?;
+    load_spellfix(&mut con)?;
     Ok(con)
 }
 
-pub(crate) fn load_spellfix(con: &mut SqliteConnection) -> Result<(), String> {
+pub(crate) fn load_spellfix(con: &mut SqliteConnection) -> Result<(), DbError> {
     let handle = con.as_raw_handle();
     let spellfix_lib = match std::env::var("SPELLFIX_LIB") {
         Ok(res) => res,
@@ -27,7 +27,7 @@ pub(crate) fn load_spellfix(con: &mut SqliteConnection) -> Result<(), String> {
         Err(_) => "./assets/windows/spellfix.dll".to_owned(),
     };
 
-    Ok(load_extension(handle, &spellfix_lib)?)
+    load_extension(handle, &spellfix_lib).map_err(DbError::SpellfixLoadError)
 }
 
 #[cfg(not(unix))]

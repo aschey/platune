@@ -53,8 +53,8 @@ impl SearchEngine {
             [query, artist, ..] => {
                 let artist_filter = self
                     .search_helper(
-                        &artist,
-                        &query,
+                        artist,
+                        query,
                         SearchOptions {
                             valid_entry_types: vec!["artist", "album_artist"],
                             ..Default::default()
@@ -71,22 +71,21 @@ impl SearchEngine {
     }
 
     fn restrict_num_terms(&self, spellfix_results: Vec<SpellfixResult>) -> Vec<SpellfixResult> {
-        let updated_results = spellfix_results
+        spellfix_results
             .into_iter()
             .sorted_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
             .take(MAX_TERMS)
             .sorted_by(|a, b| a.search.cmp(&b.search))
-            .collect_vec();
-        updated_results
+            .collect_vec()
     }
 
     async fn run_spellfix_query(
         &self,
         spellfix_query: &str,
-        terms: &Vec<&str>,
+        terms: &[&str],
         conn: &mut PoolConnection<Sqlite>,
     ) -> Vec<SpellfixResult> {
-        let mut corrected = sqlx::query_as::<_, SpellfixResult>(&spellfix_query);
+        let mut corrected = sqlx::query_as::<_, SpellfixResult>(spellfix_query);
         for term in terms {
             corrected = corrected.bind(term);
         }
@@ -182,7 +181,7 @@ impl SearchEngine {
             .take(options.limit as usize)
             .collect_vec();
 
-        return Ok(self.convert_entries(search_entries));
+        Ok(self.convert_entries(search_entries))
     }
 
     async fn run_search(
@@ -191,7 +190,7 @@ impl SearchEngine {
         original_query: &str,
         weights: HashMap<String, f32>,
         options: &SearchOptions<'_>,
-        artist_filter: &Vec<String>,
+        artist_filter: &[String],
         con: &mut PoolConnection<Sqlite>,
     ) -> Vec<SearchEntry> {
         let full_query = get_search_query(artist_filter, &options.valid_entry_types);
@@ -209,7 +208,8 @@ impl SearchEngine {
         for entry_type in &options.valid_entry_types {
             sql_query = sql_query.bind(entry_type.to_owned());
         }
-        let res = sql_query
+
+        sql_query
             .map(|row| SearchEntry {
                 entry: row.try_get("entry").unwrap(),
                 entry_type: row.try_get("entry_type").unwrap(),
@@ -223,14 +223,12 @@ impl SearchEngine {
             })
             .fetch_all(con)
             .await
-            .unwrap();
-
-        return res;
+            .unwrap()
     }
 
     fn convert_entries(&self, mut search_entries: Vec<SearchEntry>) -> Vec<SearchResult> {
         search_entries.sort();
-        let grouped = search_entries
+        search_entries
             .into_iter()
             .group_by(|key| (key.get_formatted_entry(), key.get_description()))
             .into_iter()
@@ -245,8 +243,6 @@ impl SearchEngine {
                     correlation_ids: group.iter().map(|v| v.correlation_id).collect(),
                 }
             })
-            .collect_vec();
-
-        return grouped;
+            .collect_vec()
     }
 }

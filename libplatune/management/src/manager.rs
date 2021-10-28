@@ -93,9 +93,10 @@ impl Manager {
                     _ => path.to_owned(),
                 })
                 .collect::<Vec<_>>(),
-            None => paths.map(|path| path.to_owned()).collect(),
+            None => paths.collect(),
         };
-        return new_paths;
+
+        new_paths
     }
 
     pub async fn expand_paths(&self, folders: Vec<String>) -> Vec<String> {
@@ -149,10 +150,10 @@ impl Manager {
         let mut path = path.replace(self.delim, "/");
         let re = Regex::new(r"/+").unwrap();
         path = re.replace_all(&path, "/").to_string();
-        if !path.ends_with("/") {
+        if !path.ends_with('/') {
             path += "/";
         }
-        return path;
+        path
     }
 
     async fn set_drive(&self, path: &str) {

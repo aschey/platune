@@ -60,7 +60,7 @@ impl SearchEntry {
             score.match_len_score = self.original_query.len();
         }
 
-        return score;
+        score
     }
 
     pub fn get_description(&self) -> String {

@@ -38,7 +38,7 @@ impl Database {
 
         let pool = SqlitePool::connect_with(opts.clone())
             .await
-            .map_err(|e| DbError::DbError(e))?;
+            .map_err(DbError::DbError)?;
         Ok(Self {
             search_engine: SearchEngine::new(pool.clone()),
             sync_controller: SyncController::new(pool.clone()),
@@ -54,7 +54,7 @@ impl Database {
         sqlx::migrate!("./migrations")
             .run(&mut con)
             .await
-            .map_err(|e| DbError::MigrateError(e))?;
+            .map_err(DbError::MigrateError)?;
         info!("done");
 
         Ok(())
@@ -109,7 +109,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e))?)
+        .map_err(DbError::DbError)?)
     }
 
     async fn all_by_album_artists(
@@ -131,7 +131,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e))?)
+        .map_err(DbError::DbError)?)
     }
 
     async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -151,7 +151,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e))?)
+        .map_err(DbError::DbError)?)
     }
 
     async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -171,7 +171,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e))?)
+        .map_err(DbError::DbError)?)
     }
 
     pub(crate) async fn add_folders(&self, paths: Vec<String>) {
@@ -227,7 +227,7 @@ impl Database {
             .await
             .unwrap();
 
-        return res.mount_id;
+        res.mount_id
     }
 
     pub(crate) async fn update_mount(&self, mount_id: i64, path: &str) -> u64 {
@@ -239,6 +239,7 @@ impl Database {
         .execute(&self.pool)
         .await
         .unwrap();
-        return res.rows_affected();
+
+        res.rows_affected()
     }
 }

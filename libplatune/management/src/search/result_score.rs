@@ -41,6 +41,6 @@ impl PartialOrd for ResultScore {
         if full_len_ord != Ordering::Equal {
             return Some(full_len_ord);
         }
-        return self.full_entry.partial_cmp(&other.full_entry);
+        self.full_entry.partial_cmp(&other.full_entry)
     }
 }

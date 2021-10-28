@@ -5,10 +5,7 @@ use super::spellfix_result::SpellfixResult;
 pub(crate) const START_MATCH_TEXT: &str = "{startmatch}";
 pub(crate) const END_MATCH_TEXT: &str = "{endmatch}";
 
-pub(crate) fn get_search_query(
-    artist_filter: &Vec<String>,
-    allowed_entry_types: &Vec<&str>,
-) -> String {
+pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[&str]) -> String {
     let num_base_args = 5;
     let num_artists = artist_filter.len();
     let artist_select =
@@ -66,10 +63,10 @@ pub(crate) fn get_search_query(
     ORDER BY rank
     LIMIT $5", artist_select, artist_filter_clause, type_filter, START_MATCH_TEXT, END_MATCH_TEXT);
 
-    return full_query;
+    full_query
 }
 
-pub(crate) fn get_full_spellfix_query(terms: &Vec<&str>) -> String {
+pub(crate) fn get_full_spellfix_query(terms: &[&str]) -> String {
     // Union all queries together to avoid multiple trips to the database
     let full_query = terms
         .iter()
@@ -95,7 +92,7 @@ pub(crate) fn combine_spellfix_results(spellfix_results: Vec<SpellfixResult>) ->
         .into_iter()
         .fold(vec!["".to_owned()], |a, b| {
             a.into_iter()
-                .flat_map(|x| b.iter().map(move |y| x.clone() + &y))
+                .flat_map(|x| b.iter().map(move |y| x.clone() + y))
                 .collect_vec()
         })
         .into_iter()
@@ -111,11 +108,11 @@ pub(crate) fn combine_spellfix_results(spellfix_results: Vec<SpellfixResult>) ->
 
 pub(crate) fn clean_query(query: &str) -> String {
     let query = replace_special_chars(query);
-    if query.is_empty() || query.ends_with("*") {
+    if query.is_empty() || query.ends_with('*') {
         return query;
     }
     // Add wildcard to the end to do a prefix search
-    return query + "*";
+    query + "*"
 }
 
 pub(crate) fn replace_ampersand(string: &str) -> String {
@@ -129,12 +126,10 @@ fn replace_special_chars(query: &str) -> String {
 }
 
 fn generate_parameterized_bindings(start: usize, count: usize) -> String {
-    let binding_list = (start..start + count)
+    (start..start + count)
         .map(|i| "$".to_owned() + &i.to_string())
         .collect_vec()
-        .join(",");
-
-    binding_list
+        .join(",")
 }
 
 fn get_spellfix_query(index: usize) -> String {
