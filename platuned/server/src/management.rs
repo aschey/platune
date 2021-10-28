@@ -8,6 +8,7 @@ use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use std::pin::Pin;
 use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
@@ -38,9 +39,16 @@ impl Management for ManagementImpl {
 
     async fn sync(&self, _: Request<()>) -> Result<Response<Self::SyncStream>, Status> {
         let rx = self.manager.sync().await;
-        Ok(Response::new(Box::pin(
-            tokio_stream::wrappers::ReceiverStream::new(rx).map(|r| Ok(Progress { percentage: r })),
-        )))
+        Ok(Response::new(Box::pin(ReceiverStream::new(rx).map(
+            |progress_result| match progress_result {
+                Ok(percentage) => Ok(Progress { percentage }),
+                Err(e) => {
+                    let msg = format!("Error syncing files {:?}", e);
+                    error!("{}", msg);
+                    Err(Status::internal(msg))
+                }
+            },
+        ))))
     }
 
     async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {

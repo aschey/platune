@@ -7,6 +7,7 @@ use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::{path::Path, time::Duration};
+use tokio::sync::mpsc::Receiver;
 use tracing::info;
 
 #[derive(Clone)]
@@ -76,7 +77,7 @@ impl Database {
         &self,
         folders: Vec<String>,
         mount: Option<String>,
-    ) -> tokio::sync::mpsc::Receiver<f32> {
+    ) -> Receiver<Result<f32, DbError>> {
         self.sync_controller.sync(folders, mount).await
     }
 

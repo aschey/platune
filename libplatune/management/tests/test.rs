@@ -17,7 +17,7 @@ pub async fn test_sync_empty() {
     let mut receiver = config.sync().await;
     let mut msgs = vec![];
     while let Some(msg) = receiver.recv().await {
-        msgs.push(msg);
+        msgs.push(msg.unwrap());
     }
 
     timeout(Duration::from_secs(5), db.close())
@@ -35,7 +35,7 @@ pub async fn test_sync_no_folder() {
     let mut receiver = config.sync().await;
     let mut msgs = vec![];
     while let Some(msg) = receiver.recv().await {
-        msgs.push(msg);
+        msgs.push(msg.unwrap());
     }
 
     timeout(Duration::from_secs(5), db.close())
@@ -74,7 +74,7 @@ pub async fn test_sync_basic() {
 
     let mut msgs = vec![];
     while let Some(msg) = receiver.recv().await {
-        msgs.push(msg);
+        msgs.push(msg.unwrap());
     }
 
     timeout(Duration::from_secs(5), db.close())

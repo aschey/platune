@@ -1,6 +1,8 @@
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc::{channel, Receiver};
 
+use crate::db_error::DbError;
+
 use super::sync_engine::SyncEngine;
 
 #[derive(Clone)]
@@ -12,7 +14,11 @@ impl SyncController {
     pub(crate) fn new(pool: Pool<Sqlite>) -> Self {
         Self { pool }
     }
-    pub(crate) async fn sync(&self, folders: Vec<String>, mount: Option<String>) -> Receiver<f32> {
+    pub(crate) async fn sync(
+        &self,
+        folders: Vec<String>,
+        mount: Option<String>,
+    ) -> Receiver<Result<f32, DbError>> {
         let (tx, rx) = channel(32);
         if !folders.is_empty() {
             let pool = self.pool.clone();
@@ -20,7 +26,7 @@ impl SyncController {
             tokio::task::spawn_blocking(move || {
                 let rt = tokio::runtime::Runtime::new().unwrap();
                 let mut engine = SyncEngine::new(folders, pool, mount, tx);
-                rt.block_on(engine.start());
+                rt.block_on(engine.start())
             });
         }
 

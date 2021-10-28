@@ -9,7 +9,7 @@ use crate::{
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::Receiver;
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
@@ -78,7 +78,7 @@ impl Manager {
         self.expand_paths(folders).await
     }
 
-    pub async fn sync(&self) -> mpsc::Receiver<f32> {
+    pub async fn sync(&self) -> Receiver<Result<f32, DbError>> {
         let folders = self.get_all_folders().await;
         let mount = self.get_registered_mount().await;
         self.db.sync(folders, mount).await

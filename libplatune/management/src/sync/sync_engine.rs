@@ -22,7 +22,7 @@ pub(crate) struct SyncEngine {
     paths: Vec<String>,
     pool: Pool<Sqlite>,
     mount: Option<String>,
-    tx: Sender<f32>,
+    tx: Sender<Result<f32, DbError>>,
     dispatch_tx: async_channel::Sender<Option<PathBuf>>,
     dispatch_rx: async_channel::Receiver<Option<PathBuf>>,
     finished_tx: Sender<DirRead>,
@@ -34,7 +34,7 @@ impl SyncEngine {
         paths: Vec<String>,
         pool: Pool<Sqlite>,
         mount: Option<String>,
-        tx: Sender<f32>,
+        tx: Sender<Result<f32, DbError>>,
     ) -> Self {
         let (dispatch_tx, dispatch_rx) = async_channel::bounded(100);
         let (finished_tx, finished_rx) = channel(100);
@@ -50,9 +50,15 @@ impl SyncEngine {
         }
     }
 
-    pub(crate) async fn start(&mut self) -> Result<(), DbError> {
+    pub(crate) async fn start(&mut self) {
         let (tags_tx, tags_rx) = channel(100);
-        let tags_handle = self.tags_task(tags_rx).await?;
+        let tags_handle = match self.tags_task(tags_rx).await {
+            Ok(handle) => handle,
+            Err(e) => {
+                self.tx.send(Err(e)).await.unwrap();
+                return;
+            }
+        };
 
         for path in &self.paths {
             self.dispatch_tx
@@ -64,8 +70,6 @@ impl SyncEngine {
 
         tags_tx.send(None).await.unwrap();
         tags_handle.await.unwrap();
-
-        Ok(())
     }
 
     async fn task_loop(&mut self, tags_tx: &Sender<Option<(Track, String)>>) {
@@ -86,11 +90,11 @@ impl SyncEngine {
 
                     // edge case - entire dir is empty
                     if total_dirs == 0 {
-                        self.tx.send(1.).await.unwrap();
+                        self.tx.send(Ok(1.)).await.unwrap();
                         break;
                     }
                     self.tx
-                        .send((dirs_processed as f32) / (total_dirs as f32))
+                        .send(Ok((dirs_processed as f32) / (total_dirs as f32)))
                         .await
                         .unwrap();
 
@@ -101,7 +105,7 @@ impl SyncEngine {
                 Ok(Some(DirRead::Found)) => {
                     total_dirs += 1;
                     self.tx
-                        .send((dirs_processed as f32) / (total_dirs as f32))
+                        .send(Ok((dirs_processed as f32) / (total_dirs as f32)))
                         .await
                         .unwrap();
                 }
