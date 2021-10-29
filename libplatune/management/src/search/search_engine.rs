@@ -6,11 +6,11 @@ use super::{
     search_result::SearchResult,
 };
 use crate::{
+    consts::{END_MATCH_TEXT, START_MATCH_TEXT},
     db_error::DbError,
     entry_type::EntryType,
     search::{
-        queries::{get_full_spellfix_query, END_MATCH_TEXT, START_MATCH_TEXT},
-        search_entry::SearchEntry,
+        queries::get_full_spellfix_query, search_entry::SearchEntry,
         spellfix_result::SpellfixResult,
     },
     spellfix::acquire_with_spellfix,
@@ -73,7 +73,11 @@ impl SearchEngine {
     fn restrict_num_terms(&self, spellfix_results: Vec<SpellfixResult>) -> Vec<SpellfixResult> {
         spellfix_results
             .into_iter()
-            .sorted_by(|a, b| a.score.partial_cmp(&b.score).unwrap())
+            .sorted_by(|a, b| {
+                a.score
+                    .partial_cmp(&b.score)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .take(MAX_TERMS)
             .sorted_by(|a, b| a.search.cmp(&b.search))
             .collect_vec()
@@ -84,25 +88,27 @@ impl SearchEngine {
         spellfix_query: &str,
         terms: &[&str],
         conn: &mut PoolConnection<Sqlite>,
-    ) -> Vec<SpellfixResult> {
+    ) -> Result<Vec<SpellfixResult>, DbError> {
         let mut corrected = sqlx::query_as::<_, SpellfixResult>(spellfix_query);
         for term in terms {
             corrected = corrected.bind(term);
         }
-        let mut spellfix_results = corrected.fetch_all(conn).await.unwrap();
-        let last = terms.last().unwrap().to_string();
-        spellfix_results.push(SpellfixResult {
-            word: last.to_owned(),
-            search: last,
-            score: 0.,
-        });
+        let mut spellfix_results = corrected.fetch_all(conn).await.map_err(DbError::DbError)?;
+        if let Some(last) = terms.last() {
+            let last = last.to_string();
+            spellfix_results.push(SpellfixResult {
+                word: last.to_owned(),
+                search: last,
+                score: 0.,
+            });
+        }
 
         // Searching for an excessive amount of terms can be a big performance hit
         // If there are a lot of results, we can ignore lower-scored suggestions
         if spellfix_results.len() > MAX_TERMS {
-            return self.restrict_num_terms(spellfix_results);
+            return Ok(self.restrict_num_terms(spellfix_results));
         }
-        spellfix_results
+        Ok(spellfix_results)
     }
 
     async fn search_helper(
@@ -127,7 +133,7 @@ impl SearchEngine {
                 &artist_filter,
                 &mut conn,
             )
-            .await;
+            .await?;
 
         // Already generated enough results, don't need to attempt spellfix
         if search_entries.len() == options.limit as usize {
@@ -140,7 +146,7 @@ impl SearchEngine {
 
         let spellfix_results = self
             .run_spellfix_query(&spellfix_query, &terms, &mut conn)
-            .await;
+            .await?;
 
         let weights = spellfix_results
             .iter()
@@ -161,7 +167,7 @@ impl SearchEngine {
                 &artist_filter,
                 &mut conn,
             )
-            .await;
+            .await?;
 
         for mut r in &mut search_entries {
             r.weights = weights.clone();
@@ -192,7 +198,7 @@ impl SearchEngine {
         options: &SearchOptions<'_>,
         artist_filter: &[String],
         con: &mut PoolConnection<Sqlite>,
-    ) -> Vec<SearchEntry> {
+    ) -> Result<Vec<SearchEntry>, DbError> {
         let full_query = get_search_query(artist_filter, &options.valid_entry_types);
 
         let mut sql_query = sqlx::query(&full_query)
@@ -211,19 +217,19 @@ impl SearchEngine {
 
         sql_query
             .map(|row| SearchEntry {
-                entry: row.try_get("entry").unwrap(),
-                entry_type: row.try_get("entry_type").unwrap(),
-                artist: row.try_get("artist").unwrap(),
-                album: row.try_get("album").unwrap(),
+                entry: row.try_get("entry").unwrap_or_default(),
+                entry_type: row.try_get("entry_type").unwrap_or_default(),
+                artist: row.try_get("artist").unwrap_or_default(),
+                album: row.try_get("album").unwrap_or_default(),
                 original_query: original_query.to_owned(),
-                correlation_id: row.try_get("correlation_id").unwrap(),
-                start_highlight: row.try_get("start_highlight").unwrap(),
-                end_highlight: row.try_get("end_highlight").unwrap(),
+                correlation_id: row.try_get("correlation_id").unwrap_or_default(),
+                start_highlight: row.try_get("start_highlight").unwrap_or_default(),
+                end_highlight: row.try_get("end_highlight").unwrap_or_default(),
                 weights: weights.clone(),
             })
             .fetch_all(con)
             .await
-            .unwrap()
+            .map_err(DbError::DbError)
     }
 
     fn convert_entries(&self, mut search_entries: Vec<SearchEntry>) -> Vec<SearchResult> {
@@ -234,7 +240,7 @@ impl SearchEngine {
             .into_iter()
             .map(|(key, group)| {
                 let group = group.collect_vec();
-                let first = group.get(0).unwrap();
+                let first = &group[0];
                 SearchResult {
                     entry: key.0,
                     entry_type: EntryType::from_str(&first.entry_type).unwrap(),

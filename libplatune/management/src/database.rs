@@ -3,6 +3,7 @@ use crate::search::search_options::SearchOptions;
 use crate::search::search_result::SearchResult;
 use crate::spellfix::acquire_with_spellfix;
 use crate::sync::sync_controller::SyncController;
+use crate::sync::sync_engine::SyncError;
 use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
 use sqlx::sqlite::SqliteQueryResult;
@@ -78,7 +79,7 @@ impl Database {
         &self,
         folders: Vec<String>,
         mount: Option<String>,
-    ) -> Receiver<Result<f32, DbError>> {
+    ) -> Receiver<Result<f32, SyncError>> {
         self.sync_controller.sync(folders, mount).await
     }
 

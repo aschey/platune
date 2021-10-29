@@ -48,24 +48,6 @@
       ]
     }
   },
-  "076eeae1153eca01ddef8854ccfa2293394a38183ea4050ab853bee045c2430f": {
-    "query": "\n        select entry_value as \"entry_value: String\"\n        from search_index\n        where length(entry_value) >= $1\n        and entry_type != 'song'\n        ",
-    "describe": {
-      "columns": [
-        {
-          "name": "entry_value: String",
-          "ordinal": 0,
-          "type_info": "Null"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        true
-      ]
-    }
-  },
   "07e8ac7262b424e460550c5ceb3f937da0317a36913c51214f4048e7f19734ea": {
     "query": "update folder set folder_path = ? where folder_path = ?",
     "describe": {
@@ -359,6 +341,24 @@
       },
       "nullable": [
         false
+      ]
+    }
+  },
+  "eaa96754639349a4acb343d03863bacc44fbacf7a2d1aa7d0511ac2201e8f64a": {
+    "query": "\n            select entry_value as \"entry_value: String\"\n            from search_index\n            where length(entry_value) >= $1\n            and entry_type != 'song'\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "entry_value: String",
+          "ordinal": 0,
+          "type_info": "Null"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        true
       ]
     }
   },

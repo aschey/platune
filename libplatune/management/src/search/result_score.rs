@@ -8,6 +8,17 @@ pub(crate) struct ResultScore {
     pub(crate) full_entry: String,
 }
 
+impl Default for ResultScore {
+    fn default() -> Self {
+        Self {
+            match_len_score: 0,
+            full_len_score: 0,
+            weighted_score: 0.0,
+            full_entry: "".to_owned(),
+        }
+    }
+}
+
 impl Sum for ResultScore {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|a, b| ResultScore {
@@ -16,7 +27,7 @@ impl Sum for ResultScore {
             full_len_score: a.full_len_score,
             full_entry: a.full_entry,
         })
-        .unwrap()
+        .unwrap_or_default()
     }
 }
 

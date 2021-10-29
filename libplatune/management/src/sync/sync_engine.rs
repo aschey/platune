@@ -1,4 +1,5 @@
 use std::{
+    io,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -7,22 +8,33 @@ use itertools::Itertools;
 use katatsuki::Track;
 use regex::Regex;
 use sqlx::{Pool, Sqlite};
+use thiserror::Error;
 use tokio::{
     sync::mpsc::{channel, Receiver, Sender},
     task::JoinHandle,
     time::timeout,
 };
-use tracing::info;
+use tracing::{error, info};
 
 use crate::{consts::MIN_WORDS, db_error::DbError};
 
 use super::{dir_read::DirRead, sync_dal::SyncDAL};
 
+#[derive(Error, Debug)]
+pub enum SyncError {
+    #[error(transparent)]
+    DbError(#[from] DbError),
+    #[error("Async error: {0}")]
+    AsyncError(String),
+    #[error(transparent)]
+    IOError(#[from] io::Error),
+}
+
 pub(crate) struct SyncEngine {
     paths: Vec<String>,
     pool: Pool<Sqlite>,
     mount: Option<String>,
-    tx: Sender<Result<f32, DbError>>,
+    tx: Sender<Result<f32, SyncError>>,
     dispatch_tx: async_channel::Sender<Option<PathBuf>>,
     dispatch_rx: async_channel::Receiver<Option<PathBuf>>,
     finished_tx: Sender<DirRead>,
@@ -34,10 +46,11 @@ impl SyncEngine {
         paths: Vec<String>,
         pool: Pool<Sqlite>,
         mount: Option<String>,
-        tx: Sender<Result<f32, DbError>>,
+        tx: Sender<Result<f32, SyncError>>,
     ) -> Self {
         let (dispatch_tx, dispatch_rx) = async_channel::bounded(100);
         let (finished_tx, finished_rx) = channel(100);
+
         Self {
             paths,
             pool,
@@ -50,29 +63,40 @@ impl SyncEngine {
         }
     }
 
-    pub(crate) async fn start(&mut self) {
+    pub(crate) async fn start(&mut self) -> Result<(), SyncError> {
         let (tags_tx, tags_rx) = channel(100);
-        let tags_handle = match self.tags_task(tags_rx).await {
-            Ok(handle) => handle,
-            Err(e) => {
-                self.tx.send(Err(e)).await.unwrap();
-                return;
-            }
-        };
+        let tags_handle = self.tags_task(tags_rx);
 
         for path in &self.paths {
             self.dispatch_tx
                 .send(Some(PathBuf::from(path)))
                 .await
-                .unwrap();
+                .map_err(|e| SyncError::AsyncError(e.to_string()))?;
         }
-        self.task_loop(&tags_tx).await;
+        self.task_loop(&tags_tx).await?;
 
-        tags_tx.send(None).await.unwrap();
-        tags_handle.await.unwrap();
+        tags_tx
+            .send(None)
+            .await
+            .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+
+        if let Err(e) = tags_handle
+            .await
+            .map_err(|e| SyncError::AsyncError(e.to_string()))?
+        {
+            self.tx
+                .send(Err(SyncError::DbError(e)))
+                .await
+                .map_err(|e| SyncError::AsyncError(e.to_string()))?
+        }
+
+        Ok(())
     }
 
-    async fn task_loop(&mut self, tags_tx: &Sender<Option<(Track, String)>>) {
+    async fn task_loop(
+        &mut self,
+        tags_tx: &Sender<Option<(Track, String)>>,
+    ) -> Result<(), SyncError> {
         let mut num_tasks = 1;
         let max_tasks = 100;
 
@@ -90,13 +114,16 @@ impl SyncEngine {
 
                     // edge case - entire dir is empty
                     if total_dirs == 0 {
-                        self.tx.send(Ok(1.)).await.unwrap();
+                        self.tx
+                            .send(Ok(1.))
+                            .await
+                            .map_err(|e| SyncError::AsyncError(e.to_string()))?;
                         break;
                     }
                     self.tx
                         .send(Ok((dirs_processed as f32) / (total_dirs as f32)))
                         .await
-                        .unwrap();
+                        .map_err(|e| SyncError::AsyncError(e.to_string()))?;
 
                     if total_dirs == dirs_processed {
                         break;
@@ -107,7 +134,7 @@ impl SyncEngine {
                     self.tx
                         .send(Ok((dirs_processed as f32) / (total_dirs as f32)))
                         .await
-                        .unwrap();
+                        .map_err(|e| SyncError::AsyncError(e.to_string()))?;
                 }
                 Ok(None) => {
                     break;
@@ -123,32 +150,43 @@ impl SyncEngine {
         }
 
         for _ in 0..handles.len() {
-            self.dispatch_tx.send(None).await.unwrap();
+            self.dispatch_tx
+                .send(None)
+                .await
+                .map_err(|e| SyncError::AsyncError(e.to_string()))?;
         }
         for handle in handles {
-            handle.await.unwrap();
+            if let Err(e) = handle
+                .await
+                .map_err(|e| SyncError::AsyncError(e.to_string()))?
+            {
+                return Err(e);
+            }
         }
+
+        Ok(())
     }
 
-    async fn tags_task(
+    fn tags_task(
         &self,
         mut tags_rx: Receiver<Option<(Track, String)>>,
-    ) -> Result<JoinHandle<()>, DbError> {
+    ) -> JoinHandle<Result<(), DbError>> {
         let pool = self.pool.clone();
-        let mut dal = SyncDAL::try_new(pool).await?;
-        Ok(tokio::spawn(async move {
+
+        tokio::spawn(async move {
+            let mut dal = SyncDAL::try_new(pool).await?;
             while let Some(metadata) = tags_rx.recv().await {
                 match metadata {
                     Some((metadata, path)) => {
                         let fingerprint =
                             metadata.artist.clone() + &metadata.album + &metadata.title;
-                        dal.add_artist(&metadata.artist).await;
+                        dal.add_artist(&metadata.artist).await?;
 
-                        dal.add_album_artist(&metadata.album_artists).await;
+                        dal.add_album_artist(&metadata.album_artists).await?;
 
                         dal.add_album(&metadata.album, &metadata.album_artists)
-                            .await;
-                        dal.sync_song(&path, &metadata, &fingerprint).await;
+                            .await?;
+                        dal.sync_song(&path, &metadata, &fingerprint).await?;
                     }
                     None => {
                         break;
@@ -157,19 +195,21 @@ impl SyncEngine {
             }
 
             // TODO: delete missing songs
-            dal.get_missing_songs().await;
+            dal.get_missing_songs().await?;
 
-            dal.sync_spellfix().await;
-            SyncEngine::add_search_aliases(&mut dal).await;
+            dal.sync_spellfix().await?;
+            SyncEngine::add_search_aliases(&mut dal).await?;
 
             info!("committing");
-            dal.commit().await;
+            dal.commit().await?;
             info!("done");
-        }))
+
+            Ok(())
+        })
     }
 
-    async fn add_search_aliases(dal: &mut SyncDAL<'_>) {
-        let long_vals = dal.get_long_entries().await;
+    async fn add_search_aliases(dal: &mut SyncDAL<'_>) -> Result<(), DbError> {
+        let long_vals = dal.get_long_entries().await?;
 
         let re = Regex::new(r"[\s-]+").unwrap();
         for entry_value in long_vals {
@@ -183,17 +223,26 @@ impl SyncEngine {
                     if w == "and" {
                         "&".to_owned()
                     } else {
-                        w.chars().next().unwrap().to_string().to_lowercase()
+                        w.chars()
+                            .next()
+                            .unwrap_or_default()
+                            .to_string()
+                            .to_lowercase()
                     }
                 })
                 .collect_vec()
                 .join("");
 
-            dal.insert_alias(&entry_value, &acronym).await;
+            dal.insert_alias(&entry_value, &acronym).await?;
         }
+
+        Ok(())
     }
 
-    fn spawn_task(&self, tags_tx: Sender<Option<(Track, String)>>) -> JoinHandle<()> {
+    fn spawn_task(
+        &self,
+        tags_tx: Sender<Option<(Track, String)>>,
+    ) -> JoinHandle<Result<(), SyncError>> {
         let mount = self.mount.clone();
         let dispatch_tx = self.dispatch_tx.clone();
         let dispatch_rx = self.dispatch_rx.clone();
@@ -203,13 +252,15 @@ impl SyncEngine {
                 match path {
                     Some(path) => {
                         SyncEngine::parse_dir(path, &mount, &tags_tx, &dispatch_tx, &finished_tx)
-                            .await;
+                            .await?;
                     }
                     None => {
                         break;
                     }
                 }
             }
+
+            Ok(())
         })
     }
 
@@ -219,35 +270,48 @@ impl SyncEngine {
         tags_tx: &Sender<Option<(Track, String)>>,
         dispatch_tx: &async_channel::Sender<Option<PathBuf>>,
         finished_tx: &Sender<DirRead>,
-    ) {
-        for dir_result in path.read_dir().unwrap() {
-            let dir = dir_result.unwrap();
+    ) -> Result<(), SyncError> {
+        for dir_result in path.read_dir().map_err(SyncError::IOError)? {
+            let dir = dir_result.map_err(SyncError::IOError)?;
 
-            if dir.file_type().unwrap().is_file() {
+            if dir.file_type().map_err(SyncError::IOError)?.is_file() {
                 let file_path = dir.path();
 
-                if let Some(metadata) = SyncEngine::parse_metadata(&file_path) {
+                if let Some(metadata) = SyncEngine::parse_metadata(&file_path)? {
                     let file_path_str = SyncEngine::clean_file_path(&file_path, mount);
-                    tags_tx.send(Some((metadata, file_path_str))).await.unwrap();
+                    tags_tx
+                        .send(Some((metadata, file_path_str)))
+                        .await
+                        .map_err(|e| SyncError::AsyncError(e.to_string()))?;
                 }
             } else {
-                dispatch_tx.send(Some(dir.path())).await.unwrap();
-                finished_tx.send(DirRead::Found).await.unwrap();
+                dispatch_tx
+                    .send(Some(dir.path()))
+                    .await
+                    .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                finished_tx
+                    .send(DirRead::Found)
+                    .await
+                    .map_err(|e| SyncError::AsyncError(e.to_string()))?;
             }
         }
-        finished_tx.send(DirRead::Completed).await.unwrap();
+
+        Ok(finished_tx
+            .send(DirRead::Completed)
+            .await
+            .map_err(|e| SyncError::AsyncError(e.to_string()))?)
     }
 
-    fn parse_metadata(file_path: &Path) -> Option<Track> {
+    fn parse_metadata(file_path: &Path) -> Result<Option<Track>, SyncError> {
         let name = file_path.extension().unwrap_or_default();
-        let _size = file_path.metadata().unwrap().len();
+        let _size = file_path.metadata().map_err(SyncError::IOError)?.len();
         let mut song_metadata: Option<Track> = None;
         match &name.to_str().unwrap_or_default().to_lowercase()[..] {
             "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
                 let tag_result = Track::from_path(file_path, None);
                 match tag_result {
                     Err(e) => {
-                        println!("{:?}", e);
+                        error!("{:?}", e);
                     }
                     Ok(tag) => {
                         song_metadata = Some(tag);
@@ -258,11 +322,11 @@ impl SyncEngine {
             _ => {}
         }
 
-        song_metadata
+        Ok(song_metadata)
     }
 
     fn clean_file_path(file_path: &Path, mount: &Option<String>) -> String {
-        let mut file_path_str = file_path.to_str().unwrap().to_owned();
+        let mut file_path_str = file_path.to_string_lossy().to_string();
         if cfg!(windows) {
             file_path_str = file_path_str.replace(r"\", r"/");
         }

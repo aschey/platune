@@ -2,7 +2,7 @@ use std::time::SystemTime;
 
 use itertools::Itertools;
 use katatsuki::Track;
-use sqlx::{Pool, Sqlite, Transaction};
+use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite, Transaction};
 
 use crate::{consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix};
 
@@ -13,7 +13,7 @@ pub(crate) struct SyncDAL<'a> {
 
 impl<'a> SyncDAL<'a> {
     pub(crate) async fn try_new(pool: Pool<Sqlite>) -> Result<SyncDAL<'a>, DbError> {
-        let mut tran = pool.begin().await.unwrap();
+        let mut tran = pool.begin().await.map_err(DbError::DbError)?;
         load_spellfix(&mut tran)?;
 
         let timestamp = SystemTime::now()
@@ -24,29 +24,36 @@ impl<'a> SyncDAL<'a> {
         Ok(Self { tran, timestamp })
     }
 
-    pub(crate) async fn add_artist(&mut self, artist: &str) {
-        let _ = sqlx::query!(
+    pub(crate) async fn add_artist(&mut self, artist: &str) -> Result<SqliteQueryResult, DbError> {
+        sqlx::query!(
             "insert or ignore into artist(artist_name, created_date) values(?, ?);",
             artist,
             self.timestamp
         )
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)
     }
 
-    pub(crate) async fn add_album_artist(&mut self, album_artist: &str) {
-        let _ = sqlx::query!(
+    pub(crate) async fn add_album_artist(
+        &mut self,
+        album_artist: &str,
+    ) -> Result<SqliteQueryResult, DbError> {
+        sqlx::query!(
             "insert or ignore into album_artist(album_artist_name, created_date) values(?, ?);",
             album_artist,
             self.timestamp
         )
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)
     }
 
-    pub(crate) async fn add_album(&mut self, album: &str, album_artist: &str) {
+    pub(crate) async fn add_album(
+        &mut self,
+        album: &str,
+        album_artist: &str,
+    ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
             "
         insert or ignore into album(album_name, album_artist_id, created_date) 
@@ -55,82 +62,92 @@ impl<'a> SyncDAL<'a> {
             album_artist,
             self.timestamp
         )
-        .fetch_all(&mut self.tran)
+        .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)
     }
 
-    pub(crate) async fn sync_song(&mut self, path: &str, metadata: &Track, fingerprint: &str) {
-        self.add_song(path, metadata, fingerprint).await;
-        self.update_song(path, metadata, fingerprint).await;
+    pub(crate) async fn sync_song(
+        &mut self,
+        path: &str,
+        metadata: &Track,
+        fingerprint: &str,
+    ) -> Result<SqliteQueryResult, DbError> {
+        self.add_song(path, metadata, fingerprint).await?;
+        self.update_song(path, metadata, fingerprint).await
     }
 
-    pub(crate) async fn get_missing_songs(&mut self) -> Vec<String> {
+    pub(crate) async fn get_missing_songs(&mut self) -> Result<Vec<String>, DbError> {
         let paths = sqlx::query!(
             "select song_path from song where last_scanned_date < ?",
             self.timestamp
         )
         .fetch_all(&mut self.tran)
-        .await
-        .unwrap()
+        .await?
         .into_iter()
         .map(|r| r.song_path)
         .collect_vec();
 
-        paths
+        Ok(paths)
     }
 
-    pub(crate) async fn sync_spellfix(&mut self) {
+    pub(crate) async fn sync_spellfix(&mut self) -> Result<(), DbError> {
         sqlx::query(
             "
-    insert into search_spellfix(word)
-    select term
-    from search_vocab
-    where term not in (
-        select word
-        from search_spellfix
-    )
-    ",
+            insert into search_spellfix(word)
+            select term
+            from search_vocab
+            where term not in (
+                select word
+                from search_spellfix
+            )
+            ",
         )
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)?;
 
         sqlx::query(
             "
-    delete from search_spellfix
-    where word NOT IN (
-        select term
-        from search_vocab
-    )
-    ",
+            delete from search_spellfix
+            where word NOT IN (
+                select term
+                from search_vocab
+            )
+            ",
         )
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)?;
+
+        Ok(())
     }
 
-    pub(crate) async fn get_long_entries(&mut self) -> Vec<String> {
+    pub(crate) async fn get_long_entries(&mut self) -> Result<Vec<String>, DbError> {
         let long_vals = sqlx::query!(
             r#"
-        select entry_value as "entry_value: String"
-        from search_index
-        where length(entry_value) >= $1
-        and entry_type != 'song'
-        "#,
+            select entry_value as "entry_value: String"
+            from search_index
+            where length(entry_value) >= $1
+            and entry_type != 'song'
+            "#,
             MIN_LEN as i32
         )
         .fetch_all(&mut self.tran)
         .await
-        .unwrap()
+        .map_err(DbError::DbError)?
         .into_iter()
-        .map(|r| r.entry_value.unwrap())
+        .map(|r| r.entry_value.unwrap_or_default())
         .collect_vec();
 
-        long_vals
+        Ok(long_vals)
     }
 
-    pub(crate) async fn insert_alias(&mut self, entry_value: &str, acronym: &str) {
+    pub(crate) async fn insert_alias(
+        &mut self,
+        entry_value: &str,
+        acronym: &str,
+    ) -> Result<(), DbError> {
         sqlx::query(
             "
             insert into search_spellfix(word, soundslike)
@@ -144,19 +161,25 @@ impl<'a> SyncDAL<'a> {
         .bind(acronym)
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)?;
 
         if acronym.contains('&') {
             let replaced = acronym.replace("&", "a");
-            self.insert_alt_alias(entry_value, &replaced).await;
+            self.insert_alt_alias(entry_value, &replaced).await?;
         }
+
+        Ok(())
     }
 
-    pub(crate) async fn commit(self) {
-        self.tran.commit().await.unwrap();
+    pub(crate) async fn commit(self) -> Result<(), DbError> {
+        self.tran.commit().await.map_err(DbError::DbError)
     }
 
-    async fn insert_alt_alias(&mut self, entry_value: &str, acronym: &str) {
+    async fn insert_alt_alias(
+        &mut self,
+        entry_value: &str,
+        acronym: &str,
+    ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query(
             "
             insert into search_spellfix(word, soundslike)
@@ -170,11 +193,16 @@ impl<'a> SyncDAL<'a> {
         .bind(acronym)
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)
     }
 
-    async fn add_song(&mut self, path: &str, metadata: &Track, fingerprint: &str) {
-        let _ = sqlx::query!(
+    async fn add_song(
+        &mut self,
+        path: &str,
+        metadata: &Track,
+        fingerprint: &str,
+    ) -> Result<SqliteQueryResult, DbError> {
+        sqlx::query!(
             "
         insert into song(
             song_path,
@@ -232,11 +260,16 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)
     }
 
-    async fn update_song(&mut self, path: &str, metadata: &Track, fingerprint: &str) {
-        let _ = sqlx::query!(
+    async fn update_song(
+        &mut self,
+        path: &str,
+        metadata: &Track,
+        fingerprint: &str,
+    ) -> Result<SqliteQueryResult, DbError> {
+        sqlx::query!(
             "
         update song
             set modified_date = $2,
@@ -273,6 +306,6 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .unwrap();
+        .map_err(DbError::DbError)
     }
 }

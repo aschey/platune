@@ -5,6 +5,7 @@ use crate::{
     config::Config,
     database::{Database, LookupEntry},
     db_error::DbError,
+    sync::sync_engine::SyncError,
 };
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -93,7 +94,7 @@ impl Manager {
         Ok(self.expand_paths(folders).await)
     }
 
-    pub async fn sync(&self) -> Result<Receiver<Result<f32, DbError>>, DbError> {
+    pub async fn sync(&self) -> Result<Receiver<Result<f32, SyncError>>, DbError> {
         let folders = self.get_all_folders().await?;
         let mount = self.get_registered_mount().await;
         Ok(self.db.sync(folders, mount).await)
@@ -145,9 +146,8 @@ impl Manager {
             for entry in &mut res {
                 entry.path = mount
                     .join(entry.path.to_owned())
-                    .to_str()
-                    .unwrap()
-                    .to_owned()
+                    .to_string_lossy()
+                    .to_string()
             }
         }
         Ok(res)

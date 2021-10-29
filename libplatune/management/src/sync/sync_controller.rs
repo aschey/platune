@@ -1,9 +1,7 @@
 use sqlx::{Pool, Sqlite};
 use tokio::sync::mpsc::{channel, Receiver};
 
-use crate::db_error::DbError;
-
-use super::sync_engine::SyncEngine;
+use super::sync_engine::{SyncEngine, SyncError};
 
 #[derive(Clone)]
 pub(crate) struct SyncController {
@@ -18,7 +16,7 @@ impl SyncController {
         &self,
         folders: Vec<String>,
         mount: Option<String>,
-    ) -> Receiver<Result<f32, DbError>> {
+    ) -> Receiver<Result<f32, SyncError>> {
         let (tx, rx) = channel(32);
         if !folders.is_empty() {
             let pool = self.pool.clone();

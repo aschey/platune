@@ -1,9 +1,9 @@
 use itertools::Itertools;
 use regex::Regex;
 
+use crate::consts::{END_MATCH_TEXT, START_MATCH_TEXT};
+
 use super::spellfix_result::SpellfixResult;
-pub(crate) const START_MATCH_TEXT: &str = "{startmatch}";
-pub(crate) const END_MATCH_TEXT: &str = "{endmatch}";
 
 pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[&str]) -> String {
     let num_base_args = 5;

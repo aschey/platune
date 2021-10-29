@@ -1422,6 +1422,7 @@ dependencies = [
  "dotenv",
  "itertools",
  "katatsuki",
+ "lazy_static 1.4.0",
  "libsqlite3-sys",
  "log",
  "regex 1.5.4",

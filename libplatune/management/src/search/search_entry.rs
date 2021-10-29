@@ -1,8 +1,8 @@
 use regex::Regex;
 
-use crate::consts::{MIN_LEN, MIN_WORDS};
-
 use super::result_score::ResultScore;
+use crate::consts::{END_MATCH_TEXT, MIN_LEN, MIN_WORDS, START_MATCH_TEXT};
+use lazy_static::lazy_static;
 use std::{cmp::Ordering, collections::HashMap};
 
 #[derive(Debug)]
@@ -17,12 +17,20 @@ pub(crate) struct SearchEntry {
     pub(crate) end_highlight: String,
     pub(crate) weights: HashMap<String, f32>,
 }
+lazy_static! {
+    static ref MATCH_REGEX: String = format!(
+        r"(?:{}(.*?){}[^\s]*).*",
+        START_MATCH_TEXT.replace("{", r"\{").replace("}", r"\}"),
+        END_MATCH_TEXT.replace("{", r"\{").replace("}", r"\}")
+    );
+}
 
 impl SearchEntry {
     fn score_match(&self) -> ResultScore {
         let entry = self.entry.to_lowercase();
-        let count = entry.matches(r"{startmatch}").count();
-        let re = Regex::new(&r"(?:\{startmatch\}(.*?)\{endmatch\}[^\s]*).*".repeat(count)).unwrap();
+        let count = entry.matches(START_MATCH_TEXT).count();
+
+        let re = Regex::new(&MATCH_REGEX.repeat(count)).unwrap();
         let caps = re.captures(&entry).unwrap();
 
         let mut score: ResultScore = caps
@@ -67,10 +75,10 @@ impl SearchEntry {
         match &self.entry_type[..] {
             "song" => format!(
                 "Song from {} by {}",
-                self.album.to_owned().unwrap(),
-                self.artist.to_owned().unwrap(),
+                self.album.to_owned().unwrap_or_default(),
+                self.artist.to_owned().unwrap_or_default(),
             ),
-            "album" => format!("Album by {}", self.artist.to_owned().unwrap()),
+            "album" => format!("Album by {}", self.artist.to_owned().unwrap_or_default()),
             "artist" => "Artist".to_owned(),
             "album_artist" => "Album Artist".to_owned(),
             _ => "".to_owned(),
