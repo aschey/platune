@@ -306,7 +306,7 @@ async fn run_server(
     server_result.with_context(|| "Error running server")
 }
 
-async fn run_servers(shutdown_tx: broadcast::Sender<()>, socket_path: String) -> Result<()> {
+async fn run_servers(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     let platune_player = Arc::new(PlatunePlayer::new());
     let manager = init_manager().await?;
 
@@ -325,7 +325,7 @@ async fn run_servers(shutdown_tx: broadcast::Sender<()>, socket_path: String) ->
             shutdown_tx.clone(),
             platune_player,
             manager,
-            Transport::Uds(socket_path),
+            Transport::Uds("/var/run/platuned/platuned.sock".to_owned()),
         );
         servers.push(unix_server);
     }
@@ -356,14 +356,12 @@ async fn os_main() -> Result<()> {
 
     let args: Vec<String> = std::env::args().collect();
 
-    let mut socket_path = "/var/run/platuned/platuned.sock".to_owned();
     if !(args.len() > 1 && args[1] == "-s") {
         dotenv::from_path("./.env").unwrap();
-        socket_path = "/tmp/platuned/platuned.sock".to_owned();
     }
 
     let (tx, _) = broadcast::channel(32);
     let signal_handler = SignalHandler::start(tx.clone())?;
-    run_servers(tx, socket_path).await?;
+    run_servers(tx).await?;
     signal_handler.close().await
 }
