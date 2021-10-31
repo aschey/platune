@@ -1,18 +1,16 @@
 use crate::player_server::Player;
 use crate::rpc::*;
-use std::pin::Pin;
+use std::{pin::Pin, sync::Arc};
 
 use libplatune_player::platune_player::*;
 use tonic::{Request, Response, Status};
 
 pub struct PlayerImpl {
-    player: PlatunePlayer,
+    player: Arc<PlatunePlayer>,
 }
 
 impl PlayerImpl {
-    pub fn new() -> PlayerImpl {
-        let player = PlatunePlayer::new();
-
+    pub fn new(player: Arc<PlatunePlayer>) -> Self {
         PlayerImpl { player }
     }
 }

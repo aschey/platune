@@ -1,12 +1,11 @@
 use crate::management_server::Management;
 use crate::rpc::*;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use futures::StreamExt;
-use libplatune_management::config::Config;
-use libplatune_management::database::Database;
 use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use std::pin::Pin;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Request;
@@ -15,20 +14,12 @@ use tonic::{Response, Status};
 use tracing::{error, warn};
 
 pub struct ManagementImpl {
-    manager: Manager,
+    manager: Arc<Manager>,
 }
 
 impl ManagementImpl {
-    pub async fn try_new() -> Result<ManagementImpl> {
-        let path = std::env::var("DATABASE_URL")
-            .with_context(|| "DATABASE_URL environment variable not set")?;
-        let db = Database::connect(path, true).await?;
-        db.migrate()
-            .await
-            .with_context(|| "Error migrating database")?;
-        let config = Config::try_new()?;
-        let manager = Manager::new(&db, &config);
-        Ok(ManagementImpl { manager })
+    pub fn new(manager: Arc<Manager>) -> Self {
+        Self { manager }
     }
 }
 

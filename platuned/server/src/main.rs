@@ -1,21 +1,30 @@
 mod management;
 mod player;
-use std::panic;
-
+mod signal_handler;
+#[cfg(unix)]
+mod unix;
 use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
+use crate::unix::unix_stream::UnixStream;
 use anyhow::Context;
 use anyhow::Result;
+use libplatune_management::config::Config;
+use libplatune_management::database::Database;
+use libplatune_management::manager::Manager;
+use libplatune_player::platune_player::PlatunePlayer;
 use management::ManagementImpl;
 use player::PlayerImpl;
 use rpc::*;
-use tokio::sync::mpsc::Receiver;
+use std::net::SocketAddr;
+use std::panic;
+use std::sync::Arc;
+use tokio::sync::broadcast;
 use tonic::transport::Server;
 use tracing::error;
 use tracing::info;
-use tracing_subscriber::fmt::time::LocalTime;
 use tracing_subscriber::fmt::Layer;
 use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::EnvFilter;
 
 pub mod rpc {
     tonic::include_proto!("player_rpc");
@@ -178,15 +187,7 @@ mod service {
     }
 }
 
-#[tokio::main]
-async fn main() {
-    panic::set_hook(Box::new(|panic_info| {
-        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-            error!("panic occurred: {:?}", s);
-        } else {
-            error!("panic occurred");
-        }
-    }));
+fn init_logging() {
     let proj_dirs = directories::ProjectDirs::from("", "", "platune")
         .expect("Unable to find a valid home directory");
     let file_appender = tracing_appender::rolling::hourly(proj_dirs.cache_dir(), "platuned.log");
@@ -194,57 +195,148 @@ async fn main() {
     let (non_blocking_file, _file_guard) = tracing_appender::non_blocking(file_appender);
 
     let collector = tracing_subscriber::registry()
-        .with(
-            Layer::new()
-                .with_timer(LocalTime::rfc_3339())
+        .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
+        .with({
+            #[allow(clippy::let_and_return)]
+            let layer = Layer::new()
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .with_ansi(false)
-                .with_writer(non_blocking_file),
-        )
-        .with(
-            Layer::new()
+                .with_writer(non_blocking_file);
+
+            #[cfg(windows)]
+            layer.with_timer(LocalTime::rfc_3339());
+
+            layer
+        })
+        .with({
+            #[allow(clippy::let_and_return)]
+            let layer = Layer::new()
                 .pretty()
-                .with_timer(LocalTime::rfc_3339())
                 .with_thread_ids(true)
                 .with_thread_names(true)
-                .with_writer(non_blocking_stdout),
-        );
+                .with_writer(non_blocking_stdout);
+
+            #[cfg(windows)]
+            layer.with_timer(LocalTime::rfc_3339());
+
+            layer
+        });
+
     tracing::subscriber::set_global_default(collector)
         .expect("Unable to set global tracing subscriber");
+}
+
+fn set_panic_hook() {
+    panic::set_hook(Box::new(|panic_info| {
+        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            error!("panic occurred: {:?}", s);
+        } else {
+            error!("panic occurred: {:?}", panic_info);
+        }
+    }));
+}
+
+#[tokio::main]
+async fn main() {
+    init_logging();
+    // Don't set panic hook until after logging is set up
+    set_panic_hook();
 
     info!("starting");
     if let Err(e) = os_main().await {
         error!("{:?}", e);
+
         std::process::exit(1);
     }
 }
 
-async fn run_server(rx: Option<Receiver<()>>) -> Result<()> {
-    let service = tonic_reflection::server::Builder::configure()
+async fn init_manager() -> Result<Arc<Manager>> {
+    let path = std::env::var("DATABASE_URL")
+        .with_context(|| "DATABASE_URL environment variable not set")?;
+    let db = Database::connect(path, true).await?;
+    db.migrate()
+        .await
+        .with_context(|| "Error migrating database")?;
+    let config = Config::try_new()?;
+    let manager = Manager::new(&db, &config);
+    Ok(Arc::new(manager))
+}
+
+enum Transport {
+    Http(SocketAddr),
+    #[cfg(unix)]
+    Uds(String),
+}
+
+async fn run_server(
+    mut rx: broadcast::Receiver<()>,
+    platune_player: Arc<PlatunePlayer>,
+    manager: Arc<Manager>,
+    transport: Transport,
+    is_service: bool,
+) -> Result<()> {
+    let reflection_service = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
         .build()
         .with_context(|| "Error building tonic server")?;
 
-    let addr = "0.0.0.0:50051".parse().unwrap();
+    let player = PlayerImpl::new(platune_player);
 
-    let player = PlayerImpl::new();
-    let management = ManagementImpl::try_new().await?;
+    let management = ManagementImpl::new(manager);
     let builder = Server::builder()
-        .add_service(service)
+        .add_service(reflection_service)
         .add_service(PlayerServer::new(player))
         .add_service(ManagementServer::new(management));
-    match rx {
-        Some(mut rx) => Ok(builder
-            .serve_with_shutdown(addr, async { rx.recv().await.unwrap_or_default() })
-            .await
-            .with_context(|| "Error running server")?),
 
-        None => Ok(builder
-            .serve(addr)
-            .await
-            .with_context(|| "Error running server")?),
+    let server_result = match transport {
+        Transport::Http(addr) => {
+            builder
+                .serve_with_shutdown(addr, async { rx.recv().await.unwrap_or_default() })
+                .await
+        }
+        #[cfg(unix)]
+        Transport::Uds(path) => {
+            builder
+                .serve_with_incoming_shutdown(
+                    UnixStream::get_async_stream(&path, !is_service)?,
+                    async { rx.recv().await.unwrap_or_default() },
+                )
+                .await
+        }
+    };
+
+    server_result.with_context(|| "Error running server")
+}
+
+async fn run_servers(tx: broadcast::Sender<()>, is_service: bool) -> Result<()> {
+    let platune_player = Arc::new(PlatunePlayer::new());
+    let manager = init_manager().await?;
+
+    let mut servers = Vec::<_>::new();
+    let http_server = run_server(
+        tx.subscribe(),
+        platune_player.clone(),
+        manager.clone(),
+        Transport::Http("0.0.0.0:50051".parse().unwrap()),
+        is_service,
+    );
+    servers.push(http_server);
+
+    #[cfg(unix)]
+    {
+        let unix_server = run_server(
+            tx.subscribe(),
+            platune_player,
+            manager,
+            Transport::Uds("/var/run/platuned/platuned.sock".to_owned()),
+            is_service,
+        );
+        servers.push(unix_server);
     }
+
+    futures::future::try_join_all(servers).await?;
+    Ok(())
 }
 
 #[cfg(windows)]
@@ -265,13 +357,17 @@ async fn os_main() -> Result<()> {
 
 #[cfg(not(windows))]
 async fn os_main() -> Result<()> {
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 && args[1] == "-s" {
-        run_server(None).await;
-    } else {
-        dotenv::from_path("./.env").unwrap();
-        run_server(None).await;
-    }
+    use signal_handler::SignalHandler;
 
-    Ok(())
+    let args: Vec<String> = std::env::args().collect();
+
+    let mut is_service = true;
+    if !(args.len() > 1 && args[1] == "-s") {
+        dotenv::from_path("./.env").unwrap();
+        is_service = false;
+    }
+    let (tx, _) = broadcast::channel(32);
+    let signal_handler = SignalHandler::start(tx.clone())?;
+    run_servers(tx, is_service).await?;
+    signal_handler.close().await
 }
