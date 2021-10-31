@@ -23,7 +23,7 @@ impl UnixListener {
 
         let mut perms = path
             .metadata()
-            .with_context(|| "Error reading  metadata from Unix socket file")?
+            .with_context(|| "Error reading metadata from Unix socket file")?
             .permissions();
         perms.set_mode(0o666);
         std::fs::set_permissions(&path, perms).unwrap();
