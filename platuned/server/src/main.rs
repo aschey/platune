@@ -272,7 +272,6 @@ async fn run_server(
     platune_player: Arc<PlatunePlayer>,
     manager: Arc<Manager>,
     transport: Transport,
-    is_service: bool,
 ) -> Result<()> {
     let reflection_service = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
@@ -297,10 +296,9 @@ async fn run_server(
         #[cfg(unix)]
         Transport::Uds(path) => {
             builder
-                .serve_with_incoming_shutdown(
-                    UnixStream::get_async_stream(&path, !is_service)?,
-                    async { shutdown_rx.recv().await.unwrap_or_default() },
-                )
+                .serve_with_incoming_shutdown(UnixStream::get_async_stream(&path)?, async {
+                    shutdown_rx.recv().await.unwrap_or_default()
+                })
                 .await
         }
     };
@@ -308,7 +306,7 @@ async fn run_server(
     server_result.with_context(|| "Error running server")
 }
 
-async fn run_servers(shutdown_tx: broadcast::Sender<()>, is_service: bool) -> Result<()> {
+async fn run_servers(shutdown_tx: broadcast::Sender<()>, socket_path: String) -> Result<()> {
     let platune_player = Arc::new(PlatunePlayer::new());
     let manager = init_manager().await?;
 
@@ -318,7 +316,6 @@ async fn run_servers(shutdown_tx: broadcast::Sender<()>, is_service: bool) -> Re
         platune_player.clone(),
         manager.clone(),
         Transport::Http("0.0.0.0:50051".parse().unwrap()),
-        is_service,
     );
     servers.push(http_server);
 
@@ -328,8 +325,7 @@ async fn run_servers(shutdown_tx: broadcast::Sender<()>, is_service: bool) -> Re
             shutdown_tx.clone(),
             platune_player,
             manager,
-            Transport::Uds("/var/run/platuned/platuned.sock".to_owned()),
-            is_service,
+            Transport::Uds(socket_path),
         );
         servers.push(unix_server);
     }
@@ -360,13 +356,14 @@ async fn os_main() -> Result<()> {
 
     let args: Vec<String> = std::env::args().collect();
 
-    let mut is_service = true;
+    let mut socket_path = "/var/run/platuned/platuned.sock".to_owned();
     if !(args.len() > 1 && args[1] == "-s") {
         dotenv::from_path("./.env").unwrap();
-        is_service = false;
+        socket_path = "/tmp/platuned/platuned.sock".to_owned();
     }
+
     let (tx, _) = broadcast::channel(32);
     let signal_handler = SignalHandler::start(tx.clone())?;
-    run_servers(tx, is_service).await?;
+    run_servers(tx, socket_path).await?;
     signal_handler.close().await
 }

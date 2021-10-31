@@ -1,8 +1,7 @@
-use anyhow::Context;
 use async_stream::AsyncStream;
 use futures::TryFutureExt;
 use std::{
-    io::{ErrorKind, Result},
+    io::Result,
     path::Path,
     pin::Pin,
     sync::Arc,
@@ -13,7 +12,6 @@ use tokio::{
     net::unix::{SocketAddr, UCred},
 };
 use tonic::transport::server::Connected;
-use tracing::error;
 
 use crate::unix::unix_listener::UnixListener;
 
@@ -23,23 +21,13 @@ pub struct UnixStream(pub tokio::net::UnixStream);
 impl UnixStream {
     pub fn get_async_stream(
         path: impl AsRef<Path>,
-        fallback_to_tmp: bool,
     ) -> anyhow::Result<
         AsyncStream<anyhow::Result<UnixStream, std::io::Error>, impl futures::Future<Output = ()>>,
     > {
-        let mut path = path.as_ref();
-
-        if let Err(e) = Self::create_socket_path(path) {
-            if fallback_to_tmp {
-                path = Path::new("/tmp/platuned");
-                Self::create_socket_path(path)?;
-            } else {
-                return Err(e);
-            }
-        }
+        let path = path.as_ref();
 
         {
-            let uds = UnixListener::bind(path).with_context(|| "Error binding to Unix socket")?;
+            let uds = UnixListener::bind(path)?;
 
             Ok(async_stream::stream! {
                 loop {
@@ -49,20 +37,6 @@ impl UnixStream {
                 }
             })
         }
-    }
-
-    fn create_socket_path(path: &Path) -> anyhow::Result<()> {
-        let parent_dir = path
-            .parent()
-            .with_context(|| "Socket path should have a parent directory")?;
-        if let Err(e) = std::fs::remove_file(path) {
-            if e.kind() != ErrorKind::NotFound {
-                error!("Unable to delete old Unix socket: {:?}", e);
-            }
-        }
-
-        std::fs::create_dir_all(parent_dir)
-            .with_context(|| "Unable to create Unix socket directory")
     }
 }
 
