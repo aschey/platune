@@ -171,8 +171,10 @@ impl Management for ManagementImpl {
                 let search_results = match r {
                     Ok(results) => results,
                     Err(e) => {
-                        let msg = format!("Error sending search request {:?}", e);
-                        return Err(Status::internal(msg));
+                        return Err(format_error(format!(
+                            "Error sending search request {:?}",
+                            e
+                        )));
                     }
                 };
                 let results = search_results
