@@ -187,7 +187,18 @@ mod service {
     }
 }
 
-fn init_logging() {
+fn set_panic_hook() {
+    panic::set_hook(Box::new(|panic_info| {
+        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            error!("panic occurred: {:?}", s);
+        } else {
+            error!("panic occurred: {:?}", panic_info);
+        }
+    }));
+}
+
+#[tokio::main]
+async fn main() {
     let proj_dirs = directories::ProjectDirs::from("", "", "platune")
         .expect("Unable to find a valid home directory");
     let file_appender = tracing_appender::rolling::hourly(proj_dirs.cache_dir(), "platuned.log");
@@ -195,7 +206,7 @@ fn init_logging() {
     let (non_blocking_file, _file_guard) = tracing_appender::non_blocking(file_appender);
 
     let collector = tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
+        .with(EnvFilter::from_default_env().add_directive(tracing::Level::DEBUG.into()))
         .with({
             #[allow(clippy::let_and_return)]
             let layer = Layer::new()
@@ -223,23 +234,10 @@ fn init_logging() {
             layer
         });
 
+    // This has to be ran directly in the main function
     tracing::subscriber::set_global_default(collector)
         .expect("Unable to set global tracing subscriber");
-}
 
-fn set_panic_hook() {
-    panic::set_hook(Box::new(|panic_info| {
-        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-            error!("panic occurred: {:?}", s);
-        } else {
-            error!("panic occurred: {:?}", panic_info);
-        }
-    }));
-}
-
-#[tokio::main]
-async fn main() {
-    init_logging();
     // Don't set panic hook until after logging is set up
     set_panic_hook();
 
