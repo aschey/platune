@@ -6,7 +6,7 @@ use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Request;
 use tonic::Streaming;
@@ -15,11 +15,15 @@ use tracing::{error, warn};
 
 pub struct ManagementImpl {
     manager: Arc<Manager>,
+    shutdown_tx: broadcast::Sender<()>,
 }
 
 impl ManagementImpl {
-    pub fn new(manager: Arc<Manager>) -> Self {
-        Self { manager }
+    pub fn new(manager: Arc<Manager>, shutdown_tx: broadcast::Sender<()>) -> Self {
+        Self {
+            manager,
+            shutdown_tx,
+        }
     }
 }
 
@@ -149,9 +153,13 @@ impl Management for ManagementImpl {
         let mut messages = request.into_inner();
         let manager = self.manager.clone();
         let (tx, rx) = mpsc::channel(32);
+        // Close stream when shutdown is requested
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
 
         tokio::spawn(async move {
-            while let Some(msg) = messages.next().await {
+            while let Some(msg) =
+                tokio::select! { val = messages.next() => val, _ = shutdown_rx.recv() => None }
+            {
                 match msg {
                     Ok(msg) => {
                         let options = SearchOptions {

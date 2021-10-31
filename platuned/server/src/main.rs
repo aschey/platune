@@ -206,7 +206,7 @@ async fn main() {
     let (non_blocking_file, _file_guard) = tracing_appender::non_blocking(file_appender);
 
     let collector = tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env().add_directive(tracing::Level::DEBUG.into()))
+        .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
         .with({
             #[allow(clippy::let_and_return)]
             let layer = Layer::new()
@@ -268,7 +268,7 @@ enum Transport {
 }
 
 async fn run_server(
-    mut rx: broadcast::Receiver<()>,
+    shutdown_tx: broadcast::Sender<()>,
     platune_player: Arc<PlatunePlayer>,
     manager: Arc<Manager>,
     transport: Transport,
@@ -281,16 +281,17 @@ async fn run_server(
 
     let player = PlayerImpl::new(platune_player);
 
-    let management = ManagementImpl::new(manager);
+    let management = ManagementImpl::new(manager, shutdown_tx.clone());
     let builder = Server::builder()
         .add_service(reflection_service)
         .add_service(PlayerServer::new(player))
         .add_service(ManagementServer::new(management));
 
+    let mut shutdown_rx = shutdown_tx.subscribe();
     let server_result = match transport {
         Transport::Http(addr) => {
             builder
-                .serve_with_shutdown(addr, async { rx.recv().await.unwrap_or_default() })
+                .serve_with_shutdown(addr, async { shutdown_rx.recv().await.unwrap_or_default() })
                 .await
         }
         #[cfg(unix)]
@@ -298,7 +299,7 @@ async fn run_server(
             builder
                 .serve_with_incoming_shutdown(
                     UnixStream::get_async_stream(&path, !is_service)?,
-                    async { rx.recv().await.unwrap_or_default() },
+                    async { shutdown_rx.recv().await.unwrap_or_default() },
                 )
                 .await
         }
@@ -307,13 +308,13 @@ async fn run_server(
     server_result.with_context(|| "Error running server")
 }
 
-async fn run_servers(tx: broadcast::Sender<()>, is_service: bool) -> Result<()> {
+async fn run_servers(shutdown_tx: broadcast::Sender<()>, is_service: bool) -> Result<()> {
     let platune_player = Arc::new(PlatunePlayer::new());
     let manager = init_manager().await?;
 
     let mut servers = Vec::<_>::new();
     let http_server = run_server(
-        tx.subscribe(),
+        shutdown_tx.clone(),
         platune_player.clone(),
         manager.clone(),
         Transport::Http("0.0.0.0:50051".parse().unwrap()),
@@ -324,7 +325,7 @@ async fn run_servers(tx: broadcast::Sender<()>, is_service: bool) -> Result<()> 
     #[cfg(unix)]
     {
         let unix_server = run_server(
-            tx.subscribe(),
+            shutdown_tx.clone(),
             platune_player,
             manager,
             Transport::Uds("/var/run/platuned/platuned.sock".to_owned()),
