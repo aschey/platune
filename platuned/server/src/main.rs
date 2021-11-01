@@ -5,6 +5,8 @@ mod signal_handler;
 mod unix;
 use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
+use crate::signal_handler::platform::SignalHandler;
+#[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
 use anyhow::Context;
 use anyhow::Result;
@@ -22,6 +24,8 @@ use tokio::sync::broadcast;
 use tonic::transport::Server;
 use tracing::error;
 use tracing::info;
+#[cfg(windows)]
+use tracing_subscriber::fmt::time::LocalTime;
 use tracing_subscriber::fmt::Layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
@@ -42,7 +46,7 @@ mod service {
         time::Duration,
     };
     use tokio::runtime::Runtime;
-    use tracing::error;
+    use tracing::{error, info};
     use windows_service::{
         service::{
             ServiceAccess, ServiceControl, ServiceControlAccept, ServiceErrorControl,
@@ -54,7 +58,7 @@ mod service {
         service_manager::{ServiceManager, ServiceManagerAccess},
     };
 
-    use crate::run_server;
+    use crate::run_servers;
     windows_service::define_windows_service!(service_main, handle_service_main);
 
     const SERVICE_NAME: &str = "platuned";
@@ -111,9 +115,10 @@ mod service {
     }
 
     pub fn handle_service_main(_arguments: Vec<OsString>) {
-        let (event_tx, event_rx) = tokio::sync::mpsc::channel(32);
+        let (event_tx, _) = tokio::sync::broadcast::channel(32);
 
         // Define system service event handler that will be receiving service events.
+        let event_tx_ = event_tx.clone();
         let event_handler = move |control_event| -> ServiceControlHandlerResult {
             match control_event {
                 // Notifies a service to report its current status information to the service
@@ -122,7 +127,8 @@ mod service {
 
                 // Handle stop
                 ServiceControl::Stop => {
-                    if let Err(e) = event_tx.try_send(()) {
+                    info!("Sending shutdown signal");
+                    if let Err(e) = event_tx_.send(()) {
                         error!("Error sending stop signal {:?}", e);
                     }
                     ServiceControlHandlerResult::NoError
@@ -164,7 +170,7 @@ mod service {
             return;
         }
 
-        let exit_code = match rt.block_on(async { run_server(Some(event_rx)).await }) {
+        let exit_code = match rt.block_on(async { run_servers(event_tx).await }) {
             Ok(()) => 0,
             Err(e) => {
                 error!("Error running server {:?}", e);
@@ -216,7 +222,7 @@ async fn main() {
                 .with_writer(non_blocking_file);
 
             #[cfg(windows)]
-            layer.with_timer(LocalTime::rfc_3339());
+            let layer = layer.with_timer(LocalTime::rfc_3339());
 
             layer
         })
@@ -229,7 +235,7 @@ async fn main() {
                 .with_writer(non_blocking_stdout);
 
             #[cfg(windows)]
-            layer.with_timer(LocalTime::rfc_3339());
+            let layer = layer.with_timer(LocalTime::rfc_3339());
 
             layer
         });
@@ -343,14 +349,17 @@ async fn os_main() -> Result<()> {
         dotenv::from_path(r"C:\Users\asche\code\platune\platuned\server\.env").unwrap();
         service::run()?;
     } else {
+        let (tx, _) = broadcast::channel(32);
         dotenv::from_path("./.env").unwrap();
-        run_server(None).await?;
+        let signal_handler = SignalHandler::start(tx.clone())?;
+        run_servers(tx).await?;
+        signal_handler.close().await?;
     }
 
     Ok(())
 }
 
-#[cfg(not(windows))]
+#[cfg(unix)]
 async fn os_main() -> Result<()> {
     use signal_handler::SignalHandler;
 

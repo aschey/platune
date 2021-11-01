@@ -9,15 +9,12 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0.44"
 async-stream = "0.3.2"
-ctrlc = "3.2.1"
 directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.17"
 libplatune-management = {path = "../../libplatune/management"}
 libplatune-player = {path = "../../libplatune/player"}
 prost = "0.9.0"
-signal-hook = "0.3.10"
-signal-hook-tokio = {version = "0.3.0", features = ["futures-v0_3"]}
 tokio = {version = "1.12.0", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.7", features = ["net"]}
 tonic = "0.6.0"
@@ -27,7 +24,12 @@ tracing-appender = "0.2.0"
 tracing-subscriber = {version = "0.3.1", features = ["local-time", "env-filter"]}
 
 [target.'cfg(windows)'.dependencies]
+ctrlc = "3.2.1"
 windows-service = "0.4.0"
+
+[target.'cfg(unix)'.dependencies]
+signal-hook = "0.3.10"
+signal-hook-tokio = {version = "0.3.0", features = ["futures-v0_3"]}
 
 [build-dependencies]
 tonic-build = {version = "0.6.0", features = ["prost"]}
