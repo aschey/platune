@@ -34,8 +34,8 @@ async fn main() {
     let proj_dirs = directories::ProjectDirs::from("", "", "platune")
         .expect("Unable to find a valid home directory");
     let file_appender = tracing_appender::rolling::hourly(proj_dirs.cache_dir(), "platuned.log");
-    let (non_blocking_stdout, _stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
-    let (non_blocking_file, _file_guard) = tracing_appender::non_blocking(file_appender);
+    let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
+    let (non_blocking_file, file_guard) = tracing_appender::non_blocking(file_appender);
 
     let collector = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
@@ -75,8 +75,11 @@ async fn main() {
 
     info!("starting");
     if let Err(e) = startup::start().await {
-        error!("{:?}", e);
+        error!("{:?}", e.to_string());
 
+        // Drop guards to ensure logs are flushed
+        drop(stdout_guard);
+        drop(file_guard);
         std::process::exit(1);
     }
 }
