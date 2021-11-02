@@ -361,8 +361,6 @@ async fn os_main() -> Result<()> {
 
 #[cfg(unix)]
 async fn os_main() -> Result<()> {
-    use signal_handler::SignalHandler;
-
     let args: Vec<String> = std::env::args().collect();
 
     if !(args.len() > 1 && args[1] == "-s") {
