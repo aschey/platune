@@ -94,7 +94,7 @@ async fn init_play(
 
     let songs = get_test_files(num_songs);
     let song_queue = songs.get_paths();
-    player.set_queue(song_queue.clone());
+    player.set_queue(song_queue.clone()).unwrap();
 
     assert_matches!(
         receiver.timed_recv().await,
@@ -115,7 +115,7 @@ async fn test_basic(num_songs: usize) {
         timed_await(receiver.recv()).await.unwrap(),
         Ok(PlayerEvent::QueueEnded)
     );
-    player.join();
+    player.join().unwrap();
 }
 
 #[rstest(
@@ -134,15 +134,15 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
 
     for (i, _) in songs.iter().enumerate() {
         if i == pause_index {
-            player.pause();
+            player.pause().unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Pause));
-            player.resume();
+            player.resume().unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Resume));
         }
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended));
     }
     assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::QueueEnded));
-    player.join();
+    player.join().unwrap();
 }
 
 #[rstest(
@@ -161,12 +161,12 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     let seek_time = 100;
     for (i, _) in songs.iter().enumerate() {
         if i == seek_index {
-            player.seek(seek_time);
+            player.seek(seek_time).unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(millis)) if millis == seek_time);
         }
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended));
     }
 
     assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::QueueEnded));
-    player.join();
+    player.join().unwrap();
 }

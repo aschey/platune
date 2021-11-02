@@ -1,8 +1,8 @@
-use crate::management::ManagementImpl;
 use crate::management_server::ManagementServer;
-use crate::player::PlayerImpl;
 use crate::player_server::PlayerServer;
 use crate::rpc;
+use crate::services::management::ManagementImpl;
+use crate::services::player::PlayerImpl;
 #[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
 use anyhow::Context;

@@ -1,7 +1,6 @@
-mod management;
-mod player;
 mod rpc;
 mod server;
+mod services;
 mod signal_handler;
 mod startup;
 #[cfg(unix)]
