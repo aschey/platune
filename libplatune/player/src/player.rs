@@ -1,19 +1,19 @@
 use std::{
     fs::File,
-    io::BufReader,
+    io::{BufReader, Read, Seek},
     sync::mpsc::{Receiver, Sender},
     time::Duration,
 };
 
-use rodio::{Decoder, OutputStreamHandle, Sink as RodioSink};
+use rodio::{Decoder, OutputStreamHandle, PlayError, Sink as RodioSink};
 use tokio::sync::broadcast;
-use tracing::info;
+use tracing::{error, info};
 
 use crate::enums::PlayerEvent;
 #[cfg(feature = "runtime-tokio")]
 use crate::http_stream_reader::HttpStreamReader;
 
-pub struct Player {
+pub(crate) struct Player {
     sink: RodioSink,
     queue: Vec<String>,
     event_tx: broadcast::Sender<PlayerEvent>,
@@ -26,14 +26,14 @@ pub struct Player {
 }
 
 impl Player {
-    pub fn new(
+    pub(crate) fn new(
         finish_tx: Sender<Receiver<()>>,
         event_tx: broadcast::Sender<PlayerEvent>,
         handle: OutputStreamHandle,
-    ) -> Self {
-        let sink = rodio::Sink::try_new(&handle).unwrap();
+    ) -> Result<Self, PlayError> {
+        let sink = rodio::Sink::try_new(&handle)?;
 
-        Self {
+        Ok(Self {
             sink,
             queue: vec![],
             event_tx,
@@ -43,29 +43,52 @@ impl Player {
             ignore_count: 0,
             queued_count: 0,
             volume: 0.5,
-        }
+        })
+    }
+
+    fn append_decoder<R: Read + Seek + Send + 'static>(&mut self, reader: R) {
+        let decoder = match Decoder::new(reader) {
+            Ok(decoder) => decoder,
+            Err(e) => {
+                error!("Error creating decoder {:?}", e);
+                return;
+            }
+        };
+        self.sink.append(decoder);
     }
 
     fn append_file(&mut self, path: String) {
         if path.starts_with("http") {
             #[cfg(feature = "runtime-tokio")]
             {
-                let reader = BufReader::new(HttpStreamReader::new(path));
-                let decoder = Decoder::new(reader).unwrap();
-                self.sink.append(decoder);
+                let http_reader = match HttpStreamReader::new(path) {
+                    Ok(http_reader) => http_reader,
+                    Err(e) => {
+                        error!("Error downloading http file {:?}", e);
+                        return;
+                    }
+                };
+
+                let reader = BufReader::new(http_reader);
+                self.append_decoder(reader);
             }
         } else {
-            let file = File::open(path).unwrap();
+            let file = match File::open(path) {
+                Ok(file) => file,
+                Err(e) => {
+                    error!("Error opening file {:?}", e);
+                    return;
+                }
+            };
             let reader = BufReader::new(file);
-            let decoder = Decoder::new(reader).unwrap();
-            self.sink.append(decoder);
+            self.append_decoder(reader);
         }
 
         self.queued_count += 1;
         info!("Queued count {}", self.queued_count);
     }
 
-    pub fn start(&mut self) {
+    pub(crate) fn start(&mut self) {
         if let Some(path) = self.get_current() {
             self.append_file(path);
             self.signal_finish();
@@ -79,29 +102,29 @@ impl Player {
             .unwrap_or_default();
     }
 
-    pub fn play(&mut self) {
+    pub(crate) fn play(&mut self) {
         self.sink.play();
         self.event_tx.send(PlayerEvent::Resume).unwrap_or_default();
     }
 
-    pub fn pause(&mut self) {
+    pub(crate) fn pause(&mut self) {
         self.sink.pause();
         self.event_tx.send(PlayerEvent::Pause).unwrap_or_default();
     }
 
-    pub fn set_volume(&mut self, volume: f32) {
+    pub(crate) fn set_volume(&mut self, volume: f32) {
         self.sink.set_volume(volume);
         self.volume = volume;
     }
 
-    pub fn seek(&mut self, millis: u64) {
+    pub(crate) fn seek(&mut self, millis: u64) {
         self.sink.seek(Duration::from_millis(millis));
         self.event_tx
             .send(PlayerEvent::Seek(millis))
             .unwrap_or_default();
     }
 
-    pub fn stop(&mut self) {
+    pub(crate) fn stop(&mut self) {
         self.reset();
         self.position = 0;
         self.event_tx.send(PlayerEvent::Stop).unwrap_or_default();
@@ -116,11 +139,17 @@ impl Player {
     fn reset(&mut self) {
         self.ignore_ended();
         self.sink.stop();
-        self.sink = rodio::Sink::try_new(&self.handle).unwrap();
+        self.sink = match rodio::Sink::try_new(&self.handle) {
+            Ok(sink) => sink,
+            Err(e) => {
+                error!("Error creating audio sink {:?}", e);
+                return;
+            }
+        };
         self.sink.set_volume(self.volume);
     }
 
-    pub fn on_ended(&mut self) {
+    pub(crate) fn on_ended(&mut self) {
         info!("Received ended event");
         self.queued_count -= 1;
         info!("Queued count {}", self.queued_count);
@@ -144,25 +173,32 @@ impl Player {
 
         if let Some(file) = self.get_next() {
             self.append_file(file);
-            let receiver = self.sink.get_current_receiver().unwrap();
-            self.finish_tx.send(receiver).unwrap();
+            self.signal_finish();
         }
     }
 
     fn signal_finish(&mut self) {
         info!("Sending finish receiver");
-        let receiver = self.sink.get_current_receiver().unwrap();
-        self.finish_tx.send(receiver).unwrap();
+        let receiver = match self.sink.get_current_receiver() {
+            Some(receiver) => receiver,
+            None => {
+                error!("Unable to trigger song ended event because no receiver was found");
+                return;
+            }
+        };
+        if let Err(e) = self.finish_tx.send(receiver) {
+            error!("Error sending song ended event {:?}", e);
+        }
     }
 
-    pub fn set_queue(&mut self, queue: Vec<String>) {
+    pub(crate) fn set_queue(&mut self, queue: Vec<String>) {
         self.reset();
         self.position = 0;
         self.queue = queue;
         self.start();
     }
 
-    pub fn add_to_queue(&mut self, songs: Vec<String>) {
+    pub(crate) fn add_to_queue(&mut self, songs: Vec<String>) {
         for song in songs {
             self.add_one_to_queue(song);
         }
@@ -187,11 +223,11 @@ impl Player {
         }
     }
 
-    pub fn get_current(&self) -> Option<String> {
+    pub(crate) fn get_current(&self) -> Option<String> {
         self.get_position(self.position)
     }
 
-    pub fn get_next(&self) -> Option<String> {
+    pub(crate) fn get_next(&self) -> Option<String> {
         self.get_position(self.position + 1)
     }
 
@@ -199,7 +235,7 @@ impl Player {
         self.queue.get(position).map(String::to_owned)
     }
 
-    pub fn go_next(&mut self) {
+    pub(crate) fn go_next(&mut self) {
         if self.position < self.queue.len() - 1 {
             info!(
                 "Current position: {}, Going to previous track.",
@@ -214,7 +250,7 @@ impl Player {
         }
     }
 
-    pub fn go_previous(&mut self) {
+    pub(crate) fn go_previous(&mut self) {
         if self.position > 0 {
             info!("Current position: {}, Going to next track.", self.position);
             self.position -= 1;

@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Receiver, Sender, SyncSender};
 
 use tokio::sync::broadcast;
-use tracing::info;
+use tracing::{error, info};
 
 use crate::{
     enums::{Command, PlayerEvent},
@@ -14,7 +14,9 @@ pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSende
         // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
         // after the first event if the queue is stopped
         ended_receiver.recv().unwrap_or_default();
-        request_tx.send(Command::Ended).unwrap();
+        if let Err(e) = request_tx.send(Command::Ended) {
+            error!("Error sending song ended message {:?}", e);
+        }
     }
 }
 
@@ -23,8 +25,22 @@ pub(crate) fn main_loop(
     finish_rx: Sender<Receiver<()>>,
     event_tx: broadcast::Sender<PlayerEvent>,
 ) {
-    let (_stream, handle) = rodio::OutputStream::try_default().unwrap();
-    let mut queue = Player::new(finish_rx, event_tx, handle);
+    let (_stream, handle) = match rodio::OutputStream::try_default() {
+        Ok((stream, handle)) => (stream, handle),
+        Err(e) => {
+            error!("Error creating audio output stream {:?}", e);
+            return;
+        }
+    };
+
+    let mut queue = match Player::new(finish_rx, event_tx, handle) {
+        Ok(player) => player,
+        Err(e) => {
+            error!("Error creating audio sink {:?}", e);
+            return;
+        }
+    };
+
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);
         match next_command {

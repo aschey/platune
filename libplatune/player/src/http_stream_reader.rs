@@ -1,4 +1,7 @@
+use anyhow::{Context, Result};
+use futures_util::StreamExt;
 use std::{
+    fs::File,
     io::{BufReader, Read, Seek, SeekFrom},
     str::FromStr,
     sync::{
@@ -8,9 +11,7 @@ use std::{
     },
 };
 use tempfile::{Builder, NamedTempFile};
-
-use futures_util::StreamExt;
-use tracing::info;
+use tracing::{error, info};
 
 pub(crate) struct HttpStreamReader {
     output_reader: BufReader<NamedTempFile>,
@@ -22,64 +23,107 @@ pub(crate) struct HttpStreamReader {
 }
 
 impl HttpStreamReader {
-    pub fn new(url: String) -> Self {
+    pub fn new(url: String) -> Result<Self> {
         let bytes_written = Arc::new(AtomicU32::new(0));
         let bytes_written_ = bytes_written.clone();
 
         let (ready_tx, ready_rx) = mpsc::channel();
         let (wait_written_tx, wait_written_rx) = mpsc::channel();
 
-        let tempfile_ = Builder::new().prefix("platunecache").tempfile().unwrap();
-        let mut tempfile = tempfile_.reopen().unwrap();
+        let tempfile_ = Builder::new()
+            .prefix("platunecache")
+            .tempfile()
+            .with_context(|| "Error creating http stream reader temp file")?;
+
+        let tempfile = tempfile_
+            .reopen()
+            .with_context(|| "Error reading http stream reader temp file")?;
 
         tokio::spawn(async move {
-            println!("starting download...");
-            let client = reqwest::Client::new();
-            let res = client.head(&url).send().await.unwrap();
-            let file_len = res
-                .headers()
-                .get(reqwest::header::CONTENT_LENGTH).ok_or("response doesn't include the content length")
-                .unwrap();
-            let file_len = u64::from_str(file_len.to_str().unwrap())
-                .map_err(|_| "invalid Content-Length header")
-                .unwrap();
-            info!("File length={}", file_len);
-
-            let mut stream = client.get(&url).send().await.unwrap().bytes_stream();
-
-            let mut target = (file_len as f32 * 0.01) as u32;
-            while let Some(item) = stream.next().await {
-                let item = item.unwrap();
-                let len = item.len();
-                std::io::copy(&mut item.take(len as u64), &mut tempfile).unwrap();
-                let new_len = bytes_written_.load(Ordering::SeqCst) + len as u32;
-                bytes_written_.store(new_len, Ordering::SeqCst);
-
-                if let Ok(new_target) = wait_written_rx.try_recv() {
-                    info!("write target={}", new_target);
-                    target = new_target;
-                }
-                if new_len >= target {
-                    info!("Reached target");
-                    ready_tx.send(file_len).unwrap();
-
-                    target = u32::MAX;
-                }
+            if let Err(e) =
+                Self::download_file(&url, tempfile, bytes_written_, wait_written_rx, ready_tx).await
+            {
+                error!("Error downloading file {:?}", e);
             }
-
-            info!("Finished downloading file");
         });
-        let file_len = ready_rx.recv().unwrap();
+
+        let file_len = ready_rx
+            .recv()
+            .with_context(|| "Error receiving ready signal from file http file download")?;
 
         let output_reader = BufReader::new(tempfile_);
-        HttpStreamReader {
+        Ok(HttpStreamReader {
             output_reader,
             bytes_read: 0,
             bytes_written,
             wait_written_tx,
             ready_rx,
             file_len,
+        })
+    }
+
+    async fn download_file(
+        url: &str,
+        mut tempfile: File,
+        bytes_written: Arc<AtomicU32>,
+        wait_written_rx: Receiver<u32>,
+        ready_tx: Sender<u64>,
+    ) -> Result<()> {
+        info!("Starting download...");
+        let client = reqwest::Client::new();
+        let res = client
+            .head(url)
+            .send()
+            .await
+            .with_context(|| format!("Error sending HEAD request to url {}", url))?;
+
+        let file_len = res
+            .headers()
+            .get(reqwest::header::CONTENT_LENGTH)
+            .with_context(|| "Content length missing")?;
+        let file_len = u64::from_str(
+            file_len
+                .to_str()
+                .with_context(|| "Invalid content length")?,
+        )
+        .with_context(|| "Invalid content length")?;
+
+        info!("File length={}", file_len);
+
+        let mut stream = client
+            .get(url)
+            .send()
+            .await
+            .with_context(|| format!("Error fetching url {}", url))?
+            .bytes_stream();
+
+        // Pre-buffer 1% of the file
+        let mut target = (file_len as f32 * 0.01) as u32;
+        while let Some(item) = stream.next().await {
+            let item = item.with_context(|| "Error receiving bytes from http download")?;
+            let len = item.len();
+            std::io::copy(&mut item.take(len as u64), &mut tempfile)
+                .with_context(|| "Error copying http download data to temp file")?;
+            let new_len = bytes_written.load(Ordering::SeqCst) + len as u32;
+            bytes_written.store(new_len, Ordering::SeqCst);
+
+            if let Ok(new_target) = wait_written_rx.try_recv() {
+                info!("write target={}", new_target);
+                target = new_target;
+            }
+            if new_len >= target {
+                info!("Reached target");
+                ready_tx
+                    .send(file_len)
+                    .with_context(|| "Error sending http file download ready signal")?;
+
+                // reset target to prevent this branch from triggering again
+                target = u32::MAX;
+            }
         }
+
+        info!("Finished downloading file");
+        Ok(())
     }
 
     fn wait_for_download(&mut self, requested_len: u32) {

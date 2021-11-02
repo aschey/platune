@@ -17,6 +17,7 @@ runtime-tokio = ["tokio"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.44"
 futures-util = "0.3.17"
 reqwest = {version = "0.11.6", features = ["stream"]}
 rodio = {git = "https://github.com/aschey/rodio", rev = "d18f4dfb1f3925bf964e1a4d7a4f4372d95036df", default-features = false, features = ["symphonia-all", "vorbis"]}

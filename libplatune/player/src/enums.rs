@@ -1,6 +1,6 @@
 use strum::Display;
 #[derive(Debug, Clone)]
-pub enum Command {
+pub(crate) enum Command {
     SetQueue(Vec<String>),
     AddToQueue(Vec<String>),
     Seek(u64),
