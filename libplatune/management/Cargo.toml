@@ -19,6 +19,7 @@ anyhow = "1.0.44"
 async-channel = "1.6.1"
 directories = "4.0.1"
 dotenv = "0.15.0"
+futures = "0.3.17"
 itertools = "0.10.1"
 katatsuki = {git = "https://github.com/aschey/seiri", rev = "38b9ed7fbf109851dc50b34d44f68edfd85be50d"}
 lazy_static = "1.4.0"
@@ -29,6 +30,7 @@ sqlx = {version = "0.5.9", features = ["runtime-tokio-rustls", "sqlite", "offlin
 strum = {version = "0.22.0", features = ["derive"]}
 thiserror = "1.0.30"
 tokio = {version = "1.12.0", features = ["rt-multi-thread", "macros"]}
+tokio-stream = {version = "0.1.7", features = ["net", "sync"]}
 tracing = "0.1.29"
 
 [dev-dependencies]

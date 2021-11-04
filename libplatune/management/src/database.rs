@@ -2,21 +2,22 @@ use crate::search::search_engine::SearchEngine;
 use crate::search::search_options::SearchOptions;
 use crate::search::search_result::SearchResult;
 use crate::spellfix::acquire_with_spellfix;
+use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
-use crate::sync::sync_engine::SyncError;
 use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
 use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
+use std::sync::Arc;
 use std::{path::Path, time::Duration};
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::Mutex;
 use tracing::info;
 
 #[derive(Clone)]
 pub struct Database {
     pool: Pool<Sqlite>,
     search_engine: SearchEngine,
-    sync_controller: SyncController,
+    sync_controller: Arc<Mutex<SyncController>>,
     opts: SqliteConnectOptions,
 }
 
@@ -41,10 +42,10 @@ impl Database {
 
         let pool = SqlitePool::connect_with(opts.clone())
             .await
-            .map_err(DbError::DbError)?;
+            .map_err(|e| DbError::DbError(e.to_string()))?;
         Ok(Self {
             search_engine: SearchEngine::new(pool.clone()),
-            sync_controller: SyncController::new(pool.clone()),
+            sync_controller: Arc::new(Mutex::new(SyncController::new(pool.clone()))),
             pool,
             opts,
         })
@@ -57,7 +58,7 @@ impl Database {
         sqlx::migrate!("./migrations")
             .run(&mut con)
             .await
-            .map_err(DbError::MigrateError)?;
+            .map_err(|e| DbError::DbError(e.to_string()))?;
         info!("done");
 
         Ok(())
@@ -76,11 +77,11 @@ impl Database {
     }
 
     pub(crate) async fn sync(
-        &self,
+        &mut self,
         folders: Vec<String>,
         mount: Option<String>,
-    ) -> Receiver<Result<f32, SyncError>> {
-        self.sync_controller.sync(folders, mount).await
+    ) -> ProgressStream {
+        self.sync_controller.lock().await.sync(folders, mount).await
     }
 
     pub(crate) async fn lookup(
@@ -112,7 +113,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)
+        .map_err(|e| DbError::DbError(e.to_string()))
     }
 
     async fn all_by_album_artists(
@@ -134,7 +135,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)
+        .map_err(|e| DbError::DbError(e.to_string()))
     }
 
     async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -154,7 +155,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)
+        .map_err(|e| DbError::DbError(e.to_string()))
     }
 
     async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -174,18 +175,24 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(DbError::DbError)
+        .map_err(|e| DbError::DbError(e.to_string()))
     }
 
     pub(crate) async fn add_folders(&self, paths: Vec<String>) -> Result<(), DbError> {
-        let mut tran = self.pool.begin().await.map_err(DbError::DbError)?;
+        let mut tran = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| DbError::DbError(e.to_string()))?;
         for path in paths {
             sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
                 .execute(&mut tran)
                 .await
-                .map_err(DbError::DbError)?;
+                .map_err(|e| DbError::DbError(e.to_string()))?;
         }
-        tran.commit().await.map_err(DbError::DbError)
+        tran.commit()
+            .await
+            .map_err(|e| DbError::DbError(e.to_string()))
     }
 
     pub(crate) async fn update_folder(
@@ -200,14 +207,14 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(DbError::DbError)
+        .map_err(|e| DbError::DbError(e.to_string()))
     }
 
     pub(crate) async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
         Ok(sqlx::query!("select folder_path from folder")
             .fetch_all(&self.pool)
             .await
-            .map_err(DbError::DbError)?
+            .map_err(|e| DbError::DbError(e.to_string()))?
             .into_iter()
             .map(|r| r.folder_path)
             .collect())
@@ -227,12 +234,12 @@ impl Database {
         sqlx::query!(r"insert or ignore into mount(mount_path) values(?)", path)
             .execute(&self.pool)
             .await
-            .map_err(DbError::DbError)?;
+            .map_err(|e| DbError::DbError(e.to_string()))?;
 
         let res = sqlx::query!(r"select mount_id from mount where mount_path = ?", path)
             .fetch_one(&self.pool)
             .await
-            .map_err(DbError::DbError)?;
+            .map_err(|e| DbError::DbError(e.to_string()))?;
 
         Ok(res.mount_id)
     }
@@ -245,7 +252,7 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(DbError::DbError)?;
+        .map_err(|e| DbError::DbError(e.to_string()))?;
 
         Ok(res.rows_affected())
     }

@@ -1,3 +1,4 @@
+use futures::StreamExt;
 use libplatune_management::{config::Config, database::Database, manager::Manager};
 use rstest::*;
 use std::{
@@ -10,16 +11,16 @@ use tokio::time::timeout;
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_empty() {
     let tempdir = TempDir::new().unwrap();
-    let (db, config) = setup(&tempdir).await;
+    let (db, mut manager) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
     create_dir(music_dir.clone()).unwrap();
-    config
+    manager
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = config.sync().await.unwrap();
+    let mut receiver = manager.sync().await.unwrap();
     let mut msgs = vec![];
-    while let Some(msg) = receiver.recv().await {
+    while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
     }
 
@@ -33,11 +34,11 @@ pub async fn test_sync_empty() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_no_folder() {
     let tempdir = TempDir::new().unwrap();
-    let (db, config) = setup(&tempdir).await;
+    let (db, mut manager) = setup(&tempdir).await;
 
-    let mut receiver = config.sync().await.unwrap();
+    let mut receiver = manager.sync().await.unwrap();
     let mut msgs = vec![];
-    while let Some(msg) = receiver.recv().await {
+    while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
     }
 
@@ -51,7 +52,7 @@ pub async fn test_sync_no_folder() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_basic() {
     let tempdir = TempDir::new().unwrap();
-    let (db, config) = setup(&tempdir).await;
+    let (db, mut manager) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
@@ -72,14 +73,14 @@ pub async fn test_sync_basic() {
     )
     .unwrap();
 
-    config
+    manager
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = config.sync().await.unwrap();
+    let mut receiver = manager.sync().await.unwrap();
 
     let mut msgs = vec![];
-    while let Some(msg) = receiver.recv().await {
+    while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
     }
 
@@ -566,7 +567,7 @@ pub struct SearchResultTest {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
     let tempdir = TempDir::new().unwrap();
-    let (db, manager) = setup(&tempdir).await;
+    let (db, mut manager) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
@@ -597,7 +598,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         .unwrap();
     let mut receiver = manager.sync().await.unwrap();
 
-    while receiver.recv().await.is_some() {}
+    while receiver.next().await.is_some() {}
 
     let res = manager.search(search, Default::default()).await.unwrap();
     println!("res {:?}", res);

@@ -6,20 +6,19 @@ use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc};
-use tokio_stream::wrappers::ReceiverStream;
+use tokio::sync::{broadcast, mpsc, Mutex};
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
 use tracing::{error, warn};
 
 pub struct ManagementImpl {
-    manager: Arc<Manager>,
+    manager: Arc<Mutex<Manager>>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
 impl ManagementImpl {
-    pub fn new(manager: Arc<Manager>, shutdown_tx: broadcast::Sender<()>) -> Self {
+    pub fn new(manager: Arc<Mutex<Manager>>, shutdown_tx: broadcast::Sender<()>) -> Self {
         Self {
             manager,
             shutdown_tx,
@@ -38,11 +37,11 @@ impl Management for ManagementImpl {
         Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
 
     async fn sync(&self, _: Request<()>) -> Result<Response<Self::SyncStream>, Status> {
-        let rx = match self.manager.sync().await {
+        let rx = match self.manager.lock().await.sync().await {
             Ok(rx) => rx,
             Err(e) => return Err(format_error(format!("Error syncing files {:?}", e))),
         };
-        Ok(Response::new(Box::pin(ReceiverStream::new(rx).map(
+        Ok(Response::new(Box::pin(rx.map(
             |progress_result| match progress_result {
                 Ok(percentage) => Ok(Progress { percentage }),
                 Err(e) => Err(format_error(format!("Error syncing files {:?}", e))),
@@ -53,6 +52,8 @@ impl Management for ManagementImpl {
     async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
         if let Err(e) = self
             .manager
+            .lock()
+            .await
             .add_folders(
                 request
                     .into_inner()
@@ -69,7 +70,7 @@ impl Management for ManagementImpl {
     }
 
     async fn get_all_folders(&self, _: Request<()>) -> Result<Response<FoldersMessage>, Status> {
-        let folders = match self.manager.get_all_folders().await {
+        let folders = match self.manager.lock().await.get_all_folders().await {
             Ok(f) => f,
             Err(e) => {
                 return Err(format_error(format!("Error syncing files {:?}", e)));
@@ -84,6 +85,8 @@ impl Management for ManagementImpl {
     ) -> Result<Response<()>, Status> {
         match self
             .manager
+            .lock()
+            .await
             .register_drive(&request.into_inner().mount)
             .await
         {
@@ -96,7 +99,7 @@ impl Management for ManagementImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<RegisteredMountMessage>, Status> {
-        let mount = self.manager.get_registered_mount().await;
+        let mount = self.manager.lock().await.get_registered_mount().await;
         Ok(Response::new(RegisteredMountMessage {
             mount: mount.unwrap_or_default(),
         }))
@@ -109,6 +112,8 @@ impl Management for ManagementImpl {
         let request = request.into_inner();
         let lookup_result = match self
             .manager
+            .lock()
+            .await
             .lookup(
                 request.correlation_ids,
                 match EntryType::from_i32(request.entry_type).unwrap() {
@@ -165,7 +170,10 @@ impl Management for ManagementImpl {
                         let options = SearchOptions {
                             ..Default::default()
                         };
-                        if let Err(e) = tx.send(manager.search(&msg.query, options).await).await {
+                        if let Err(e) = tx
+                            .send(manager.lock().await.search(&msg.query, options).await)
+                            .await
+                        {
                             warn!("Error sending message to response stream {:?}", e);
                         }
                     }

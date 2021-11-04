@@ -1430,6 +1430,7 @@ dependencies = [
  "criterion",
  "directories",
  "dotenv",
+ "futures",
  "itertools",
  "katatsuki",
  "lazy_static 1.4.0",
@@ -1442,6 +1443,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tracing",
 ]
 
@@ -3264,6 +3266,7 @@ dependencies = [
  "futures-core",
  "pin-project-lite",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]

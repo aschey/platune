@@ -1,5 +1,4 @@
 use std::{
-    io,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -10,7 +9,10 @@ use regex::Regex;
 use sqlx::{Pool, Sqlite};
 use thiserror::Error;
 use tokio::{
-    sync::mpsc::{channel, Receiver, Sender},
+    sync::{
+        broadcast,
+        mpsc::{channel, Receiver, Sender},
+    },
     task::JoinHandle,
     time::timeout,
 };
@@ -20,21 +22,34 @@ use crate::{consts::MIN_WORDS, db_error::DbError};
 
 use super::{dir_read::DirRead, sync_dal::SyncDAL};
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum SyncError {
     #[error(transparent)]
     DbError(#[from] DbError),
     #[error("Async error: {0}")]
     AsyncError(String),
-    #[error(transparent)]
-    IOError(#[from] io::Error),
+    #[error("IO Error: {0}")]
+    IOError(String),
+}
+
+trait SendSyncError {
+    fn send_error(&self, err: SyncError);
+}
+
+impl SendSyncError for broadcast::Sender<Option<Result<f32, SyncError>>> {
+    fn send_error(&self, err: SyncError) {
+        error!("{:?}", err);
+        if let Err(e) = self.send(Some(Err(err))) {
+            error!("Error sending broadcast message to clients {:?}", e);
+        }
+    }
 }
 
 pub(crate) struct SyncEngine {
     paths: Vec<String>,
     pool: Pool<Sqlite>,
     mount: Option<String>,
-    tx: Sender<Result<f32, SyncError>>,
+    tx: broadcast::Sender<Option<Result<f32, SyncError>>>,
     dispatch_tx: async_channel::Sender<Option<PathBuf>>,
     dispatch_rx: async_channel::Receiver<Option<PathBuf>>,
     finished_tx: Sender<DirRead>,
@@ -46,7 +61,7 @@ impl SyncEngine {
         paths: Vec<String>,
         pool: Pool<Sqlite>,
         mount: Option<String>,
-        tx: Sender<Result<f32, SyncError>>,
+        tx: broadcast::Sender<Option<Result<f32, SyncError>>>,
     ) -> Self {
         let (dispatch_tx, dispatch_rx) = async_channel::bounded(100);
         let (finished_tx, finished_rx) = channel(100);
@@ -63,34 +78,33 @@ impl SyncEngine {
         }
     }
 
-    pub(crate) async fn start(&mut self) -> Result<(), SyncError> {
+    pub(crate) async fn start(&mut self) {
         let (tags_tx, tags_rx) = channel(100);
         let tags_handle = self.tags_task(tags_rx);
 
         for path in &self.paths {
-            self.dispatch_tx
-                .send(Some(PathBuf::from(path)))
-                .await
-                .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+            if let Err(e) = self.dispatch_tx.send(Some(PathBuf::from(path))).await {
+                self.tx.send_error(SyncError::AsyncError(e.to_string()));
+            }
         }
-        self.task_loop(&tags_tx).await?;
-
-        tags_tx
-            .send(None)
-            .await
-            .map_err(|e| SyncError::AsyncError(e.to_string()))?;
-
-        if let Err(e) = tags_handle
-            .await
-            .map_err(|e| SyncError::AsyncError(e.to_string()))?
-        {
-            self.tx
-                .send(Err(SyncError::DbError(e)))
-                .await
-                .map_err(|e| SyncError::AsyncError(e.to_string()))?
+        if let Err(e) = self.task_loop(&tags_tx).await {
+            self.tx.send_error(e);
         }
 
-        Ok(())
+        if let Err(e) = tags_tx.send(None).await {
+            self.tx.send_error(SyncError::AsyncError(e.to_string()));
+        }
+
+        match tags_handle.await {
+            Ok(Err(e)) => self.tx.send_error(SyncError::DbError(e)),
+            Ok(Ok(())) => {}
+            Err(e) => {
+                self.tx.send_error(SyncError::AsyncError(e.to_string()));
+            }
+        }
+        if let Err(e) = self.tx.send(None) {
+            error!("Error sending message to clients {:?}", e);
+        }
     }
 
     async fn task_loop(
@@ -115,14 +129,12 @@ impl SyncEngine {
                     // edge case - entire dir is empty
                     if total_dirs == 0 {
                         self.tx
-                            .send(Ok(1.))
-                            .await
+                            .send(Some(Ok(1.)))
                             .map_err(|e| SyncError::AsyncError(e.to_string()))?;
                         break;
                     }
                     self.tx
-                        .send(Ok((dirs_processed as f32) / (total_dirs as f32)))
-                        .await
+                        .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
                         .map_err(|e| SyncError::AsyncError(e.to_string()))?;
 
                     if total_dirs == dirs_processed {
@@ -132,8 +144,7 @@ impl SyncEngine {
                 Ok(Some(DirRead::Found)) => {
                     total_dirs += 1;
                     self.tx
-                        .send(Ok((dirs_processed as f32) / (total_dirs as f32)))
-                        .await
+                        .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
                         .map_err(|e| SyncError::AsyncError(e.to_string()))?;
                 }
                 Ok(None) => {
@@ -271,10 +282,17 @@ impl SyncEngine {
         dispatch_tx: &async_channel::Sender<Option<PathBuf>>,
         finished_tx: &Sender<DirRead>,
     ) -> Result<(), SyncError> {
-        for dir_result in path.read_dir().map_err(SyncError::IOError)? {
-            let dir = dir_result.map_err(SyncError::IOError)?;
+        for dir_result in path
+            .read_dir()
+            .map_err(|e| SyncError::IOError(e.to_string()))?
+        {
+            let dir = dir_result.map_err(|e| SyncError::IOError(e.to_string()))?;
 
-            if dir.file_type().map_err(SyncError::IOError)?.is_file() {
+            if dir
+                .file_type()
+                .map_err(|e| SyncError::IOError(e.to_string()))?
+                .is_file()
+            {
                 let file_path = dir.path();
 
                 if let Some(metadata) = SyncEngine::parse_metadata(&file_path)? {
@@ -304,7 +322,10 @@ impl SyncEngine {
 
     fn parse_metadata(file_path: &Path) -> Result<Option<Track>, SyncError> {
         let name = file_path.extension().unwrap_or_default();
-        let _size = file_path.metadata().map_err(SyncError::IOError)?.len();
+        let _size = file_path
+            .metadata()
+            .map_err(|e| SyncError::IOError(e.to_string()))?
+            .len();
         let mut song_metadata: Option<Track> = None;
         match &name.to_str().unwrap_or_default().to_lowercase()[..] {
             "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {

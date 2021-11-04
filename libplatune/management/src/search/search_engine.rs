@@ -93,7 +93,10 @@ impl SearchEngine {
         for term in terms {
             corrected = corrected.bind(term);
         }
-        let mut spellfix_results = corrected.fetch_all(conn).await.map_err(DbError::DbError)?;
+        let mut spellfix_results = corrected
+            .fetch_all(conn)
+            .await
+            .map_err(|e| DbError::DbError(e.to_string()))?;
         if let Some(last) = terms.last() {
             let last = last.to_string();
             spellfix_results.push(SpellfixResult {
@@ -229,7 +232,7 @@ impl SearchEngine {
             })
             .fetch_all(con)
             .await
-            .map_err(DbError::DbError)
+            .map_err(|e| DbError::DbError(e.to_string()))
     }
 
     fn convert_entries(&self, mut search_entries: Vec<SearchEntry>) -> Vec<SearchResult> {

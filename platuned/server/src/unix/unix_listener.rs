@@ -26,7 +26,8 @@ impl UnixListener {
             .with_context(|| "Error reading metadata from Unix socket file")?
             .permissions();
         perms.set_mode(0o666);
-        std::fs::set_permissions(&path, perms).unwrap();
+        std::fs::set_permissions(&path, perms)
+            .with_context(|| "Error setting permissions on Unix socket file")?;
 
         Ok(Self { path, listener })
     }

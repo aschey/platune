@@ -12,7 +12,10 @@ use crate::db_error::DbError;
 pub(crate) async fn acquire_with_spellfix(
     pool: &Pool<Sqlite>,
 ) -> Result<PoolConnection<Sqlite>, DbError> {
-    let mut con = pool.acquire().await?;
+    let mut con = pool
+        .acquire()
+        .await
+        .map_err(|e| DbError::DbError(e.to_string()))?;
     load_spellfix(&mut con)?;
     Ok(con)
 }

@@ -5,12 +5,11 @@ use crate::{
     config::Config,
     database::{Database, LookupEntry},
     db_error::DbError,
-    sync::sync_engine::SyncError,
+    sync::progress_stream::ProgressStream,
 };
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
-use tokio::sync::mpsc::Receiver;
 
 #[derive(Error, Debug)]
 pub enum ManagerError {
@@ -94,7 +93,7 @@ impl Manager {
         Ok(self.expand_paths(folders).await)
     }
 
-    pub async fn sync(&self) -> Result<Receiver<Result<f32, SyncError>>, DbError> {
+    pub async fn sync(&mut self) -> Result<ProgressStream, DbError> {
         let folders = self.get_all_folders().await?;
         let mount = self.get_registered_mount().await;
         Ok(self.db.sync(folders, mount).await)
