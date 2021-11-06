@@ -1,6 +1,7 @@
 use libsqlite3_sys::{sqlite3, sqlite3_load_extension};
 use sqlx::{pool::PoolConnection, Pool, Sqlite, SqliteConnection};
 use std::{
+    env::var,
     ffi::{CStr, CString},
     os::raw::c_char,
     path::Path,
@@ -22,7 +23,7 @@ pub(crate) async fn acquire_with_spellfix(
 
 pub(crate) fn load_spellfix(con: &mut SqliteConnection) -> Result<(), DbError> {
     let handle = con.as_raw_handle();
-    let spellfix_lib = match std::env::var("SPELLFIX_LIB") {
+    let spellfix_lib = match var("SPELLFIX_LIB") {
         Ok(res) => res,
         #[cfg(target_os = "linux")]
         Err(_) => "./assets/linux/spellfix.o".to_owned(),

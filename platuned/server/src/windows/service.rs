@@ -1,6 +1,7 @@
 use crate::server;
 use anyhow::{Context, Result};
 use std::{
+    env::current_exe,
     ffi::{OsStr, OsString},
     time::Duration,
 };
@@ -40,8 +41,7 @@ pub fn install() -> Result<()> {
         service.delete().with_context(|| "Error deleting service")?;
     }
 
-    let service_binary_path =
-        ::std::env::current_exe().with_context(|| "Error getting current exe path")?;
+    let service_binary_path = current_exe().with_context(|| "Error getting current exe path")?;
 
     let service_info = ServiceInfo {
         name: OsString::from(SERVICE_NAME),

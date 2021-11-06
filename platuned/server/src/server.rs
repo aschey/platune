@@ -11,6 +11,7 @@ use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
+use std::env::var;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -52,8 +53,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
 }
 
 async fn init_manager() -> Result<Arc<Mutex<Manager>>> {
-    let path = std::env::var("DATABASE_URL")
-        .with_context(|| "DATABASE_URL environment variable not set")?;
+    let path = var("DATABASE_URL").with_context(|| "DATABASE_URL environment variable not set")?;
     let db = Database::connect(path, true).await?;
     db.migrate()
         .await

@@ -10,6 +10,7 @@ mod windows;
 
 use rpc::*;
 use std::panic;
+use std::process::exit;
 use tracing::error;
 use tracing::info;
 #[cfg(windows)]
@@ -79,6 +80,6 @@ async fn main() {
         // Drop guards to ensure logs are flushed
         drop(stdout_guard);
         drop(file_guard);
-        std::process::exit(1);
+        exit(1);
     }
 }
