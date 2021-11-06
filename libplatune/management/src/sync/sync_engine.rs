@@ -152,9 +152,9 @@ impl SyncEngine {
                 }
                 Err(_) => {
                     if num_tasks < max_tasks {
-                        println!("spawning task");
                         handles.push(self.spawn_task(tags_tx.clone()));
                         num_tasks += 1;
+                        info!("Spawning task. Num tasks: {:?}", num_tasks);
                     }
                 }
             }
