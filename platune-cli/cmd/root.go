@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/charmbracelet/lipgloss"
@@ -32,6 +34,7 @@ var rootCmd = &cobra.Command{
 		}
 		if interactive {
 			state.curPrompt.Run()
+			handleExit()
 		} else {
 			err := cmd.Help()
 			if err != nil {
@@ -41,6 +44,13 @@ var rootCmd = &cobra.Command{
 		}
 
 	},
+}
+
+func handleExit() {
+	rawModeOff := exec.Command("/bin/stty", "-raw", "echo")
+	rawModeOff.Stdin = os.Stdin
+	_ = rawModeOff.Run()
+	rawModeOff.Wait()
 }
 
 func Execute() {

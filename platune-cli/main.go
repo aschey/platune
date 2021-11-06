@@ -15,7 +15,9 @@ limitations under the License.
 */
 package main
 
-import "github.com/aschey/platune/cli/v2/cmd"
+import (
+	"github.com/aschey/platune/cli/v2/cmd"
+)
 
 func main() {
 	cmd.Execute()
