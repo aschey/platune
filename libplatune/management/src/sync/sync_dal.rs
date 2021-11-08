@@ -83,19 +83,19 @@ impl<'a> SyncDAL<'a> {
             .await
     }
 
-    pub(crate) async fn get_missing_songs(&mut self) -> Result<Vec<String>, DbError> {
-        let paths = sqlx::query!(
-            "select song_path from song where last_scanned_date < ?",
+    pub(crate) async fn update_missing_songs(&mut self) -> Result<(), DbError> {
+        sqlx::query!(
+            "
+            insert into deleted_song(song_id)
+            select song_id from song where last_scanned_date < ?
+            ",
             self.timestamp
         )
-        .fetch_all(&mut self.tran)
+        .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))?
-        .into_iter()
-        .map(|r| r.song_path)
-        .collect_vec();
+        .map_err(|e| DbError::DbError(e.to_string()))?;
 
-        Ok(paths)
+        Ok(())
     }
 
     pub(crate) async fn sync_spellfix(&mut self) -> Result<(), DbError> {

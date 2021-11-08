@@ -213,8 +213,7 @@ impl SyncEngine {
                 }
             }
 
-            // TODO: delete missing songs
-            dal.get_missing_songs().await?;
+            dal.update_missing_songs().await?;
 
             dal.sync_spellfix().await?;
             SyncEngine::add_search_aliases(&mut dal).await?;

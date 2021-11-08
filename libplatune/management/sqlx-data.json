@@ -126,24 +126,6 @@
       "nullable": []
     }
   },
-  "a439a5c8fd02437b3c24f8275625e8dcb1ea3a473182016a05e53e4efd67300d": {
-    "query": "select song_path from song where last_scanned_date < ?",
-    "describe": {
-      "columns": [
-        {
-          "name": "song_path",
-          "ordinal": 0,
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "a8497639b27ddf1cfe84a38a90c71b1b4fc16f8fcf3c4c3db4fc9b44dc519233": {
     "query": "select folder_path from folder",
     "describe": {
@@ -368,6 +350,16 @@
       "columns": [],
       "parameters": {
         "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "ff35926a38ef74dbf323eddd34f5d592a1661a86a10940bd6f166de7a3776369": {
+    "query": "\n            insert into deleted_song(song_id)\n            select song_id from song where last_scanned_date < ?\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
       },
       "nullable": []
     }
