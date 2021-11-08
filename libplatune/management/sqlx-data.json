@@ -58,6 +58,24 @@
       "nullable": []
     }
   },
+  "40d364a651098b44f8f4f7292f88da0f9e0479580f232e6b03b7e5cdee832ca8": {
+    "query": "\n        select song_path from deleted_song ds\n        inner join song s on s.song_id = ds.song_id\n        ",
+    "describe": {
+      "columns": [
+        {
+          "name": "song_path",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "4378592db0a04e875ec33f69dd998fa14697356b6db290f5ecc44001c73af10c": {
     "query": "select mount_id from mount where mount_path = ?",
     "describe": {

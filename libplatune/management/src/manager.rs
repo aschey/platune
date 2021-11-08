@@ -5,6 +5,7 @@ use crate::{
     config::Config,
     database::{Database, LookupEntry},
     db_error::DbError,
+    path_mut::PathMut,
     sync::progress_stream::ProgressStream,
 };
 use regex::Regex;
@@ -140,16 +141,21 @@ impl Manager {
         entry_type: EntryType,
     ) -> Result<Vec<LookupEntry>, DbError> {
         let mut res = self.db.lookup(correlation_ids, entry_type).await?;
+        self.update_paths(&mut res).await;
+
+        Ok(res)
+    }
+
+    async fn update_paths<T>(&self, paths: &mut Vec<T>)
+    where
+        T: PathMut,
+    {
         if let Some(mount) = self.get_registered_mount().await {
             let mount = Path::new(&mount);
-            for entry in &mut res {
-                entry.path = mount
-                    .join(entry.path.to_owned())
-                    .to_string_lossy()
-                    .to_string()
+            for entry in paths.iter_mut() {
+                entry.update_path(mount.join(entry.get_path()).to_string_lossy().to_string())
             }
         }
-        Ok(res)
     }
 
     pub async fn search(
@@ -158,6 +164,12 @@ impl Manager {
         options: SearchOptions<'_>,
     ) -> Result<Vec<SearchResult>, DbError> {
         Ok(self.db.search(query, options).await?)
+    }
+
+    pub async fn get_deleted_songs(&self) -> Result<Vec<String>, DbError> {
+        let mut deleted = self.db.get_deleted_songs().await?;
+        self.update_paths(&mut deleted).await;
+        Ok(deleted)
     }
 
     fn clean_path(&self, path: &str) -> String {

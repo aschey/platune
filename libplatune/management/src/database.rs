@@ -5,6 +5,7 @@ use crate::spellfix::acquire_with_spellfix;
 use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
+use itertools::Itertools;
 use log::LevelFilter;
 use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
@@ -176,6 +177,21 @@ impl Database {
         .fetch_all(&self.pool)
         .await
         .map_err(|e| DbError::DbError(e.to_string()))
+    }
+
+    pub(crate) async fn get_deleted_songs(&self) -> Result<Vec<String>, DbError> {
+        Ok(sqlx::query!(
+            "
+        select song_path from deleted_song ds
+        inner join song s on s.song_id = ds.song_id
+        "
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| DbError::DbError(e.to_string()))?
+        .into_iter()
+        .map(|r| r.song_path)
+        .collect_vec())
     }
 
     pub(crate) async fn add_folders(&self, paths: Vec<String>) -> Result<(), DbError> {

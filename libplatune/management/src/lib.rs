@@ -4,6 +4,7 @@ pub mod database;
 pub mod db_error;
 pub mod entry_type;
 pub mod manager;
+mod path_mut;
 pub mod search;
 mod spellfix;
 pub mod sync;
