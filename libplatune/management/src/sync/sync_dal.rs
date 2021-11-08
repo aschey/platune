@@ -74,10 +74,13 @@ impl<'a> SyncDAL<'a> {
         &mut self,
         path: &str,
         metadata: &Track,
+        file_size: i64,
         fingerprint: &str,
     ) -> Result<SqliteQueryResult, DbError> {
-        self.add_song(path, metadata, fingerprint).await?;
-        self.update_song(path, metadata, fingerprint).await
+        self.add_song(path, metadata, file_size, fingerprint)
+            .await?;
+        self.update_song(path, metadata, file_size, fingerprint)
+            .await
     }
 
     pub(crate) async fn get_missing_songs(&mut self) -> Result<Vec<String>, DbError> {
@@ -207,6 +210,7 @@ impl<'a> SyncDAL<'a> {
         &mut self,
         path: &str,
         metadata: &Track,
+        file_size: i64,
         fingerprint: &str,
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
@@ -227,6 +231,7 @@ impl<'a> SyncDAL<'a> {
             duration,
             sample_rate,
             bit_rate,
+            file_size,
             album_art_path,
             fingerprint
             )
@@ -240,7 +245,7 @@ impl<'a> SyncDAL<'a> {
                     inner join album_artist aa on a.album_artist_id = aa.album_artist_id
                     where a.album_name = ? and aa.album_artist_name = ?
                 ), 
-                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             on conflict(song_path) do update
             set last_scanned_date = ?;
@@ -261,6 +266,7 @@ impl<'a> SyncDAL<'a> {
             metadata.duration,
             metadata.sample_rate,
             metadata.bitrate,
+            file_size,
             "",
             fingerprint,
             self.timestamp
@@ -274,6 +280,7 @@ impl<'a> SyncDAL<'a> {
         &mut self,
         path: &str,
         metadata: &Track,
+        file_size: i64,
         fingerprint: &str,
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
@@ -291,9 +298,10 @@ impl<'a> SyncDAL<'a> {
             duration = $11,
             sample_rate = $12,
             bit_rate = $13,
-            album_art_path = $14,
-            fingerprint = $15
-        where song_path = $1 and fingerprint != $15;
+            file_size = $14,
+            album_art_path = $15,
+            fingerprint = $16
+        where song_path = $1 and fingerprint != $16;
         ",
             path,
             self.timestamp,
@@ -308,6 +316,7 @@ impl<'a> SyncDAL<'a> {
             metadata.duration,
             metadata.sample_rate,
             metadata.bitrate,
+            file_size,
             "",
             fingerprint
         )

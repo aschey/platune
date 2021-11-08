@@ -1,4 +1,6 @@
 use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -96,7 +98,7 @@ impl SyncEngine {
         }
 
         match tags_handle.await {
-            Ok(Err(e)) => self.tx.send_error(SyncError::DbError(e)),
+            Ok(Err(e)) => self.tx.send_error(e),
             Ok(Ok(())) => {}
             Err(e) => {
                 self.tx.send_error(SyncError::AsyncError(e.to_string()));
@@ -109,7 +111,7 @@ impl SyncEngine {
 
     async fn task_loop(
         &mut self,
-        tags_tx: &Sender<Option<(Track, String)>>,
+        tags_tx: &Sender<Option<(Track, String, PathBuf)>>,
     ) -> Result<(), SyncError> {
         let mut num_tasks = 1;
         let max_tasks = 100;
@@ -180,24 +182,30 @@ impl SyncEngine {
 
     fn tags_task(
         &self,
-        mut tags_rx: Receiver<Option<(Track, String)>>,
-    ) -> JoinHandle<Result<(), DbError>> {
+        mut tags_rx: Receiver<Option<(Track, String, PathBuf)>>,
+    ) -> JoinHandle<Result<(), SyncError>> {
         let pool = self.pool.clone();
 
         tokio::spawn(async move {
             let mut dal = SyncDAL::try_new(pool).await?;
             while let Some(metadata) = tags_rx.recv().await {
                 match metadata {
-                    Some((metadata, path)) => {
-                        let fingerprint =
-                            metadata.artist.clone() + &metadata.album + &metadata.title;
+                    Some((metadata, path_str, path)) => {
+                        let mut hasher = DefaultHasher::new();
+                        metadata.hash(&mut hasher);
+                        let file_size = path
+                            .metadata()
+                            .map_err(|e| SyncError::IOError(e.to_string()))?
+                            .len();
+                        file_size.hash(&mut hasher);
+                        let fingerprint = hasher.finish().to_string();
+
                         dal.add_artist(&metadata.artist).await?;
-
                         dal.add_album_artist(&metadata.album_artists).await?;
-
                         dal.add_album(&metadata.album, &metadata.album_artists)
                             .await?;
-                        dal.sync_song(&path, &metadata, &fingerprint).await?;
+                        dal.sync_song(&path_str, &metadata, file_size as i64, &fingerprint)
+                            .await?;
                     }
                     None => {
                         break;
@@ -252,7 +260,7 @@ impl SyncEngine {
 
     fn spawn_task(
         &self,
-        tags_tx: Sender<Option<(Track, String)>>,
+        tags_tx: Sender<Option<(Track, String, PathBuf)>>,
     ) -> JoinHandle<Result<(), SyncError>> {
         let mount = self.mount.clone();
         let dispatch_tx = self.dispatch_tx.clone();
@@ -278,7 +286,7 @@ impl SyncEngine {
     async fn parse_dir(
         path: PathBuf,
         mount: &Option<String>,
-        tags_tx: &Sender<Option<(Track, String)>>,
+        tags_tx: &Sender<Option<(Track, String, PathBuf)>>,
         dispatch_tx: &async_channel::Sender<Option<PathBuf>>,
         finished_tx: &Sender<DirRead>,
     ) -> Result<(), SyncError> {
@@ -294,11 +302,10 @@ impl SyncEngine {
                 .is_file()
             {
                 let file_path = dir.path();
-
                 if let Some(metadata) = SyncEngine::parse_metadata(&file_path)? {
                     let file_path_str = SyncEngine::clean_file_path(&file_path, mount);
                     tags_tx
-                        .send(Some((metadata, file_path_str)))
+                        .send(Some((metadata, file_path_str, file_path)))
                         .await
                         .map_err(|e| SyncError::AsyncError(e.to_string()))?;
                 }

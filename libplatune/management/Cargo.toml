@@ -21,7 +21,7 @@ directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.17"
 itertools = "0.10.1"
-katatsuki = {git = "https://github.com/aschey/seiri", rev = "38b9ed7fbf109851dc50b34d44f68edfd85be50d"}
+katatsuki = {git = "https://github.com/aschey/seiri", rev = "a643a0ec242622a83c4f5d08aa79a3dca2302ca1"}
 lazy_static = "1.4.0"
 libsqlite3-sys = "0.22.2"
 log = "0.4.14"

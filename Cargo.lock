@@ -1347,7 +1347,7 @@ dependencies = [
 [[package]]
 name = "katatsuki"
 version = "1.0.11"
-source = "git+https://github.com/aschey/seiri?rev=38b9ed7fbf109851dc50b34d44f68edfd85be50d#38b9ed7fbf109851dc50b34d44f68edfd85be50d"
+source = "git+https://github.com/aschey/seiri?rev=a643a0ec242622a83c4f5d08aa79a3dca2302ca1#a643a0ec242622a83c4f5d08aa79a3dca2302ca1"
 dependencies = [
  "chrono",
  "enum-primitive-derive",
@@ -1404,7 +1404,7 @@ checksum = "869d572136620d55835903746bcb5cdc54cb2851fd0aeec53220b4bb65ef3013"
 [[package]]
 name = "libkatatsuki-sys"
 version = "1.0.11"
-source = "git+https://github.com/aschey/seiri?rev=38b9ed7fbf109851dc50b34d44f68edfd85be50d#38b9ed7fbf109851dc50b34d44f68edfd85be50d"
+source = "git+https://github.com/aschey/seiri?rev=a643a0ec242622a83c4f5d08aa79a3dca2302ca1#a643a0ec242622a83c4f5d08aa79a3dca2302ca1"
 dependencies = [
  "bindgen",
  "cmake",

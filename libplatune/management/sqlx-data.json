@@ -76,6 +76,16 @@
       ]
     }
   },
+  "43a98dddc87037ea2a01a957e7e3370aa3c02682e6c07388375831eb3359f112": {
+    "query": "\n        insert into song(\n            song_path,\n            modified_date,\n            created_date,\n            last_scanned_date,\n            artist_id,\n            song_title,\n            album_id,\n            track_number,\n            disc_number,\n            song_year,\n            song_month,\n            song_day,\n            duration,\n            sample_rate,\n            bit_rate,\n            file_size,\n            album_art_path,\n            fingerprint\n            )\n            values\n            (\n                ?, ?, ?, ?,\n                (select artist_id from artist where artist_name = ?), \n                ?, \n                (\n                    select album_id from album a\n                    inner join album_artist aa on a.album_artist_id = aa.album_artist_id\n                    where a.album_name = ? and aa.album_artist_name = ?\n                ), \n                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n            )\n            on conflict(song_path) do update\n            set last_scanned_date = ?;\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 20
+      },
+      "nullable": []
+    }
+  },
   "48b93f37ed89f2f302e5465207adaafd2066eca6677701dc7783ea6760616459": {
     "query": "update mount set mount_path = ? where mount_id = ?",
     "describe": {
@@ -92,16 +102,6 @@
       "columns": [],
       "parameters": {
         "Right": 3
-      },
-      "nullable": []
-    }
-  },
-  "7c78c07272d18b770eb0053ba7b3817681d0a972c81a3da37ab6f2dd2a679cb3": {
-    "query": "\n        update song\n            set modified_date = $2,\n            artist_id = (select artist_id from artist where artist_name = $3),\n            song_title = $4,\n            album_id = (select album_id from album where album_name = $5),\n            track_number = $6,\n            disc_number = $7,\n            song_year = $8,\n            song_month = $9,\n            song_day = $10,\n            duration = $11,\n            sample_rate = $12,\n            bit_rate = $13,\n            album_art_path = $14,\n            fingerprint = $15\n        where song_path = $1 and fingerprint != $15;\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 15
       },
       "nullable": []
     }
@@ -210,16 +210,6 @@
       ]
     }
   },
-  "bb3ee5614d92c83900bb555ad10266da50988820a845b33de773b94bb981178a": {
-    "query": "\n        insert into song(\n            song_path,\n            modified_date,\n            created_date,\n            last_scanned_date,\n            artist_id,\n            song_title,\n            album_id,\n            track_number,\n            disc_number,\n            song_year,\n            song_month,\n            song_day,\n            duration,\n            sample_rate,\n            bit_rate,\n            album_art_path,\n            fingerprint\n            )\n            values\n            (\n                ?, ?, ?, ?,\n                (select artist_id from artist where artist_name = ?), \n                ?, \n                (\n                    select album_id from album a\n                    inner join album_artist aa on a.album_artist_id = aa.album_artist_id\n                    where a.album_name = ? and aa.album_artist_name = ?\n                ), \n                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n            )\n            on conflict(song_path) do update\n            set last_scanned_date = ?;\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 19
-      },
-      "nullable": []
-    }
-  },
   "bf88648ff9341decce1a77f3c911ae77a9db59f35c7c4d2d7d752f3b3cb8dda5": {
     "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            from album_artist aa\n            inner join album al on al.album_artist_id = aa.album_artist_id\n            inner join song s on s.album_id = al.album_id\n            inner join artist ar on ar.artist_id = s.artist_id\n            where aa.album_artist_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number",
     "describe": {
@@ -266,6 +256,16 @@
         false,
         false
       ]
+    }
+  },
+  "c15e2a9bf8826fceb398b45d84e14c669d6863c4c1b1e461ac05341a0abcfff2": {
+    "query": "\n        update song\n            set modified_date = $2,\n            artist_id = (select artist_id from artist where artist_name = $3),\n            song_title = $4,\n            album_id = (select album_id from album where album_name = $5),\n            track_number = $6,\n            disc_number = $7,\n            song_year = $8,\n            song_month = $9,\n            song_day = $10,\n            duration = $11,\n            sample_rate = $12,\n            bit_rate = $13,\n            file_size = $14,\n            album_art_path = $15,\n            fingerprint = $16\n        where song_path = $1 and fingerprint != $16;\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 16
+      },
+      "nullable": []
     }
   },
   "cfeec44a77e5d75c6edecdd6311276dd753762ecda42e62c927e375abf1471e9": {

@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS song (
-    song_id INTEGER PRIMARY KEY NOT NULL,
+    song_id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     song_path TEXT NOT NULL COLLATE NOCASE,
     last_scanned_date INTEGER NOT NULL,
     artist_id INTEGER NOT NULL,
@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS song (
     duration INTEGER NOT NULL,
     sample_rate INTEGER NOT NULL,
     bit_rate INTEGER NOT NULL,
+    file_size INTEGER NOT NULL,
     album_art_path TEXT NULL COLLATE NOCASE,
     fingerprint TEXT NOT NULL,
     created_date INTEGER NOT NULL,
