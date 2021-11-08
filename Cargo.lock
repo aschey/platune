@@ -1428,6 +1428,7 @@ dependencies = [
  "anyhow",
  "async-channel",
  "criterion",
+ "ctor",
  "directories",
  "dotenv",
  "futures",
@@ -1445,6 +1446,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

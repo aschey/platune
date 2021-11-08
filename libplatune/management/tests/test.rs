@@ -7,6 +7,18 @@ use std::{
 };
 use tempfile::TempDir;
 use tokio::time::timeout;
+use tracing::Level;
+
+#[ctor::ctor]
+fn init() {
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_thread_ids(true)
+        .with_thread_names(true)
+        .with_test_writer()
+        .with_max_level(Level::INFO)
+        .init();
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_empty() {
@@ -83,6 +95,61 @@ pub async fn test_sync_basic() {
     while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
     }
+
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
+
+    assert_eq!(vec![0., 1.], msgs);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+pub async fn test_sync_multiple() {
+    let tempdir = TempDir::new().unwrap();
+    let (db, mut manager) = setup(&tempdir).await;
+    let music_dir = tempdir.path().join("configdir");
+    let inner_dir = music_dir.join("folder1");
+
+    for i in 0..10 {
+        create_dir_all(inner_dir.clone().join(format!("test{}", i))).unwrap();
+
+        fs::copy(
+            "../player/tests/assets/test.mp3",
+            inner_dir.join(format!("test{}/test.mp3", i)),
+        )
+        .unwrap();
+        fs::copy(
+            "../player/tests/assets/test2.mp3",
+            inner_dir.join(format!("test{}/test2.mp3", i)),
+        )
+        .unwrap();
+        fs::copy(
+            "../player/tests/assets/test3.mp3",
+            inner_dir.join(format!("test{}/test3.mp3", i)),
+        )
+        .unwrap();
+    }
+
+    manager
+        .add_folder(music_dir.to_str().unwrap())
+        .await
+        .unwrap();
+
+    let mut receiver1 = manager.sync().await.unwrap();
+    let mut receiver2 = manager.sync().await.unwrap();
+
+    let handle1 = tokio::spawn(async move {
+        let mut msgs = vec![];
+        while let Some(msg) = receiver1.next().await {
+            msgs.push(msg.unwrap());
+        }
+        msgs
+    });
+
+    let handle2 = tokio::spawn(async move { while receiver2.next().await.is_some() {} });
+
+    let msgs = handle1.await.unwrap();
+    handle2.await.unwrap();
 
     timeout(Duration::from_secs(5), db.close())
         .await

@@ -55,12 +55,12 @@ impl Database {
     pub async fn migrate(&self) -> Result<(), DbError> {
         let mut con = acquire_with_spellfix(&self.pool).await?;
 
-        info!("migrating");
+        info!("Migrating");
         sqlx::migrate!("./migrations")
             .run(&mut con)
             .await
-            .map_err(|e| DbError::DbError(e.to_string()))?;
-        info!("done");
+            .map_err(|e| DbError::DbError(format!("Error running migrations {}", e.to_string())))?;
+        info!("Finished migrating");
 
         Ok(())
     }

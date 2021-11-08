@@ -18,7 +18,7 @@ use tokio::{
     task::JoinHandle,
     time::timeout,
 };
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{consts::MIN_WORDS, db_error::DbError};
 
@@ -81,6 +81,7 @@ impl SyncEngine {
     }
 
     pub(crate) async fn start(&mut self) {
+        info!("Starting sync process");
         let (tags_tx, tags_rx) = channel(100);
         let tags_handle = self.tags_task(tags_rx);
 
@@ -127,7 +128,10 @@ impl SyncEngine {
             match timeout(Duration::from_millis(1), self.finished_rx.recv()).await {
                 Ok(Some(DirRead::Completed)) => {
                     dirs_processed += 1;
-
+                    debug!(
+                        "Read dir. Dirs processed: {} Total dirs: {}",
+                        dirs_processed, total_dirs
+                    );
                     // edge case - entire dir is empty
                     if total_dirs == 0 {
                         self.tx
@@ -145,6 +149,10 @@ impl SyncEngine {
                 }
                 Ok(Some(DirRead::Found)) => {
                     total_dirs += 1;
+                    debug!(
+                        "Found dir. Dirs processed: {} Total dirs: {}",
+                        dirs_processed, total_dirs
+                    );
                     self.tx
                         .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
                         .map_err(|e| SyncError::AsyncError(e.to_string()))?;
@@ -156,7 +164,7 @@ impl SyncEngine {
                     if num_tasks < max_tasks {
                         handles.push(self.spawn_task(tags_tx.clone()));
                         num_tasks += 1;
-                        info!("Spawning task. Num tasks: {:?}", num_tasks);
+                        debug!("Spawning task. Num tasks: {:?}", num_tasks);
                     }
                 }
             }
@@ -218,9 +226,9 @@ impl SyncEngine {
             dal.sync_spellfix().await?;
             SyncEngine::add_search_aliases(&mut dal).await?;
 
-            info!("committing");
+            info!("Committing changes");
             dal.commit().await?;
-            info!("done");
+            info!("Finished committing");
 
             Ok(())
         })
@@ -289,6 +297,7 @@ impl SyncEngine {
         dispatch_tx: &async_channel::Sender<Option<PathBuf>>,
         finished_tx: &Sender<DirRead>,
     ) -> Result<(), SyncError> {
+        debug!("Reading dir {:?}", path);
         for dir_result in path
             .read_dir()
             .map_err(|e| SyncError::IOError(e.to_string()))?

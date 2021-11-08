@@ -41,6 +41,7 @@ func syncProgress() {
 		for {
 			progress, err := sync.Recv()
 			if err != nil {
+				fmt.Println()
 				return
 			}
 			b.Update(int(progress.Percentage*1000),
