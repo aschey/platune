@@ -78,6 +78,26 @@ func (mr *MockManagementClientMockRecorder) GetAllFolders(ctx, in interface{}, o
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllFolders", reflect.TypeOf((*MockManagementClient)(nil).GetAllFolders), varargs...)
 }
 
+// GetDeleted mocks base method.
+func (m *MockManagementClient) GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*v2.GetDeletedResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetDeleted", varargs...)
+	ret0, _ := ret[0].(*v2.GetDeletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeleted indicates an expected call of GetDeleted.
+func (mr *MockManagementClientMockRecorder) GetDeleted(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeleted", reflect.TypeOf((*MockManagementClient)(nil).GetDeleted), varargs...)
+}
+
 // GetRegisteredMount mocks base method.
 func (m *MockManagementClient) GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*v2.RegisteredMountMessage, error) {
 	m.ctrl.T.Helper()
@@ -489,6 +509,21 @@ func (m *MockManagementServer) GetAllFolders(arg0 context.Context, arg1 *emptypb
 func (mr *MockManagementServerMockRecorder) GetAllFolders(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllFolders", reflect.TypeOf((*MockManagementServer)(nil).GetAllFolders), arg0, arg1)
+}
+
+// GetDeleted mocks base method.
+func (m *MockManagementServer) GetDeleted(arg0 context.Context, arg1 *emptypb.Empty) (*v2.GetDeletedResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeleted", arg0, arg1)
+	ret0, _ := ret[0].(*v2.GetDeletedResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeleted indicates an expected call of GetDeleted.
+func (mr *MockManagementServerMockRecorder) GetDeleted(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeleted", reflect.TypeOf((*MockManagementServer)(nil).GetDeleted), arg0, arg1)
 }
 
 // GetRegisteredMount mocks base method.

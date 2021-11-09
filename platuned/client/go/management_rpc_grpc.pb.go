@@ -26,6 +26,7 @@ type ManagementClient interface {
 	GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RegisteredMountMessage, error)
 	Search(ctx context.Context, opts ...grpc.CallOption) (Management_SearchClient, error)
 	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*LookupResponse, error)
+	GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error)
 }
 
 type managementClient struct {
@@ -144,6 +145,15 @@ func (c *managementClient) Lookup(ctx context.Context, in *LookupRequest, opts .
 	return out, nil
 }
 
+func (c *managementClient) GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error) {
+	out := new(GetDeletedResponse)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/GetDeleted", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ManagementServer is the server API for Management service.
 // All implementations must embed UnimplementedManagementServer
 // for forward compatibility
@@ -155,6 +165,7 @@ type ManagementServer interface {
 	GetRegisteredMount(context.Context, *emptypb.Empty) (*RegisteredMountMessage, error)
 	Search(Management_SearchServer) error
 	Lookup(context.Context, *LookupRequest) (*LookupResponse, error)
+	GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error)
 	mustEmbedUnimplementedManagementServer()
 }
 
@@ -182,6 +193,9 @@ func (UnimplementedManagementServer) Search(Management_SearchServer) error {
 }
 func (UnimplementedManagementServer) Lookup(context.Context, *LookupRequest) (*LookupResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Lookup not implemented")
+}
+func (UnimplementedManagementServer) GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDeleted not implemented")
 }
 func (UnimplementedManagementServer) mustEmbedUnimplementedManagementServer() {}
 
@@ -333,6 +347,24 @@ func _Management_Lookup_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Management_GetDeleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).GetDeleted(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/GetDeleted",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).GetDeleted(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Management_ServiceDesc is the grpc.ServiceDesc for Management service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -359,6 +391,10 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Lookup",
 			Handler:    _Management_Lookup_Handler,
+		},
+		{
+			MethodName: "GetDeleted",
+			Handler:    _Management_GetDeleted_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -213,4 +213,14 @@ impl Management for ManagementImpl {
             })
         })))
     }
+
+    async fn get_deleted(&self, _: Request<()>) -> Result<Response<GetDeletedResponse>, Status> {
+        let deleted_songs = match self.manager.lock().await.get_deleted_songs().await {
+            Ok(songs) => songs,
+            Err(e) => return Err(format_error(format!("Error getting deleted songs {:?}", e))),
+        };
+        return Ok(Response::new(GetDeletedResponse {
+            paths: deleted_songs,
+        }));
+    }
 }

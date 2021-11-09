@@ -17,6 +17,7 @@ service Management {
       returns (RegisteredMountMessage) {}
   rpc Search(stream SearchRequest) returns (stream SearchResponse) {}
   rpc Lookup(LookupRequest) returns (LookupResponse) {}
+  rpc GetDeleted(google.protobuf.Empty) returns (GetDeletedResponse) {}
 }
 
 message Progress { float percentage = 1; }
@@ -63,3 +64,5 @@ message SearchResult {
 }
 
 message SearchResponse { repeated SearchResult results = 1; }
+
+message GetDeletedResponse { repeated string paths = 1; }
