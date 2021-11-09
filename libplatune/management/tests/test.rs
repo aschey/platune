@@ -158,6 +158,54 @@ pub async fn test_sync_multiple() {
     assert_eq!(vec![0., 1.], msgs);
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+pub async fn test_sync_delete() {
+    let tempdir = TempDir::new().unwrap();
+    let (db, mut manager) = setup(&tempdir).await;
+    let music_dir = tempdir.path().join("configdir");
+    let inner_dir = music_dir.join("folder1");
+    create_dir_all(inner_dir.clone()).unwrap();
+
+    fs::copy(
+        "../player/tests/assets/test.mp3",
+        inner_dir.join("test.mp3"),
+    )
+    .unwrap();
+    fs::copy(
+        "../player/tests/assets/test2.mp3",
+        inner_dir.join("test2.mp3"),
+    )
+    .unwrap();
+    let last_song = inner_dir.join("test3.mp3");
+    fs::copy("../player/tests/assets/test3.mp3", last_song.clone()).unwrap();
+
+    manager
+        .add_folder(music_dir.to_str().unwrap())
+        .await
+        .unwrap();
+    let mut receiver = manager.sync().await.unwrap();
+
+    while receiver.next().await.is_some() {}
+
+    fs::remove_file(last_song.clone()).unwrap();
+    // We store unix timestamps at a granularity of seconds so we need to wait for enough time to pass
+    std::thread::sleep(Duration::from_secs(2));
+
+    let mut receiver = manager.sync().await.unwrap();
+    while receiver.next().await.is_some() {}
+    let deleted = manager.get_deleted_songs().await.unwrap();
+
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
+
+    assert_eq!(1, deleted.len());
+    assert_eq!(
+        deleted[0],
+        last_song.to_string_lossy().to_string().replace("\\", "/")
+    );
+}
+
 pub struct SongTest {
     title: Option<&'static str>,
     artist: Option<&'static str>,
