@@ -193,6 +193,11 @@ pub async fn test_sync_delete() {
 
     let mut receiver = manager.sync().await.unwrap();
     while receiver.next().await.is_some() {}
+
+    // sync twice after deleting to ensure no unique constraint errors
+    let mut receiver = manager.sync().await.unwrap();
+    while receiver.next().await.is_some() {}
+
     let deleted = manager.get_deleted_songs().await.unwrap();
 
     timeout(Duration::from_secs(5), db.close())
