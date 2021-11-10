@@ -88,6 +88,7 @@ impl<'a> SyncDAL<'a> {
             "
             insert into deleted_song(song_id)
             select song_id from song where last_scanned_date < ?
+            on conflict do nothing
             ",
             self.timestamp
         )

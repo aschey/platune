@@ -15,7 +15,7 @@ use std::env::var;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tonic::transport::Server;
 
 enum Transport {
@@ -52,7 +52,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     Ok(())
 }
 
-async fn init_manager() -> Result<Arc<Mutex<Manager>>> {
+async fn init_manager() -> Result<Arc<RwLock<Manager>>> {
     let path = var("DATABASE_URL").with_context(|| "DATABASE_URL environment variable not set")?;
     let db = Database::connect(path, true).await?;
     db.migrate()
@@ -61,13 +61,13 @@ async fn init_manager() -> Result<Arc<Mutex<Manager>>> {
     let config = Config::try_new()?;
     let manager = Manager::new(&db, &config);
 
-    Ok(Arc::new(Mutex::new(manager)))
+    Ok(Arc::new(RwLock::new(manager)))
 }
 
 async fn run_server(
     shutdown_tx: broadcast::Sender<()>,
     platune_player: Arc<PlatunePlayer>,
-    manager: Arc<Mutex<Manager>>,
+    manager: Arc<RwLock<Manager>>,
     transport: Transport,
 ) -> Result<()> {
     let reflection_service = tonic_reflection::server::Builder::configure()

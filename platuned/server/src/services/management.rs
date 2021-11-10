@@ -6,19 +6,19 @@ use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio::sync::{broadcast, mpsc, RwLock};
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
 use tracing::{error, warn};
 
 pub struct ManagementImpl {
-    manager: Arc<Mutex<Manager>>,
+    manager: Arc<RwLock<Manager>>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
 impl ManagementImpl {
-    pub fn new(manager: Arc<Mutex<Manager>>, shutdown_tx: broadcast::Sender<()>) -> Self {
+    pub fn new(manager: Arc<RwLock<Manager>>, shutdown_tx: broadcast::Sender<()>) -> Self {
         Self {
             manager,
             shutdown_tx,
@@ -37,7 +37,7 @@ impl Management for ManagementImpl {
         Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
 
     async fn sync(&self, _: Request<()>) -> Result<Response<Self::SyncStream>, Status> {
-        let rx = match self.manager.lock().await.sync().await {
+        let rx = match self.manager.write().await.sync().await {
             Ok(rx) => rx,
             Err(e) => return Err(format_error(format!("Error syncing files {:?}", e))),
         };
@@ -52,7 +52,7 @@ impl Management for ManagementImpl {
     async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
         if let Err(e) = self
             .manager
-            .lock()
+            .write()
             .await
             .add_folders(
                 request
@@ -70,7 +70,7 @@ impl Management for ManagementImpl {
     }
 
     async fn get_all_folders(&self, _: Request<()>) -> Result<Response<FoldersMessage>, Status> {
-        let folders = match self.manager.lock().await.get_all_folders().await {
+        let folders = match self.manager.read().await.get_all_folders().await {
             Ok(f) => f,
             Err(e) => {
                 return Err(format_error(format!("Error syncing files {:?}", e)));
@@ -85,7 +85,7 @@ impl Management for ManagementImpl {
     ) -> Result<Response<()>, Status> {
         match self
             .manager
-            .lock()
+            .write()
             .await
             .register_drive(&request.into_inner().mount)
             .await
@@ -99,7 +99,7 @@ impl Management for ManagementImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<RegisteredMountMessage>, Status> {
-        let mount = self.manager.lock().await.get_registered_mount().await;
+        let mount = self.manager.read().await.get_registered_mount().await;
         Ok(Response::new(RegisteredMountMessage {
             mount: mount.unwrap_or_default(),
         }))
@@ -112,7 +112,7 @@ impl Management for ManagementImpl {
         let request = request.into_inner();
         let lookup_result = match self
             .manager
-            .lock()
+            .read()
             .await
             .lookup(
                 request.correlation_ids,
@@ -157,6 +157,7 @@ impl Management for ManagementImpl {
     ) -> Result<Response<Self::SearchStream>, Status> {
         let mut messages = request.into_inner();
         let manager = self.manager.clone();
+
         let (tx, rx) = mpsc::channel(32);
         // Close stream when shutdown is requested
         let mut shutdown_rx = self.shutdown_tx.subscribe();
@@ -165,15 +166,13 @@ impl Management for ManagementImpl {
             while let Some(msg) =
                 tokio::select! { val = messages.next() => val, _ = shutdown_rx.recv() => None }
             {
+                let manager = manager.read().await;
                 match msg {
                     Ok(msg) => {
                         let options = SearchOptions {
                             ..Default::default()
                         };
-                        if let Err(e) = tx
-                            .send(manager.lock().await.search(&msg.query, options).await)
-                            .await
-                        {
+                        if let Err(e) = tx.send(manager.search(&msg.query, options).await).await {
                             warn!("Error sending message to response stream {:?}", e);
                         }
                     }
@@ -215,7 +214,7 @@ impl Management for ManagementImpl {
     }
 
     async fn get_deleted(&self, _: Request<()>) -> Result<Response<GetDeletedResponse>, Status> {
-        let deleted_songs = match self.manager.lock().await.get_deleted_songs().await {
+        let deleted_songs = match self.manager.read().await.get_deleted_songs().await {
             Ok(songs) => songs,
             Err(e) => return Err(format_error(format!("Error getting deleted songs {:?}", e))),
         };
