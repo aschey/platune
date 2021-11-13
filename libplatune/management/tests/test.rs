@@ -7,7 +7,7 @@ use std::{
 };
 use tempfile::TempDir;
 use tokio::time::timeout;
-use tracing::Level;
+use tracing::{info, Level};
 
 #[ctor::ctor]
 fn init() {
@@ -229,6 +229,7 @@ impl Default for SongTest {
     }
 }
 
+#[derive(Debug)]
 pub struct SearchResultTest {
     entry: &'static str,
     correlation_ids: Vec<i32>,
@@ -681,7 +682,31 @@ pub struct SearchResultTest {
             SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![1]},
             SearchResultTest {entry: "qwerty song 1", correlation_ids: vec![2]},
         ],
-        "qwerty song 1")
+        "qwerty song 1"),
+    case(vec![
+        SongTest {
+            title: Some("life 1"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("life 2"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("life 3"),
+            ..Default::default()
+        },
+        SongTest {
+            title: Some("ligne"),
+            ..Default::default()
+        },],
+        vec![
+            SearchResultTest {entry: "life 1", correlation_ids: vec![1]},
+            SearchResultTest {entry: "life 2", correlation_ids: vec![2]},
+            SearchResultTest {entry: "life 3", correlation_ids: vec![3]},
+            SearchResultTest {entry: "ligne", correlation_ids: vec![4]},
+        ],
+        "lige"),
     )
 ]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -721,7 +746,9 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
     while receiver.next().await.is_some() {}
 
     let res = manager.search(search, Default::default()).await.unwrap();
-    println!("res {:?}", res);
+
+    info!("expected {:?}\n", results);
+    info!("actual {:?}", res);
 
     assert!(res.len() == results.len());
 
@@ -743,6 +770,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
 
 async fn setup(tempdir: &TempDir) -> (Database, Manager) {
     let sql_path = tempdir.path().join("platune.db");
+    info!("{:?}", sql_path);
     let config_path = tempdir.path().join("platuneconfig");
     let db = Database::connect(sql_path, true).await.unwrap();
     db.migrate().await.unwrap();

@@ -133,27 +133,47 @@ fn generate_parameterized_bindings(start: usize, count: usize) -> String {
 }
 
 fn get_spellfix_query(index: usize) -> String {
-    // This was obtained very unscientifically through trial and error
+    // These constants were obtained very unscientifically through trial and error
     let word_normalization_factor = 3.5;
+    let max_score = 50;
+
+    // If results appear more often, rate them higher
+    let score_clause = "score * CASE WHEN cnt IS NULL THEN 1.0 ELSE 5.0 / MIN(cnt, 5) END";
 
     // If the word contains whitespace, it must be a special entry we added explicitly like an abbreviation
     // Need to calculate these two cases differently and attempt to normalize them
     // Divide by word length to normalize total error over number of letters
-    // Note: multiplying by 1.0 is the way to coerce an int to a float
-    let score_clause = format!("case 
-    when word like '% %' then (distance * 1.0 / (length(word) - length(replace(word, ' ', '')))) * {1} 
-    else editdist3(${0}, word) * 1.0 / length(word) end", index, word_normalization_factor);
+    // Note: multiplying by 1.0 is a way to coerce an int to a float
     format!(
         "
-        select * from (
-            select distinct word, ${0} search, {1} score
-            from search_spellfix 
-            where word match replace(${0}, '*', '')
-            and ({1}) <= 50
-            order by {1}
-            limit 5
+        SELECT * FROM (
+            SELECT distinct word, ${0} search, {3} score FROM (
+                SELECT * FROM (
+                    SELECT word, CASE 
+                        WHEN word like '% %' then (distance * 1.0 / (LENGTH(word) - LENGTH(REPLACE(word, ' ', '')))) * {1}
+                        ELSE EDITDIST3(${0}, word) * 1.0 / LENGTH(word) END score
+                    FROM search_spellfix
+                    WHERE word match REPLACE(${0}, '*', '')
+                ) 
+                UNION ALL
+                -- Sometimes the match function is too conservative for our purposes
+                -- so we need to include results based on the raw distance as well
+                SELECT * FROM (
+                    SELECT word, EDITDIST3(${0}, word) * 1.0 / LENGTH(word) score 
+                    FROM search_spellfix
+                    WHERE EDITDIST3(REPLACE(${0}, '*', ''), word) * 1.0 / LENGTH(word) <= {2}
+                )
+                
+            )
+            LEFT OUTER JOIN search_vocab sv ON sv.term = word
+            WHERE score <= {2}
+            ORDER BY {3}
+            LIMIT 5
         )
         ",
-        index, score_clause,
+        index,
+        word_normalization_factor,
+        max_score,
+        score_clause
     )
 }
