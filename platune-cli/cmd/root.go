@@ -50,7 +50,10 @@ func handleExit() {
 	rawModeOff := exec.Command("/bin/stty", "-raw", "echo")
 	rawModeOff.Stdin = os.Stdin
 	_ = rawModeOff.Run()
-	rawModeOff.Wait()
+	err := rawModeOff.Wait()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func Execute() {

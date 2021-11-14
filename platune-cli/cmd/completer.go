@@ -109,17 +109,17 @@ func (state *cmdState) updateMaxWidths(in prompt.Document, titleRatio float32) {
 
 	titleMaxLength := int(base * titleRatio)
 	descriptionMaxLength := int(base * (1 - titleRatio))
-	prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)
-	prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt)
+	prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)              //nolint:errcheck
+	prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt) //nolint:errcheck
 }
 
 func (state *cmdState) updateMaxDescriptionWidth(in prompt.Document, maxWidth int) {
-	prompt.OptionMaxDescriptionWidth(uint16(maxWidth))(state.curPrompt)
+	prompt.OptionMaxDescriptionWidth(uint16(maxWidth))(state.curPrompt) //nolint:errcheck
 }
 
 func (state *cmdState) unsetMaxWidths() {
-	prompt.OptionMaxTextWidth(0)(state.curPrompt)
-	prompt.OptionMaxDescriptionWidth(0)(state.curPrompt)
+	prompt.OptionMaxTextWidth(0)(state.curPrompt)        //nolint:errcheck
+	prompt.OptionMaxDescriptionWidth(0)(state.curPrompt) //nolint:errcheck
 }
 
 func completerDefault(in prompt.Document) []prompt.Suggest {
@@ -168,7 +168,7 @@ func dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prom
 
 	suggestions := filePathCompleter.Complete(in, filePathSkipFirst)
 	if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
-		prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt)
+		prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"})(state.curPrompt) //nolint:errcheck
 		return suggestions
 	}
 
@@ -195,7 +195,7 @@ func dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prom
 		}
 		state.suggestions = suggestions
 	}
-	prompt.OptionCompletionWordSeparator([]string{addQueueCmdText + " "})(state.curPrompt)
+	prompt.OptionCompletionWordSeparator([]string{addQueueCmdText + " "})(state.curPrompt) //nolint:errcheck
 
 	return suggestions
 }

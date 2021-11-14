@@ -14,7 +14,7 @@ import (
 )
 
 type item struct {
-	searchResult platune.SearchResult
+	searchResult *platune.SearchResult
 }
 
 var (
@@ -142,7 +142,7 @@ func (m model) View() string {
 func getItems(results []*platune.SearchResult) []list.Item {
 	items := []list.Item{}
 	for _, result := range results {
-		items = append(items, item{searchResult: *result})
+		items = append(items, item{searchResult: result})
 	}
 
 	return items
@@ -159,7 +159,7 @@ func renderSearchResults(results *platune.SearchResponse, callback func(entries 
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l, callback: callback}
+	m := model{list: l, callback: callback, choice: item{searchResult: &platune.SearchResult{}}}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)

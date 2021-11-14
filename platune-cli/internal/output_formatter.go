@@ -18,7 +18,9 @@ func addColor(replaceStr string, searchStr string, style lipgloss.Style) string 
 
 func FormatHelp(c *cobra.Command) {
 	fmt.Printf("%s\n\n", c.Long)
-	c.Usage()
+	if err := c.Usage(); err != nil {
+		fmt.Println(err)
+	}
 }
 
 func FormatUsage(c *cobra.Command, usageFunc func(c *cobra.Command) error, exampleText string) {
@@ -26,7 +28,9 @@ func FormatUsage(c *cobra.Command, usageFunc func(c *cobra.Command) error, examp
 	rOut, wOut, _ := os.Pipe()
 	c.SetOut(wOut)
 
-	usageFunc(c)
+	if err := usageFunc(c); err != nil {
+		fmt.Println(err)
+	}
 	wOut.Close()
 
 	var out, _ = ioutil.ReadAll(rOut)
