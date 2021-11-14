@@ -12,17 +12,13 @@ use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
-use std::env;
 use std::env::var;
 use std::net::SocketAddr;
-use std::path::Path;
-use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
-use tracing::warn;
 
 enum Transport {
     Http(SocketAddr),
@@ -45,6 +41,11 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
 
     #[cfg(unix)]
     {
+        use std::env;
+        use std::path::Path;
+        use std::path::PathBuf;
+        use tracing::warn;
+
         let socket_base = match env::var("XDG_RUNTIME_DIR") {
             Ok(socket_base) => socket_base,
             Err(e) => {

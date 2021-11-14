@@ -1,5 +1,0 @@
-{
-  "scripts": {
-    "test":  "cargo test --features=dummy --locked"
-  }
-}
