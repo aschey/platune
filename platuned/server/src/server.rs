@@ -12,18 +12,22 @@ use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
+use std::env;
 use std::env::var;
 use std::net::SocketAddr;
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
+use tracing::warn;
 
 enum Transport {
     Http(SocketAddr),
     #[cfg(unix)]
-    Uds(String),
+    Uds(PathBuf),
 }
 
 pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
@@ -41,11 +45,22 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
 
     #[cfg(unix)]
     {
+        let socket_base = match env::var("XDG_RUNTIME_DIR") {
+            Ok(socket_base) => socket_base,
+            Err(e) => {
+                warn!(
+                    "Unable to get XDG_RUNTIME_DIR. Defaulting to /tmp/platuned: {:?}",
+                    e
+                );
+                "/tmp".to_owned()
+            }
+        };
+        let socket_path = Path::new(&socket_base).join("platuned/platuned.sock");
         let unix_server = run_server(
             shutdown_tx.clone(),
             platune_player,
             manager,
-            Transport::Uds("/var/run/platuned/platuned.sock".to_owned()),
+            Transport::Uds(socket_path),
         );
         servers.push(unix_server);
     }
