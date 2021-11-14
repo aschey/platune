@@ -1,17 +1,9 @@
 {
   "private": true,
-  "workspaces": [
-    "libplatune",
-    "platune-cli"
-  ],
   "scripts": {
-    "test": "mono-run test --ui row",
-    "test-rust": "cargo test --features=dummy --locked",
-    "verify-features": "cargo hack --feature-powerset --exclude-no-default-features clippy --locked -- -D warnings",
     "prepare": "husky install"
   },
   "devDependencies": {
-    "husky": "^7.0.2",
-    "monorepo-run": "https://github.com/Akryum/monorepo-run"
+    "husky": "^7.0.2"
   }
 }

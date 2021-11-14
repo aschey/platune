@@ -12,16 +12,20 @@ use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
+#[cfg(unix)]
 use std::env;
 use std::env::var;
 use std::net::SocketAddr;
+#[cfg(unix)]
 use std::path::Path;
+#[cfg(unix)]
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
+#[cfg(unix)]
 use tracing::warn;
 
 enum Transport {
