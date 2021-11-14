@@ -34,7 +34,7 @@ func testRenderItem(t *testing.T, index int, expected string) {
 }
 
 func TestRenderSelected(t *testing.T) {
-	expected := "  > test entry1 - test description1"
+	expected := "  ▶ test entry1 - test description1"
 	testRenderItem(t, 0, expected)
 }
 

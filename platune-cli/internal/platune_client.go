@@ -86,6 +86,12 @@ func (p *PlatuneClient) AddToQueue(songs []string, printMsg bool) {
 	})
 }
 
+func (p *PlatuneClient) SetVolume(volume float32) {
+	p.runCommand("Set", func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.SetVolume(ctx, &platune.SetVolumeRequest{Volume: volume})
+	})
+}
+
 func (p *PlatuneClient) SetQueue(queue []string, printMsg bool) {
 	msg := ""
 	if printMsg {
@@ -166,10 +172,15 @@ func (p *PlatuneClient) SetMount(mount string) {
 	})
 }
 
-func (p *PlatuneClient) SetVolume(volume float32) {
-	p.runCommand("Set", func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.SetVolume(ctx, &platune.SetVolumeRequest{Volume: volume})
-	})
+func (p *PlatuneClient) GetDeleted() *platune.GetDeletedResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	deleted, err := p.managementClient.GetDeleted(ctx, &emptypb.Empty{})
+	if err != nil {
+		fmt.Println(err)
+	}
+	cancel()
+
+	return deleted
 }
 
 func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
