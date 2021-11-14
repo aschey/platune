@@ -10,7 +10,7 @@ pub(crate) async fn acquire_with_spellfix(
     let mut con = pool
         .acquire()
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))?;
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
     load_spellfix(&mut con)?;
     Ok(con)
 }
@@ -32,11 +32,11 @@ fn load_extension<P: AsRef<Path>>(
 ) -> Result<(), String> {
     let handle = con.as_raw_handle();
     let rusqlite_con =
-        unsafe { rusqlite::Connection::from_handle(handle).map_err(|e| e.to_string())? };
+        unsafe { rusqlite::Connection::from_handle(handle).map_err(|e| format!("{:?}", e))? };
 
     let _guard = LoadExtensionGuard::new(&rusqlite_con).unwrap();
     rusqlite_con
         .load_extension(dylib_path, None)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("{:?}", e))?;
     Ok(())
 }

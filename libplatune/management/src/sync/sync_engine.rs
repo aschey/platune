@@ -87,7 +87,8 @@ impl SyncEngine {
 
         for path in &self.paths {
             if let Err(e) = self.dispatch_tx.send(Some(PathBuf::from(path))).await {
-                self.tx.send_error(SyncError::AsyncError(e.to_string()));
+                self.tx
+                    .send_error(SyncError::AsyncError(format!("{:?}", e)));
             }
         }
         if let Err(e) = self.task_loop(&tags_tx).await {
@@ -95,14 +96,16 @@ impl SyncEngine {
         }
 
         if let Err(e) = tags_tx.send(None).await {
-            self.tx.send_error(SyncError::AsyncError(e.to_string()));
+            self.tx
+                .send_error(SyncError::AsyncError(format!("{:?}", e)));
         }
 
         match tags_handle.await {
             Ok(Err(e)) => self.tx.send_error(e),
             Ok(Ok(())) => {}
             Err(e) => {
-                self.tx.send_error(SyncError::AsyncError(e.to_string()));
+                self.tx
+                    .send_error(SyncError::AsyncError(format!("{:?}", e)));
             }
         }
         if let Err(e) = self.tx.send(None) {
@@ -136,12 +139,12 @@ impl SyncEngine {
                     if total_dirs == 0 {
                         self.tx
                             .send(Some(Ok(1.)))
-                            .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                            .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
                         break;
                     }
                     self.tx
                         .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
-                        .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                        .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
 
                     if total_dirs == dirs_processed {
                         break;
@@ -155,7 +158,7 @@ impl SyncEngine {
                     );
                     self.tx
                         .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
-                        .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                        .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
                 }
                 Ok(None) => {
                     break;
@@ -174,12 +177,12 @@ impl SyncEngine {
             self.dispatch_tx
                 .send(None)
                 .await
-                .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
         }
         for handle in handles {
             if let Err(e) = handle
                 .await
-                .map_err(|e| SyncError::AsyncError(e.to_string()))?
+                .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?
             {
                 return Err(e);
             }
@@ -203,7 +206,7 @@ impl SyncEngine {
                         metadata.hash(&mut hasher);
                         let file_size = path
                             .metadata()
-                            .map_err(|e| SyncError::IOError(e.to_string()))?
+                            .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
                             .len();
                         file_size.hash(&mut hasher);
                         let fingerprint = hasher.finish().to_string();
@@ -300,13 +303,13 @@ impl SyncEngine {
         debug!("Reading dir {:?}", path);
         for dir_result in path
             .read_dir()
-            .map_err(|e| SyncError::IOError(e.to_string()))?
+            .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
         {
-            let dir = dir_result.map_err(|e| SyncError::IOError(e.to_string()))?;
+            let dir = dir_result.map_err(|e| SyncError::IOError(format!("{:?}", e)))?;
 
             if dir
                 .file_type()
-                .map_err(|e| SyncError::IOError(e.to_string()))?
+                .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
                 .is_file()
             {
                 let file_path = dir.path();
@@ -315,31 +318,31 @@ impl SyncEngine {
                     tags_tx
                         .send(Some((metadata, file_path_str, file_path)))
                         .await
-                        .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                        .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
                 }
             } else {
                 dispatch_tx
                     .send(Some(dir.path()))
                     .await
-                    .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                    .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
                 finished_tx
                     .send(DirRead::Found)
                     .await
-                    .map_err(|e| SyncError::AsyncError(e.to_string()))?;
+                    .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
             }
         }
 
         Ok(finished_tx
             .send(DirRead::Completed)
             .await
-            .map_err(|e| SyncError::AsyncError(e.to_string()))?)
+            .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?)
     }
 
     fn parse_metadata(file_path: &Path) -> Result<Option<Track>, SyncError> {
         let name = file_path.extension().unwrap_or_default();
         let _size = file_path
             .metadata()
-            .map_err(|e| SyncError::IOError(e.to_string()))?
+            .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
             .len();
         let mut song_metadata: Option<Track> = None;
         match &name.to_str().unwrap_or_default().to_lowercase()[..] {

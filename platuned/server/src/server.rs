@@ -7,6 +7,7 @@ use crate::services::player::PlayerImpl;
 use crate::unix::unix_stream::UnixStream;
 use anyhow::Context;
 use anyhow::Result;
+use futures::future::try_join_all;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use libplatune_management::manager::Manager;
@@ -17,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
+use tonic_reflection::server::Builder;
 
 enum Transport {
     Http(SocketAddr),
@@ -48,7 +50,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
         servers.push(unix_server);
     }
 
-    futures::future::try_join_all(servers).await?;
+    try_join_all(servers).await?;
     Ok(())
 }
 
@@ -70,7 +72,7 @@ async fn run_server(
     manager: Arc<RwLock<Manager>>,
     transport: Transport,
 ) -> Result<()> {
-    let reflection_service = tonic_reflection::server::Builder::configure()
+    let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
         .build()
         .with_context(|| "Error building tonic server")?;
@@ -85,19 +87,17 @@ async fn run_server(
 
     let mut shutdown_rx = shutdown_tx.subscribe();
     let server_result = match transport {
-        Transport::Http(addr) => {
-            builder
-                .serve_with_shutdown(addr, async { shutdown_rx.recv().await.unwrap_or_default() })
-                .await
-        }
+        Transport::Http(addr) => builder
+            .serve_with_shutdown(addr, async { shutdown_rx.recv().await.unwrap_or_default() })
+            .await
+            .with_context(|| "Error running HTTP server"),
         #[cfg(unix)]
-        Transport::Uds(path) => {
-            builder
-                .serve_with_incoming_shutdown(UnixStream::get_async_stream(&path)?, async {
-                    shutdown_rx.recv().await.unwrap_or_default()
-                })
-                .await
-        }
+        Transport::Uds(path) => builder
+            .serve_with_incoming_shutdown(UnixStream::get_async_stream(&path)?, async {
+                shutdown_rx.recv().await.unwrap_or_default()
+            })
+            .await
+            .with_context(|| "Error running UDS server"),
     };
 
     server_result.with_context(|| "Error running server")

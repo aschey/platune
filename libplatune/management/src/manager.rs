@@ -191,7 +191,7 @@ impl Manager {
 
         self.config
             .set_drive_id(id)
-            .map_err(|e| ManagerError::WriteError(e.to_string()))
+            .map_err(|e| ManagerError::WriteError(format!("{:?}", e)))
     }
 }
 

@@ -30,7 +30,7 @@ impl futures::Stream for ProgressStream {
                 None => Poll::Ready(None),
                 Some(progress_val_result) => match progress_val_result {
                     Ok(progress_val) => Poll::Ready(progress_val),
-                    Err(e) => Poll::Ready(Some(Err(SyncError::AsyncError(e.to_string())))),
+                    Err(e) => Poll::Ready(Some(Err(SyncError::AsyncError(format!("{:?}", e))))),
                 },
             },
             Poll::Pending => Poll::Pending,

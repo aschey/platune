@@ -8,7 +8,9 @@ mod unix;
 #[cfg(windows)]
 mod windows;
 
+use directories::ProjectDirs;
 use rpc::*;
+use std::io::stdout;
 use std::panic;
 use std::process::exit;
 use tracing::error;
@@ -31,10 +33,11 @@ fn set_panic_hook() {
 
 #[tokio::main]
 async fn main() {
-    let proj_dirs = directories::ProjectDirs::from("", "", "platune")
-        .expect("Unable to find a valid home directory");
-    let file_appender = tracing_appender::rolling::hourly(proj_dirs.cache_dir(), "platuned.log");
-    let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
+    let proj_dirs =
+        ProjectDirs::from("", "", "platune").expect("Unable to find a valid home directory");
+    let log_dir = proj_dirs.cache_dir();
+    let file_appender = tracing_appender::rolling::hourly(log_dir, "platuned.log");
+    let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(stdout());
     let (non_blocking_file, file_guard) = tracing_appender::non_blocking(file_appender);
 
     let collector = tracing_subscriber::registry()
@@ -72,10 +75,10 @@ async fn main() {
 
     // Don't set panic hook until after logging is set up
     set_panic_hook();
-
-    info!("starting");
+    info!("Log dir: {:?}", log_dir);
+    info!("Starting...");
     if let Err(e) = startup::start().await {
-        error!("{:?}", e.to_string());
+        error!("{:?}", e);
 
         // Drop guards to ensure logs are flushed
         drop(stdout_guard);

@@ -43,7 +43,7 @@ impl Database {
 
         let pool = SqlitePool::connect_with(opts.clone())
             .await
-            .map_err(|e| DbError::DbError(e.to_string()))?;
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
         Ok(Self {
             search_engine: SearchEngine::new(pool.clone()),
             sync_controller: Arc::new(Mutex::new(SyncController::new(pool.clone()))),
@@ -59,7 +59,9 @@ impl Database {
         sqlx::migrate!("./migrations")
             .run(&mut con)
             .await
-            .map_err(|e| DbError::DbError(format!("Error running migrations {}", e.to_string())))?;
+            .map_err(|e| {
+                DbError::DbError(format!("Error running migrations {}", format!("{:?}", e)))
+            })?;
         info!("Finished migrating");
 
         Ok(())
@@ -114,7 +116,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     async fn all_by_album_artists(
@@ -136,7 +138,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -156,7 +158,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -176,7 +178,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     pub(crate) async fn get_deleted_songs(&self) -> Result<Vec<String>, DbError> {
@@ -188,7 +190,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))?
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))?
         .into_iter()
         .map(|r| r.song_path)
         .collect_vec())
@@ -199,16 +201,16 @@ impl Database {
             .pool
             .begin()
             .await
-            .map_err(|e| DbError::DbError(e.to_string()))?;
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
         for path in paths {
             sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
                 .execute(&mut tran)
                 .await
-                .map_err(|e| DbError::DbError(e.to_string()))?;
+                .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
         }
         tran.commit()
             .await
-            .map_err(|e| DbError::DbError(e.to_string()))
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     pub(crate) async fn update_folder(
@@ -223,14 +225,14 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     pub(crate) async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
         Ok(sqlx::query!("select folder_path from folder")
             .fetch_all(&self.pool)
             .await
-            .map_err(|e| DbError::DbError(e.to_string()))?
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?
             .into_iter()
             .map(|r| r.folder_path)
             .collect())
@@ -250,12 +252,12 @@ impl Database {
         sqlx::query!(r"insert or ignore into mount(mount_path) values(?)", path)
             .execute(&self.pool)
             .await
-            .map_err(|e| DbError::DbError(e.to_string()))?;
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
 
         let res = sqlx::query!(r"select mount_id from mount where mount_path = ?", path)
             .fetch_one(&self.pool)
             .await
-            .map_err(|e| DbError::DbError(e.to_string()))?;
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
 
         Ok(res.mount_id)
     }
@@ -268,7 +270,7 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(e.to_string()))?;
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
 
         Ok(res.rows_affected())
     }
