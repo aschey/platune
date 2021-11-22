@@ -24,10 +24,30 @@ var (
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
 	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
+	subtle            = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
+	buttonStyle       = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#FFF7DB")).
+				Background(lipgloss.Color("#888B7E")).
+				Padding(0, 3).
+				MarginTop(1)
+	activeButtonStyle = buttonStyle.Copy().
+				Foreground(lipgloss.Color("#FFF7DB")).
+				Background(lipgloss.Color("#F25D94")).
+				MarginRight(2).
+				Underline(true)
+	dialogBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#874BFD")).
+			Padding(1, 0).
+			BorderTop(true).
+			BorderLeft(true).
+			BorderRight(true).
+			BorderBottom(true)
 )
 
 type model struct {
-	list list.Model
+	list         list.Model
+	enterPressed bool
 }
 
 type itemDelegate struct{}
@@ -101,6 +121,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.list, cmd = m.list.Update(msg)
 			return m, cmd
 
+		case "enter":
+			m.enterPressed = true
+			return m, nil
+
 		default:
 			var cmd tea.Cmd
 			m.list, cmd = m.list.Update(msg)
@@ -137,7 +161,24 @@ func (m model) View() string {
 	// 	// }
 	// 	return quitTextStyle.Render(fmt.Sprintf("%s test", m.choice.path))
 	// }
+	if m.enterPressed {
+		numSelectedSongs := 0
+		for _, listItem := range m.list.Items() {
+			i := listItem.(item)
+			if i.selected {
+				numSelectedSongs++
+			}
+		}
+		text := fmt.Sprintf("Are you sure you want to permanently delete %d songs?", numSelectedSongs)
+		question := lipgloss.NewStyle().Width(50).Align(lipgloss.Center).Render(text)
+		okButton := activeButtonStyle.Render("Yes")
+		cancelButton := buttonStyle.Render("Cancel")
+		buttons := lipgloss.JoinHorizontal(lipgloss.Top, okButton, cancelButton)
+		ui := lipgloss.JoinVertical(lipgloss.Center, question, buttons)
 
+		dialog := dialogBoxStyle.Render(ui)
+		return dialog
+	}
 	return m.list.View()
 }
 
@@ -168,7 +209,7 @@ func RenderDeletedFiles() {
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l}
+	m := model{list: l, enterPressed: false}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)
