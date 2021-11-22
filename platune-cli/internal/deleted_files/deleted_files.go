@@ -33,7 +33,6 @@ var (
 	activeButtonStyle = buttonStyle.Copy().
 				Foreground(lipgloss.Color("#FFF7DB")).
 				Background(lipgloss.Color("#F25D94")).
-				MarginRight(2).
 				Underline(true)
 	dialogBoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -46,8 +45,10 @@ var (
 )
 
 type model struct {
-	list         list.Model
-	enterPressed bool
+	list              list.Model
+	showConfirmDialog bool
+	cancelChosen      bool
+	quitText          string
 }
 
 type itemDelegate struct{}
@@ -82,55 +83,84 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m model) updateList(msg tea.KeyMsg, keypress string) (tea.Model, tea.Cmd) {
 	i := m.list.SelectedItem().(item)
 
+	switch keypress {
+	case "a":
+		allSelected := true
+		items := m.list.Items()
+		for _, it := range items {
+			i := it.(item)
+			if !i.selected {
+				allSelected = false
+				break
+			}
+		}
+		shouldSelectAll := !allSelected
+		for index, it := range items {
+			i := it.(item)
+			i.selected = shouldSelectAll
+			m.list.SetItem(index, i)
+		}
+		var cmd tea.Cmd
+		m.list, cmd = m.list.Update(msg)
+		return m, cmd
+
+	case " ":
+		i.selected = !i.selected
+		m.list.SetItem(m.list.Index(), i)
+
+		var cmd tea.Cmd
+		m.list, cmd = m.list.Update(msg)
+		return m, cmd
+
+	case "enter":
+		if m.getNumSelected() > 0 {
+			m.showConfirmDialog = true
+			return m, nil
+		}
+		m.quitText = "No Songs Deleted"
+		return m, tea.Quit
+
+	default:
+		var cmd tea.Cmd
+		m.list, cmd = m.list.Update(msg)
+		return m, cmd
+	}
+}
+
+func (m model) updateConfirmDialog(keypress string) (tea.Model, tea.Cmd) {
+	switch keypress {
+	case "tab", "left", "right", " ":
+		m.cancelChosen = !m.cancelChosen
+	case "enter":
+		if m.cancelChosen {
+			m.showConfirmDialog = false
+		} else {
+			m.quitText = fmt.Sprintf("%d song(s) deleted", m.getNumSelected())
+			return m, tea.Quit
+		}
+	case "ctrl+c":
+		return m, tea.Quit
+	}
+
+	return m, nil
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
 		return m, nil
 
 	case tea.KeyMsg:
-		switch keypress := msg.String(); keypress {
-
-		case "a":
-			allSelected := true
-			items := m.list.Items()
-			for _, it := range items {
-				i := it.(item)
-				if !i.selected {
-					allSelected = false
-					break
-				}
-			}
-			shouldSelectAll := !allSelected
-			for index, it := range items {
-				i := it.(item)
-				i.selected = shouldSelectAll
-				m.list.SetItem(index, i)
-			}
-			var cmd tea.Cmd
-			m.list, cmd = m.list.Update(msg)
-			return m, cmd
-
-		case " ":
-			i.selected = !i.selected
-			m.list.SetItem(m.list.Index(), i)
-
-			var cmd tea.Cmd
-			m.list, cmd = m.list.Update(msg)
-			return m, cmd
-
-		case "enter":
-			m.enterPressed = true
-			return m, nil
-
-		default:
-			var cmd tea.Cmd
-			m.list, cmd = m.list.Update(msg)
-			return m, cmd
+		keypress := msg.String()
+		if m.showConfirmDialog {
+			return m.updateConfirmDialog(keypress)
+		} else {
+			return m.updateList(msg, keypress)
 		}
-
 	default:
 		return m, nil
 	}
@@ -153,26 +183,37 @@ func (d itemDelegate) FullHelp() [][]key.Binding {
 	return [][]key.Binding{helpKeys}
 }
 
-func (m model) View() string {
-	// if m.choice.path != "" {
-	// 	// result := m.choice.searchResult
-	// 	// if result.Artist != nil {
-	// 	// 	return quitTextStyle.Render(fmt.Sprintf("%s - %s added to queue", result.Entry, *result.Artist))
-	// 	// }
-	// 	return quitTextStyle.Render(fmt.Sprintf("%s test", m.choice.path))
-	// }
-	if m.enterPressed {
-		numSelectedSongs := 0
-		for _, listItem := range m.list.Items() {
-			i := listItem.(item)
-			if i.selected {
-				numSelectedSongs++
-			}
+func (m model) getNumSelected() int {
+	numSelectedSongs := 0
+	for _, listItem := range m.list.Items() {
+		i := listItem.(item)
+		if i.selected {
+			numSelectedSongs++
 		}
-		text := fmt.Sprintf("Are you sure you want to permanently delete %d songs?", numSelectedSongs)
+	}
+	return numSelectedSongs
+}
+
+func (m model) View() string {
+	if m.quitText != "" {
+		return quitTextStyle.Render(m.quitText)
+	}
+	if m.showConfirmDialog {
+		text := fmt.Sprintf("Are you sure you want to permanently delete %d song(s)?", m.getNumSelected())
+
 		question := lipgloss.NewStyle().Width(50).Align(lipgloss.Center).Render(text)
-		okButton := activeButtonStyle.Render("Yes")
-		cancelButton := buttonStyle.Render("Cancel")
+		okButtonStyle := buttonStyle
+		cancelButtonStyle := buttonStyle
+		if m.cancelChosen {
+			cancelButtonStyle = activeButtonStyle
+		} else {
+			okButtonStyle = activeButtonStyle
+		}
+		okButtonStyle = okButtonStyle.MarginRight(2)
+		cancelButtonStyle = cancelButtonStyle.MarginLeft(2)
+
+		okButton := okButtonStyle.Render("Ok")
+		cancelButton := cancelButtonStyle.Render("Cancel")
 		buttons := lipgloss.JoinHorizontal(lipgloss.Top, okButton, cancelButton)
 		ui := lipgloss.JoinVertical(lipgloss.Center, question, buttons)
 
@@ -209,7 +250,7 @@ func RenderDeletedFiles() {
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l, enterPressed: false}
+	m := model{list: l, showConfirmDialog: false, quitText: ""}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)
