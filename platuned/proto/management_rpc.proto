@@ -18,6 +18,7 @@ service Management {
   rpc Search(stream SearchRequest) returns (stream SearchResponse) {}
   rpc Lookup(LookupRequest) returns (LookupResponse) {}
   rpc GetDeleted(google.protobuf.Empty) returns (GetDeletedResponse) {}
+  rpc DeleteTracks(IdMessage) returns (google.protobuf.Empty) {}
 }
 
 message Progress { float percentage = 1; }
@@ -25,6 +26,8 @@ message Progress { float percentage = 1; }
 message FoldersMessage { repeated string folders = 1; }
 
 message RegisteredMountMessage { string mount = 1; }
+
+message IdMessage { repeated int64 ids = 1; }
 
 message SearchRequest {
   string query = 1;

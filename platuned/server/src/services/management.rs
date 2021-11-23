@@ -228,4 +228,15 @@ impl Management for ManagementImpl {
                 .collect(),
         }));
     }
+
+    async fn delete_tracks(&self, request: Request<IdMessage>) -> Result<Response<()>, Status> {
+        let request = request.into_inner();
+
+        let manager = self.manager.write().await;
+        if let Err(e) = manager.delete_tracks(request.ids).await {
+            return Err(format_error(format!("Error deleting tracks {:?}", e)));
+        }
+
+        Ok(Response::new(()))
+    }
 }

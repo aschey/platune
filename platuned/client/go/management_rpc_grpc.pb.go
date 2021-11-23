@@ -27,6 +27,7 @@ type ManagementClient interface {
 	Search(ctx context.Context, opts ...grpc.CallOption) (Management_SearchClient, error)
 	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*LookupResponse, error)
 	GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error)
+	DeleteTracks(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type managementClient struct {
@@ -154,6 +155,15 @@ func (c *managementClient) GetDeleted(ctx context.Context, in *emptypb.Empty, op
 	return out, nil
 }
 
+func (c *managementClient) DeleteTracks(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/DeleteTracks", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ManagementServer is the server API for Management service.
 // All implementations must embed UnimplementedManagementServer
 // for forward compatibility
@@ -166,6 +176,7 @@ type ManagementServer interface {
 	Search(Management_SearchServer) error
 	Lookup(context.Context, *LookupRequest) (*LookupResponse, error)
 	GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error)
+	DeleteTracks(context.Context, *IdMessage) (*emptypb.Empty, error)
 	mustEmbedUnimplementedManagementServer()
 }
 
@@ -196,6 +207,9 @@ func (UnimplementedManagementServer) Lookup(context.Context, *LookupRequest) (*L
 }
 func (UnimplementedManagementServer) GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDeleted not implemented")
+}
+func (UnimplementedManagementServer) DeleteTracks(context.Context, *IdMessage) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTracks not implemented")
 }
 func (UnimplementedManagementServer) mustEmbedUnimplementedManagementServer() {}
 
@@ -365,6 +379,24 @@ func _Management_GetDeleted_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Management_DeleteTracks_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IdMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).DeleteTracks(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/DeleteTracks",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).DeleteTracks(ctx, req.(*IdMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Management_ServiceDesc is the grpc.ServiceDesc for Management service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -395,6 +427,10 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetDeleted",
 			Handler:    _Management_GetDeleted_Handler,
+		},
+		{
+			MethodName: "DeleteTracks",
+			Handler:    _Management_DeleteTracks_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

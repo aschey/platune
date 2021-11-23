@@ -58,6 +58,26 @@ func (mr *MockManagementClientMockRecorder) AddFolders(ctx, in interface{}, opts
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFolders", reflect.TypeOf((*MockManagementClient)(nil).AddFolders), varargs...)
 }
 
+// DeleteTracks mocks base method.
+func (m *MockManagementClient) DeleteTracks(ctx context.Context, in *v2.IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteTracks", varargs...)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteTracks indicates an expected call of DeleteTracks.
+func (mr *MockManagementClientMockRecorder) DeleteTracks(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTracks", reflect.TypeOf((*MockManagementClient)(nil).DeleteTracks), varargs...)
+}
+
 // GetAllFolders mocks base method.
 func (m *MockManagementClient) GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*v2.FoldersMessage, error) {
 	m.ctrl.T.Helper()
@@ -494,6 +514,21 @@ func (m *MockManagementServer) AddFolders(arg0 context.Context, arg1 *v2.Folders
 func (mr *MockManagementServerMockRecorder) AddFolders(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddFolders", reflect.TypeOf((*MockManagementServer)(nil).AddFolders), arg0, arg1)
+}
+
+// DeleteTracks mocks base method.
+func (m *MockManagementServer) DeleteTracks(arg0 context.Context, arg1 *v2.IdMessage) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteTracks", arg0, arg1)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteTracks indicates an expected call of DeleteTracks.
+func (mr *MockManagementServerMockRecorder) DeleteTracks(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTracks", reflect.TypeOf((*MockManagementServer)(nil).DeleteTracks), arg0, arg1)
 }
 
 // GetAllFolders mocks base method.

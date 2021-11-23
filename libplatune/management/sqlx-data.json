@@ -350,6 +350,16 @@
       ]
     }
   },
+  "e265f0b9b83b676161b2ee5c69a8ddc14624184df43836e75458bc3fc6f1adb0": {
+    "query": "\n            DELETE FROM deleted_song WHERE deleted_song_id = ?;\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
   "e4ce417888facebb6ce04ddfb664fe787b8840a09f1bff10fdcf06849d1edcdb": {
     "query": "INSERT OR IGNORE INTO mount(mount_path) VALUES(?);",
     "describe": {

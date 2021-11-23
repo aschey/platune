@@ -211,6 +211,29 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
+    pub(crate) async fn delete_tracks(&self, ids: Vec<i64>) -> Result<(), DbError> {
+        let mut tran = self
+            .pool
+            .begin()
+            .await
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        for id in ids {
+            sqlx::query!(
+                "
+            DELETE FROM deleted_song WHERE deleted_song_id = ?;
+            ",
+                id
+            )
+            .execute(&mut tran)
+            .await
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        }
+
+        tran.commit()
+            .await
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))
+    }
+
     pub(crate) async fn add_folders(&self, paths: Vec<String>) -> Result<(), DbError> {
         let mut tran = self
             .pool

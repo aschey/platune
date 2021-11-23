@@ -172,6 +172,10 @@ impl Manager {
         Ok(deleted)
     }
 
+    pub async fn delete_tracks(&self, ids: Vec<i64>) -> Result<(), DbError> {
+        self.db.delete_tracks(ids).await
+    }
+
     fn clean_path(&self, path: &str) -> String {
         let mut path = path.replace(self.delim, "/");
         let re = Regex::new(r"/+").unwrap();
