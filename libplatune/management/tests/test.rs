@@ -201,7 +201,7 @@ pub async fn test_sync_delete() {
     let deleted = manager.get_deleted_songs().await.unwrap();
 
     manager
-        .delete_tracks(vec![deleted[0].deleted_song_id])
+        .delete_tracks(vec![deleted[0].song_id])
         .await
         .unwrap();
 

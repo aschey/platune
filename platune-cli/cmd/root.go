@@ -49,8 +49,7 @@ var rootCmd = &cobra.Command{
 func handleExit() {
 	rawModeOff := exec.Command("/bin/stty", "-raw", "echo")
 	rawModeOff.Stdin = os.Stdin
-	_ = rawModeOff.Run()
-	err := rawModeOff.Wait()
+	err := rawModeOff.Run()
 	if err != nil {
 		fmt.Println(err)
 	}
