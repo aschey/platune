@@ -3,7 +3,7 @@ pub use crate::search::search_options::SearchOptions;
 pub use crate::search::search_result::SearchResult;
 use crate::{
     config::Config,
-    database::{Database, LookupEntry},
+    database::{Database, DeletedEntry, LookupEntry},
     db_error::DbError,
     path_mut::PathMut,
     sync::progress_stream::ProgressStream,
@@ -166,7 +166,7 @@ impl Manager {
         Ok(self.db.search(query, options).await?)
     }
 
-    pub async fn get_deleted_songs(&self) -> Result<Vec<String>, DbError> {
+    pub async fn get_deleted_songs(&self) -> Result<Vec<DeletedEntry>, DbError> {
         let mut deleted = self.db.get_deleted_songs().await?;
         self.update_paths(&mut deleted).await;
         Ok(deleted)

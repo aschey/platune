@@ -240,16 +240,20 @@ func RenderDeletedFiles() {
 	const defaultWidth = 20
 	const defaultHeight = 14
 	deleted := internal.Client.GetDeleted()
+	paths := []string{}
+	for _, result := range deleted.Results {
+		paths = append(paths, result.Path)
+	}
 	for i := 0; i < 20; i++ {
-		deleted.Paths = append(deleted.Paths, fmt.Sprintf("%d", i))
+		paths = append(paths, fmt.Sprintf("%d", i))
 	}
 
-	l := list.NewModel(getItems(deleted.Paths), itemDelegate{}, defaultWidth, defaultHeight)
+	l := list.NewModel(getItems(paths), itemDelegate{}, defaultWidth, defaultHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowPagination(true)
 	l.SetShowTitle(true)
-	l.Title = fmt.Sprintf("Found %d missing songs", len(deleted.Paths))
+	l.Title = fmt.Sprintf("Found %d missing songs", len(paths))
 	l.NewStatusMessage("Choose which songs to remove")
 
 	l.Styles.PaginationStyle = paginationStyle

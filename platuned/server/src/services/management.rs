@@ -219,7 +219,13 @@ impl Management for ManagementImpl {
             Err(e) => return Err(format_error(format!("Error getting deleted songs {:?}", e))),
         };
         return Ok(Response::new(GetDeletedResponse {
-            paths: deleted_songs,
+            results: deleted_songs
+                .into_iter()
+                .map(|d| DeletedResult {
+                    path: d.song_path,
+                    id: d.deleted_song_id,
+                })
+                .collect(),
         }));
     }
 }

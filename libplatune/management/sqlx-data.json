@@ -76,24 +76,6 @@
       ]
     }
   },
-  "3c7563a697934e3e5cb8d4908b2331e8238d7d59cffaca56af0888b43b7e1f83": {
-    "query": "\n        SELECT song_path FROM deleted_song ds\n        INNER JOIN song s ON s.song_id = ds.song_id;\n        ",
-    "describe": {
-      "columns": [
-        {
-          "name": "song_path",
-          "ordinal": 0,
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Right": 0
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "3f21e1a47c3439428f316f532f65083ea3cfb4e9aa452a1d3b45f8ae1b1ef076": {
     "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            FROM artist ar\n            INNER JOIN song s ON s.artist_id = ar.artist_id\n            INNER JOIN album al ON al.album_id = s.album_id\n            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id\n            WHERE ar.artist_id = ?\n            ORDER BY aa.album_artist_id, al.album_id, s.track_number;\n            ",
     "describe": {
@@ -256,6 +238,30 @@
         "Right": 20
       },
       "nullable": []
+    }
+  },
+  "5f0eb06316c5d764720b190f15b170d871bf0a556a357b9b9213851fb6c5c106": {
+    "query": "\n            SELECT ds.deleted_song_id, song_path FROM deleted_song ds\n            INNER JOIN song s ON s.song_id = ds.song_id;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "deleted_song_id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "song_path",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false,
+        false
+      ]
     }
   },
   "688b717086e5aaf8911249f1d05f0ce67cb04201e86da332d5bd8796c11b1fe8": {

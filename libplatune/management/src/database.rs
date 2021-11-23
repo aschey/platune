@@ -1,3 +1,4 @@
+use crate::path_mut::PathMut;
 use crate::search::search_engine::SearchEngine;
 use crate::search::search_options::SearchOptions;
 use crate::search::search_result::SearchResult;
@@ -5,7 +6,6 @@ use crate::spellfix::acquire_with_spellfix;
 use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
-use itertools::Itertools;
 use log::LevelFilter;
 use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
@@ -30,6 +30,22 @@ pub struct LookupEntry {
     pub song: String,
     pub path: String,
     pub track: i64,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct DeletedEntry {
+    pub deleted_song_id: i64,
+    pub song_path: String,
+}
+
+impl PathMut for DeletedEntry {
+    fn get_path(&self) -> String {
+        self.song_path.to_owned()
+    }
+
+    fn update_path(&mut self, path: String) {
+        self.song_path = path
+    }
 }
 
 impl Database {
@@ -182,19 +198,17 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
-    pub(crate) async fn get_deleted_songs(&self) -> Result<Vec<String>, DbError> {
-        Ok(sqlx::query!(
+    pub(crate) async fn get_deleted_songs(&self) -> Result<Vec<DeletedEntry>, DbError> {
+        sqlx::query_as!(
+            DeletedEntry,
             "
-        SELECT song_path FROM deleted_song ds
-        INNER JOIN song s ON s.song_id = ds.song_id;
-        "
+            SELECT ds.deleted_song_id, song_path FROM deleted_song ds
+            INNER JOIN song s ON s.song_id = ds.song_id;
+            "
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?
-        .into_iter()
-        .map(|r| r.song_path)
-        .collect_vec())
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     pub(crate) async fn add_folders(&self, paths: Vec<String>) -> Result<(), DbError> {

@@ -206,7 +206,7 @@ pub async fn test_sync_delete() {
 
     assert_eq!(1, deleted.len());
     assert_eq!(
-        deleted[0],
+        deleted[0].song_path,
         last_song.to_string_lossy().to_string().replace("\\", "/")
     );
 }

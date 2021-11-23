@@ -65,4 +65,8 @@ message SearchResult {
 
 message SearchResponse { repeated SearchResult results = 1; }
 
-message GetDeletedResponse { repeated string paths = 1; }
+message DeletedResult {
+  string path = 1;
+  int64 id = 2;
+}
+message GetDeletedResponse { repeated DeletedResult results = 1; }
