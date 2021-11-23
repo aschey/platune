@@ -182,6 +182,16 @@
       ]
     }
   },
+  "4dc750294461696a3f3c5943d1e2f9c391b60b122cc974515618e2654ec9722b": {
+    "query": "DELETE FROM song WHERE song_id = ?;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
   "59e18ca57ac4749d846b8dd4839ae82ef72b7796ad540c455d02fa4f3060cfe8": {
     "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            FROM album_artist aa\n            INNER JOIN album al ON al.album_artist_id = aa.album_artist_id\n            INNER JOIN song s ON s.album_id = al.album_id\n            INNER JOIN artist ar ON ar.artist_id = s.artist_id\n            WHERE aa.album_artist_id = ?\n            ORDER BY aa.album_artist_id, al.album_id, s.track_number;",
     "describe": {
@@ -350,8 +360,8 @@
       ]
     }
   },
-  "e265f0b9b83b676161b2ee5c69a8ddc14624184df43836e75458bc3fc6f1adb0": {
-    "query": "\n            DELETE FROM deleted_song WHERE deleted_song_id = ?;\n            ",
+  "e4ce417888facebb6ce04ddfb664fe787b8840a09f1bff10fdcf06849d1edcdb": {
+    "query": "INSERT OR IGNORE INTO mount(mount_path) VALUES(?);",
     "describe": {
       "columns": [],
       "parameters": {
@@ -360,8 +370,8 @@
       "nullable": []
     }
   },
-  "e4ce417888facebb6ce04ddfb664fe787b8840a09f1bff10fdcf06849d1edcdb": {
-    "query": "INSERT OR IGNORE INTO mount(mount_path) VALUES(?);",
+  "e76472a340928bf52198d482b89242296e6da5065353ab2827f8d3415eb4a898": {
+    "query": "DELETE FROM deleted_song WHERE deleted_song_id = ?;",
     "describe": {
       "columns": [],
       "parameters": {

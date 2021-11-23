@@ -218,15 +218,15 @@ impl Database {
             .await
             .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
         for id in ids {
-            sqlx::query!(
-                "
-            DELETE FROM deleted_song WHERE deleted_song_id = ?;
-            ",
-                id
-            )
-            .execute(&mut tran)
-            .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            sqlx::query!("DELETE FROM deleted_song WHERE deleted_song_id = ?;", id)
+                .execute(&mut tran)
+                .await
+                .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+
+            sqlx::query!("DELETE FROM song WHERE song_id = ?;", id)
+                .execute(&mut tran)
+                .await
+                .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
         }
 
         tran.commit()

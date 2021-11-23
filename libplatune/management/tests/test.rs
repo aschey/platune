@@ -200,6 +200,13 @@ pub async fn test_sync_delete() {
 
     let deleted = manager.get_deleted_songs().await.unwrap();
 
+    manager
+        .delete_tracks(vec![deleted[0].deleted_song_id])
+        .await
+        .unwrap();
+
+    let deleted2 = manager.get_deleted_songs().await.unwrap();
+
     timeout(Duration::from_secs(5), db.close())
         .await
         .unwrap_or_default();
@@ -209,6 +216,9 @@ pub async fn test_sync_delete() {
         deleted[0].song_path,
         last_song.to_string_lossy().to_string().replace("\\", "/")
     );
+
+    // TODO: add test to check if number of songs decreased once we have an endpoint to get all songs
+    assert_eq!(0, deleted2.len());
 }
 
 pub struct SongTest {
