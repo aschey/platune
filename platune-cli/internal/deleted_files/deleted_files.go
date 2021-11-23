@@ -194,31 +194,35 @@ func (m model) getNumSelected() int {
 	return numSelectedSongs
 }
 
+func (m model) viewConfirmDialog() string {
+	text := fmt.Sprintf("Are you sure you want to permanently delete %d song(s)?", m.getNumSelected())
+
+	question := lipgloss.NewStyle().Width(50).Align(lipgloss.Center).Render(text)
+	okButtonStyle := buttonStyle
+	cancelButtonStyle := buttonStyle
+	if m.cancelChosen {
+		cancelButtonStyle = activeButtonStyle
+	} else {
+		okButtonStyle = activeButtonStyle
+	}
+	okButtonStyle = okButtonStyle.MarginRight(2)
+	cancelButtonStyle = cancelButtonStyle.MarginLeft(2)
+
+	okButton := okButtonStyle.Render("Ok")
+	cancelButton := cancelButtonStyle.Render("Cancel")
+	buttons := lipgloss.JoinHorizontal(lipgloss.Top, okButton, cancelButton)
+	ui := lipgloss.JoinVertical(lipgloss.Center, question, buttons)
+
+	dialog := dialogBoxStyle.Render(ui)
+	return dialog
+}
+
 func (m model) View() string {
 	if m.quitText != "" {
 		return quitTextStyle.Render(m.quitText)
 	}
 	if m.showConfirmDialog {
-		text := fmt.Sprintf("Are you sure you want to permanently delete %d song(s)?", m.getNumSelected())
-
-		question := lipgloss.NewStyle().Width(50).Align(lipgloss.Center).Render(text)
-		okButtonStyle := buttonStyle
-		cancelButtonStyle := buttonStyle
-		if m.cancelChosen {
-			cancelButtonStyle = activeButtonStyle
-		} else {
-			okButtonStyle = activeButtonStyle
-		}
-		okButtonStyle = okButtonStyle.MarginRight(2)
-		cancelButtonStyle = cancelButtonStyle.MarginLeft(2)
-
-		okButton := okButtonStyle.Render("Ok")
-		cancelButton := cancelButtonStyle.Render("Cancel")
-		buttons := lipgloss.JoinHorizontal(lipgloss.Top, okButton, cancelButton)
-		ui := lipgloss.JoinVertical(lipgloss.Center, question, buttons)
-
-		dialog := dialogBoxStyle.Render(ui)
-		return dialog
+		m.viewConfirmDialog()
 	}
 	return m.list.View()
 }
