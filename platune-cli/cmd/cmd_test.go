@@ -235,6 +235,9 @@ func TestSync(t *testing.T) {
 		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1}, nil)
 		stream.EXPECT().Recv().Return(nil, fmt.Errorf("error"))
 		expect.Sync(gomock.Any(), gomock.Any()).Return(stream, nil)
+		expect.GetDeleted(gomock.Any(), gomock.Any()).Return(&platune.GetDeletedResponse{
+			Results: []*platune.DeletedResult{},
+		}, nil)
 	}, syncCmdText)
 	if len(res) == 0 {
 		t.Errorf("Expected length > 0")

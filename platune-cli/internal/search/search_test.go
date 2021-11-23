@@ -71,7 +71,7 @@ func TestSelectOneItem(t *testing.T) {
 func TestProcessFilesystem(t *testing.T) {
 	selectedFile := ""
 	fsCallback := func(file string) { selectedFile = file }
-	fileToChoose := "./search_results.go"
+	fileToChoose := "./search.go"
 	ProcessSearchResults([]string{fileToChoose}, fsCallback, nil)
 	fullPath, _ := filepath.Abs(selectedFile)
 	if fullPath != selectedFile {
