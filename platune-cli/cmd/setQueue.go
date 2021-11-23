@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aschey/platune/cli/v2/internal"
+	"github.com/aschey/platune/cli/v2/internal/search"
 	platune "github.com/aschey/platune/client"
 	"github.com/spf13/cobra"
 )
@@ -19,7 +20,7 @@ var setQueueCmd = &cobra.Command{
 
 	Args: cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.ProcessSearchResults(args,
+		search.ProcessSearchResults(args,
 			func(file string) { internal.Client.SetQueue([]string{file}, true) },
 			func(entries []*platune.LookupEntry) { internal.Client.SetQueueFromSearchResults(entries, false) })
 	},

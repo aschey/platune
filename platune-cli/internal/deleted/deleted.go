@@ -1,4 +1,4 @@
-package deleted_files
+package deleted
 
 import (
 	"fmt"

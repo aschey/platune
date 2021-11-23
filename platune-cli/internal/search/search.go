@@ -1,4 +1,4 @@
-package internal
+package search
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aschey/platune/cli/v2/internal"
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -49,7 +50,7 @@ func ProcessSearchResults(args []string, filesystemCallback func(file string), d
 		filesystemCallback(allArgs)
 		return
 	} else {
-		searchClient := Client.Search()
+		searchClient := internal.Client.Search()
 		err := searchClient.Send(&platune.SearchRequest{Query: allArgs})
 		if err != nil {
 			fmt.Println(err)
@@ -65,7 +66,7 @@ func ProcessSearchResults(args []string, filesystemCallback func(file string), d
 			return
 		} else if len(results.Results) == 1 {
 			result := results.Results[0]
-			lookupResults := Client.Lookup(result.EntryType, result.CorrelationIds)
+			lookupResults := internal.Client.Lookup(result.EntryType, result.CorrelationIds)
 
 			dbCallback(lookupResults.Entries)
 			return
@@ -110,7 +111,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			i := m.list.SelectedItem().(item)
-			lookupResults := Client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
+			lookupResults := internal.Client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
 			m.callback(lookupResults.Entries)
 			m.choice = i
 

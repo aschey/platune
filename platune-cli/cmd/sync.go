@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"github.com/aschey/platune/cli/v2/internal"
-	"github.com/aschey/platune/cli/v2/internal/deleted_files"
+	"github.com/aschey/platune/cli/v2/internal/deleted"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +44,7 @@ func syncProgress() {
 	// 			bar.Context{bar.Ctx("elapsed", time.Since(start).Round(time.Millisecond*10).String())})
 	// 	}
 	// }
-	deleted_files.RenderDeletedFiles()
+	deleted.RenderDeletedFiles()
 }
 
 func init() {

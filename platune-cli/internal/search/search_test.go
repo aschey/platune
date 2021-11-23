@@ -1,4 +1,4 @@
-package internal
+package search
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/test"
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/bubbles/list"
@@ -63,7 +64,7 @@ func TestSelectOneItem(t *testing.T) {
 		{Artist: "artist name", Album: "album 1", Song: "song name", Path: "/test/path/1", Track: 1},
 	}
 	mock.EXPECT().Lookup(gomock.Any(), lookupRequest).Return(&platune.LookupResponse{Entries: lookupEntries}, nil)
-	Client = NewTestClient(nil, mock)
+	internal.Client = internal.NewTestClient(nil, mock)
 	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 }
 
@@ -95,7 +96,7 @@ func TestOneSearchResult(t *testing.T) {
 		Lookup(gomock.Any(), &platune.LookupRequest{EntryType: platune.EntryType_SONG, CorrelationIds: []int32{1}}).
 		Return(&platune.LookupResponse{Entries: []*platune.LookupEntry{{Song: song}}}, nil)
 
-	Client = NewTestClient(nil, mock)
+	internal.Client = internal.NewTestClient(nil, mock)
 
 	ProcessSearchResults([]string{song}, nil, dbCallback)
 	if len(lookupEntries) != 1 {
@@ -117,7 +118,7 @@ func TestNoResults(t *testing.T) {
 	mock := test.NewMockManagementClient(ctrl)
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 
-	Client = NewTestClient(nil, mock)
+	internal.Client = internal.NewTestClient(nil, mock)
 
 	rescueStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
