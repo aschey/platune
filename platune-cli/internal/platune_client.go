@@ -183,6 +183,12 @@ func (p *PlatuneClient) GetDeleted() *platune.GetDeletedResponse {
 	return deleted
 }
 
+func (p *PlatuneClient) DeleteTracks(ids []int64) {
+	p.runCommand("", func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.managementClient.DeleteTracks(ctx, &platune.IdMessage{Ids: ids})
+	})
+}
+
 func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := cmdFunc(ctx)

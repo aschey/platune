@@ -34,7 +34,7 @@ pub struct LookupEntry {
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct DeletedEntry {
-    pub deleted_song_id: i64,
+    pub song_id: i64,
     pub song_path: String,
 }
 
@@ -202,7 +202,7 @@ impl Database {
         sqlx::query_as!(
             DeletedEntry,
             "
-            SELECT ds.deleted_song_id, song_path FROM deleted_song ds
+            SELECT ds.song_id, song_path FROM deleted_song ds
             INNER JOIN song s ON s.song_id = ds.song_id;
             "
         )
@@ -218,7 +218,7 @@ impl Database {
             .await
             .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
         for id in ids {
-            sqlx::query!("DELETE FROM deleted_song WHERE deleted_song_id = ?;", id)
+            sqlx::query!("DELETE FROM deleted_song WHERE song_id = ?;", id)
                 .execute(&mut tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{:?}", e)))?;

@@ -223,7 +223,7 @@ impl Management for ManagementImpl {
                 .into_iter()
                 .map(|d| DeletedResult {
                     path: d.song_path,
-                    id: d.deleted_song_id,
+                    id: d.song_id,
                 })
                 .collect(),
         }));

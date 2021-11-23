@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/aschey/platune/cli/v2/internal"
+	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,6 +16,7 @@ import (
 type item struct {
 	path     string
 	index    int
+	id       int64
 	selected bool
 }
 
@@ -138,6 +140,7 @@ func (m model) updateConfirmDialog(keypress string) (tea.Model, tea.Cmd) {
 		if m.cancelChosen {
 			m.showConfirmDialog = false
 		} else {
+			internal.Client.DeleteTracks(m.getSelectedIds())
 			m.quitText = fmt.Sprintf("%d song(s) deleted", m.getNumSelected())
 			return m, tea.Quit
 		}
@@ -194,6 +197,18 @@ func (m model) getNumSelected() int {
 	return numSelectedSongs
 }
 
+func (m model) getSelectedIds() []int64 {
+	ids := []int64{}
+	for _, listItem := range m.list.Items() {
+		i := listItem.(item)
+		if i.selected {
+			ids = append(ids, i.id)
+		}
+	}
+
+	return ids
+}
+
 func (m model) viewConfirmDialog() string {
 	text := fmt.Sprintf("Are you sure you want to permanently delete %d song(s)?", m.getNumSelected())
 
@@ -222,15 +237,15 @@ func (m model) View() string {
 		return quitTextStyle.Render(m.quitText)
 	}
 	if m.showConfirmDialog {
-		m.viewConfirmDialog()
+		return m.viewConfirmDialog()
 	}
 	return m.list.View()
 }
 
-func getItems(results []string) []list.Item {
+func getItems(results []*platune.DeletedResult) []list.Item {
 	items := []list.Item{}
 	for i, result := range results {
-		items = append(items, item{path: result, index: i, selected: false})
+		items = append(items, item{path: result.Path, id: result.Id, index: i, selected: false})
 	}
 
 	return items
@@ -240,20 +255,18 @@ func RenderDeletedFiles() {
 	const defaultWidth = 20
 	const defaultHeight = 14
 	deleted := internal.Client.GetDeleted()
-	paths := []string{}
-	for _, result := range deleted.Results {
-		paths = append(paths, result.Path)
-	}
-	for i := 0; i < 20; i++ {
-		paths = append(paths, fmt.Sprintf("%d", i))
+
+	numResults := len(deleted.Results)
+	if numResults == 0 {
+		return
 	}
 
-	l := list.NewModel(getItems(paths), itemDelegate{}, defaultWidth, defaultHeight)
+	l := list.NewModel(getItems(deleted.Results), itemDelegate{}, defaultWidth, defaultHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowPagination(true)
 	l.SetShowTitle(true)
-	l.Title = fmt.Sprintf("Found %d missing songs", len(paths))
+	l.Title = fmt.Sprintf("Found %d missing song(s)", numResults)
 	l.NewStatusMessage("Choose which songs to remove")
 
 	l.Styles.PaginationStyle = paginationStyle

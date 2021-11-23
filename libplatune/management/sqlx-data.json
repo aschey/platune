@@ -250,30 +250,6 @@
       "nullable": []
     }
   },
-  "5f0eb06316c5d764720b190f15b170d871bf0a556a357b9b9213851fb6c5c106": {
-    "query": "\n            SELECT ds.deleted_song_id, song_path FROM deleted_song ds\n            INNER JOIN song s ON s.song_id = ds.song_id;\n            ",
-    "describe": {
-      "columns": [
-        {
-          "name": "deleted_song_id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "song_path",
-          "ordinal": 1,
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Right": 0
-      },
-      "nullable": [
-        false,
-        false
-      ]
-    }
-  },
   "688b717086e5aaf8911249f1d05f0ce67cb04201e86da332d5bd8796c11b1fe8": {
     "query": "UPDATE mount SET mount_path = ? WHERE mount_id = ?;",
     "describe": {
@@ -332,6 +308,16 @@
       ]
     }
   },
+  "b936aefc6646218a43d4c682298327f156abbc7af38449332fb0918a01241586": {
+    "query": "DELETE FROM deleted_song WHERE song_id = ?;",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
   "c1d504b795cd0268f4a98378973f90a345bc8d9e92ce9f2910347834e1a66cbf": {
     "query": "UPDATE folder SET folder_path = ? WHERE folder_path = ?;",
     "describe": {
@@ -370,16 +356,6 @@
       "nullable": []
     }
   },
-  "e76472a340928bf52198d482b89242296e6da5065353ab2827f8d3415eb4a898": {
-    "query": "DELETE FROM deleted_song WHERE deleted_song_id = ?;",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": []
-    }
-  },
   "eaf104b3af1fff251dcbafc8c7fe8580b8f4de8981bfa31ba5bdf9d7dcf2df8e": {
     "query": "INSERT OR IGNORE INTO folder(folder_path) VALUES(?);",
     "describe": {
@@ -388,6 +364,30 @@
         "Right": 1
       },
       "nullable": []
+    }
+  },
+  "fbca921460d753f0db8b88bf572337bff9f50a34689cf7828fdc53c5b818dde6": {
+    "query": "\n            SELECT ds.song_id, song_path FROM deleted_song ds\n            INNER JOIN song s ON s.song_id = ds.song_id;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "song_id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "song_path",
+          "ordinal": 1,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false,
+        false
+      ]
     }
   },
   "ffac4396adf0ef0a1a3b7fe25d09209a8a754296bb65ca47ee10e679f82c9cc3": {
