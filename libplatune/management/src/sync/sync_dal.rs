@@ -29,7 +29,7 @@ impl<'a> SyncDAL<'a> {
 
     pub(crate) async fn add_artist(&mut self, artist: &str) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
-            "insert or ignore into artist(artist_name, created_date) values(?, ?);",
+            "INSERT OR IGNORE INTO artist(artist_name, created_date) values(?, ?);",
             artist,
             self.timestamp
         )
@@ -43,7 +43,7 @@ impl<'a> SyncDAL<'a> {
         album_artist: &str,
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
-            "insert or ignore into album_artist(album_artist_name, created_date) values(?, ?);",
+            "INSERT OR IGNORE INTO album_artist(album_artist_name, created_date) values(?, ?);",
             album_artist,
             self.timestamp
         )
@@ -59,8 +59,8 @@ impl<'a> SyncDAL<'a> {
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
             "
-        insert or ignore into album(album_name, album_artist_id, created_date) 
-        values(?, (select album_artist_id from album_artist where album_artist_name = ?), ?);",
+        INSERT OR IGNORE INTO album(album_name, album_artist_id, created_date) 
+        values(?, (SELECT album_artist_id FROM album_artist WHERE album_artist_name = ?), ?);",
             album,
             album_artist,
             self.timestamp
@@ -86,9 +86,9 @@ impl<'a> SyncDAL<'a> {
     pub(crate) async fn update_missing_songs(&mut self) -> Result<(), DbError> {
         sqlx::query!(
             "
-            insert into deleted_song(song_id)
-            select song_id from song where last_scanned_date < ?
-            on conflict do nothing
+            INSERT INTO deleted_song(song_id)
+            SELECT song_id FROM song WHERE last_scanned_date < ?
+            ON CONFLICT DO NOTHING;
             ",
             self.timestamp
         )
@@ -102,13 +102,13 @@ impl<'a> SyncDAL<'a> {
     pub(crate) async fn sync_spellfix(&mut self) -> Result<(), DbError> {
         sqlx::query(
             "
-            insert into search_spellfix(word)
-            select term
-            from search_vocab
-            where term not in (
-                select word
-                from search_spellfix
-            )
+            INSERT INTO search_spellfix(word)
+            SELECT term
+            FROM search_vocab
+            WHERE term not in (
+                SELECT word
+                FROM search_spellfix
+            );
             ",
         )
         .execute(&mut self.tran)
@@ -117,11 +117,11 @@ impl<'a> SyncDAL<'a> {
 
         sqlx::query(
             "
-            delete from search_spellfix
-            where word NOT IN (
-                select term
-                from search_vocab
-            )
+            DELETE FROM search_spellfix
+            WHERE word NOT IN (
+                SELECT term
+                FROM search_vocab
+            );
             ",
         )
         .execute(&mut self.tran)
@@ -134,10 +134,10 @@ impl<'a> SyncDAL<'a> {
     pub(crate) async fn get_long_entries(&mut self) -> Result<Vec<String>, DbError> {
         let long_vals = sqlx::query!(
             r#"
-            select entry_value as "entry_value: String"
-            from search_index
-            where length(entry_value) >= $1
-            and entry_type != 'song'
+            SELECT entry_value as "entry_value: String"
+            FROM search_index
+            WHERE length(entry_value) >= $1
+            and entry_type != 'song';
             "#,
             MIN_LEN as i32
         )
@@ -158,11 +158,11 @@ impl<'a> SyncDAL<'a> {
     ) -> Result<(), DbError> {
         sqlx::query(
             "
-            insert into search_spellfix(word, soundslike)
-            select $1, $2
-            where not exists (
-                select 1 from search_spellfix where word = $1
-            )
+            INSERT INTO search_spellfix(word, soundslike)
+            SELECT $1, $2
+            WHERE NOT EXISTS (
+                SELECT 1 FROM search_spellfix WHERE word = $1
+            );
         ",
         )
         .bind(entry_value)
@@ -193,11 +193,11 @@ impl<'a> SyncDAL<'a> {
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query(
             "
-            insert into search_spellfix(word, soundslike)
-            select $1, $2
-            where  (
-                select count(1) from search_spellfix where word = $1
-            ) < 2
+            INSERT INTO search_spellfix(word, soundslike)
+            SELECT $1, $2
+            WHERE  (
+                SELECT count(1) FROM search_spellfix WHERE word = $1
+            ) < 2;
         ",
         )
         .bind(entry_value)
@@ -216,7 +216,7 @@ impl<'a> SyncDAL<'a> {
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
             "
-        insert into song(
+        INSERT INTO song(
             song_path,
             modified_date,
             created_date,
@@ -239,17 +239,17 @@ impl<'a> SyncDAL<'a> {
             values
             (
                 ?, ?, ?, ?,
-                (select artist_id from artist where artist_name = ?), 
+                (SELECT artist_id FROM artist WHERE artist_name = ?), 
                 ?, 
                 (
-                    select album_id from album a
-                    inner join album_artist aa on a.album_artist_id = aa.album_artist_id
-                    where a.album_name = ? and aa.album_artist_name = ?
+                    SELECT album_id FROM album a
+                    INNER JOIN album_artist aa ON a.album_artist_id = aa.album_artist_id
+                    WHERE a.album_name = ? AND aa.album_artist_name = ?
                 ), 
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
-            on conflict(song_path) do update
-            set last_scanned_date = ?;
+            ON CONFLICT(song_path) DO UPDATE
+            SET last_scanned_date = ?;
         ",
             path,
             self.timestamp,
@@ -286,11 +286,11 @@ impl<'a> SyncDAL<'a> {
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
             "
-        update song
-            set modified_date = $2,
-            artist_id = (select artist_id from artist where artist_name = $3),
+        UPDATE song
+            SET modified_date = $2,
+            artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),
             song_title = $4,
-            album_id = (select album_id from album where album_name = $5),
+            album_id = (SELECT album_id FROM album WHERE album_name = $5),
             track_number = $6,
             disc_number = $7,
             song_year = $8,
@@ -302,7 +302,7 @@ impl<'a> SyncDAL<'a> {
             file_size = $14,
             album_art_path = $15,
             fingerprint = $16
-        where song_path = $1 and fingerprint != $16;
+        WHERE song_path = $1 AND fingerprint != $16;
         ",
             path,
             self.timestamp,

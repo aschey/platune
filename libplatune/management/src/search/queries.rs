@@ -61,7 +61,7 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
     SELECT entry, entry_type, artist, album, correlation_id, start_highlight, end_highlight FROM cte
     WHERE row_num = 1
     ORDER BY rank
-    LIMIT $5", artist_select, artist_filter_clause, type_filter, START_MATCH_TEXT, END_MATCH_TEXT);
+    LIMIT $5;", artist_select, artist_filter_clause, type_filter, START_MATCH_TEXT, END_MATCH_TEXT);
 
     full_query
 }
@@ -146,8 +146,9 @@ fn get_spellfix_query(index: usize) -> String {
     // Note: multiplying by 1.0 is a way to coerce an int to a float
     format!(
         "
+        --beginsql
         SELECT * FROM (
-            SELECT distinct word, ${0} search, {3} score FROM (
+            SELECT DISTINCT word, ${0} search, {3} score FROM (
                 SELECT * FROM (
                     SELECT word, CASE 
                         WHEN word like '% %' then (distance * 1.0 / (LENGTH(word) - LENGTH(REPLACE(word, ' ', '')))) * {1}
@@ -170,6 +171,7 @@ fn get_spellfix_query(index: usize) -> String {
             ORDER BY {3}
             LIMIT 5
         )
+        --endsql
         ",
         index,
         word_normalization_factor,

@@ -1,7 +1,17 @@
 {
   "db": "SQLite",
-  "003e3f034acafb42411411f121bcadb61896aa7ed95f2743a9d8dcdfde083875": {
-    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            from song s\n            inner join artist ar on ar.artist_id = s.artist_id\n            inner join album al on al.album_id = s.album_id\n            inner join album_artist aa on aa.album_artist_id = al.album_artist_id\n            where s.song_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number\n            ",
+  "09de73b0e0b009f5e307bbdb64e2ada5085945a2a9420bf71d90c8f488e3cb9e": {
+    "query": "INSERT OR IGNORE INTO artist(artist_name, created_date) values(?, ?);",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "1a7c5070e1a86fae64572263b16e5c4a5e921b3c9cb9e37590ef78b3f42224c9": {
+    "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track \n            FROM album al\n            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id\n            INNER JOIN song s ON s.album_id = al.album_id\n            INNER JOIN artist ar ON ar.artist_id = s.artist_id\n            WHERE al.album_id = ?\n            ORDER BY aa.album_artist_id, al.album_id, s.track_number;\n            ",
     "describe": {
       "columns": [
         {
@@ -48,114 +58,8 @@
       ]
     }
   },
-  "07e8ac7262b424e460550c5ceb3f937da0317a36913c51214f4048e7f19734ea": {
-    "query": "update folder set folder_path = ? where folder_path = ?",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 2
-      },
-      "nullable": []
-    }
-  },
-  "38a48619cff50816964b07ba8c05f983fbfe704d0107180c09c8d8e2fec5d69c": {
-    "query": "\n            insert into deleted_song(song_id)\n            select song_id from song where last_scanned_date < ?\n            on conflict do nothing\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": []
-    }
-  },
-  "40d364a651098b44f8f4f7292f88da0f9e0479580f232e6b03b7e5cdee832ca8": {
-    "query": "\n        select song_path from deleted_song ds\n        inner join song s on s.song_id = ds.song_id\n        ",
-    "describe": {
-      "columns": [
-        {
-          "name": "song_path",
-          "ordinal": 0,
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Right": 0
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "4378592db0a04e875ec33f69dd998fa14697356b6db290f5ecc44001c73af10c": {
-    "query": "select mount_id from mount where mount_path = ?",
-    "describe": {
-      "columns": [
-        {
-          "name": "mount_id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
-  "43a98dddc87037ea2a01a957e7e3370aa3c02682e6c07388375831eb3359f112": {
-    "query": "\n        insert into song(\n            song_path,\n            modified_date,\n            created_date,\n            last_scanned_date,\n            artist_id,\n            song_title,\n            album_id,\n            track_number,\n            disc_number,\n            song_year,\n            song_month,\n            song_day,\n            duration,\n            sample_rate,\n            bit_rate,\n            file_size,\n            album_art_path,\n            fingerprint\n            )\n            values\n            (\n                ?, ?, ?, ?,\n                (select artist_id from artist where artist_name = ?), \n                ?, \n                (\n                    select album_id from album a\n                    inner join album_artist aa on a.album_artist_id = aa.album_artist_id\n                    where a.album_name = ? and aa.album_artist_name = ?\n                ), \n                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n            )\n            on conflict(song_path) do update\n            set last_scanned_date = ?;\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 20
-      },
-      "nullable": []
-    }
-  },
-  "48b93f37ed89f2f302e5465207adaafd2066eca6677701dc7783ea6760616459": {
-    "query": "update mount set mount_path = ? where mount_id = ?",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 2
-      },
-      "nullable": []
-    }
-  },
-  "61aa548735df72ef474f6ee58701ecef1e561f286fc905b101c5614649bc79ef": {
-    "query": "\n        insert or ignore into album(album_name, album_artist_id, created_date) \n        values(?, (select album_artist_id from album_artist where album_artist_name = ?), ?);",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 3
-      },
-      "nullable": []
-    }
-  },
-  "99c71f11716e6474849335b657e791f22f3849f4143356f09dae476778ab58a5": {
-    "query": "insert or ignore into mount(mount_path) values(?)",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": []
-    }
-  },
-  "9c8b924022197273d0251e9a96ff2e9d864130aa47907f8d5e8d60dc2f2be427": {
-    "query": "insert or ignore into folder(folder_path) values(?)",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": []
-    }
-  },
-  "a8497639b27ddf1cfe84a38a90c71b1b4fc16f8fcf3c4c3db4fc9b44dc519233": {
-    "query": "select folder_path from folder",
+  "2cc30f9f2d89181a3bc6557c3e39c0898b8fb32bac24c09855c42fc8af01b976": {
+    "query": "SELECT folder_path FROM folder;",
     "describe": {
       "columns": [
         {
@@ -172,8 +76,26 @@
       ]
     }
   },
-  "b7b6ea40a50b75672165fd5148e25671447503d2e08c84702abc02d49f6da86f": {
-    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            from artist ar\n            inner join song s on s.artist_id = ar.artist_id\n            inner join album al on al.album_id = s.album_id\n            inner join album_artist aa on aa.album_artist_id = al.album_artist_id\n            where ar.artist_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number",
+  "3c7563a697934e3e5cb8d4908b2331e8238d7d59cffaca56af0888b43b7e1f83": {
+    "query": "\n        SELECT song_path FROM deleted_song ds\n        INNER JOIN song s ON s.song_id = ds.song_id;\n        ",
+    "describe": {
+      "columns": [
+        {
+          "name": "song_path",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 0
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "3f21e1a47c3439428f316f532f65083ea3cfb4e9aa452a1d3b45f8ae1b1ef076": {
+    "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            FROM artist ar\n            INNER JOIN song s ON s.artist_id = ar.artist_id\n            INNER JOIN album al ON al.album_id = s.album_id\n            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id\n            WHERE ar.artist_id = ?\n            ORDER BY aa.album_artist_id, al.album_id, s.track_number;\n            ",
     "describe": {
       "columns": [
         {
@@ -220,66 +142,124 @@
       ]
     }
   },
-  "bf88648ff9341decce1a77f3c911ae77a9db59f35c7c4d2d7d752f3b3cb8dda5": {
-    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            from album_artist aa\n            inner join album al on al.album_artist_id = aa.album_artist_id\n            inner join song s on s.album_id = al.album_id\n            inner join artist ar on ar.artist_id = s.artist_id\n            where aa.album_artist_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number",
-    "describe": {
-      "columns": [
-        {
-          "name": "artist",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "song",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "path",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "album",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "album_artist",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "track",
-          "ordinal": 5,
-          "type_info": "Int64"
-        }
-      ],
-      "parameters": {
-        "Right": 1
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
-  "c15e2a9bf8826fceb398b45d84e14c669d6863c4c1b1e461ac05341a0abcfff2": {
-    "query": "\n        update song\n            set modified_date = $2,\n            artist_id = (select artist_id from artist where artist_name = $3),\n            song_title = $4,\n            album_id = (select album_id from album where album_name = $5),\n            track_number = $6,\n            disc_number = $7,\n            song_year = $8,\n            song_month = $9,\n            song_day = $10,\n            duration = $11,\n            sample_rate = $12,\n            bit_rate = $13,\n            file_size = $14,\n            album_art_path = $15,\n            fingerprint = $16\n        where song_path = $1 and fingerprint != $16;\n        ",
+  "46b9dc2157711890bf9720a027d18dc8991504b0bb6c79c40579e588f9b77bc6": {
+    "query": "\n        INSERT OR IGNORE INTO album(album_name, album_artist_id, created_date) \n        values(?, (SELECT album_artist_id FROM album_artist WHERE album_artist_name = ?), ?);",
     "describe": {
       "columns": [],
       "parameters": {
-        "Right": 16
+        "Right": 3
       },
       "nullable": []
     }
   },
-  "cfeec44a77e5d75c6edecdd6311276dd753762ecda42e62c927e375abf1471e9": {
-    "query": "insert or ignore into artist(artist_name, created_date) values(?, ?);",
+  "46fdc7d3da9ee39c3c0f9c6fea2b5ff2573c1a8b355d35306e5b7bdf7b79b713": {
+    "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            FROM song s\n            INNER JOIN artist ar ON ar.artist_id = s.artist_id\n            INNER JOIN album al ON al.album_id = s.album_id\n            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id\n            WHERE s.song_id = ?\n            ORDER BY aa.album_artist_id, al.album_id, s.track_number;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "song",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "track",
+          "ordinal": 5,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "59e18ca57ac4749d846b8dd4839ae82ef72b7796ad540c455d02fa4f3060cfe8": {
+    "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            FROM album_artist aa\n            INNER JOIN album al ON al.album_artist_id = aa.album_artist_id\n            INNER JOIN song s ON s.album_id = al.album_id\n            INNER JOIN artist ar ON ar.artist_id = s.artist_id\n            WHERE aa.album_artist_id = ?\n            ORDER BY aa.album_artist_id, al.album_id, s.track_number;",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "song",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "track",
+          "ordinal": 5,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "5c148b599e797d965a2d5309985775b7a443a12fa6423ec09ea4a195f55bcdd8": {
+    "query": "\n        INSERT INTO song(\n            song_path,\n            modified_date,\n            created_date,\n            last_scanned_date,\n            artist_id,\n            song_title,\n            album_id,\n            track_number,\n            disc_number,\n            song_year,\n            song_month,\n            song_day,\n            duration,\n            sample_rate,\n            bit_rate,\n            file_size,\n            album_art_path,\n            fingerprint\n            )\n            values\n            (\n                ?, ?, ?, ?,\n                (SELECT artist_id FROM artist WHERE artist_name = ?), \n                ?, \n                (\n                    SELECT album_id FROM album a\n                    INNER JOIN album_artist aa ON a.album_artist_id = aa.album_artist_id\n                    WHERE a.album_name = ? AND aa.album_artist_name = ?\n                ), \n                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n            )\n            ON CONFLICT(song_path) DO UPDATE\n            SET last_scanned_date = ?;\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 20
+      },
+      "nullable": []
+    }
+  },
+  "688b717086e5aaf8911249f1d05f0ce67cb04201e86da332d5bd8796c11b1fe8": {
+    "query": "UPDATE mount SET mount_path = ? WHERE mount_id = ?;",
     "describe": {
       "columns": [],
       "parameters": {
@@ -288,74 +268,38 @@
       "nullable": []
     }
   },
-  "d258adbf66d199908c47ec323d63e699025b02deeb37e415b0de8e8f8771025f": {
-    "query": "\n            select ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track \n            from album al\n            inner join album_artist aa on aa.album_artist_id = al.album_artist_id\n            inner join song s on s.album_id = al.album_id\n            inner join artist ar on ar.artist_id = s.artist_id\n            where al.album_id = ?\n            order by aa.album_artist_id, al.album_id, s.track_number\n            ",
+  "6fbdb5793f80cd5ce88257dfca285c188935eaa7f30d4f9d8dcc3ea3ef63e170": {
+    "query": "INSERT OR IGNORE INTO album_artist(album_artist_name, created_date) values(?, ?);",
     "describe": {
-      "columns": [
-        {
-          "name": "artist",
-          "ordinal": 0,
-          "type_info": "Text"
-        },
-        {
-          "name": "song",
-          "ordinal": 1,
-          "type_info": "Text"
-        },
-        {
-          "name": "path",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "album",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "album_artist",
-          "ordinal": 4,
-          "type_info": "Text"
-        },
-        {
-          "name": "track",
-          "ordinal": 5,
-          "type_info": "Int64"
-        }
-      ],
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
+  "72f80bdd84c614f2783fb5902937f055e19d17d70d58d3b98e83efc6b1e22b88": {
+    "query": "\n            INSERT INTO deleted_song(song_id)\n            SELECT song_id FROM song WHERE last_scanned_date < ?\n            ON CONFLICT DO NOTHING;\n            ",
+    "describe": {
+      "columns": [],
       "parameters": {
         "Right": 1
       },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
+      "nullable": []
     }
   },
-  "e71602afbe17eed877757f091bf1993ae5a9c9876fda0d464b59cdb678f96a1d": {
-    "query": "select mount_path from mount where mount_id = ?",
+  "a65c7e93559c7ebc8727338a22594b8da6a7c719aaf106db041e6cfe509b2a0e": {
+    "query": "\n        UPDATE song\n            SET modified_date = $2,\n            artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),\n            song_title = $4,\n            album_id = (SELECT album_id FROM album WHERE album_name = $5),\n            track_number = $6,\n            disc_number = $7,\n            song_year = $8,\n            song_month = $9,\n            song_day = $10,\n            duration = $11,\n            sample_rate = $12,\n            bit_rate = $13,\n            file_size = $14,\n            album_art_path = $15,\n            fingerprint = $16\n        WHERE song_path = $1 AND fingerprint != $16;\n        ",
     "describe": {
-      "columns": [
-        {
-          "name": "mount_path",
-          "ordinal": 0,
-          "type_info": "Text"
-        }
-      ],
+      "columns": [],
       "parameters": {
-        "Right": 1
+        "Right": 16
       },
-      "nullable": [
-        false
-      ]
+      "nullable": []
     }
   },
-  "eaa96754639349a4acb343d03863bacc44fbacf7a2d1aa7d0511ac2201e8f64a": {
-    "query": "\n            select entry_value as \"entry_value: String\"\n            from search_index\n            where length(entry_value) >= $1\n            and entry_type != 'song'\n            ",
+  "b2f28d8f611691beda9499ef24c23f4bdd22e5789b1a89561cc4753cf1e5355f": {
+    "query": "\n            SELECT entry_value as \"entry_value: String\"\n            FROM search_index\n            WHERE length(entry_value) >= $1\n            and entry_type != 'song';\n            ",
     "describe": {
       "columns": [
         {
@@ -372,14 +316,70 @@
       ]
     }
   },
-  "fcaeb39c84f53ae4f8f9c7acad669037db9fb983136598c7cef727ff40a84fc7": {
-    "query": "insert or ignore into album_artist(album_artist_name, created_date) values(?, ?);",
+  "c1d504b795cd0268f4a98378973f90a345bc8d9e92ce9f2910347834e1a66cbf": {
+    "query": "UPDATE folder SET folder_path = ? WHERE folder_path = ?;",
     "describe": {
       "columns": [],
       "parameters": {
         "Right": 2
       },
       "nullable": []
+    }
+  },
+  "cf09f4b0219da03698a3fd1fc226690e6e39995f49c333c4a258915972fa31f3": {
+    "query": "SELECT mount_path FROM mount WHERE mount_id = ?;",
+    "describe": {
+      "columns": [
+        {
+          "name": "mount_path",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
+  "e4ce417888facebb6ce04ddfb664fe787b8840a09f1bff10fdcf06849d1edcdb": {
+    "query": "INSERT OR IGNORE INTO mount(mount_path) VALUES(?);",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
+  "eaf104b3af1fff251dcbafc8c7fe8580b8f4de8981bfa31ba5bdf9d7dcf2df8e": {
+    "query": "INSERT OR IGNORE INTO folder(folder_path) VALUES(?);",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
+  "ffac4396adf0ef0a1a3b7fe25d09209a8a754296bb65ca47ee10e679f82c9cc3": {
+    "query": "SELECT mount_id FROM mount WHERE mount_path = ?;",
+    "describe": {
+      "columns": [
+        {
+          "name": "mount_id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false
+      ]
     }
   }
 }

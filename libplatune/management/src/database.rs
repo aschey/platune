@@ -104,14 +104,15 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
             al.album_name album, aa.album_artist_name album_artist, s.track_number track
-            from artist ar
-            inner join song s on s.artist_id = ar.artist_id
-            inner join album al on al.album_id = s.album_id
-            inner join album_artist aa on aa.album_artist_id = al.album_artist_id
-            where ar.artist_id = ?
-            order by aa.album_artist_id, al.album_id, s.track_number",
+            FROM artist ar
+            INNER JOIN song s ON s.artist_id = ar.artist_id
+            INNER JOIN album al ON al.album_id = s.album_id
+            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            WHERE ar.artist_id = ?
+            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ",
             artist_ids[0]
         )
         .fetch_all(&self.pool)
@@ -126,14 +127,14 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
             al.album_name album, aa.album_artist_name album_artist, s.track_number track
-            from album_artist aa
-            inner join album al on al.album_artist_id = aa.album_artist_id
-            inner join song s on s.album_id = al.album_id
-            inner join artist ar on ar.artist_id = s.artist_id
-            where aa.album_artist_id = ?
-            order by aa.album_artist_id, al.album_id, s.track_number",
+            FROM album_artist aa
+            INNER JOIN album al ON al.album_artist_id = aa.album_artist_id
+            INNER JOIN song s ON s.album_id = al.album_id
+            INNER JOIN artist ar ON ar.artist_id = s.artist_id
+            WHERE aa.album_artist_id = ?
+            ORDER BY aa.album_artist_id, al.album_id, s.track_number;",
             album_artist_ids[0]
         )
         .fetch_all(&self.pool)
@@ -145,14 +146,14 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
             al.album_name album, aa.album_artist_name album_artist, s.track_number track 
-            from album al
-            inner join album_artist aa on aa.album_artist_id = al.album_artist_id
-            inner join song s on s.album_id = al.album_id
-            inner join artist ar on ar.artist_id = s.artist_id
-            where al.album_id = ?
-            order by aa.album_artist_id, al.album_id, s.track_number
+            FROM album al
+            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            INNER JOIN song s ON s.album_id = al.album_id
+            INNER JOIN artist ar ON ar.artist_id = s.artist_id
+            WHERE al.album_id = ?
+            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
             ",
             album_ids[0]
         )
@@ -165,14 +166,14 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            select ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
             al.album_name album, aa.album_artist_name album_artist, s.track_number track
-            from song s
-            inner join artist ar on ar.artist_id = s.artist_id
-            inner join album al on al.album_id = s.album_id
-            inner join album_artist aa on aa.album_artist_id = al.album_artist_id
-            where s.song_id = ?
-            order by aa.album_artist_id, al.album_id, s.track_number
+            FROM song s
+            INNER JOIN artist ar ON ar.artist_id = s.artist_id
+            INNER JOIN album al ON al.album_id = s.album_id
+            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            WHERE s.song_id = ?
+            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
             ",
             song_ids[0]
         )
@@ -184,8 +185,8 @@ impl Database {
     pub(crate) async fn get_deleted_songs(&self) -> Result<Vec<String>, DbError> {
         Ok(sqlx::query!(
             "
-        select song_path from deleted_song ds
-        inner join song s on s.song_id = ds.song_id
+        SELECT song_path FROM deleted_song ds
+        INNER JOIN song s ON s.song_id = ds.song_id;
         "
         )
         .fetch_all(&self.pool)
@@ -203,7 +204,7 @@ impl Database {
             .await
             .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
         for path in paths {
-            sqlx::query!("insert or ignore into folder(folder_path) values(?)", path)
+            sqlx::query!("INSERT OR IGNORE INTO folder(folder_path) VALUES(?);", path)
                 .execute(&mut tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
@@ -219,7 +220,7 @@ impl Database {
         new_path: String,
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
-            "update folder set folder_path = ? where folder_path = ?",
+            "UPDATE folder SET folder_path = ? WHERE folder_path = ?;",
             new_path,
             old_path
         )
@@ -229,7 +230,7 @@ impl Database {
     }
 
     pub(crate) async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
-        Ok(sqlx::query!("select folder_path from folder")
+        Ok(sqlx::query!("SELECT folder_path FROM folder;")
             .fetch_all(&self.pool)
             .await
             .map_err(|e| DbError::DbError(format!("{:?}", e)))?
@@ -239,7 +240,7 @@ impl Database {
     }
 
     pub(crate) async fn get_mount(&self, mount_id: i64) -> Option<String> {
-        match sqlx::query!("select mount_path from mount where mount_id = ?", mount_id)
+        match sqlx::query!("SELECT mount_path FROM mount WHERE mount_id = ?;", mount_id)
             .fetch_one(&self.pool)
             .await
         {
@@ -249,12 +250,12 @@ impl Database {
     }
 
     pub(crate) async fn add_mount(&self, path: &str) -> Result<i64, DbError> {
-        sqlx::query!(r"insert or ignore into mount(mount_path) values(?)", path)
+        sqlx::query!(r"INSERT OR IGNORE INTO mount(mount_path) VALUES(?);", path)
             .execute(&self.pool)
             .await
             .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
 
-        let res = sqlx::query!(r"select mount_id from mount where mount_path = ?", path)
+        let res = sqlx::query!(r"SELECT mount_id FROM mount WHERE mount_path = ?;", path)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
@@ -264,7 +265,7 @@ impl Database {
 
     pub(crate) async fn update_mount(&self, mount_id: i64, path: &str) -> Result<u64, DbError> {
         let res = sqlx::query!(
-            "update mount set mount_path = ? where mount_id = ?",
+            "UPDATE mount SET mount_path = ? WHERE mount_id = ?;",
             path,
             mount_id
         )
