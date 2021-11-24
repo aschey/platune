@@ -216,5 +216,3 @@ func (p *PlatuneClient) getPathsFromLookup(entries []*platune.LookupEntry) []str
 
 	return paths
 }
-
-//var Client = NewPlatuneClient()

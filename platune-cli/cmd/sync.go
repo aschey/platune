@@ -21,9 +21,8 @@ var syncCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		client := ctx.Value(Client).(*internal.PlatuneClient)
-		deleted := ctx.Value(Deleted).(*deleted.Deleted)
+		client := GetClient(cmd)
+		deleted := GetDeleted(cmd)
 		syncProgress(client, deleted)
 	},
 }

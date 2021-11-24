@@ -18,8 +18,7 @@ var setMountCmd = &cobra.Command{
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		client := ctx.Value(Client).(*internal.PlatuneClient)
+		client := GetClient(cmd)
 		client.SetMount(args[0])
 	},
 }

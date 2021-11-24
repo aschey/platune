@@ -54,6 +54,3 @@ func NewState(client *internal.PlatuneClient, searchClient *platune.Management_S
 
 	return &state
 }
-
-// var state cmdState
-// var searchClient platune.Management_SearchClient

@@ -162,9 +162,6 @@ func isWindows() bool {
 
 func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prompt.Suggest {
 	state.updateMaxWidths(in, 1./3)
-	// if searchClient == nil {
-	// 	searchClient = internal.Client.Search()
-	// }
 
 	suggestions := filePathCompleter.Complete(in, filePathSkipFirst)
 	if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {

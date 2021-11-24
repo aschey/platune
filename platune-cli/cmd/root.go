@@ -13,6 +13,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 )
 
@@ -33,8 +34,7 @@ var rootCmd = &cobra.Command{
 	Long: title,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		state := ctx.Value(State).(*cmdState)
+		state := GetState(cmd)
 		interactive, err := cmd.Flags().GetBool("interactive")
 		if err != nil {
 			fmt.Println(err)
@@ -42,7 +42,6 @@ var rootCmd = &cobra.Command{
 		}
 		if interactive {
 			state.curPrompt.Run()
-			handleExit()
 		} else {
 			err := cmd.Help()
 			if err != nil {
@@ -63,48 +62,41 @@ func handleExit() {
 	}
 }
 
-type Dependency int
-
-const (
-	Logger Dependency = iota
-	Client
-	State
-	Deleted
-	Search
-)
-
 func register(lifecycle fx.Lifecycle, logger *zap.Logger, client *internal.PlatuneClient,
 	state *cmdState, deleted *deleted.Deleted, search *search.Search) {
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				cmdCtx := context.WithValue(ctx, Logger, logger)
-				cmdCtx = context.WithValue(cmdCtx, Client, client)
-				cmdCtx = context.WithValue(cmdCtx, State, state)
-				cmdCtx = context.WithValue(cmdCtx, Deleted, deleted)
-				cmdCtx = context.WithValue(cmdCtx, Search, search)
-				cobra.CheckErr(rootCmd.ExecuteContext(cmdCtx))
+				ctx = RegisterLogger(ctx, logger)
+				ctx = RegisterClient(ctx, client)
+				ctx = RegisterState(ctx, state)
+				ctx = RegisterDeleted(ctx, deleted)
+				ctx = RegisterSearch(ctx, search)
+
+				cobra.CheckErr(rootCmd.ExecuteContext(ctx))
 				return nil
 			},
 			OnStop: func(context.Context) error {
+				handleExit()
 				return nil
 			},
 		},
 	)
 }
 
-func NewLogger() *zap.Logger {
+func NewLogger() (*zap.Logger, error) {
 	dir, err := os.Executable()
 	if err != nil {
 		panic(err)
 	}
+
 	fullpath := filepath.Join(filepath.Dir(dir), "platune-cli.log")
 	cfg := zap.NewProductionConfig()
 	cfg.OutputPaths = []string{
 		fullpath,
 	}
-	logger, _ := cfg.Build()
-	return logger
+
+	return cfg.Build()
 }
 
 func Execute() {
@@ -115,19 +107,19 @@ func Execute() {
 		fx.Provide(internal.NewSearchClient),
 		fx.Provide(search.NewSearch),
 		fx.Provide(deleted.NewDeleted),
-		// fx.WithLogger(func(logger *zap.Logger) fxevent.Logger {
-		// 	return &fxevent.ZapLogger{Logger: logger}
-		// }),
+		fx.WithLogger(func(logger *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: logger}
+		}),
 	)
 
-	stopCtx := context.Background()
-	app.Start(stopCtx)
-	//cobra.CheckErr(rootCmd.Execute())
+	ctx := context.Background()
+
+	app.Start(ctx)
+	app.Stop(ctx)
+
 }
 
 func init() {
-	//initState()
-
 	usageFunc := rootCmd.UsageFunc()
 	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, "")
