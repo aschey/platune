@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"github.com/aschey/go-prompt"
+	"github.com/aschey/platune/cli/v2/internal"
+	"github.com/aschey/platune/cli/v2/internal/deleted"
 	platune "github.com/aschey/platune/client"
 )
 
@@ -11,6 +13,9 @@ type cmdState struct {
 	lookupResult []*platune.LookupEntry
 	curPrompt    *prompt.Prompt
 	suggestions  []prompt.Suggest
+	searchClient *platune.Management_SearchClient
+	client       *internal.PlatuneClient
+	deleted      *deleted.Deleted
 }
 
 type Mode string
@@ -26,8 +31,16 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 	return string(state.mode[len(state.mode)-1]), true
 }
 
-func initState() {
-	state = cmdState{mode: []Mode{NormalMode}, currentQueue: []*platune.LookupEntry{}, suggestions: []prompt.Suggest{}}
+func NewState(client *internal.PlatuneClient, searchClient *platune.Management_SearchClient,
+	deleted *deleted.Deleted) *cmdState {
+	state := cmdState{
+		mode:         []Mode{NormalMode},
+		currentQueue: []*platune.LookupEntry{},
+		suggestions:  []prompt.Suggest{},
+		client:       client,
+		searchClient: searchClient,
+		deleted:      deleted,
+	}
 	state.curPrompt = prompt.New(
 		state.executor,
 		state.completer,
@@ -38,7 +51,9 @@ func initState() {
 		prompt.OptionShowCompletionAtStart(),
 		prompt.OptionCompletionOnDown(),
 	)
+
+	return &state
 }
 
-var state cmdState
-var searchClient platune.Management_SearchClient
+// var state cmdState
+// var searchClient platune.Management_SearchClient

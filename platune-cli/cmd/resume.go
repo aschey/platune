@@ -15,7 +15,9 @@ var resumeCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.Client.Resume()
+		ctx := cmd.Context()
+		client := ctx.Value(Client).(*internal.PlatuneClient)
+		client.Resume()
 	},
 }
 

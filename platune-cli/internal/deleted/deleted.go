@@ -48,9 +48,18 @@ var (
 
 type model struct {
 	list              list.Model
+	client            *internal.PlatuneClient
 	showConfirmDialog bool
 	cancelChosen      bool
 	quitText          string
+}
+
+type Deleted struct {
+	client *internal.PlatuneClient
+}
+
+func NewDeleted(client *internal.PlatuneClient) *Deleted {
+	return &Deleted{client: client}
 }
 
 type itemDelegate struct{}
@@ -140,7 +149,7 @@ func (m model) updateConfirmDialog(keypress string) (tea.Model, tea.Cmd) {
 		if m.cancelChosen {
 			m.showConfirmDialog = false
 		} else {
-			internal.Client.DeleteTracks(m.getSelectedIds())
+			m.client.DeleteTracks(m.getSelectedIds())
 			m.quitText = fmt.Sprintf("%d song(s) deleted", m.getNumSelected())
 			return m, tea.Quit
 		}
@@ -251,10 +260,10 @@ func getItems(results []*platune.DeletedResult) []list.Item {
 	return items
 }
 
-func RenderDeletedFiles() {
+func (d *Deleted) RenderDeletedFiles() {
 	const defaultWidth = 20
 	const defaultHeight = 14
-	deleted := internal.Client.GetDeleted()
+	deleted := d.client.GetDeleted()
 
 	numResults := len(deleted.Results)
 	if numResults == 0 {
@@ -271,7 +280,7 @@ func RenderDeletedFiles() {
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l, showConfirmDialog: false, quitText: ""}
+	m := model{list: l, client: d.client, showConfirmDialog: false, quitText: ""}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)

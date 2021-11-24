@@ -15,7 +15,9 @@ var pauseCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.Client.Pause()
+		ctx := cmd.Context()
+		client := ctx.Value(Client).(*internal.PlatuneClient)
+		client.Pause()
 	},
 }
 

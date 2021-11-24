@@ -42,9 +42,9 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 
 	if state.mode[0] == NormalMode && len(state.currentQueue) > 0 {
 		if isSetQueueMode {
-			internal.Client.SetQueueFromSearchResults(state.currentQueue, true)
+			state.client.SetQueueFromSearchResults(state.currentQueue, true)
 		} else {
-			internal.Client.AddSearchResultsToQueue(state.currentQueue, true)
+			state.client.AddSearchResultsToQueue(state.currentQueue, true)
 		}
 
 		state.currentQueue = []*platune.LookupEntry{}
@@ -57,13 +57,13 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		if strings.Trim(in, " ") == "" {
 			state.mode = []Mode{NormalMode}
 		} else if selected != nil {
-			executeEntryType(selected, SetQueueMode)
+			state.executeEntryType(selected, SetQueueMode)
 		} else {
 			state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: in})
 		}
 
 	case AlbumMode:
-		if checkSpecialOptions(selected) {
+		if state.checkSpecialOptions(selected) {
 			return
 		}
 		state.mode = append(state.mode, SongMode)
@@ -80,7 +80,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		state.lookupResult = newResults
 		return
 	case SongMode:
-		if checkSpecialOptions(selected) {
+		if state.checkSpecialOptions(selected) {
 			return
 		}
 		newMode := state.mode[0]
@@ -106,7 +106,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 		}
 
 		if selected != nil {
-			executeEntryType(selected, NormalMode)
+			state.executeEntryType(selected, NormalMode)
 			return
 		}
 
@@ -115,33 +115,33 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			fmt.Println(err)
 			return
 		}
-		internal.Client.AddToQueue([]string{full}, true)
+		state.client.AddToQueue([]string{full}, true)
 	case seekCmdText:
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
 			return
 		}
-		internal.Client.Seek(cmds[1])
+		state.client.Seek(cmds[1])
 	case setVolumeCmdText:
 		if len(cmds) < 2 {
 			fmt.Println("Usage: " + setVolumeUsage)
 		}
-		runSetVolume(cmds[1:])
+		runSetVolume(state.client, cmds[1:])
 	case pauseCmdText:
-		internal.Client.Pause()
+		state.client.Pause()
 	case resumeCmdText:
-		internal.Client.Resume()
+		state.client.Resume()
 	case stopCmdText:
-		internal.Client.Stop()
+		state.client.Stop()
 	case nextCmdText:
-		internal.Client.Next()
+		state.client.Next()
 	case previousCmdText:
-		internal.Client.Previous()
+		state.client.Previous()
 	case syncCmdText:
-		syncProgress()
+		syncProgress(state.client, state.deleted)
 		fmt.Println()
 	case getAllFoldersCmdText:
-		internal.Client.GetAllFolders()
+		state.client.GetAllFolders()
 	case addFolderCmdText:
 		if len(cmds) < 2 {
 			fmt.Printf("Usage: %s <path>\n", addFolderCmdText)
@@ -152,7 +152,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			fmt.Println(err)
 			return
 		}
-		internal.Client.AddFolder(full)
+		state.client.AddFolder(full)
 	case setMountCmdText:
 		if len(cmds) < 2 {
 			fmt.Printf("Usage: %s <path>\n", setMountCmdText)
@@ -163,17 +163,17 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			fmt.Println(err)
 			return
 		}
-		internal.Client.SetMount(full)
+		state.client.SetMount(full)
 	case "q":
 		fmt.Println("Exiting...")
 		os.Exit(0)
 	}
 }
 
-func executeEntryType(selected *prompt.Suggest, defaultMode Mode) {
+func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode Mode) {
 	searchResult, valid := selected.Metadata.(*platune.SearchResult)
 	if valid {
-		lookupResult := internal.Client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
+		lookupResult := state.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 		switch searchResult.EntryType {
 		case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
 			state.mode = append(state.mode, AlbumMode)
@@ -225,7 +225,7 @@ func expandFolder(song string) (string, error) {
 	return full, err
 }
 
-func checkSpecialOptions(selected *prompt.Suggest) bool {
+func (state *cmdState) checkSpecialOptions(selected *prompt.Suggest) bool {
 	switch selected.Text {
 	case selectAll:
 		results, ok := selected.Metadata.([]*platune.LookupEntry)

@@ -32,7 +32,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 	} else if len(before) > 1 {
 		return state.completerCmd(in, before)
 	} else {
-		return completerDefault(in)
+		return state.completerDefault(in)
 	}
 }
 
@@ -44,7 +44,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 
 	switch state.mode[len(state.mode)-1] {
 	case SetQueueMode:
-		return dbCompleter(in, in.TextBeforeCursor(), false)
+		return state.dbCompleter(in, in.TextBeforeCursor(), false)
 	case AlbumMode:
 		suggestionMap := map[string]prompt.Suggest{}
 		for _, r := range state.lookupResult {
@@ -94,7 +94,7 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 		return filePathCompleter.Complete(in, true)
 	case addQueueCmdText:
 		rest := strings.Join(before[1:], " ")
-		return dbCompleter(in, rest, true)
+		return state.dbCompleter(in, rest, true)
 	default:
 		return []prompt.Suggest{}
 	}
@@ -122,7 +122,7 @@ func (state *cmdState) unsetMaxWidths() {
 	prompt.OptionMaxDescriptionWidth(0)(state.curPrompt) //nolint:errcheck
 }
 
-func completerDefault(in prompt.Document) []prompt.Suggest {
+func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 	cmds := []prompt.Suggest{
 		{Text: setQueueCmdText, Description: setQueueDescription},
 		{Text: addQueueCmdText, Description: addQueueDescription, Placeholder: addQueueExampleText},
@@ -160,11 +160,11 @@ func isWindows() bool {
 	return runtime.GOOS == "windows"
 }
 
-func dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prompt.Suggest {
+func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prompt.Suggest {
 	state.updateMaxWidths(in, 1./3)
-	if searchClient == nil {
-		searchClient = internal.Client.Search()
-	}
+	// if searchClient == nil {
+	// 	searchClient = internal.Client.Search()
+	// }
 
 	suggestions := filePathCompleter.Complete(in, filePathSkipFirst)
 	if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {
@@ -172,6 +172,7 @@ func dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prom
 		return suggestions
 	}
 
+	searchClient := *state.searchClient
 	sendErr := searchClient.Send(&platune.SearchRequest{
 		Query: rest,
 	})

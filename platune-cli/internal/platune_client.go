@@ -19,7 +19,7 @@ type PlatuneClient struct {
 	managementClient platune.ManagementClient
 }
 
-func NewPlatuneClient() PlatuneClient {
+func NewPlatuneClient() *PlatuneClient {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	conn, err := grpc.Dial("localhost:50051", opts...)
@@ -29,7 +29,13 @@ func NewPlatuneClient() PlatuneClient {
 	}
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
-	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
+	client := PlatuneClient{playerClient: playerClient, managementClient: managementClient}
+	return &client
+}
+
+func NewSearchClient(client *PlatuneClient) *platune.Management_SearchClient {
+	searchClient := client.Search()
+	return &searchClient
 }
 
 func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
@@ -211,4 +217,4 @@ func (p *PlatuneClient) getPathsFromLookup(entries []*platune.LookupEntry) []str
 	return paths
 }
 
-var Client = NewPlatuneClient()
+//var Client = NewPlatuneClient()

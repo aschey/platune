@@ -29,6 +29,7 @@ var (
 type model struct {
 	list     list.Model
 	choice   item
+	client   *internal.PlatuneClient
 	callback func(entries []*platune.LookupEntry)
 }
 
@@ -36,7 +37,15 @@ type itemDelegate struct{}
 
 var noResultsStr string = "No results"
 
-func ProcessSearchResults(args []string, filesystemCallback func(file string), dbCallback func(entries []*platune.LookupEntry)) {
+type Search struct {
+	client *internal.PlatuneClient
+}
+
+func NewSearch(client *internal.PlatuneClient) *Search {
+	return &Search{client: client}
+}
+
+func (search *Search) ProcessSearchResults(args []string, filesystemCallback func(file string), dbCallback func(entries []*platune.LookupEntry)) {
 	allArgs := strings.Join(args, " ")
 	_, err := os.Stat(allArgs)
 	if err == nil {
@@ -50,7 +59,7 @@ func ProcessSearchResults(args []string, filesystemCallback func(file string), d
 		filesystemCallback(allArgs)
 		return
 	} else {
-		searchClient := internal.Client.Search()
+		searchClient := search.client.Search()
 		err := searchClient.Send(&platune.SearchRequest{Query: allArgs})
 		if err != nil {
 			fmt.Println(err)
@@ -66,13 +75,13 @@ func ProcessSearchResults(args []string, filesystemCallback func(file string), d
 			return
 		} else if len(results.Results) == 1 {
 			result := results.Results[0]
-			lookupResults := internal.Client.Lookup(result.EntryType, result.CorrelationIds)
+			lookupResults := search.client.Lookup(result.EntryType, result.CorrelationIds)
 
 			dbCallback(lookupResults.Entries)
 			return
 		}
 
-		renderSearchResults(results, dbCallback)
+		search.renderSearchResults(results, dbCallback)
 	}
 }
 
@@ -111,7 +120,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "enter":
 			i := m.list.SelectedItem().(item)
-			lookupResults := internal.Client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
+			client := *m.client
+			lookupResults := client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
 			m.callback(lookupResults.Entries)
 			m.choice = i
 
@@ -149,7 +159,7 @@ func getItems(results []*platune.SearchResult) []list.Item {
 	return items
 }
 
-func renderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
+func (search *Search) renderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
 	const defaultWidth = 20
 	const defaultHeight = 14
 
@@ -160,7 +170,7 @@ func renderSearchResults(results *platune.SearchResponse, callback func(entries 
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l, callback: callback, choice: item{searchResult: &platune.SearchResult{}}}
+	m := model{list: l, client: search.client, callback: callback, choice: item{searchResult: &platune.SearchResult{}}}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)

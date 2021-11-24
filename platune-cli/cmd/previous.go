@@ -15,7 +15,9 @@ var previousCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.Client.Previous()
+		ctx := cmd.Context()
+		client := ctx.Value(Client).(*internal.PlatuneClient)
+		client.Previous()
 	},
 }
 

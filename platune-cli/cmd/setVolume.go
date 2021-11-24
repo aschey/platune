@@ -21,11 +21,13 @@ var setVolumeCmd = &cobra.Command{
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		runSetVolume(args)
+		ctx := cmd.Context()
+		client := ctx.Value(Client).(*internal.PlatuneClient)
+		runSetVolume(client, args)
 	},
 }
 
-func runSetVolume(args []string) {
+func runSetVolume(client *internal.PlatuneClient, args []string) {
 	vol, err := strconv.ParseFloat(args[0], 32)
 	errMsg := "Volume must be a number between 0 and 1"
 	if err != nil {
@@ -36,7 +38,7 @@ func runSetVolume(args []string) {
 		fmt.Println(errMsg)
 		return
 	}
-	internal.Client.SetVolume(float32(vol))
+	client.SetVolume(float32(vol))
 }
 
 func init() {

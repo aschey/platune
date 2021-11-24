@@ -18,7 +18,9 @@ var addFolderCmd = &cobra.Command{
 
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		internal.Client.AddFolder(args[0])
+		ctx := cmd.Context()
+		client := ctx.Value(Client).(*internal.PlatuneClient)
+		client.AddFolder(args[0])
 	},
 }
 

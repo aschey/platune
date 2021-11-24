@@ -21,12 +21,15 @@ var syncCmd = &cobra.Command{
 
 	Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		syncProgress()
+		ctx := cmd.Context()
+		client := ctx.Value(Client).(*internal.PlatuneClient)
+		deleted := ctx.Value(Deleted).(*deleted.Deleted)
+		syncProgress(client, deleted)
 	},
 }
 
-func syncProgress() {
-	sync, cancel := internal.Client.Sync()
+func syncProgress(client *internal.PlatuneClient, deleted *deleted.Deleted) {
+	sync, cancel := client.Sync()
 	defer cancel()
 
 	if sync != nil {
