@@ -31,14 +31,15 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 	return string(state.mode[len(state.mode)-1]), true
 }
 
-func NewState(client *internal.PlatuneClient, searchClient *platune.Management_SearchClient,
+func NewState(client *internal.PlatuneClient,
 	deleted *deleted.Deleted) *cmdState {
+	searchClient := client.Search()
 	state := cmdState{
 		mode:         []Mode{NormalMode},
 		currentQueue: []*platune.LookupEntry{},
 		suggestions:  []prompt.Suggest{},
 		client:       client,
-		searchClient: searchClient,
+		searchClient: &searchClient,
 		deleted:      deleted,
 	}
 	state.curPrompt = prompt.New(

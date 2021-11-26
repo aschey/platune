@@ -62,19 +62,22 @@ func handleExit() {
 	}
 }
 
-func register(lifecycle fx.Lifecycle, logger *zap.Logger, client *internal.PlatuneClient,
+func start(ctx context.Context, client *internal.PlatuneClient,
+	state *cmdState, deleted *deleted.Deleted, search *search.Search) error {
+	ctx = RegisterClient(ctx, client)
+	ctx = RegisterState(ctx, state)
+	ctx = RegisterDeleted(ctx, deleted)
+	ctx = RegisterSearch(ctx, search)
+
+	return rootCmd.ExecuteContext(ctx)
+}
+
+func register(lifecycle fx.Lifecycle, client *internal.PlatuneClient,
 	state *cmdState, deleted *deleted.Deleted, search *search.Search) {
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				ctx = RegisterLogger(ctx, logger)
-				ctx = RegisterClient(ctx, client)
-				ctx = RegisterState(ctx, state)
-				ctx = RegisterDeleted(ctx, deleted)
-				ctx = RegisterSearch(ctx, search)
-
-				cobra.CheckErr(rootCmd.ExecuteContext(ctx))
-				return nil
+				return start(ctx, client, state, deleted, search)
 			},
 			OnStop: func(context.Context) error {
 				handleExit()
@@ -104,7 +107,6 @@ func Execute() {
 		fx.Provide(NewLogger),
 		fx.Provide(NewState),
 		fx.Provide(internal.NewPlatuneClient),
-		fx.Provide(internal.NewSearchClient),
 		fx.Provide(search.NewSearch),
 		fx.Provide(deleted.NewDeleted),
 		fx.WithLogger(func(logger *zap.Logger) fxevent.Logger {

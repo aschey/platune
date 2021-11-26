@@ -33,11 +33,6 @@ func NewPlatuneClient() *PlatuneClient {
 	return &client
 }
 
-func NewSearchClient(client *PlatuneClient) *platune.Management_SearchClient {
-	searchClient := client.Search()
-	return &searchClient
-}
-
 func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
+	"github.com/aschey/platune/cli/v2/internal/deleted"
+	"github.com/aschey/platune/cli/v2/internal/search"
 	"github.com/aschey/platune/cli/v2/test"
 	platune "github.com/aschey/platune/client"
 	"github.com/golang/mock/gomock"
@@ -29,10 +32,16 @@ func runPlayerTest(t *testing.T, expected string,
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mock := test.NewMockPlayerClient(ctrl)
+	stream := test.NewMockManagement_SearchClient(ctrl)
+	//stream.EXPECT().Send(gomock.Any()).Return(nil)
+	//stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
+	mock2 := test.NewMockManagementClient(ctrl)
+	mock2.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	expectFunc(mock.EXPECT())
-	internal.Client = internal.NewTestClient(mock, nil)
 
-	runTest(t, expected, args...)
+	client := internal.NewTestClient(mock, mock2)
+
+	runTest(t, expected, &client, args...)
 }
 
 func runManagementTest(t *testing.T, expected string,
@@ -41,19 +50,30 @@ func runManagementTest(t *testing.T, expected string,
 	defer ctrl.Finish()
 	mock := test.NewMockManagementClient(ctrl)
 	expectFunc(mock.EXPECT())
-	internal.Client = internal.NewTestClient(nil, mock)
+	client := internal.NewTestClient(nil, mock)
 
-	return runTest(t, expected, args...)
+	return runTest(t, expected, &client, args...)
 }
 
-func runTest(t *testing.T, expected string, args ...string) string {
+func getState(client *internal.PlatuneClient) *cmdState {
+	deleted := deleted.NewDeleted(client)
+	state := NewState(client, deleted)
+	return state
+}
+
+func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args ...string) string {
 	os.Args = append(originalArgs, args...)
 	rescueStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
 	rootCmd.SetOut(wOut)
 	os.Stdout = wOut
 
-	if err := rootCmd.Execute(); err != nil {
+	ctx := context.Background()
+	deleted := deleted.NewDeleted(client)
+	search := search.NewSearch(client)
+
+	state := getState(client)
+	if err := start(ctx, client, state, deleted, search); err != nil {
 		t.Errorf(err.Error())
 	}
 	wOut.Close()
@@ -68,18 +88,19 @@ func runTest(t *testing.T, expected string, args ...string) string {
 	return outStr
 }
 
-func initSetQueuePrompt(t *testing.T) {
+func initSetQueuePrompt(t *testing.T, state *cmdState) {
 	state.executor(setQueueCmdText, nil)
 	if state.mode[0] != setQueueCmdText+"> " {
 		t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
 	}
 }
 
-func executeInteractive(t *testing.T, steps []completionCase, selectPrompt bool) {
+func executeInteractive(t *testing.T, steps []completionCase, state *cmdState, selectPrompt bool) {
 	for _, step := range steps {
 		buf := prompt.NewBuffer()
 		buf.InsertText(step.in, false, true)
 		doc := buf.Document()
+
 		results := state.completer(*doc)
 		if len(results) != step.outLength {
 			t.Errorf("Expected length %d, Got %d", step.outLength, len(results))
@@ -99,7 +120,6 @@ func executeInteractive(t *testing.T, steps []completionCase, selectPrompt bool)
 func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.SearchResult,
 	lookupRequest *platune.LookupRequest, lookupEntries []*platune.LookupEntry,
 	matcherFunc func(arg interface{}) bool, steps []completionCase, isAddQueue bool, selectPrompt bool) {
-	searchClient = nil
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -124,9 +144,11 @@ func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.
 		playerMock.EXPECT().SetQueue(gomock.Any(), matcher)
 	}
 
-	internal.Client = internal.NewTestClient(playerMock, mgmtMock)
+	client := internal.NewTestClient(playerMock, mgmtMock)
 
-	executeInteractive(t, steps, selectPrompt)
+	state := getState(&client)
+
+	executeInteractive(t, steps, state, selectPrompt)
 
 	if !isAddQueue {
 		state.executor("", nil)
@@ -288,8 +310,6 @@ func TestSetVolume(t *testing.T) {
 }
 
 func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
-	initState()
-	searchClient = nil
 	buf := prompt.NewBuffer()
 	buf.InsertText(prefix+"root", false, true)
 	doc := buf.Document()
@@ -303,10 +323,11 @@ func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
 
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
-	internal.Client = internal.NewTestClient(nil, mock)
+	client := internal.NewTestClient(nil, mock)
+	state := getState(&client)
 
 	if !isAddQueue {
-		initSetQueuePrompt(t)
+		initSetQueuePrompt(t, state)
 	}
 
 	results := state.completer(*doc)
@@ -326,7 +347,8 @@ func TestAddQueueFileCompleter(t *testing.T) {
 	testFileCompleter(t, addQueueCmdText+" ", true)
 }
 
-func testSongSelection(t *testing.T, matcherFunc func(arg interface{}) bool, prefix string, isAddQueue bool, selectPrompt bool) {
+func testSongSelection(t *testing.T, matcherFunc func(arg interface{}) bool, prefix string,
+	client *internal.PlatuneClient, isAddQueue bool, selectPrompt bool) {
 	artist := "blah"
 	searchResults := []*platune.SearchResult{
 		{Entry: "song name", EntryType: platune.EntryType_SONG, Artist: &artist, CorrelationIds: []int32{1}, Description: "song desc"},
@@ -339,9 +361,10 @@ func testSongSelection(t *testing.T, matcherFunc func(arg interface{}) bool, pre
 	steps := []completionCase{
 		{in: prefix + "song name", outLength: 1, choiceText: "song name", choiceIndex: 0},
 	}
-	initState()
+
+	state := getState(client)
 	if !isAddQueue {
-		initSetQueuePrompt(t)
+		initSetQueuePrompt(t, state)
 	}
 	testInteractive(t, "song name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue, selectPrompt)
 }
@@ -350,16 +373,18 @@ func TestAddQueueSongSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		return arg.(*platune.AddToQueueRequest).Songs[0] == "/test/path/1"
 	}
-	testSongSelection(t, matcherFunc, addQueueCmdText+" ", true, true)
-	testSongSelection(t, matcherFunc, addQueueCmdText+" ", true, false)
+	client := internal.NewTestClient(nil, nil)
+	testSongSelection(t, matcherFunc, addQueueCmdText+" ", &client, true, true)
+	testSongSelection(t, matcherFunc, addQueueCmdText+" ", &client, true, false)
 }
 
 func TestSetQueueSongSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		return arg.(*platune.QueueRequest).Queue[0] == "/test/path/1"
 	}
-	testSongSelection(t, matcherFunc, "", false, true)
-	testSongSelection(t, matcherFunc, "", false, false)
+	client := internal.NewTestClient(nil, nil)
+	testSongSelection(t, matcherFunc, "", &client, false, true)
+	testSongSelection(t, matcherFunc, "", &client, false, false)
 }
 
 func testAlbumSelection(t *testing.T, matcherFunc func(arg interface{}) bool, prefix string, isAddQueue bool, selectPrompt bool) {
@@ -377,9 +402,11 @@ func testAlbumSelection(t *testing.T, matcherFunc func(arg interface{}) bool, pr
 		{in: prefix + "album name", outLength: 1, choiceText: "album name", choiceIndex: 0},
 		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
 	}
-	initState()
+
 	if !isAddQueue {
-		initSetQueuePrompt(t)
+		client := internal.NewTestClient(nil, nil)
+		state := getState(&client)
+		initSetQueuePrompt(t, state)
 	}
 	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue, selectPrompt)
 }
@@ -417,9 +444,11 @@ func testAlbumSelectAll(t *testing.T, matcherFunc func(arg interface{}) bool, pr
 		{in: prefix + "album name", outLength: 1, choiceText: "album name", choiceIndex: 0},
 		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
-	initState()
+
 	if !isAddQueue {
-		initSetQueuePrompt(t)
+		client := internal.NewTestClient(nil, nil)
+		state := getState(&client)
+		initSetQueuePrompt(t, state)
 	}
 	testInteractive(t, "album name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue, selectPrompt)
 }
@@ -459,9 +488,11 @@ func testArtistSelection(t *testing.T, matcherFunc func(arg interface{}) bool, p
 		{in: "album 1", outLength: 1, choiceText: "album 1", choiceIndex: 0},
 		{in: "track 1", outLength: 1, choiceText: "track 1", choiceIndex: 0},
 	}
-	initState()
+
 	if !isAddQueue {
-		initSetQueuePrompt(t)
+		client := internal.NewTestClient(nil, nil)
+		state := getState(&client)
+		initSetQueuePrompt(t, state)
 	}
 	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue, selectPrompt)
 }
@@ -500,9 +531,11 @@ func testArtistSelectAll(t *testing.T, matcherFunc func(arg interface{}) bool, p
 		{in: prefix + "artist name", outLength: 1, choiceText: "artist name", choiceIndex: 0},
 		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
-	initState()
+
 	if !isAddQueue {
-		initSetQueuePrompt(t)
+		client := internal.NewTestClient(nil, nil)
+		state := getState(&client)
+		initSetQueuePrompt(t, state)
 	}
 	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue, selectPrompt)
 }
@@ -550,9 +583,11 @@ func testArtistSelectOneAlbum(t *testing.T, matcherFunc func(arg interface{}) bo
 		{in: "album 2", outLength: 1, choiceText: "album 2", choiceIndex: 0},
 		{in: selectAll, outLength: 1, choiceText: selectAll, choiceIndex: 0},
 	}
-	initState()
+
 	if !isAddQueue {
-		initSetQueuePrompt(t)
+		client := internal.NewTestClient(nil, nil)
+		state := getState(&client)
+		initSetQueuePrompt(t, state)
 	}
 	testInteractive(t, "artist name", searchResults, lookupRequest, lookupEntries, matcherFunc, steps, isAddQueue, selectPrompt)
 }
@@ -580,11 +615,11 @@ func TestSetQueueArtistSelectOneAlbum(t *testing.T) {
 }
 
 func TestAddFolderCompleter(t *testing.T) {
-	initState()
 	buf := prompt.NewBuffer()
 	buf.InsertText(addFolderCmdText+" root", false, true)
 	doc := buf.Document()
-
+	client := internal.NewTestClient(nil, nil)
+	state := getState(&client)
 	results := state.completer(*doc)
 	if len(results) != 1 {
 		t.Error("Should've found one result")
@@ -595,7 +630,18 @@ func TestAddFolderCompleter(t *testing.T) {
 }
 
 func TestSetQueueExecutor(t *testing.T) {
-	initState()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mock := test.NewMockPlayerClient(ctrl)
+	matcher := test.NewMatcher(func(arg interface{}) bool {
+		queue := arg.(*platune.QueueRequest).Queue
+		return strings.HasSuffix(queue[0], "root.go")
+	})
+	mock.EXPECT().SetQueue(gomock.Any(), matcher)
+	client := internal.NewTestClient(mock, nil)
+	state := getState(&client)
+
 	state.executor(setQueueCmdText, nil)
 	if state.mode[0] != setQueueCmdText+"> " {
 		t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
@@ -607,15 +653,6 @@ func TestSetQueueExecutor(t *testing.T) {
 	if !strings.HasSuffix(state.currentQueue[0].Path, "root.go") {
 		t.Error("root.go should've been added to the queue")
 	}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
 
-	mock := test.NewMockPlayerClient(ctrl)
-	matcher := test.NewMatcher(func(arg interface{}) bool {
-		queue := arg.(*platune.QueueRequest).Queue
-		return strings.HasSuffix(queue[0], "root.go")
-	})
-	mock.EXPECT().SetQueue(gomock.Any(), matcher)
-	internal.Client = internal.NewTestClient(mock, nil)
 	state.executor("", nil)
 }

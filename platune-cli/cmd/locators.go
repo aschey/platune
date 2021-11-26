@@ -57,5 +57,5 @@ func GetSearch(cmd *cobra.Command) *search.Search {
 }
 
 func RegisterSearch(ctx context.Context, search *search.Search) context.Context {
-	return context.WithValue(ctx, clientKey, searchKey)
+	return context.WithValue(ctx, searchKey, search)
 }
