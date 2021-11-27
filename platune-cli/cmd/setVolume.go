@@ -14,18 +14,6 @@ const setVolumeExampleText = "<value between 0 and 1>"
 
 var setVolumeUsage = fmt.Sprintf("%s %s", setVolumeCmdText, setVolumeExampleText)
 
-var setVolumeCmd = &cobra.Command{
-	Use:   setVolumeUsage,
-	Short: setVolumeDescription,
-	Long:  setVolumeDescription,
-
-	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		runSetVolume(client, args)
-	},
-}
-
 func runSetVolume(client *internal.PlatuneClient, args []string) {
 	vol, err := strconv.ParseFloat(args[0], 32)
 	errMsg := "Volume must be a number between 0 and 1"
@@ -40,7 +28,19 @@ func runSetVolume(client *internal.PlatuneClient, args []string) {
 	client.SetVolume(float32(vol))
 }
 
-func init() {
+func newSetVolumeCmd() *cobra.Command {
+	setVolumeCmd := &cobra.Command{
+		Use:   setVolumeUsage,
+		Short: setVolumeDescription,
+		Long:  setVolumeDescription,
+
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			runSetVolume(client, args)
+		},
+	}
+
 	usageFunc := setVolumeCmd.UsageFunc()
 	setVolumeCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, setVolumeExampleText)
@@ -49,5 +49,6 @@ func init() {
 	setVolumeCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(setVolumeCmd)
+
+	return setVolumeCmd
 }

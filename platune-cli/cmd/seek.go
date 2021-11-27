@@ -11,19 +11,18 @@ const seekExampleText = "[hh:][mm:]ss"
 const seekDescription = "Seek to a specific time"
 const seekCmdText = "seek"
 
-var seekCmd = &cobra.Command{
-	Use:   fmt.Sprintf("%s %s", seekCmdText, seekExampleText),
-	Short: seekDescription,
-	Long:  seekDescription,
+func newSeekCmd() *cobra.Command {
+	seekCmd := &cobra.Command{
+		Use:   fmt.Sprintf("%s %s", seekCmdText, seekExampleText),
+		Short: seekDescription,
+		Long:  seekDescription,
 
-	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		client.Seek(args[0])
-	},
-}
-
-func init() {
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.Seek(args[0])
+		},
+	}
 	usageFunc := seekCmd.UsageFunc()
 	seekCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, seekExampleText)
@@ -32,5 +31,6 @@ func init() {
 	seekCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(seekCmd)
+
+	return seekCmd
 }

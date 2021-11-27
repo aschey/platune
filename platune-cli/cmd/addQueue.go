@@ -12,22 +12,23 @@ const addQueueDescription = "Adds a song to the end of the queue"
 const addQueueCmdText = "add-queue"
 const addQueueExampleText = "<file, url, or db entry>"
 
-var addQueueCmd = &cobra.Command{
-	Use:   fmt.Sprintf("%s %s", addQueueCmdText, addQueueExampleText),
-	Short: addQueueDescription,
-	Long:  addQueueDescription,
+func newAddQueueCmd() *cobra.Command {
+	addQueueCmd := &cobra.Command{
+		Use:   fmt.Sprintf("%s %s", addQueueCmdText, addQueueExampleText),
+		Short: addQueueDescription,
+		Long:  addQueueDescription,
 
-	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		search := GetSearch(cmd)
-		search.ProcessSearchResults(args,
-			func(file string) { client.AddToQueue([]string{file}, true) },
-			func(entries []*platune.LookupEntry) { client.AddSearchResultsToQueue(entries, false) })
-	},
-}
+		Args: cobra.MinimumNArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			search := GetSearch(cmd)
 
-func init() {
+			search.ProcessSearchResults(args,
+				func(file string) { client.AddToQueue([]string{file}, true) },
+				func(entries []*platune.LookupEntry) { client.AddSearchResultsToQueue(entries, false) })
+		},
+	}
+
 	usageFunc := addQueueCmd.UsageFunc()
 	addQueueCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, addQueueExampleText)
@@ -36,5 +37,6 @@ func init() {
 	addQueueCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(addQueueCmd)
+
+	return addQueueCmd
 }

@@ -65,6 +65,7 @@ func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args
 	os.Args = append(originalArgs, args...)
 	rescueStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
+	rootCmd := newRootCmd()
 	rootCmd.SetOut(wOut)
 	os.Stdout = wOut
 
@@ -73,7 +74,7 @@ func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args
 	search := search.NewSearch(client)
 
 	state := getState(client)
-	if err := start(ctx, client, state, deleted, search); err != nil {
+	if err := start(rootCmd, ctx, client, state, deleted, search); err != nil {
 		t.Errorf(err.Error())
 	}
 	wOut.Close()

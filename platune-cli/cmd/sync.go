@@ -14,19 +14,6 @@ import (
 const syncDescription = "Syncs the database with the configured folders to import"
 const syncCmdText = "sync"
 
-var syncCmd = &cobra.Command{
-	Use:   syncCmdText,
-	Short: syncDescription,
-	Long:  syncDescription,
-
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		deleted := GetDeleted(cmd)
-		syncProgress(client, deleted)
-	},
-}
-
 func syncProgress(client *internal.PlatuneClient, deleted *deleted.Deleted) {
 	sync, cancel := client.Sync()
 	defer cancel()
@@ -54,7 +41,19 @@ func syncProgress(client *internal.PlatuneClient, deleted *deleted.Deleted) {
 	}
 }
 
-func init() {
+func newSyncCmd() *cobra.Command {
+	syncCmd := &cobra.Command{
+		Use:   syncCmdText,
+		Short: syncDescription,
+		Long:  syncDescription,
+
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			deleted := GetDeleted(cmd)
+			syncProgress(client, deleted)
+		},
+	}
 	usageFunc := syncCmd.UsageFunc()
 	syncCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, "")
@@ -63,5 +62,6 @@ func init() {
 	syncCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(syncCmd)
+
+	return syncCmd
 }

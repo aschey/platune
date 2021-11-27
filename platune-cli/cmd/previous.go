@@ -8,19 +8,19 @@ import (
 const previousDescription = "Skips to the previous track"
 const previousCmdText = "previous"
 
-var previousCmd = &cobra.Command{
-	Use:   previousCmdText,
-	Short: previousDescription,
-	Long:  previousDescription,
+func newPreviousCmd() *cobra.Command {
+	previousCmd := &cobra.Command{
+		Use:   previousCmdText,
+		Short: previousDescription,
+		Long:  previousDescription,
 
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		client.Previous()
-	},
-}
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.Previous()
+		},
+	}
 
-func init() {
 	usageFunc := previousCmd.UsageFunc()
 	previousCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, "")
@@ -29,5 +29,6 @@ func init() {
 	previousCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(previousCmd)
+
+	return previousCmd
 }

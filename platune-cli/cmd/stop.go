@@ -8,19 +8,19 @@ import (
 const stopDescription = "Stops the queue. No effect if already stopped."
 const stopCmdText = "stop"
 
-var stopCmd = &cobra.Command{
-	Use:   stopCmdText,
-	Short: stopDescription,
-	Long:  stopDescription,
+func newStopCmd() *cobra.Command {
+	stopCmd := &cobra.Command{
+		Use:   stopCmdText,
+		Short: stopDescription,
+		Long:  stopDescription,
 
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		client.Stop()
-	},
-}
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.Stop()
+		},
+	}
 
-func init() {
 	usageFunc := stopCmd.UsageFunc()
 	stopCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, "")
@@ -29,5 +29,6 @@ func init() {
 	stopCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(stopCmd)
+
+	return stopCmd
 }

@@ -11,19 +11,19 @@ const addFolderDescription = "Adds a folder to the library"
 const addFolderCmdText = "add-folder"
 const addFolderExampleText = "<path>"
 
-var addFolderCmd = &cobra.Command{
-	Use:   fmt.Sprintf("%s %s", addFolderCmdText, addFolderExampleText),
-	Short: addFolderDescription,
-	Long:  addFolderDescription,
+func newAddFolderCmd() *cobra.Command {
+	addFolderCmd := &cobra.Command{
+		Use:   fmt.Sprintf("%s %s", addFolderCmdText, addFolderExampleText),
+		Short: addFolderDescription,
+		Long:  addFolderDescription,
 
-	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		client.AddFolder(args[0])
-	},
-}
+		Args: cobra.ExactArgs(1),
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.AddFolder(args[0])
+		},
+	}
 
-func init() {
 	usageFunc := addFolderCmd.UsageFunc()
 	addFolderCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, addFolderExampleText)
@@ -32,5 +32,6 @@ func init() {
 	addFolderCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(addFolderCmd)
+
+	return addFolderCmd
 }

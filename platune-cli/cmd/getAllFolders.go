@@ -8,19 +8,19 @@ import (
 const getAllFoldersDescription = "Lists all configured folders"
 const getAllFoldersCmdText = "get-all-folders"
 
-var getAllFoldersCmd = &cobra.Command{
-	Use:   getAllFoldersCmdText,
-	Short: getAllFoldersDescription,
-	Long:  getAllFoldersDescription,
+func newGetAllFoldersCmd() *cobra.Command {
+	getAllFoldersCmd := &cobra.Command{
+		Use:   getAllFoldersCmdText,
+		Short: getAllFoldersDescription,
+		Long:  getAllFoldersDescription,
 
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		client.GetAllFolders()
-	},
-}
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.GetAllFolders()
+		},
+	}
 
-func init() {
 	usageFunc := getAllFoldersCmd.UsageFunc()
 	getAllFoldersCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, "")
@@ -29,5 +29,6 @@ func init() {
 	getAllFoldersCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(getAllFoldersCmd)
+
+	return getAllFoldersCmd
 }

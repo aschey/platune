@@ -28,29 +28,58 @@ var title = lipgloss.NewStyle().
 	PaddingRight(1).
 	Render(title1 + "\n" + title2)
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:  "platune-cli",
-	Long: title,
+func newRootCmd() *cobra.Command {
+	rootCmd := &cobra.Command{
+		Use:  "platune-cli",
+		Long: title,
 
-	Run: func(cmd *cobra.Command, args []string) {
-		state := GetState(cmd)
-		interactive, err := cmd.Flags().GetBool("interactive")
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		if interactive {
-			state.curPrompt.Run()
-		} else {
-			err := cmd.Help()
+		Run: func(cmd *cobra.Command, args []string) {
+			state := GetState(cmd)
+			interactive, err := cmd.Flags().GetBool("interactive")
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-		}
+			if interactive {
+				state.curPrompt.Run()
+			} else {
+				err := cmd.Help()
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}
 
-	},
+		},
+	}
+
+	usageFunc := rootCmd.UsageFunc()
+	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
+		internal.FormatUsage(c, usageFunc, "")
+		return nil
+	})
+
+	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
+		internal.FormatHelp(c)
+	})
+
+	rootCmd.Flags().BoolP("interactive", "i", false, "Run in interactive mode")
+
+	rootCmd.AddCommand(newAddFolderCmd())
+	rootCmd.AddCommand(newAddQueueCmd())
+	rootCmd.AddCommand(newGetAllFoldersCmd())
+	rootCmd.AddCommand(newNextCmd())
+	rootCmd.AddCommand(newPauseCmd())
+	rootCmd.AddCommand(newPreviousCmd())
+	rootCmd.AddCommand(newResumeCmd())
+	rootCmd.AddCommand(newSeekCmd())
+	rootCmd.AddCommand(newSetMountCmd())
+	rootCmd.AddCommand(newSetQueueCmd())
+	rootCmd.AddCommand(newSetVolumeCmd())
+	rootCmd.AddCommand(newStopCmd())
+	rootCmd.AddCommand(newSyncCmd())
+
+	return rootCmd
 }
 
 func handleExit() {
@@ -62,7 +91,7 @@ func handleExit() {
 	}
 }
 
-func start(ctx context.Context, client *internal.PlatuneClient,
+func start(rootCmd *cobra.Command, ctx context.Context, client *internal.PlatuneClient,
 	state *cmdState, deleted *deleted.Deleted, search *search.Search) error {
 	ctx = RegisterClient(ctx, client)
 	ctx = RegisterState(ctx, state)
@@ -77,7 +106,8 @@ func register(lifecycle fx.Lifecycle, client *internal.PlatuneClient,
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				return start(ctx, client, state, deleted, search)
+				rootCmd := newRootCmd()
+				return start(rootCmd, ctx, client, state, deleted, search)
 			},
 			OnStop: func(context.Context) error {
 				handleExit()
@@ -116,21 +146,7 @@ func Execute() {
 
 	ctx := context.Background()
 
-	app.Start(ctx)
-	app.Stop(ctx)
+	cobra.CheckErr(app.Start(ctx))
+	cobra.CheckErr(app.Stop(ctx))
 
-}
-
-func init() {
-	usageFunc := rootCmd.UsageFunc()
-	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
-		internal.FormatUsage(c, usageFunc, "")
-		return nil
-	})
-
-	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
-		internal.FormatHelp(c)
-	})
-
-	rootCmd.Flags().BoolP("interactive", "i", false, "Run in interactive mode")
 }

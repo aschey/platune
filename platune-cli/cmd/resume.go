@@ -8,19 +8,19 @@ import (
 const resumeDescription = "Resumes the queue. No effect if already playing."
 const resumeCmdText = "resume"
 
-var resumeCmd = &cobra.Command{
-	Use:   resumeCmdText,
-	Short: resumeDescription,
-	Long:  resumeDescription,
+func newResumeCmd() *cobra.Command {
+	resumeCmd := &cobra.Command{
+		Use:   resumeCmdText,
+		Short: resumeDescription,
+		Long:  resumeDescription,
 
-	Args: cobra.NoArgs,
-	Run: func(cmd *cobra.Command, args []string) {
-		client := GetClient(cmd)
-		client.Resume()
-	},
-}
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.Resume()
+		},
+	}
 
-func init() {
 	usageFunc := resumeCmd.UsageFunc()
 	resumeCmd.SetUsageFunc(func(c *cobra.Command) error {
 		internal.FormatUsage(c, usageFunc, "")
@@ -29,5 +29,6 @@ func init() {
 	resumeCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
 		internal.FormatHelp(c)
 	})
-	rootCmd.AddCommand(resumeCmd)
+
+	return resumeCmd
 }
