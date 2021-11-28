@@ -35,7 +35,7 @@ func testRenderItem(t *testing.T, index int, expected string) {
 }
 
 func TestRenderSelected(t *testing.T) {
-	expected := "  ▶ test entry1 - test description1"
+	expected := selectedItemStyle.Render("▶ test entry1 - test description1")
 	testRenderItem(t, 0, expected)
 }
 
@@ -51,11 +51,6 @@ func TestSelectOneItem(t *testing.T) {
 	}
 	items := getItems(results)
 
-	d := itemDelegate{}
-	l := list.NewModel(items, d, 0, 0)
-	m := model{list: l, callback: func(entries []*platune.LookupEntry) {}}
-
-	m.list.CursorDown()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mock := test.NewMockManagementClient(ctrl)
@@ -64,7 +59,14 @@ func TestSelectOneItem(t *testing.T) {
 		{Artist: "artist name", Album: "album 1", Song: "song name", Path: "/test/path/1", Track: 1},
 	}
 	mock.EXPECT().Lookup(gomock.Any(), lookupRequest).Return(&platune.LookupResponse{Entries: lookupEntries}, nil)
-	internal.Client = internal.NewTestClient(nil, mock)
+	client := internal.NewTestClient(nil, mock)
+
+	d := itemDelegate{}
+	l := list.NewModel(items, d, 0, 0)
+	m := model{list: l, client: &client, callback: func(entries []*platune.LookupEntry) {}}
+
+	m.list.CursorDown()
+
 	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 }
 
@@ -72,7 +74,8 @@ func TestProcessFilesystem(t *testing.T) {
 	selectedFile := ""
 	fsCallback := func(file string) { selectedFile = file }
 	fileToChoose := "./search.go"
-	ProcessSearchResults([]string{fileToChoose}, fsCallback, nil)
+	search := NewSearch(nil)
+	search.ProcessSearchResults([]string{fileToChoose}, fsCallback, nil)
 	fullPath, _ := filepath.Abs(selectedFile)
 	if fullPath != selectedFile {
 		t.Errorf("Expected %s got %s", fullPath, selectedFile)
@@ -96,9 +99,10 @@ func TestOneSearchResult(t *testing.T) {
 		Lookup(gomock.Any(), &platune.LookupRequest{EntryType: platune.EntryType_SONG, CorrelationIds: []int32{1}}).
 		Return(&platune.LookupResponse{Entries: []*platune.LookupEntry{{Song: song}}}, nil)
 
-	internal.Client = internal.NewTestClient(nil, mock)
+	client := internal.NewTestClient(nil, mock)
+	search := NewSearch(&client)
 
-	ProcessSearchResults([]string{song}, nil, dbCallback)
+	search.ProcessSearchResults([]string{song}, nil, dbCallback)
 	if len(lookupEntries) != 1 {
 		t.Errorf("Should've sent one result")
 	}
@@ -118,13 +122,14 @@ func TestNoResults(t *testing.T) {
 	mock := test.NewMockManagementClient(ctrl)
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 
-	internal.Client = internal.NewTestClient(nil, mock)
+	client := internal.NewTestClient(nil, mock)
+	search := NewSearch(&client)
 
 	rescueStdout := os.Stdout
 	rOut, wOut, _ := os.Pipe()
 	os.Stdout = wOut
 
-	ProcessSearchResults([]string{"test song"}, nil, nil)
+	search.ProcessSearchResults([]string{"test song"}, nil, nil)
 
 	wOut.Close()
 	os.Stdout = rescueStdout
