@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/MarvinJWendt/testza"
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/deleted"
@@ -56,28 +57,21 @@ func runManagementTest(t *testing.T, expected string,
 
 func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args ...string) string {
 	os.Args = append(originalArgs, args...)
-	rescueStdout := os.Stdout
-	rOut, wOut, _ := os.Pipe()
 	rootCmd := newRootCmd()
-	rootCmd.SetOut(wOut)
-	os.Stdout = wOut
 
 	ctx := context.Background()
 	deleted := deleted.NewDeleted(client)
 	search := search.NewSearch(client)
 
 	state := NewState(client, deleted)
-	if err := start(rootCmd, ctx, client, state, deleted, search); err != nil {
-		t.Errorf(err.Error())
-	}
-	wOut.Close()
-	rootCmd.SetOut(rescueStdout)
-	os.Stdout = rescueStdout
-	var out, _ = io.ReadAll(rOut)
-	outStr := string(out)
-	if expected != "" && outStr != expected {
-		t.Errorf("Expected %s, Got %s", expected, outStr)
-	}
+
+	outStr, err := testza.CaptureStdout(func(out io.Writer) error {
+		return start(rootCmd, ctx, client, state, deleted, search)
+	})
+
+	testza.AssertNoError(t, err)
+	testza.AssertTrue(t, expected == "" || outStr == expected,
+		fmt.Sprintf("Expected %s, Got %s", expected, outStr))
 
 	return outStr
 }
@@ -95,13 +89,11 @@ func executeInteractive(t *testing.T, state *cmdState, steps []completionCase, s
 		buf.InsertText(step.in, false, true)
 		doc := buf.Document()
 		results := state.completer(*doc)
-		if len(results) != step.outLength {
-			t.Errorf("Expected length %d, Got %d", step.outLength, len(results))
-		}
+		testza.AssertLen(t, results, step.outLength)
+
 		choice := results[step.choiceIndex]
-		if choice.Text != step.choiceText {
-			t.Errorf("Expected %s, Got %s", step.choiceText, choice.Text)
-		}
+		testza.AssertEqual(t, step.choiceText, choice.Text)
+
 		if selectPrompt {
 			state.executor(step.in, &results[step.choiceIndex])
 		} else {
@@ -258,9 +250,8 @@ func TestSync(t *testing.T) {
 			Results: []*platune.DeletedResult{},
 		}, nil)
 	}, syncCmdText)
-	if len(res) == 0 {
-		t.Errorf("Expected length > 0")
-	}
+
+	testza.AssertGreater(t, len(res), 0)
 }
 
 func TestGetAllFolders(t *testing.T) {
@@ -268,9 +259,8 @@ func TestGetAllFolders(t *testing.T) {
 	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
 		expect.GetAllFolders(gomock.Any(), gomock.Any()).Return(&platune.FoldersMessage{Folders: []string{response}}, nil)
 	}, getAllFoldersCmdText)
-	if !strings.Contains(res, response) {
-		t.Errorf("Response should contain folder")
-	}
+
+	testza.AssertContains(t, res, response)
 }
 
 func TestAddFolder(t *testing.T) {

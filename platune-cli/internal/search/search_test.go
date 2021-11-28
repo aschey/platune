@@ -2,11 +2,12 @@ package search
 
 import (
 	"bytes"
+	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/MarvinJWendt/testza"
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/test"
 	platune "github.com/aschey/platune/client"
@@ -29,9 +30,7 @@ func testRenderItem(t *testing.T, index int, expected string) {
 	d.Render(&buf, l, index, items[index])
 
 	out := buf.String()
-	if out != expected {
-		t.Errorf("Expected %s, got %s", expected, out)
-	}
+	testza.AssertEqual(t, expected, out, fmt.Sprintf("Expected %s, got %s", expected, out))
 }
 
 func TestRenderSelected(t *testing.T) {
@@ -77,9 +76,9 @@ func TestProcessFilesystem(t *testing.T) {
 	search := NewSearch(nil)
 	search.ProcessSearchResults([]string{fileToChoose}, fsCallback, nil)
 	fullPath, _ := filepath.Abs(selectedFile)
-	if fullPath != selectedFile {
-		t.Errorf("Expected %s got %s", fullPath, selectedFile)
-	}
+
+	testza.AssertEqual(t, fullPath, selectedFile,
+		fmt.Sprintf("Expected %s got %s", fullPath, selectedFile))
 }
 
 func TestOneSearchResult(t *testing.T) {
@@ -103,13 +102,9 @@ func TestOneSearchResult(t *testing.T) {
 	search := NewSearch(&client)
 
 	search.ProcessSearchResults([]string{song}, nil, dbCallback)
-	if len(lookupEntries) != 1 {
-		t.Errorf("Should've sent one result")
-	}
 
-	if lookupEntries[0].Song != song {
-		t.Errorf("Expected %s, got %s", song, lookupEntries[0].Song)
-	}
+	testza.AssertLen(t, lookupEntries, 1)
+	testza.AssertEqual(t, song, lookupEntries[0].Song)
 }
 
 func TestNoResults(t *testing.T) {
@@ -125,19 +120,10 @@ func TestNoResults(t *testing.T) {
 	client := internal.NewTestClient(nil, mock)
 	search := NewSearch(&client)
 
-	rescueStdout := os.Stdout
-	rOut, wOut, _ := os.Pipe()
-	os.Stdout = wOut
+	outStr, _ := testza.CaptureStdout(func(io.Writer) error {
+		search.ProcessSearchResults([]string{"test song"}, nil, nil)
+		return nil
+	})
 
-	search.ProcessSearchResults([]string{"test song"}, nil, nil)
-
-	wOut.Close()
-	os.Stdout = rescueStdout
-
-	var out, _ = io.ReadAll(rOut)
-	outStr := string(out)
-
-	if outStr != noResultsStr+"\n" {
-		t.Errorf("Expected %s, got %s", noResultsStr, outStr)
-	}
+	testza.AssertEqual(t, noResultsStr+"\n", outStr, fmt.Sprintf("Expected %s, got %s", noResultsStr, outStr))
 }

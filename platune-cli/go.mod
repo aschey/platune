@@ -3,6 +3,7 @@ module github.com/aschey/platune/cli/v2
 go 1.16
 
 require (
+	github.com/MarvinJWendt/testza v0.2.12
 	github.com/aschey/go-prompt v0.2.7-0.20211107192052-857b38ecf016
 	github.com/aschey/platune/client v0.0.0
 	github.com/atotto/clipboard v0.1.4 // indirect
@@ -25,7 +26,6 @@ require (
 	go.uber.org/zap v1.19.1
 	golang.org/x/net v0.0.0-20211123203042-d83791d6bcd9 // indirect
 	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20211118181313-81c1377c94b1 // indirect
 	google.golang.org/grpc v1.42.0
