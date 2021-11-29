@@ -8,7 +8,7 @@ build *ARGS:
 setup:
     npm install
     npm run prepare
-    go install github.com/golang/mock/mockgen@1.6.0
+    go install github.com/golang/mock/mockgen@v1.6.0
     go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
     go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
     curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.43.0
