@@ -39,7 +39,7 @@ func TestRenderSelected(t *testing.T) {
 }
 
 func TestRender(t *testing.T) {
-	expected := "    test entry2 - test description2"
+	expected := itemStyle.Render("test entry2 - test description2")
 	testRenderItem(t, 1, expected)
 }
 
