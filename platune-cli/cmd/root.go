@@ -15,6 +15,7 @@ import (
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var title1 = "█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █"
@@ -124,12 +125,20 @@ func NewLogger() (*zap.Logger, error) {
 	}
 
 	fullpath := filepath.Join(filepath.Dir(dir), "platune-cli.log")
-	cfg := zap.NewProductionConfig()
-	cfg.OutputPaths = []string{
-		fullpath,
+
+	// Workaround for Windows support
+	// see https://github.com/uber-go/zap/issues/994
+	// TODO: update this when Windows support is fixed
+	enc := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	ws, err := os.OpenFile(fullpath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, err
 	}
 
-	return cfg.Build()
+	core := zapcore.NewCore(enc, ws, zapcore.InfoLevel)
+	logger := zap.New(core)
+
+	return logger, nil
 }
 
 func Execute() {
