@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 CURRENT_DIR=$(dirname $0)
 mockgen -package=test -source="${CURRENT_DIR}/../platuned/client/go/player_rpc_grpc.pb.go" > "${CURRENT_DIR}/test/player_mock.go"
 mockgen -package=test -source="${CURRENT_DIR}/../platuned/client/go/management_rpc_grpc.pb.go" > "${CURRENT_DIR}/test/management_mock.go"
