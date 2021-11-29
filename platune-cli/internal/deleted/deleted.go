@@ -118,7 +118,7 @@ func (m model) updateList(msg tea.KeyMsg, keypress string) (tea.Model, tea.Cmd) 
 		m.list, cmd = m.list.Update(msg)
 		return m, cmd
 
-	case " ":
+	case " ", "space":
 		i.selected = !i.selected
 		m.list.SetItem(m.list.Index(), i)
 
