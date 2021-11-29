@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"regexp"
 	"testing"
 
 	"github.com/MarvinJWendt/testza"
@@ -37,7 +38,7 @@ func testRenderItem(t *testing.T, index int, checked bool, expected string) {
 	testza.AssertEqual(t, expected, out, fmt.Sprintf("Expected %s, got %s", expected, out))
 }
 
-func sendKeys(t *testing.T, msgs []tea.KeyMsg) model {
+func sendKeys(ctrl *gomock.Controller, msgs []tea.KeyMsg, deletedIds []int64, m *model) model {
 	results := []*platune.DeletedResult{
 		{Path: "/test/path/1", Id: 1},
 		{Path: "/test/path/2", Id: 2},
@@ -46,18 +47,35 @@ func sendKeys(t *testing.T, msgs []tea.KeyMsg) model {
 	d := itemDelegate{}
 	l := list.NewModel(items, d, 0, 0)
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mock := test.NewMockManagementClient(ctrl)
-	client := internal.NewTestClient(nil, mock)
+	if m == nil {
+		mock := test.NewMockManagementClient(ctrl)
+		if len(deletedIds) > 0 {
+			mock.EXPECT().DeleteTracks(gomock.Any(), &platune.IdMessage{Ids: deletedIds})
+		}
+		client := internal.NewTestClient(nil, mock)
 
-	m := model{list: l, client: &client, showConfirmDialog: false, cancelChosen: false, quitText: ""}
-	for _, msg := range msgs {
-		newModel, _ := m.Update(msg)
-		m = newModel.(model)
+		m = &model{list: l, client: &client, showConfirmDialog: false, cancelChosen: false, quitText: ""}
 	}
 
-	return m
+	for _, msg := range msgs {
+		newModel, _ := m.Update(msg)
+		mm := newModel.(model)
+		m = &mm
+	}
+
+	return *m
+}
+
+func cleanupView(m model) string {
+	view := m.View()
+	extraText := regexp.MustCompile(`\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])|\n|│`)
+	whitespace := regexp.MustCompile(`\s+`)
+	// remove ansi escape sequences and some extra special characters
+	view = string(extraText.ReplaceAll([]byte(view), []byte("")))
+	// replace extra whitespace with a single whitespace character
+	view = string(whitespace.ReplaceAll([]byte(view), []byte(" ")))
+
+	return view
 }
 
 func TestNoRenderWhenNoResults(t *testing.T) {
@@ -96,36 +114,84 @@ func TestRenderChecked(t *testing.T) {
 }
 
 func TestChooseResultSpaceKey(t *testing.T) {
-	m := sendKeys(t, []tea.KeyMsg{{Type: tea.KeySpace}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeySpace}}, []int64{}, nil)
 	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
 }
 
 func TestChooseResultWhitespace(t *testing.T) {
-	m := sendKeys(t, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune(" ")}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune(" ")}}, []int64{}, nil)
 	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
 }
 
 func TestChooseAllResults(t *testing.T) {
-	m := sendKeys(t, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("a")}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("a")}}, []int64{}, nil)
 	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
 	testza.AssertTrue(t, m.list.Items()[1].(item).selected)
 }
 
 func TestUnselectAllResults(t *testing.T) {
-	m := sendKeys(t, []tea.KeyMsg{
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{
 		{Type: tea.KeyRunes, Runes: []rune("a")},
 		{Type: tea.KeyRunes, Runes: []rune("a")},
-	})
+	}, []int64{}, nil)
 	testza.AssertFalse(t, m.list.Items()[0].(item).selected)
 	testza.AssertFalse(t, m.list.Items()[1].(item).selected)
 }
 
 func TestReselectAllResults(t *testing.T) {
-	m := sendKeys(t, []tea.KeyMsg{
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{
 		{Type: tea.KeyRunes, Runes: []rune("a")},
 		{Type: tea.KeyRunes, Runes: []rune(" ")},
 		{Type: tea.KeyRunes, Runes: []rune("a")},
-	})
+	}, []int64{}, nil)
 	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
 	testza.AssertTrue(t, m.list.Items()[1].(item).selected)
+}
+
+func TestChooseNoFilesToDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, nil)
+	testza.AssertEqual(t, quitTextStyle.Render("No Songs Deleted"), m.View())
+}
+
+func TestDeleteAllFiles(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("a")}, {Type: tea.KeyEnter}}, []int64{1, 2}, nil)
+	view := cleanupView(m)
+	testza.AssertContains(t, view, "Are you sure you want to permanently delete 2 song(s)?")
+
+	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, &m)
+}
+
+func TestDeleteFirstFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune(" ")}, {Type: tea.KeyEnter}}, []int64{1}, nil)
+	view := cleanupView(m)
+	testza.AssertContains(t, view, "Are you sure you want to permanently delete 1 song(s)?")
+
+	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, &m)
+}
+
+func TestDeleteSecondFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyDown}, {Type: tea.KeyRunes, Runes: []rune(" ")}, {Type: tea.KeyEnter}}, []int64{2}, nil)
+	view := cleanupView(m)
+
+	testza.AssertContains(t, view, "Are you sure you want to permanently delete 1 song(s)?")
+
+	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, &m)
 }
