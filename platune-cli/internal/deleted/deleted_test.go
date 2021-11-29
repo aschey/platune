@@ -37,7 +37,7 @@ func testRenderItem(t *testing.T, index int, checked bool, expected string) {
 	testza.AssertEqual(t, expected, out, fmt.Sprintf("Expected %s, got %s", expected, out))
 }
 
-func sendKey(t *testing.T, msg tea.KeyMsg) model {
+func sendKeys(t *testing.T, msgs []tea.KeyMsg) model {
 	results := []*platune.DeletedResult{
 		{Path: "/test/path/1", Id: 1},
 		{Path: "/test/path/2", Id: 2},
@@ -52,8 +52,12 @@ func sendKey(t *testing.T, msg tea.KeyMsg) model {
 	client := internal.NewTestClient(nil, mock)
 
 	m := model{list: l, client: &client, showConfirmDialog: false, cancelChosen: false, quitText: ""}
-	newModel, _ := m.Update(msg)
-	return newModel.(model)
+	for _, msg := range msgs {
+		newModel, _ := m.Update(msg)
+		m = newModel.(model)
+	}
+
+	return m
 }
 
 func TestNoRenderWhenNoResults(t *testing.T) {
@@ -92,17 +96,36 @@ func TestRenderChecked(t *testing.T) {
 }
 
 func TestChooseResultSpaceKey(t *testing.T) {
-	m := sendKey(t, tea.KeyMsg{Type: tea.KeySpace})
+	m := sendKeys(t, []tea.KeyMsg{{Type: tea.KeySpace}})
 	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
 }
 
 func TestChooseResultWhitespace(t *testing.T) {
-	m := sendKey(t, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(" ")})
+	m := sendKeys(t, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune(" ")}})
 	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
 }
 
 func TestChooseAllResults(t *testing.T) {
-	m := sendKey(t, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
+	m := sendKeys(t, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("a")}})
+	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
+	testza.AssertTrue(t, m.list.Items()[1].(item).selected)
+}
+
+func TestUnselectAllResults(t *testing.T) {
+	m := sendKeys(t, []tea.KeyMsg{
+		{Type: tea.KeyRunes, Runes: []rune("a")},
+		{Type: tea.KeyRunes, Runes: []rune("a")},
+	})
+	testza.AssertFalse(t, m.list.Items()[0].(item).selected)
+	testza.AssertFalse(t, m.list.Items()[1].(item).selected)
+}
+
+func TestReselectAllResults(t *testing.T) {
+	m := sendKeys(t, []tea.KeyMsg{
+		{Type: tea.KeyRunes, Runes: []rune("a")},
+		{Type: tea.KeyRunes, Runes: []rune(" ")},
+		{Type: tea.KeyRunes, Runes: []rune("a")},
+	})
 	testza.AssertTrue(t, m.list.Items()[0].(item).selected)
 	testza.AssertTrue(t, m.list.Items()[1].(item).selected)
 }
