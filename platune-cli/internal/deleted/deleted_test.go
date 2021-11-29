@@ -173,6 +173,8 @@ func TestDeleteAllFiles(t *testing.T) {
 	testza.AssertContains(t, view, "Are you sure you want to permanently delete 2 song(s)?")
 
 	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, &m)
+	view = cleanupView(m)
+	testza.AssertContains(t, view, "2 song(s) deleted")
 }
 
 func TestDeleteFirstFile(t *testing.T) {
@@ -183,6 +185,8 @@ func TestDeleteFirstFile(t *testing.T) {
 	testza.AssertContains(t, view, "Are you sure you want to permanently delete 1 song(s)?")
 
 	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, &m)
+	view = cleanupView(m)
+	testza.AssertContains(t, view, "1 song(s) deleted")
 }
 
 func TestDeleteSecondFile(t *testing.T) {
@@ -194,4 +198,40 @@ func TestDeleteSecondFile(t *testing.T) {
 	testza.AssertContains(t, view, "Are you sure you want to permanently delete 1 song(s)?")
 
 	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, &m)
+	view = cleanupView(m)
+	testza.AssertContains(t, view, "1 song(s) deleted")
+}
+
+func TestCancelDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("a")}, {Type: tea.KeyEnter}}, []int64{}, nil)
+	view := cleanupView(m)
+
+	testza.AssertContains(t, view, "Are you sure you want to permanently delete 2 song(s)?")
+
+	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyLeft}, {Type: tea.KeyEnter}}, []int64{}, &m)
+	view = cleanupView(m)
+	testza.AssertContains(t, view, "▶ ◉ /test/path/1")
+}
+
+func TestCancelThenDelete(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	m := sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("a")}, {Type: tea.KeyEnter}}, []int64{1, 2}, nil)
+	view := cleanupView(m)
+
+	testza.AssertContains(t, view, "Are you sure you want to permanently delete 2 song(s)?")
+
+	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyLeft}, {Type: tea.KeyEnter}}, []int64{}, &m)
+	view = cleanupView(m)
+	testza.AssertContains(t, view, "▶ ◉ /test/path/1")
+
+	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyEnter}}, []int64{}, &m)
+	view = cleanupView(m)
+	testza.AssertContains(t, view, "Are you sure you want to permanently delete 2 song(s)?")
+
+	m = sendKeys(ctrl, []tea.KeyMsg{{Type: tea.KeyLeft}, {Type: tea.KeyEnter}}, []int64{}, &m)
+	view = cleanupView(m)
+	testza.AssertContains(t, view, "2 song(s) deleted")
 }
