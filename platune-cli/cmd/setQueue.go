@@ -10,7 +10,7 @@ import (
 
 const setQueueDescription = "Sets the queue and starts playback. Resets the queue if playback has already started."
 const setQueueCmdText = "set-queue"
-const setQueueExampleText = "<file, url, or db entry>"
+const setQueueExampleText = "<song, artist, album, file path, or url>"
 
 func newSetQueueCmd() *cobra.Command {
 	setQueueCmd := &cobra.Command{

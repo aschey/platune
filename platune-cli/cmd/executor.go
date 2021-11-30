@@ -63,7 +63,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		}
 
 	case AlbumMode:
-		if state.checkSpecialOptions(selected) {
+		if selected == nil || state.checkSpecialOptions(selected) {
 			return
 		}
 		state.mode = append(state.mode, SongMode)
@@ -80,7 +80,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		state.lookupResult = newResults
 		return
 	case SongMode:
-		if state.checkSpecialOptions(selected) {
+		if selected == nil || state.checkSpecialOptions(selected) {
 			return
 		}
 		newMode := state.mode[0]

@@ -10,7 +10,7 @@ import (
 
 const addQueueDescription = "Adds a song to the end of the queue"
 const addQueueCmdText = "add-queue"
-const addQueueExampleText = "<file, url, or db entry>"
+const addQueueExampleText = "<song, artist, album, file path, or url>"
 
 func newAddQueueCmd() *cobra.Command {
 	addQueueCmd := &cobra.Command{
