@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/deleted"
@@ -83,13 +84,14 @@ func newRootCmd() *cobra.Command {
 	return rootCmd
 }
 
-func handleExit() {
+func handleExit() error {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
 	rawModeOff := exec.Command("/bin/stty", "-raw", "echo")
 	rawModeOff.Stdin = os.Stdin
 	err := rawModeOff.Run()
-	if err != nil {
-		fmt.Println(err)
-	}
+	return err
 }
 
 func start(rootCmd *cobra.Command, ctx context.Context, client *internal.PlatuneClient,
@@ -111,8 +113,7 @@ func register(lifecycle fx.Lifecycle, client *internal.PlatuneClient,
 				return start(rootCmd, ctx, client, state, deleted, search)
 			},
 			OnStop: func(context.Context) error {
-				handleExit()
-				return nil
+				return handleExit()
 			},
 		},
 	)
