@@ -78,9 +78,7 @@ func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args
 
 func initSetQueuePrompt(t *testing.T, state *cmdState) {
 	state.executor(setQueueCmdText, nil)
-	if state.mode[0] != setQueueCmdText+"> " {
-		t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
-	}
+	testza.AssertEqual(t, SetQueueMode, state.mode.First())
 }
 
 func executeInteractive(t *testing.T, state *cmdState, steps []completionCase, selectPrompt bool) {
@@ -321,12 +319,9 @@ func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 	}
 
 	results := state.completer(*doc)
-	if len(results) != 1 {
-		t.Error("Should've found one result")
-	}
-	if results[0].Text != "root.go" {
-		t.Error("Result should be root.go")
-	}
+
+	testza.AssertLen(t, results, 1)
+	testza.AssertEqual(t, "root.go", results[0].Text)
 }
 
 func TestSetQueueFileCompleter(t *testing.T) {
@@ -589,12 +584,8 @@ func TestAddFolderCompleter(t *testing.T) {
 	state := NewState(&client, deleted)
 
 	results := state.completer(*doc)
-	if len(results) != 1 {
-		t.Error("Should've found one result")
-	}
-	if results[0].Text != "root.go" {
-		t.Error("Result should be root.go")
-	}
+	testza.AssertLen(t, results, 1)
+	testza.AssertEqual(t, "root.go", results[0].Text)
 }
 
 func TestSetQueueExecutor(t *testing.T) {
@@ -616,16 +607,11 @@ func TestSetQueueExecutor(t *testing.T) {
 	state := NewState(&client, deleted)
 
 	state.executor(setQueueCmdText, nil)
-	if state.mode[0] != setQueueCmdText+"> " {
-		t.Error(fmt.Sprintf("Live prefix should be set to %s> ", setQueueCmdText))
-	}
-	state.executor("root.go", &prompt.Suggest{Text: "root.go", Metadata: "root.go"})
-	if len(state.currentQueue) != 1 {
-		t.Error("Should've added an item to the queue")
-	}
-	if !strings.HasSuffix(state.currentQueue[0].Path, "root.go") {
-		t.Error("root.go should've been added to the queue")
-	}
+	testza.AssertEqual(t, SetQueueMode, state.mode.First())
 
+	state.executor("root.go", &prompt.Suggest{Text: "root.go", Metadata: "root.go"})
+	testza.AssertLen(t, state.currentQueue, 1)
+
+	testza.AssertTrue(t, strings.HasSuffix(state.currentQueue[0].Path, "root.go"), "root.go should've been added to the queue")
 	state.executor("", nil)
 }

@@ -27,7 +27,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		state.unsetMaxWidths()
 	}
 	before := strings.Split(in.TextBeforeCursor(), " ")
-	if state.mode[len(state.mode)-1] != NormalMode {
+	if state.mode.Current() != NormalMode {
 		return state.completerMode(in)
 	} else if len(before) > 1 {
 		return state.completerCmd(in, before)
@@ -42,7 +42,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 		state.updateMaxWidths(in, 1.)
 	}
 
-	switch state.mode[len(state.mode)-1] {
+	switch state.mode.Current() {
 	case SetQueueMode:
 		return state.dbCompleter(in, in.TextBeforeCursor(), false)
 	case AlbumMode:

@@ -13,12 +13,12 @@ import (
 )
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest) {
-	isSetQueueMode := state.mode[0] == SetQueueMode
+	isSetQueueMode := state.mode.First() == SetQueueMode
 	if selected == nil {
 		// User did not explicitly choose a result
 		// See if we can find a match instead
 		text := strings.Trim(strings.ToLower(in), " ")
-		if strings.HasPrefix(text, addQueueCmdText) && state.mode[len(state.mode)-1] == NormalMode {
+		if strings.HasPrefix(text, addQueueCmdText) && state.mode.Current() == NormalMode {
 			cmds := strings.SplitN(text, " ", 2)
 			text = strings.Trim(cmds[len(cmds)-1], " ")
 		}
@@ -29,7 +29,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 			}
 		}
 	}
-	if state.mode[len(state.mode)-1] != NormalMode {
+	if state.mode.Current() != NormalMode {
 		state.executeMode(in, selected)
 	} else {
 		cmds := strings.SplitN(in, " ", 2)
@@ -40,7 +40,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 		state.executeCmd(cmds, selected)
 	}
 
-	if state.mode[0] == NormalMode && len(state.currentQueue) > 0 {
+	if state.mode.First() == NormalMode && len(state.currentQueue) > 0 {
 		if isSetQueueMode {
 			state.client.SetQueueFromSearchResults(state.currentQueue, true)
 		} else {
@@ -52,10 +52,10 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 }
 
 func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
-	switch state.mode[len(state.mode)-1] {
+	switch state.mode.Current() {
 	case SetQueueMode:
 		if strings.Trim(in, " ") == "" {
-			state.mode = []Mode{NormalMode}
+			state.mode = NewDefaultMode()
 		} else if selected != nil {
 			state.executeEntryType(selected, SetQueueMode)
 		} else {
@@ -66,7 +66,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		if selected == nil || state.checkSpecialOptions(selected) {
 			return
 		}
-		state.mode = append(state.mode, SongMode)
+		state.mode.Set(SongMode)
 		newResults := []*platune.LookupEntry{}
 		for _, r := range state.lookupResult {
 			album := r.Album
@@ -83,9 +83,8 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		if selected == nil || state.checkSpecialOptions(selected) {
 			return
 		}
-		newMode := state.mode[0]
 		lookupResponse := selected.Metadata.(*platune.LookupEntry)
-		state.mode = []Mode{newMode}
+		state.mode.Reset()
 		state.currentQueue = append(state.currentQueue, lookupResponse)
 
 		return
@@ -97,7 +96,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 	case setQueueCmdText:
 		fmt.Println("Enter file paths or urls to add to the queue.")
 		fmt.Println("Enter a blank line when done.")
-		state.mode = []Mode{SetQueueMode}
+		state.mode = NewMode(SetQueueMode)
 		return
 	case addQueueCmdText:
 		if len(cmds) < 2 {
@@ -170,19 +169,19 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 	}
 }
 
-func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode Mode) {
+func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode ModeDef) {
 	searchResult, valid := selected.Metadata.(*platune.SearchResult)
 	if valid {
 		lookupResult := state.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 		switch searchResult.EntryType {
 		case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
-			state.mode = append(state.mode, AlbumMode)
+			state.mode.Set(AlbumMode)
 			state.lookupResult = lookupResult.Entries
 		case platune.EntryType_ALBUM:
-			state.mode = append(state.mode, SongMode)
+			state.mode.Set(SongMode)
 			state.lookupResult = lookupResult.Entries
 		case platune.EntryType_SONG:
-			state.mode = []Mode{defaultMode}
+			state.mode = NewDefaultMode()
 			state.currentQueue = append(state.currentQueue, lookupResult.Entries...)
 		}
 	} else {
@@ -231,12 +230,12 @@ func (state *cmdState) checkSpecialOptions(selected *prompt.Suggest) bool {
 		results, ok := selected.Metadata.([]*platune.LookupEntry)
 		if ok {
 			state.currentQueue = append(state.currentQueue, results...)
-			state.mode = []Mode{state.mode[0]}
+			state.mode.Reset()
 			return true
 		}
 	case back:
 		if selected.Metadata == nil {
-			state.mode = []Mode{state.mode[0]}
+			state.mode.Reset()
 			return true
 		}
 	default:
