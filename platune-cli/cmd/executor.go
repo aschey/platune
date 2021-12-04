@@ -9,16 +9,17 @@ import (
 
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
+	"github.com/aschey/platune/cli/v2/internal/mode"
 	platune "github.com/aschey/platune/client"
 )
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest) {
-	isSetQueueMode := state.mode.First() == SetQueueMode
+	isSetQueueMode := state.mode.First() == mode.SetQueueMode
 	if selected == nil {
 		// User did not explicitly choose a result
 		// See if we can find a match instead
 		text := strings.Trim(strings.ToLower(in), " ")
-		if strings.HasPrefix(text, addQueueCmdText) && state.mode.Current() == NormalMode {
+		if strings.HasPrefix(text, addQueueCmdText) && state.mode.Current() == mode.NormalMode {
 			cmds := strings.SplitN(text, " ", 2)
 			text = strings.Trim(cmds[len(cmds)-1], " ")
 		}
@@ -29,7 +30,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 			}
 		}
 	}
-	if state.mode.Current() != NormalMode {
+	if state.mode.Current() != mode.NormalMode {
 		state.executeMode(in, selected)
 	} else {
 		cmds := strings.SplitN(in, " ", 2)
@@ -40,7 +41,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 		state.executeCmd(cmds, selected)
 	}
 
-	if state.mode.First() == NormalMode && len(state.currentQueue) > 0 {
+	if state.mode.First() == mode.NormalMode && len(state.currentQueue) > 0 {
 		if isSetQueueMode {
 			state.client.SetQueueFromSearchResults(state.currentQueue, true)
 		} else {
@@ -53,20 +54,20 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 
 func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 	switch state.mode.Current() {
-	case SetQueueMode:
+	case mode.SetQueueMode:
 		if strings.Trim(in, " ") == "" {
-			state.mode = NewDefaultMode()
+			state.mode = mode.NewDefaultMode()
 		} else if selected != nil {
-			state.executeEntryType(selected, SetQueueMode)
+			state.executeEntryType(selected, mode.SetQueueMode)
 		} else {
 			state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: in})
 		}
 
-	case AlbumMode:
+	case mode.AlbumMode:
 		if selected == nil || state.checkSpecialOptions(selected) {
 			return
 		}
-		state.mode.Set(SongMode)
+		state.mode.Set(mode.SongMode)
 		newResults := []*platune.LookupEntry{}
 		for _, r := range state.lookupResult {
 			album := r.Album
@@ -79,7 +80,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		}
 		state.lookupResult = newResults
 		return
-	case SongMode:
+	case mode.SongMode:
 		if selected == nil || state.checkSpecialOptions(selected) {
 			return
 		}
@@ -96,7 +97,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 	case setQueueCmdText:
 		fmt.Println("Enter file paths or urls to add to the queue.")
 		fmt.Println("Enter a blank line when done.")
-		state.mode = NewMode(SetQueueMode)
+		state.mode = mode.NewMode(mode.SetQueueMode)
 		return
 	case addQueueCmdText:
 		if len(cmds) < 2 {
@@ -105,7 +106,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 		}
 
 		if selected != nil {
-			state.executeEntryType(selected, NormalMode)
+			state.executeEntryType(selected, mode.NormalMode)
 			return
 		}
 
@@ -169,19 +170,19 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 	}
 }
 
-func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode ModeDef) {
+func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode mode.ModeDef) {
 	searchResult, valid := selected.Metadata.(*platune.SearchResult)
 	if valid {
 		lookupResult := state.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 		switch searchResult.EntryType {
 		case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
-			state.mode.Set(AlbumMode)
+			state.mode.Set(mode.AlbumMode)
 			state.lookupResult = lookupResult.Entries
 		case platune.EntryType_ALBUM:
-			state.mode.Set(SongMode)
+			state.mode.Set(mode.SongMode)
 			state.lookupResult = lookupResult.Entries
 		case platune.EntryType_SONG:
-			state.mode = NewDefaultMode()
+			state.mode = mode.NewDefaultMode()
 			state.currentQueue = append(state.currentQueue, lookupResult.Entries...)
 		}
 	} else {

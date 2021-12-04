@@ -8,6 +8,7 @@ import (
 
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
+	"github.com/aschey/platune/cli/v2/internal/mode"
 	platune "github.com/aschey/platune/client"
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
@@ -27,7 +28,7 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 		state.unsetMaxWidths()
 	}
 	before := strings.Split(in.TextBeforeCursor(), " ")
-	if state.mode.Current() != NormalMode {
+	if state.mode.Current() != mode.NormalMode {
 		return state.completerMode(in)
 	} else if len(before) > 1 {
 		return state.completerCmd(in, before)
@@ -43,9 +44,9 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 	}
 
 	switch state.mode.Current() {
-	case SetQueueMode:
+	case mode.SetQueueMode:
 		return state.dbCompleter(in, in.TextBeforeCursor(), false)
-	case AlbumMode:
+	case mode.AlbumMode:
 		suggestionMap := map[string]prompt.Suggest{}
 		for _, r := range state.lookupResult {
 			album := r.Album
@@ -67,7 +68,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 		}, suggestions...)
 		state.suggestions = suggestions
 
-	case SongMode:
+	case mode.SongMode:
 		suggestions = []prompt.Suggest{
 			{Text: selectAll, Metadata: state.lookupResult},
 			{Text: back},

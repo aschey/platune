@@ -13,6 +13,7 @@ import (
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/deleted"
+	"github.com/aschey/platune/cli/v2/internal/mode"
 	"github.com/aschey/platune/cli/v2/internal/search"
 	"github.com/aschey/platune/cli/v2/test"
 	platune "github.com/aschey/platune/client"
@@ -78,7 +79,7 @@ func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args
 
 func initSetQueuePrompt(t *testing.T, state *cmdState) {
 	state.executor(setQueueCmdText, nil)
-	testza.AssertEqual(t, SetQueueMode, state.mode.First())
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
 }
 
 func executeInteractive(t *testing.T, state *cmdState, steps []completionCase, selectPrompt bool) {
@@ -607,7 +608,7 @@ func TestSetQueueExecutor(t *testing.T) {
 	state := NewState(&client, deleted)
 
 	state.executor(setQueueCmdText, nil)
-	testza.AssertEqual(t, SetQueueMode, state.mode.First())
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
 
 	state.executor("root.go", &prompt.Suggest{Text: "root.go", Metadata: "root.go"})
 	testza.AssertLen(t, state.currentQueue, 1)
