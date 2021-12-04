@@ -616,3 +616,23 @@ func TestSetQueueExecutor(t *testing.T) {
 	testza.AssertTrue(t, strings.HasSuffix(state.currentQueue[0].Path, "root.go"), "root.go should've been added to the queue")
 	state.executor("", nil)
 }
+
+func TestSetQueueExecutorInvalidFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mgmtMock := test.NewMockManagementClient(ctrl)
+	stream := test.NewMockManagement_SearchClient(ctrl)
+	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
+	client := internal.NewTestClient(nil, mgmtMock)
+	deleted := deleted.NewDeleted(&client)
+	state := NewState(&client, deleted)
+
+	state.executor(setQueueCmdText, nil)
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
+
+	state.executor("blah.go", &prompt.Suggest{Text: "blah.go", Metadata: "blah.go"})
+	testza.AssertLen(t, state.currentQueue, 0)
+
+	state.executor("", nil)
+}

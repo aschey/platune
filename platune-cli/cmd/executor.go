@@ -57,10 +57,15 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 	case mode.SetQueueMode:
 		if strings.Trim(in, " ") == "" {
 			state.mode = mode.NewDefaultMode()
-		} else if selected != nil {
-			state.executeEntryType(selected, mode.SetQueueMode)
 		} else {
-			state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: in})
+			pathInput, err := getPathInput(in, selected)
+			if err != nil {
+				fmt.Println(err)
+			} else if pathInput == "" {
+				state.executeEntryType(selected, mode.SetQueueMode)
+			} else {
+				state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: in})
+			}
 		}
 
 	case mode.AlbumMode:
@@ -93,6 +98,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 }
 
 func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
+	rest := strings.Join(cmds[1:], " ")
 	switch cmds[0] {
 	case setQueueCmdText:
 		fmt.Println("Enter file paths or urls to add to the queue.")
@@ -105,17 +111,18 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			return
 		}
 
-		if selected != nil {
-			state.executeEntryType(selected, mode.NormalMode)
-			return
-		}
-
-		full, err := expandFile(cmds[1])
+		pathInput, err := getPathInput(rest, selected)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		state.client.AddToQueue([]string{full}, true)
+
+		if pathInput == "" {
+			state.executeEntryType(selected, mode.NormalMode)
+			return
+		}
+
+		state.client.AddToQueue([]string{pathInput}, true)
 	case seekCmdText:
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")
@@ -211,7 +218,7 @@ func expandFile(song string) (string, error) {
 	full, stat, err := expandPath(song)
 
 	if stat != nil && stat.Mode().IsDir() {
-		return "", fmt.Errorf("cannot add a directory")
+		return "", fmt.Errorf("Cannot add a directory")
 	}
 	return full, err
 }
@@ -220,7 +227,7 @@ func expandFolder(song string) (string, error) {
 	full, stat, err := expandPath(song)
 
 	if stat != nil && !stat.Mode().IsDir() {
-		return "", fmt.Errorf("cannot add a file")
+		return "", fmt.Errorf("Cannot add a file")
 	}
 	return full, err
 }
@@ -244,4 +251,20 @@ func (state *cmdState) checkSpecialOptions(selected *prompt.Suggest) bool {
 	}
 
 	return false
+}
+
+func getPathInput(in string, selected *prompt.Suggest) (string, error) {
+	selectedIsSearchResult := false
+	if selected != nil {
+		// If the metadata is a string, this is a file path completion
+		_, isStr := selected.Metadata.(string)
+		selectedIsSearchResult = !isStr
+	}
+
+	if selectedIsSearchResult {
+		return "", nil
+	}
+
+	full, err := expandFile(in)
+	return full, err
 }
