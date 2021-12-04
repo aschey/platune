@@ -18,7 +18,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 		// User did not explicitly choose a result
 		// See if we can find a match instead
 		text := strings.Trim(strings.ToLower(in), " ")
-		if strings.HasPrefix(text, addQueueCmdText) {
+		if strings.HasPrefix(text, addQueueCmdText) && state.mode[len(state.mode)-1] == NormalMode {
 			cmds := strings.SplitN(text, " ", 2)
 			text = strings.Trim(cmds[len(cmds)-1], " ")
 		}
