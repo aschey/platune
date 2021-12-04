@@ -17,6 +17,7 @@ name = "bench"
 [dependencies]
 anyhow = "1.0.44"
 async-channel = "1.6.1"
+concread = "0.2.19"
 directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.17"

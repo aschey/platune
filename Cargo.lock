@@ -404,6 +404,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "concread"
+version = "0.2.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b976d09b0160d0e2fd016551933080082a4072d4bacb105dfb55859bc0d1ce0e"
+dependencies = [
+ "ahash",
+ "crossbeam",
+ "crossbeam-epoch",
+ "crossbeam-utils",
+ "lru",
+ "parking_lot",
+ "rand",
+ "smallvec",
+ "tokio",
+]
+
+[[package]]
 name = "concurrent-queue"
 version = "1.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -559,6 +576,20 @@ checksum = "d00996de9f2f7559f7f4dc286073197f83e92256a59ed395f9aac01fe717da57"
 dependencies = [
  "cast",
  "itertools",
+]
+
+[[package]]
+name = "crossbeam"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ae5588f6b3c3cb05239e90bd110f257254aecd01e4635400391aeae07497845"
+dependencies = [
+ "cfg-if",
+ "crossbeam-channel",
+ "crossbeam-deque",
+ "crossbeam-epoch",
+ "crossbeam-queue",
+ "crossbeam-utils",
 ]
 
 [[package]]
@@ -1439,6 +1470,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
+ "concread",
  "criterion",
  "ctor",
  "directories",
@@ -1509,6 +1541,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "lru"
+version = "0.6.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ea2d928b485416e8908cff2d97d621db22b27f7b3b6729e438bcf42c671ba91"
+dependencies = [
+ "hashbrown",
 ]
 
 [[package]]

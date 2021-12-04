@@ -1,6 +1,6 @@
 use crate::entry_type::EntryType;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SearchResult {
     pub entry: String,
     pub entry_type: EntryType,

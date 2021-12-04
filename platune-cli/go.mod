@@ -33,3 +33,5 @@ require (
 )
 
 replace github.com/aschey/platune/client => ../platuned/client/go
+
+replace github.com/aschey/go-prompt => ../../go-prompt

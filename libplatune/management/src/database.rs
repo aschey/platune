@@ -100,7 +100,16 @@ impl Database {
         folders: Vec<String>,
         mount: Option<String>,
     ) -> ProgressStream {
-        self.sync_controller.lock().await.sync(folders, mount).await
+        let search_engine = self.search_engine.clone();
+        self.sync_controller
+            .lock()
+            .await
+            .sync(
+                folders,
+                mount,
+                Box::new(move || search_engine.clear_cache()),
+            )
+            .await
     }
 
     pub(crate) async fn lookup(

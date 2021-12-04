@@ -1,4 +1,9 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use super::{
     queries::{clean_query, combine_spellfix_results, get_search_query, replace_ampersand},
@@ -15,20 +20,24 @@ use crate::{
     },
     spellfix::acquire_with_spellfix,
 };
+use concread::arcache::ARCache;
 use itertools::Itertools;
 use regex::Regex;
 use sqlx::{pool::PoolConnection, Pool, Row, Sqlite};
+use tracing::info;
 
 #[derive(Clone)]
 pub(crate) struct SearchEngine {
     pool: Pool<Sqlite>,
+    cache: Arc<ARCache<String, Vec<SearchResult>>>,
 }
 
 const MAX_TERMS: usize = 20;
 
 impl SearchEngine {
     pub(crate) fn new(pool: Pool<Sqlite>) -> Self {
-        Self { pool }
+        let cache = Arc::new(ARCache::new_size(25, 25));
+        Self { pool, cache }
     }
 
     pub(crate) async fn search(
@@ -36,12 +45,38 @@ impl SearchEngine {
         query: &str,
         options: SearchOptions<'_>,
     ) -> Result<Vec<SearchResult>, DbError> {
-        // Parse out artist filter if it was supplied
-        let (adj_query, artist_filter) = self.split_artist_filter(query).await?;
+        info!("Searching for {}", query);
 
-        Ok(self
-            .search_helper(&adj_query, &adj_query, options, artist_filter)
-            .await?)
+        let res = match self.cache.read().get(query) {
+            Some(val) => val.to_owned(),
+            None => {
+                let start = Instant::now();
+                // Parse out artist filter if it was supplied
+                let (adj_query, artist_filter) = self.split_artist_filter(query).await?;
+
+                let res = self
+                    .search_helper(&adj_query, &adj_query, options, artist_filter)
+                    .await?;
+                let time_taken = start.elapsed();
+                if time_taken > Duration::from_millis(50) {
+                    info!("Slow query: {:?}. Caching result", time_taken);
+                    let mut write_tx = self.cache.write();
+                    write_tx.insert(query.to_owned(), res.clone());
+                    write_tx.commit();
+                }
+                info!("Finished searching");
+
+                return Ok(res);
+            }
+        };
+
+        Ok(res)
+    }
+
+    pub(crate) fn clear_cache(&self) {
+        let mut write_tx = self.cache.write();
+        write_tx.clear();
+        write_tx.commit();
     }
 
     async fn split_artist_filter(&self, query: &str) -> Result<(String, Vec<String>), DbError> {

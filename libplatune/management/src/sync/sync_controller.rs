@@ -28,6 +28,7 @@ impl SyncController {
         &mut self,
         folders: Vec<String>,
         mount: Option<String>,
+        finished_callback: Box<dyn Fn() + Send>,
     ) -> ProgressStream {
         if let Some(finished_rx) = &mut self.finished_rx {
             if finished_rx.try_recv().is_err() {
@@ -52,6 +53,7 @@ impl SyncController {
                 if let Err(e) = finished_tx.send(()) {
                     error!("Error sending sync finished signal {:?}", e);
                 }
+                finished_callback();
             });
         } else if let Err(e) = tx.send(None) {
             error!("Error sending sync finished signal {:?}", e);

@@ -21,12 +21,7 @@ var filePathCompleter = internal.FilePathCompleter{
 }
 
 func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
-	// Windows terminal doesn't handle overflow as well as Unix
-	if isWindows() {
-		state.updateMaxWidths(in, 1./3)
-	} else {
-		state.unsetMaxWidths()
-	}
+
 	before := strings.Split(in.TextBeforeCursor(), " ")
 	if state.mode.Current() != mode.NormalMode {
 		return state.completerMode(in)
@@ -39,8 +34,11 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 
 func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 	suggestions := []prompt.Suggest{}
+	// Windows terminal doesn't handle overflow as well as Unix
 	if isWindows() {
 		state.updateMaxWidths(in, 1.)
+	} else {
+		state.unsetMaxWidths()
 	}
 
 	switch state.mode.Current() {
@@ -89,6 +87,12 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 }
 
 func (state *cmdState) completerCmd(in prompt.Document, before []string) []prompt.Suggest {
+	if isWindows() {
+		state.updateMaxWidths(in, 1.)
+	} else {
+		state.unsetMaxWidths()
+	}
+
 	first := before[0]
 	switch first {
 	case addFolderCmdText, setMountCmdText:
@@ -141,8 +145,8 @@ func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 
+	state.unsetMaxWidths()
 	if runtime.GOOS == "windows" {
-		state.unsetMaxWidths()
 		maxCmdLength := 15
 		maxWidth := getAvailableWidth(maxCmdLength)
 		state.updateMaxDescriptionWidth(in, maxWidth)
@@ -153,8 +157,8 @@ func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 
 func getAvailableWidth(currentCol int) int {
 	cols, _ := consolesize.GetConsoleSize()
-	base := cols - currentCol - 10
-	return base
+	//base := cols - currentCol - 10
+	return cols
 }
 
 func isWindows() bool {
