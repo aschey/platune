@@ -35,23 +35,23 @@ func newRootCmd() *cobra.Command {
 		Use:  "platune-cli",
 		Long: title,
 
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			state := GetState(cmd)
 			interactive, err := cmd.Flags().GetBool("interactive")
 			if err != nil {
-				fmt.Println(err)
-				return
+				return err
 			}
+
 			if interactive {
-				state.curPrompt.Run()
-			} else {
-				err := cmd.Help()
-				if err != nil {
-					fmt.Println(err)
-					return
+				exitCode := state.curPrompt.Run()
+				if exitCode != 0 {
+					return fmt.Errorf("Prompt exited with code %d", exitCode)
+				} else {
+					return nil
 				}
 			}
 
+			return cmd.Help()
 		},
 	}
 
