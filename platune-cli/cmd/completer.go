@@ -146,7 +146,7 @@ func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 	}
 
 	state.unsetMaxWidths()
-	if runtime.GOOS == "windows" {
+	if isWindows() {
 		maxCmdLength := 15
 		maxWidth := getAvailableWidth(maxCmdLength)
 		state.updateMaxDescriptionWidth(in, maxWidth)
@@ -156,9 +156,13 @@ func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 }
 
 func getAvailableWidth(currentCol int) int {
-	cols, _ := consolesize.GetConsoleSize()
-	//base := cols - currentCol - 10
-	return cols
+	consoleSize, _ := consolesize.GetConsoleSize()
+
+	if !isWindows() {
+		return consoleSize
+	}
+	available := consoleSize - currentCol - 10
+	return available
 }
 
 func isWindows() bool {
