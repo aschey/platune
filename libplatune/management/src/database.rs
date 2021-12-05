@@ -19,7 +19,6 @@ pub struct Database {
     pool: Pool<Sqlite>,
     search_engine: SearchEngine,
     sync_controller: Arc<Mutex<SyncController>>,
-    opts: SqliteConnectOptions,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -64,7 +63,6 @@ impl Database {
             search_engine: SearchEngine::new(pool.clone()),
             sync_controller: Arc::new(Mutex::new(SyncController::new(pool.clone()))),
             pool,
-            opts,
         })
     }
 
