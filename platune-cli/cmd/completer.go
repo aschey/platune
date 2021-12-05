@@ -21,7 +21,6 @@ var filePathCompleter = internal.FilePathCompleter{
 }
 
 func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
-
 	before := strings.Split(in.TextBeforeCursor(), " ")
 	if state.mode.Current() != mode.NormalMode {
 		return state.completerMode(in)
@@ -108,14 +107,15 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 func (state *cmdState) updateMaxWidths(in prompt.Document, titleRatio float32) {
 	col := in.CursorPositionCol()
 	base := float32(getAvailableWidth(col))
-	if isWindows() {
-		base -= 10
-	}
 
 	titleMaxLength := int(base * titleRatio)
 	descriptionMaxLength := int(base * (1 - titleRatio))
 	prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)              //nolint:errcheck
 	prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt) //nolint:errcheck
+}
+
+func (state *cmdState) updateMaxTextWidth(in prompt.Document, maxWidth int) {
+	prompt.OptionMaxTextWidth(uint16(maxWidth))(state.curPrompt) //nolint:errcheck
 }
 
 func (state *cmdState) updateMaxDescriptionWidth(in prompt.Document, maxWidth int) {
@@ -145,11 +145,13 @@ func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 
-	state.unsetMaxWidths()
 	if isWindows() {
 		maxCmdLength := 15
 		maxWidth := getAvailableWidth(maxCmdLength)
 		state.updateMaxDescriptionWidth(in, maxWidth)
+		state.updateMaxTextWidth(in, maxCmdLength)
+	} else {
+		state.unsetMaxWidths()
 	}
 
 	return prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
@@ -161,8 +163,8 @@ func getAvailableWidth(currentCol int) int {
 	if !isWindows() {
 		return consoleSize
 	}
-	available := consoleSize - currentCol - 10
-	return available
+	available := float32(consoleSize)*.85 - float32(currentCol)
+	return int(available)
 }
 
 func isWindows() bool {
