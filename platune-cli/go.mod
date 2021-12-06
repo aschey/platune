@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/MarvinJWendt/testza v0.2.12
-	github.com/aschey/go-prompt v0.2.7-0.20211206001609-41b63ffc5fdc
+	github.com/aschey/go-prompt v0.2.7-0.20211206020350-820ae3dd7c4a
 	github.com/aschey/platune/client v0.0.0
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/bubbles v0.9.0
