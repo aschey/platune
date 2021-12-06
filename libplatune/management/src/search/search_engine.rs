@@ -24,7 +24,7 @@ use concread::arcache::ARCache;
 use itertools::Itertools;
 use regex::Regex;
 use sqlx::{pool::PoolConnection, Pool, Row, Sqlite};
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Clone)]
 pub(crate) struct SearchEngine {
@@ -42,13 +42,15 @@ impl SearchEngine {
 
     pub(crate) async fn search(
         &self,
-        query: &str,
+        mut query: &str,
         options: SearchOptions<'_>,
     ) -> Result<Vec<SearchResult>, DbError> {
-        info!("Searching for {}", query);
-
+        query = query.trim();
         let res = match self.cache.read().get(query) {
-            Some(val) => val.to_owned(),
+            Some(val) => {
+                info!("Using cache for search {}", query);
+                val.to_owned()
+            }
             None => {
                 let start = Instant::now();
                 // Parse out artist filter if it was supplied
@@ -59,12 +61,16 @@ impl SearchEngine {
                     .await?;
                 let time_taken = start.elapsed();
                 if time_taken > Duration::from_millis(50) {
-                    info!("Slow query: {:?}. Caching result", time_taken);
+                    warn!(
+                        "Search for {} was slow: {:?}. Caching result",
+                        query, time_taken
+                    );
                     let mut write_tx = self.cache.write();
                     write_tx.insert(query.to_owned(), res.clone());
                     write_tx.commit();
+                } else {
+                    info!("Search for {} finished in {:?}", query, time_taken);
                 }
-                info!("Finished searching");
 
                 return Ok(res);
             }
