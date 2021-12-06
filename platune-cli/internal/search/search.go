@@ -59,13 +59,7 @@ func (search *Search) ProcessSearchResults(args []string, filesystemCallback fun
 		filesystemCallback(allArgs)
 		return
 	} else {
-		searchClient := search.client.Search()
-		err := searchClient.Send(&platune.SearchRequest{Query: allArgs})
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		results, err := searchClient.Recv()
+		results, err := search.client.Search(&platune.SearchRequest{Query: allArgs})
 		if err != nil {
 			fmt.Println(err)
 			return

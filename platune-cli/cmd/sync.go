@@ -15,30 +15,24 @@ const syncDescription = "Syncs the database with the configured folders to impor
 const syncCmdText = "sync"
 
 func syncProgress(client *internal.PlatuneClient, deleted *deleted.Deleted) {
-	sync, cancel := client.Sync()
-	defer cancel()
 
-	if sync != nil {
-		b := bar.NewWithOpts(
-			bar.WithDimensions(1000, 30),
-			bar.WithFormat(
-				fmt.Sprintf("Syncing... %s %s | %s",
-					lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render(":bar"),
-					lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(":percent"),
-					lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Render(":elapsed"))))
+	b := bar.NewWithOpts(
+		bar.WithDimensions(1000, 30),
+		bar.WithFormat(
+			fmt.Sprintf("Syncing... %s %s | %s",
+				lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render(":bar"),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(":percent"),
+				lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Render(":elapsed"))))
 
-		start := time.Now()
-		for {
-			progress, err := sync.Recv()
-			if err != nil {
-				fmt.Println()
-				deleted.RenderDeletedFiles()
-				return
-			}
-			b.Update(int(progress.Percentage*1000),
-				bar.Context{bar.Ctx("elapsed", time.Since(start).Round(time.Millisecond*10).String())})
-		}
+	start := time.Now()
+	for progress := range client.Sync() {
+		b.Update(int(progress.Percentage*1000),
+			bar.Context{bar.Ctx("elapsed", time.Since(start).Round(time.Millisecond*10).String())})
 	}
+
+	fmt.Println()
+	deleted.RenderDeletedFiles()
+
 }
 
 func newSyncCmd() *cobra.Command {

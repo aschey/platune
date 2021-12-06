@@ -34,9 +34,8 @@ func runPlayerTest(t *testing.T, expected string,
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	playerMock := test.NewMockPlayerClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
 	mgmtMock := test.NewMockManagementClient(ctrl)
-	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
+
 	expectFunc(playerMock.EXPECT())
 	client := internal.NewTestClient(playerMock, mgmtMock)
 
@@ -48,8 +47,7 @@ func runManagementTest(t *testing.T, expected string,
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mock := test.NewMockManagementClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
+
 	expectFunc(mock.EXPECT())
 	client := internal.NewTestClient(nil, mock)
 
@@ -243,7 +241,7 @@ func TestSync(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		stream := test.NewMockManagement_SyncClient(ctrl)
 		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1}, nil)
-		stream.EXPECT().Recv().Return(nil, fmt.Errorf("error"))
+		stream.EXPECT().Recv().Return(nil, io.EOF)
 		expect.Sync(gomock.Any(), gomock.Any()).Return(stream, nil)
 		expect.GetDeleted(gomock.Any(), gomock.Any()).Return(&platune.GetDeletedResponse{
 			Results: []*platune.DeletedResult{},
@@ -578,8 +576,7 @@ func TestAddFolderCompleter(t *testing.T) {
 
 	playerClient := test.NewMockPlayerClient(ctrl)
 	mgmtClient := test.NewMockManagementClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	mgmtClient.EXPECT().Search(gomock.Any()).Return(stream, nil)
+
 	client := internal.NewTestClient(playerClient, mgmtClient)
 	deleted := deleted.NewDeleted(&client)
 	state := NewState(&client, deleted)
@@ -601,8 +598,6 @@ func TestSetQueueExecutor(t *testing.T) {
 	playerMock.EXPECT().SetQueue(gomock.Any(), matcher)
 
 	mgmtMock := test.NewMockManagementClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	client := internal.NewTestClient(playerMock, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
 	state := NewState(&client, deleted)
@@ -622,8 +617,6 @@ func TestSetQueueExecutorInvalidFile(t *testing.T) {
 	defer ctrl.Finish()
 
 	mgmtMock := test.NewMockManagementClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	client := internal.NewTestClient(nil, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
 	state := NewState(&client, deleted)

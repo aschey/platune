@@ -14,7 +14,6 @@ type cmdState struct {
 	lookupResult []*platune.LookupEntry
 	curPrompt    *prompt.Prompt
 	suggestions  []prompt.Suggest
-	searchClient *platune.Management_SearchClient
 	client       *internal.PlatuneClient
 	deleted      *deleted.Deleted
 }
@@ -25,13 +24,11 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 
 func NewState(client *internal.PlatuneClient,
 	deleted *deleted.Deleted) *cmdState {
-	searchClient := client.Search()
 	state := cmdState{
 		mode:         mode.NewDefaultMode(),
 		currentQueue: []*platune.LookupEntry{},
 		suggestions:  []prompt.Suggest{},
 		client:       client,
-		searchClient: &searchClient,
 		deleted:      deleted,
 	}
 	state.curPrompt = prompt.New(

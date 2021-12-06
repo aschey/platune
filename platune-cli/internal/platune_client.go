@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"strconv"
@@ -11,12 +12,34 @@ import (
 
 	platune "github.com/aschey/platune/client"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type PlatuneClient struct {
 	playerClient     platune.PlayerClient
 	managementClient platune.ManagementClient
+	searchClient     *platune.Management_SearchClient
+	syncClient       *platune.Management_SyncClient
+}
+
+func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, ctx context.Context) {
+	for {
+		state := conn.GetState()
+		conn.Connect()
+		conn.WaitForStateChange(ctx, state)
+		newState := conn.GetState()
+		fmt.Println(newState.String())
+		if newState == connectivity.Ready {
+			if p.searchClient != nil {
+				p.initSearchClient() //nolint:errcheck
+			}
+			if p.syncClient != nil {
+				p.initSyncClient() //nolint:errcheck
+			}
+		}
+	}
+
 }
 
 func NewPlatuneClient() *PlatuneClient {
@@ -27,10 +50,13 @@ func NewPlatuneClient() *PlatuneClient {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	ctx := context.Background()
+
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
-	client := PlatuneClient{playerClient: playerClient, managementClient: managementClient}
-	return &client
+	client := &PlatuneClient{playerClient: playerClient, managementClient: managementClient}
+	go client.monitorConnectionState(conn, ctx)
+	return client
 }
 
 func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
@@ -120,25 +146,59 @@ func (p *PlatuneClient) Seek(time string) {
 	})
 }
 
-func (p *PlatuneClient) Sync() (platune.Management_SyncClient, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
+func (p *PlatuneClient) initSyncClient() error {
+	ctx := context.Background()
 	sync, err := p.managementClient.Sync(ctx, &emptypb.Empty{})
 
-	if err != nil {
-		fmt.Println(err)
-		return nil, cancel
-	}
-	return sync, cancel
+	p.syncClient = &sync
+	return err
 }
 
-func (p *PlatuneClient) Search() platune.Management_SearchClient {
+func (p *PlatuneClient) Sync() <-chan *platune.Progress {
+	if err := p.initSyncClient(); err != nil {
+		fmt.Println(err)
+	}
+
+	out := make(chan *platune.Progress)
+	sync := *p.syncClient
+	go func() {
+		defer close(out)
+		for {
+			progress, err := sync.Recv()
+			if err == nil {
+				out <- progress
+			} else if err == io.EOF {
+				p.syncClient = nil
+				return
+			} else {
+				fmt.Println(err)
+			}
+		}
+	}()
+
+	return out
+}
+
+func (p *PlatuneClient) initSearchClient() error {
 	ctx := context.Background()
 	search, err := p.managementClient.Search(ctx)
-	if err != nil {
-		fmt.Println(err)
-		return nil
+	p.searchClient = &search
+	return err
+}
+
+func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchResponse, error) {
+	if p.searchClient == nil {
+		if err := p.initSearchClient(); err != nil {
+			fmt.Println(err)
+		}
 	}
-	return search
+
+	searchClient := *p.searchClient
+	if err := searchClient.Send(req); err != nil {
+		return nil, err
+	}
+
+	return searchClient.Recv()
 }
 
 func (p *PlatuneClient) Lookup(entryType platune.EntryType, correlationIds []int32) *platune.LookupResponse {

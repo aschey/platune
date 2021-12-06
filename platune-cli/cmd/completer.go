@@ -180,17 +180,11 @@ func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkip
 		return suggestions
 	}
 
-	searchClient := *state.searchClient
-	sendErr := searchClient.Send(&platune.SearchRequest{
+	res, err := state.client.Search(&platune.SearchRequest{
 		Query: rest,
 	})
-	if sendErr != nil {
-		fmt.Println("send error", sendErr)
-		return []prompt.Suggest{}
-	}
-	res, recvErr := searchClient.Recv()
-	if recvErr != nil {
-		fmt.Println("recv error", recvErr)
+	if err != nil {
+		fmt.Println(err)
 		return []prompt.Suggest{}
 	}
 
