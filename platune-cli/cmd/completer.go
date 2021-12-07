@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -33,17 +32,12 @@ func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
 
 func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 	suggestions := []prompt.Suggest{}
-	// Windows terminal doesn't handle overflow as well as Unix
-	if isWindows() {
-		state.updateMaxWidths(in, 1.)
-	} else {
-		state.unsetMaxWidths()
-	}
 
 	switch state.mode.Current() {
 	case mode.SetQueueMode:
 		return state.dbCompleter(in, in.TextBeforeCursor(), false)
 	case mode.AlbumMode:
+		state.unsetMaxWidths()
 		suggestionMap := map[string]prompt.Suggest{}
 		for _, r := range state.lookupResult {
 			album := r.Album
@@ -66,6 +60,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 		state.suggestions = suggestions
 
 	case mode.SongMode:
+		state.unsetMaxWidths()
 		suggestions = []prompt.Suggest{
 			{Text: selectAll, Metadata: state.lookupResult},
 			{Text: back},
@@ -86,15 +81,11 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 }
 
 func (state *cmdState) completerCmd(in prompt.Document, before []string) []prompt.Suggest {
-	if isWindows() {
-		state.updateMaxWidths(in, 1.)
-	} else {
-		state.unsetMaxWidths()
-	}
 
 	first := before[0]
 	switch first {
 	case addFolderCmdText, setMountCmdText:
+		state.unsetMaxWidths()
 		return filePathCompleter.Complete(in, true)
 	case addQueueCmdText:
 		rest := strings.Join(before[1:], " ")
@@ -105,21 +96,13 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string) []promp
 }
 
 func (state *cmdState) updateMaxWidths(in prompt.Document, titleRatio float32) {
-	col := in.CursorPositionCol()
-	base := float32(getAvailableWidth(col))
+	size, _ := consolesize.GetConsoleSize()
+	base := float32(size)
 
 	titleMaxLength := int(base * titleRatio)
 	descriptionMaxLength := int(base * (1 - titleRatio))
 	prompt.OptionMaxTextWidth(uint16(titleMaxLength))(state.curPrompt)              //nolint:errcheck
 	prompt.OptionMaxDescriptionWidth(uint16(descriptionMaxLength))(state.curPrompt) //nolint:errcheck
-}
-
-func (state *cmdState) updateMaxTextWidth(in prompt.Document, maxWidth int) {
-	prompt.OptionMaxTextWidth(uint16(maxWidth))(state.curPrompt) //nolint:errcheck
-}
-
-func (state *cmdState) updateMaxDescriptionWidth(in prompt.Document, maxWidth int) {
-	prompt.OptionMaxDescriptionWidth(uint16(maxWidth))(state.curPrompt) //nolint:errcheck
 }
 
 func (state *cmdState) unsetMaxWidths() {
@@ -145,30 +128,9 @@ func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 		{Text: "q", Description: "Quit interactive prompt"},
 	}
 
-	if isWindows() {
-		maxCmdLength := 15
-		maxWidth := getAvailableWidth(maxCmdLength)
-		state.updateMaxDescriptionWidth(in, maxWidth)
-		state.updateMaxTextWidth(in, maxCmdLength)
-	} else {
-		state.unsetMaxWidths()
-	}
+	state.unsetMaxWidths()
 
 	return prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
-}
-
-func getAvailableWidth(currentCol int) int {
-	consoleSize, _ := consolesize.GetConsoleSize()
-
-	if !isWindows() {
-		return consoleSize
-	}
-	available := float32(consoleSize)*.85 - float32(currentCol)
-	return int(available)
-}
-
-func isWindows() bool {
-	return runtime.GOOS == "windows"
 }
 
 func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prompt.Suggest {
