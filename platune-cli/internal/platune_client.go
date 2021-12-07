@@ -36,8 +36,18 @@ func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, ctx contex
 		conn.Connect()
 		conn.WaitForStateChange(ctx, state)
 		newState := conn.GetState()
+		stateStr := newState.String()
 
-		p.statusChan <- newState.String()
+		switch newState {
+		case connectivity.Connecting:
+			p.statusChan <- stateStr + "..."
+		case connectivity.Idle:
+			p.statusChan <- stateStr
+		case connectivity.Ready:
+			p.statusChan <- newState.String() + " ✓"
+		case connectivity.Shutdown, connectivity.TransientFailure:
+			p.statusChan <- newState.String() + " ✗"
+		}
 
 		if newState == connectivity.Ready {
 			if p.searchClient != nil {
