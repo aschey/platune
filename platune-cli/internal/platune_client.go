@@ -16,11 +16,18 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+type StatusChan chan string
+
+func NewStatusChan() StatusChan {
+	return make(StatusChan, 128)
+}
+
 type PlatuneClient struct {
 	playerClient     platune.PlayerClient
 	managementClient platune.ManagementClient
 	searchClient     *platune.Management_SearchClient
 	syncClient       *platune.Management_SyncClient
+	statusChan       StatusChan
 }
 
 func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, ctx context.Context) {
@@ -29,7 +36,9 @@ func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, ctx contex
 		conn.Connect()
 		conn.WaitForStateChange(ctx, state)
 		newState := conn.GetState()
-		fmt.Println(newState.String())
+
+		p.statusChan <- newState.String()
+
 		if newState == connectivity.Ready {
 			if p.searchClient != nil {
 				p.initSearchClient() //nolint:errcheck
@@ -39,10 +48,9 @@ func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, ctx contex
 			}
 		}
 	}
-
 }
 
-func NewPlatuneClient() *PlatuneClient {
+func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 	conn, err := grpc.Dial("localhost:50051", opts...)
@@ -54,7 +62,7 @@ func NewPlatuneClient() *PlatuneClient {
 
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
-	client := &PlatuneClient{playerClient: playerClient, managementClient: managementClient}
+	client := &PlatuneClient{playerClient: playerClient, managementClient: managementClient, statusChan: statusChan}
 	go client.monitorConnectionState(conn, ctx)
 	return client
 }

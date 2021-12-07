@@ -22,8 +22,7 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 	return string(state.mode.Current()), true
 }
 
-func NewState(client *internal.PlatuneClient,
-	deleted *deleted.Deleted) *cmdState {
+func NewState(client *internal.PlatuneClient, deleted *deleted.Deleted, statusChan internal.StatusChan) *cmdState {
 	state := cmdState{
 		mode:         mode.NewDefaultMode(),
 		currentQueue: []*platune.LookupEntry{},
@@ -40,6 +39,7 @@ func NewState(client *internal.PlatuneClient,
 		prompt.OptionCompletionWordSeparator([]string{" ", "/", "\\"}),
 		prompt.OptionShowCompletionAtStart(),
 		prompt.OptionCompletionOnDown(),
+		prompt.OptionStatusbarSignal(statusChan),
 	)
 
 	return &state

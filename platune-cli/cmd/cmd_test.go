@@ -62,7 +62,7 @@ func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args
 	deleted := deleted.NewDeleted(client)
 	search := search.NewSearch(client)
 
-	state := NewState(client, deleted)
+	state := NewState(client, deleted, make(internal.StatusChan))
 
 	outStr, err := testza.CaptureStdout(func(out io.Writer) error {
 		return start(rootCmd, ctx, client, state, deleted, search)
@@ -128,7 +128,7 @@ func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.
 
 	client := internal.NewTestClient(playerMock, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted)
+	state := NewState(&client, deleted, make(internal.StatusChan))
 
 	if !isAddQueue {
 		initSetQueuePrompt(t, state)
@@ -311,7 +311,7 @@ func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	client := internal.NewTestClient(nil, mock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted)
+	state := NewState(&client, deleted, make(internal.StatusChan))
 
 	if !isAddQueue {
 		initSetQueuePrompt(t, state)
@@ -579,7 +579,7 @@ func TestAddFolderCompleter(t *testing.T) {
 
 	client := internal.NewTestClient(playerClient, mgmtClient)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted)
+	state := NewState(&client, deleted, make(internal.StatusChan))
 
 	results := state.completer(*doc)
 	testza.AssertLen(t, results, 1)
@@ -600,7 +600,7 @@ func TestSetQueueExecutor(t *testing.T) {
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	client := internal.NewTestClient(playerMock, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted)
+	state := NewState(&client, deleted, make(internal.StatusChan))
 
 	state.executor(setQueueCmdText, nil)
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
@@ -619,7 +619,7 @@ func TestSetQueueExecutorInvalidFile(t *testing.T) {
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	client := internal.NewTestClient(nil, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted)
+	state := NewState(&client, deleted, make(internal.StatusChan))
 
 	state.executor(setQueueCmdText, nil)
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())

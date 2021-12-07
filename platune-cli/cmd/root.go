@@ -149,6 +149,7 @@ func Execute() {
 		fx.Provide(internal.NewPlatuneClient),
 		fx.Provide(search.NewSearch),
 		fx.Provide(deleted.NewDeleted),
+		fx.Provide(internal.NewStatusChan),
 		fx.WithLogger(func(logger *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: logger}
 		}),
