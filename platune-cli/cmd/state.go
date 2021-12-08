@@ -13,7 +13,6 @@ type cmdState struct {
 	currentQueue []*platune.LookupEntry
 	lookupResult []*platune.LookupEntry
 	curPrompt    *prompt.Prompt
-	suggestions  []prompt.Suggest
 	client       *internal.PlatuneClient
 	deleted      *deleted.Deleted
 }
@@ -26,7 +25,6 @@ func NewState(client *internal.PlatuneClient, deleted *deleted.Deleted, statusCh
 	state := cmdState{
 		mode:         mode.NewDefaultMode(),
 		currentQueue: []*platune.LookupEntry{},
-		suggestions:  []prompt.Suggest{},
 		client:       client,
 		deleted:      deleted,
 	}

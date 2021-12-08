@@ -13,7 +13,7 @@ import (
 	platune "github.com/aschey/platune/client"
 )
 
-func (state *cmdState) executor(in string, selected *prompt.Suggest) {
+func (state *cmdState) executor(in string, selected *prompt.Suggest, suggestions []prompt.Suggest) {
 	isSetQueueMode := state.mode.First() == mode.SetQueueMode
 	if selected == nil {
 		// User did not explicitly choose a result
@@ -23,7 +23,7 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest) {
 			cmds := strings.SplitN(text, " ", 2)
 			text = strings.Trim(cmds[len(cmds)-1], " ")
 		}
-		for _, suggestion := range state.suggestions {
+		for _, suggestion := range suggestions {
 			if strings.ToLower(suggestion.Text) == text {
 				selected = &suggestion
 				break

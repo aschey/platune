@@ -19,23 +19,23 @@ var filePathCompleter = internal.FilePathCompleter{
 	IgnoreCase: true,
 }
 
-func (state *cmdState) completer(in prompt.Document) []prompt.Suggest {
+func (state *cmdState) completer(in prompt.Document, returnChan chan []prompt.Suggest) {
 	before := strings.Split(in.TextBeforeCursor(), " ")
 	if state.mode.Current() != mode.NormalMode {
-		return state.completerMode(in)
+		state.completerMode(in, returnChan)
 	} else if len(before) > 1 {
-		return state.completerCmd(in, before)
+		state.completerCmd(in, before, returnChan)
 	} else {
-		return state.completerDefault(in)
+		state.completerDefault(in, returnChan)
 	}
 }
 
-func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
+func (state *cmdState) completerMode(in prompt.Document, returnChan chan []prompt.Suggest) {
 	suggestions := []prompt.Suggest{}
 
 	switch state.mode.Current() {
 	case mode.SetQueueMode:
-		return state.dbCompleter(in, in.TextBeforeCursor(), false)
+		state.dbCompleter(in, in.TextBeforeCursor(), false, returnChan)
 	case mode.AlbumMode:
 		state.unsetMaxWidths()
 		suggestionMap := map[string]prompt.Suggest{}
@@ -57,7 +57,7 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 			{Text: selectAll, Metadata: state.lookupResult},
 			{Text: back},
 		}, suggestions...)
-		state.suggestions = suggestions
+		returnChan <- prompt.FilterHasPrefix(suggestions, in.CurrentLineBeforeCursor(), true)
 
 	case mode.SongMode:
 		state.unsetMaxWidths()
@@ -75,23 +75,21 @@ func (state *cmdState) completerMode(in prompt.Document) []prompt.Suggest {
 				CompletionText: completionText,
 				Metadata:       r})
 		}
-		state.suggestions = suggestions
+		returnChan <- prompt.FilterHasPrefix(suggestions, in.CurrentLineBeforeCursor(), true)
 	}
-	return prompt.FilterHasPrefix(suggestions, in.CurrentLineBeforeCursor(), true)
 }
 
-func (state *cmdState) completerCmd(in prompt.Document, before []string) []prompt.Suggest {
-
+func (state *cmdState) completerCmd(in prompt.Document, before []string, returnChan chan []prompt.Suggest) {
 	first := before[0]
 	switch first {
 	case addFolderCmdText, setMountCmdText:
 		state.unsetMaxWidths()
-		return filePathCompleter.Complete(in, true)
+		returnChan <- filePathCompleter.Complete(in, true)
 	case addQueueCmdText:
 		rest := strings.Join(before[1:], " ")
-		return state.dbCompleter(in, rest, true)
+		state.dbCompleter(in, rest, true, returnChan)
 	default:
-		return []prompt.Suggest{}
+		returnChan <- []prompt.Suggest{}
 	}
 }
 
@@ -110,7 +108,7 @@ func (state *cmdState) unsetMaxWidths() {
 	prompt.OptionMaxDescriptionWidth(0)(state.curPrompt) //nolint:errcheck
 }
 
-func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
+func (state *cmdState) completerDefault(in prompt.Document, returnChan chan []prompt.Suggest) {
 	cmds := []prompt.Suggest{
 		{Text: setQueueCmdText, Description: setQueueDescription},
 		{Text: addQueueCmdText, Description: addQueueDescription, Placeholder: addQueueExampleText},
@@ -130,10 +128,10 @@ func (state *cmdState) completerDefault(in prompt.Document) []prompt.Suggest {
 
 	state.unsetMaxWidths()
 
-	return prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
+	returnChan <- prompt.FilterHasPrefix(cmds, in.GetWordBeforeCursor(), true)
 }
 
-func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool) []prompt.Suggest {
+func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool, returnChan chan []prompt.Suggest) []prompt.Suggest {
 	state.updateMaxWidths(in, 1./3)
 
 	suggestions := filePathCompleter.Complete(in, filePathSkipFirst)
@@ -142,24 +140,28 @@ func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkip
 		return suggestions
 	}
 
-	res, err := state.client.Search(&platune.SearchRequest{
-		Query: rest,
-	})
-	if err != nil {
-		fmt.Println(err)
-		return []prompt.Suggest{}
-	}
-
-	if len(res.Results) > 0 {
-		for _, r := range res.Results {
-			suggestions = append(suggestions, prompt.Suggest{
-				Text:        r.Entry,
-				Description: r.Description,
-				Metadata:    r,
-			})
+	go func() {
+		res, err := state.client.Search(&platune.SearchRequest{
+			Query: rest,
+		})
+		if err != nil {
+			fmt.Println(err)
+			returnChan <- []prompt.Suggest{}
+			return
 		}
-		state.suggestions = suggestions
-	}
+
+		if len(res.Results) > 0 {
+			for _, r := range res.Results {
+				suggestions = append(suggestions, prompt.Suggest{
+					Text:        r.Entry,
+					Description: r.Description,
+					Metadata:    r,
+				})
+			}
+		}
+		returnChan <- suggestions
+	}()
+
 	prompt.OptionCompletionWordSeparator([]string{addQueueCmdText + " "})(state.curPrompt) //nolint:errcheck
 
 	return suggestions

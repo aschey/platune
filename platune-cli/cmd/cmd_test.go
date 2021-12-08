@@ -76,7 +76,7 @@ func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args
 }
 
 func initSetQueuePrompt(t *testing.T, state *cmdState) {
-	state.executor(setQueueCmdText, nil)
+	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
 }
 
@@ -85,16 +85,18 @@ func executeInteractive(t *testing.T, state *cmdState, steps []completionCase, s
 		buf := prompt.NewBuffer()
 		buf.InsertText(step.in, false, true)
 		doc := buf.Document()
-		results := state.completer(*doc)
+		resultChan := make(chan []prompt.Suggest, 1)
+		state.completer(*doc, resultChan)
+		results := <-resultChan
 		testza.AssertLen(t, results, step.outLength)
 
 		choice := results[step.choiceIndex]
 		testza.AssertEqual(t, step.choiceText, choice.Text)
 
 		if selectPrompt {
-			state.executor(step.in, &results[step.choiceIndex])
+			state.executor(step.in, &results[step.choiceIndex], results)
 		} else {
-			state.executor(step.in, nil)
+			state.executor(step.in, nil, results)
 		}
 	}
 }
@@ -137,7 +139,7 @@ func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.
 	executeInteractive(t, state, steps, selectPrompt)
 
 	if !isAddQueue {
-		state.executor("", nil)
+		state.executor("", nil, []prompt.Suggest{})
 	}
 }
 
@@ -317,7 +319,9 @@ func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 		initSetQueuePrompt(t, state)
 	}
 
-	results := state.completer(*doc)
+	resultChan := make(chan []prompt.Suggest, 1)
+	state.completer(*doc, resultChan)
+	results := <-resultChan
 
 	testza.AssertLen(t, results, 1)
 	testza.AssertEqual(t, "root.go", results[0].Text)
@@ -581,7 +585,9 @@ func TestAddFolderCompleter(t *testing.T) {
 	deleted := deleted.NewDeleted(&client)
 	state := NewState(&client, deleted, make(internal.StatusChan))
 
-	results := state.completer(*doc)
+	resultChan := make(chan []prompt.Suggest, 1)
+	state.completer(*doc, resultChan)
+	results := <-resultChan
 	testza.AssertLen(t, results, 1)
 	testza.AssertEqual(t, "root.go", results[0].Text)
 }
@@ -602,14 +608,15 @@ func TestSetQueueExecutor(t *testing.T) {
 	deleted := deleted.NewDeleted(&client)
 	state := NewState(&client, deleted, make(internal.StatusChan))
 
-	state.executor(setQueueCmdText, nil)
+	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
 
-	state.executor("root.go", &prompt.Suggest{Text: "root.go", Metadata: "root.go"})
+	suggests := []prompt.Suggest{{Text: "root.go", Metadata: "root.go"}}
+	state.executor("root.go", &suggests[0], suggests)
 	testza.AssertLen(t, state.currentQueue, 1)
 
 	testza.AssertTrue(t, strings.HasSuffix(state.currentQueue[0].Path, "root.go"), "root.go should've been added to the queue")
-	state.executor("", nil)
+	state.executor("", nil, []prompt.Suggest{})
 }
 
 func TestSetQueueExecutorInvalidFile(t *testing.T) {
@@ -621,11 +628,12 @@ func TestSetQueueExecutorInvalidFile(t *testing.T) {
 	deleted := deleted.NewDeleted(&client)
 	state := NewState(&client, deleted, make(internal.StatusChan))
 
-	state.executor(setQueueCmdText, nil)
+	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
 
-	state.executor("blah.go", &prompt.Suggest{Text: "blah.go", Metadata: "blah.go"})
+	suggests := []prompt.Suggest{{Text: "blah.go", Metadata: "blah.go"}}
+	state.executor("blah.go", &suggests[0], suggests)
 	testza.AssertLen(t, state.currentQueue, 0)
 
-	state.executor("", nil)
+	state.executor("", nil, []prompt.Suggest{})
 }
