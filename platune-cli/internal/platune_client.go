@@ -6,11 +6,15 @@ import (
 	"io"
 	"math"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	platune "github.com/aschey/platune/client"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/nathan-fiscaletti/consolesize-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -31,49 +35,102 @@ type PlatuneClient struct {
 	statusChan       StatusChan
 }
 
-func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, ctx context.Context) {
+func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, connCh chan connectivity.State, ctx context.Context) {
 	for {
 		state := conn.GetState()
 		conn.Connect()
 		conn.WaitForStateChange(ctx, state)
 		newState := conn.GetState()
-		stateStr := newState.String()
-
-		switch newState {
-		case connectivity.Connecting:
-			p.statusChan <- stateStr + "..."
-		case connectivity.Idle:
-			p.statusChan <- stateStr
-		case connectivity.Ready:
-			p.statusChan <- newState.String() + " ✓"
-		case connectivity.Shutdown, connectivity.TransientFailure:
-			p.statusChan <- newState.String() + " ✗"
-		}
-
-		if newState == connectivity.Ready {
-			if p.searchClient != nil {
-				p.initSearchClient() //nolint:errcheck
-			}
-			if p.syncClient != nil {
-				p.initSyncClient() //nolint:errcheck
-			}
-			if p.eventClient != nil {
-				p.initEventClient() //nolint:errcheck
-			}
-		}
+		connCh <- newState
 	}
 }
 
-func (p *PlatuneClient) subscribeEvents() {
+func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 	p.initEventClient()
-	queue := []string{}
 	for {
 		msg, _ := (*p.eventClient).Recv()
-		switch msg.Event {
-		case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED:
-			queue = msg.Queue
-			println(queue)
+		eventCh <- msg
+	}
+}
+
+func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, queue []string, queuePos int, playingStatus string) ([]string, int, string) {
+	switch msg.Event {
+	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED:
+		queue = msg.Queue
+		queuePos = 0
+		playingStatus = queue[queuePos]
+	case platune.Event_ENDED, platune.Event_NEXT:
+		queuePos++
+		playingStatus = queue[queuePos]
+	case platune.Event_PREVIOUS:
+		queuePos--
+		playingStatus = queue[queuePos]
+	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
+		playingStatus = "⏹ Stopped"
+	case platune.Event_PAUSE:
+		playingStatus = "⏸︎ Paused"
+	case platune.Event_RESUME:
+		playingStatus = queue[queuePos]
+	}
+	return queue, queuePos, playingStatus
+}
+
+func (p *PlatuneClient) handleStateChange(newState connectivity.State) string {
+	if newState == connectivity.Ready {
+		if p.searchClient != nil {
+			p.initSearchClient() //nolint:errcheck
 		}
+		if p.syncClient != nil {
+			p.initSyncClient() //nolint:errcheck
+		}
+		if p.eventClient != nil {
+			p.initEventClient() //nolint:errcheck
+		}
+	}
+
+	stateStr := newState.String()
+	switch newState {
+	case connectivity.Connecting:
+		return stateStr + "..."
+	case connectivity.Idle:
+		return stateStr
+	case connectivity.Ready:
+		return "✓ " + stateStr
+	case connectivity.Shutdown, connectivity.TransientFailure:
+		return "✗ " + stateStr
+	default:
+		return ""
+	}
+}
+
+func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh chan connectivity.State) {
+	queue := []string{}
+	queuePos := 0
+	connectionStatus := ""
+	playingStatus := "⏹ Stopped"
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(
+		sigCh,
+		syscall.SIGWINCH,
+	)
+
+	for {
+		select {
+		case msg := <-eventCh:
+			queue, queuePos, playingStatus = p.handlePlayerEvent(msg, queue, queuePos, playingStatus)
+		case newState := <-stateCh:
+			connectionStatus = p.handleStateChange(newState)
+		case <-sigCh:
+		}
+		size, _ := consolesize.GetConsoleSize()
+		connectionStatusFormatted := lipgloss.NewStyle().Render(connectionStatus)
+		playingStatusFormatted := lipgloss.NewStyle().
+			Width(size - len(connectionStatusFormatted) + 2).
+			Align(lipgloss.Right).
+			Render(playingStatus)
+		formattedStatus := lipgloss.JoinHorizontal(lipgloss.Bottom, connectionStatusFormatted, playingStatusFormatted)
+		p.statusChan <- formattedStatus
 	}
 }
 
@@ -90,8 +147,11 @@ func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
 	client := &PlatuneClient{playerClient: playerClient, managementClient: managementClient, statusChan: statusChan}
-	go client.subscribeEvents()
-	go client.monitorConnectionState(conn, ctx)
+	eventCh := make(chan *platune.EventResponse)
+	go client.subscribeEvents(eventCh)
+	connCh := make(chan connectivity.State)
+	go client.monitorConnectionState(conn, connCh, ctx)
+	go client.eventLoop(eventCh, connCh)
 	return client
 }
 

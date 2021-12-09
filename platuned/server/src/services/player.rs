@@ -157,7 +157,10 @@ impl Player for PlayerImpl {
                                 PlayerEvent::Next => Event::Next.into(),
                                 PlayerEvent::Previous => Event::Previous.into(),
                                 PlayerEvent::QueueEnded => Event::QueueEnded.into(),
-                                _ => unreachable!(""),
+                                _ => unreachable!(
+                                    "Encountered unhandled event {:?}",
+                                    msg.to_string()
+                                ),
                             },
                             millis: None,
                             volume: None,
