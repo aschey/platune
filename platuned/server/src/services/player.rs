@@ -113,7 +113,7 @@ impl Player for PlayerImpl {
                     PlayerEvent::SetVolume(volume) => tx
                         .send(Ok(EventResponse {
                             queue: vec![],
-                            event: msg.to_string(),
+                            event: Event::SetVolume.into(),
                             millis: None,
                             volume: Some(*volume),
                         }))
@@ -122,7 +122,7 @@ impl Player for PlayerImpl {
                     PlayerEvent::Seek(millis) => tx
                         .send(Ok(EventResponse {
                             queue: vec![],
-                            event: msg.to_string(),
+                            event: Event::Seek.into(),
                             millis: Some(*millis),
                             volume: None,
                         }))
@@ -131,7 +131,16 @@ impl Player for PlayerImpl {
                     PlayerEvent::StartQueue(queue) => tx
                         .send(Ok(EventResponse {
                             queue: queue.clone(),
-                            event: msg.to_string(),
+                            event: Event::StartQueue.into(),
+                            millis: None,
+                            volume: None,
+                        }))
+                        .await
+                        .unwrap_or_default(),
+                    PlayerEvent::QueueUpdated(queue) => tx
+                        .send(Ok(EventResponse {
+                            queue: queue.clone(),
+                            event: Event::QueueUpdated.into(),
                             millis: None,
                             volume: None,
                         }))
@@ -140,7 +149,16 @@ impl Player for PlayerImpl {
                     _ => tx
                         .send(Ok(EventResponse {
                             queue: vec![],
-                            event: msg.to_string(),
+                            event: match msg {
+                                PlayerEvent::Stop => Event::Stop.into(),
+                                PlayerEvent::Pause => Event::Pause.into(),
+                                PlayerEvent::Resume => Event::Resume.into(),
+                                PlayerEvent::Ended => Event::Ended.into(),
+                                PlayerEvent::Next => Event::Next.into(),
+                                PlayerEvent::Previous => Event::Previous.into(),
+                                PlayerEvent::QueueEnded => Event::QueueEnded.into(),
+                                _ => unreachable!(""),
+                            },
                             millis: None,
                             volume: None,
                         }))

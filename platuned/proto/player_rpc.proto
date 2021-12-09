@@ -21,13 +21,27 @@ service Player {
   rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse) {}
 }
 
+enum Event {
+  START_QUEUE=0;
+  QUEUE_UPDATED=1;
+  STOP=2;
+  PAUSE=3;
+  RESUME=4;
+  ENDED=5;
+  NEXT=6;
+  PREVIOUS=7;
+  SET_VOLUME=8;
+  SEEK=9;
+  QUEUE_ENDED=10;
+}
+
 message QueueRequest { repeated string queue = 1; }
 message AddToQueueRequest { repeated string songs = 1; }
 message SeekRequest { uint64 millis = 1; }
 message SetVolumeRequest { float volume = 1; }
 message EventResponse {
   repeated string queue = 1;
-  string event = 2;
+  Event event = 2;
   optional uint64 millis = 3;
   optional float volume = 4;
 }

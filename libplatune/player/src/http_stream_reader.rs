@@ -138,11 +138,11 @@ impl HttpStreamReader {
 }
 
 impl Read for HttpStreamReader {
-    fn read(&mut self, mut buf: &mut [u8]) -> Result<usize, std::io::Error> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, std::io::Error> {
         let requested_len = self.bytes_read + buf.len() as u32;
         self.wait_for_download(requested_len);
 
-        let res = self.output_reader.read(&mut buf);
+        let res = self.output_reader.read(buf);
         self.bytes_read += buf.len() as u32;
         res
     }

@@ -21,6 +21,79 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type Event int32
+
+const (
+	Event_START_QUEUE   Event = 0
+	Event_QUEUE_UPDATED Event = 1
+	Event_STOP          Event = 2
+	Event_PAUSE         Event = 3
+	Event_RESUME        Event = 4
+	Event_ENDED         Event = 5
+	Event_NEXT          Event = 6
+	Event_PREVIOUS      Event = 7
+	Event_SET_VOLUME    Event = 8
+	Event_SEEK          Event = 9
+	Event_QUEUE_ENDED   Event = 10
+)
+
+// Enum value maps for Event.
+var (
+	Event_name = map[int32]string{
+		0:  "START_QUEUE",
+		1:  "QUEUE_UPDATED",
+		2:  "STOP",
+		3:  "PAUSE",
+		4:  "RESUME",
+		5:  "ENDED",
+		6:  "NEXT",
+		7:  "PREVIOUS",
+		8:  "SET_VOLUME",
+		9:  "SEEK",
+		10: "QUEUE_ENDED",
+	}
+	Event_value = map[string]int32{
+		"START_QUEUE":   0,
+		"QUEUE_UPDATED": 1,
+		"STOP":          2,
+		"PAUSE":         3,
+		"RESUME":        4,
+		"ENDED":         5,
+		"NEXT":          6,
+		"PREVIOUS":      7,
+		"SET_VOLUME":    8,
+		"SEEK":          9,
+		"QUEUE_ENDED":   10,
+	}
+)
+
+func (x Event) Enum() *Event {
+	p := new(Event)
+	*p = x
+	return p
+}
+
+func (x Event) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Event) Descriptor() protoreflect.EnumDescriptor {
+	return file_player_rpc_proto_enumTypes[0].Descriptor()
+}
+
+func (Event) Type() protoreflect.EnumType {
+	return &file_player_rpc_proto_enumTypes[0]
+}
+
+func (x Event) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Event.Descriptor instead.
+func (Event) EnumDescriptor() ([]byte, []int) {
+	return file_player_rpc_proto_rawDescGZIP(), []int{0}
+}
+
 type QueueRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -215,7 +288,7 @@ type EventResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	Queue  []string `protobuf:"bytes,1,rep,name=queue,proto3" json:"queue,omitempty"`
-	Event  string   `protobuf:"bytes,2,opt,name=event,proto3" json:"event,omitempty"`
+	Event  Event    `protobuf:"varint,2,opt,name=event,proto3,enum=player_rpc.Event" json:"event,omitempty"`
 	Millis *uint64  `protobuf:"varint,3,opt,name=millis,proto3,oneof" json:"millis,omitempty"`
 	Volume *float32 `protobuf:"fixed32,4,opt,name=volume,proto3,oneof" json:"volume,omitempty"`
 }
@@ -259,11 +332,11 @@ func (x *EventResponse) GetQueue() []string {
 	return nil
 }
 
-func (x *EventResponse) GetEvent() string {
+func (x *EventResponse) GetEvent() Event {
 	if x != nil {
 		return x.Event
 	}
-	return ""
+	return Event_START_QUEUE
 }
 
 func (x *EventResponse) GetMillis() uint64 {
@@ -297,15 +370,26 @@ var file_player_rpc_proto_rawDesc = []byte{
 	0x6c, 0x69, 0x73, 0x22, 0x2a, 0x0a, 0x10, 0x53, 0x65, 0x74, 0x56, 0x6f, 0x6c, 0x75, 0x6d, 0x65,
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d,
 	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x02, 0x52, 0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x22,
-	0x8b, 0x01, 0x0a, 0x0d, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x9e, 0x01, 0x0a, 0x0d, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
 	0x65, 0x12, 0x14, 0x0a, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09,
-	0x52, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x1b, 0x0a,
-	0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04, 0x48, 0x00, 0x52,
-	0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x88, 0x01, 0x01, 0x12, 0x1b, 0x0a, 0x06, 0x76, 0x6f,
-	0x6c, 0x75, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x02, 0x48, 0x01, 0x52, 0x06, 0x76, 0x6f,
-	0x6c, 0x75, 0x6d, 0x65, 0x88, 0x01, 0x01, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x6d, 0x69, 0x6c, 0x6c,
-	0x69, 0x73, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x32, 0x82, 0x05,
+	0x52, 0x05, 0x71, 0x75, 0x65, 0x75, 0x65, 0x12, 0x27, 0x0a, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x11, 0x2e, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f,
+	0x72, 0x70, 0x63, 0x2e, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x05, 0x65, 0x76, 0x65, 0x6e, 0x74,
+	0x12, 0x1b, 0x0a, 0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x04,
+	0x48, 0x00, 0x52, 0x06, 0x6d, 0x69, 0x6c, 0x6c, 0x69, 0x73, 0x88, 0x01, 0x01, 0x12, 0x1b, 0x0a,
+	0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x02, 0x48, 0x01, 0x52,
+	0x06, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65, 0x88, 0x01, 0x01, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x6d,
+	0x69, 0x6c, 0x6c, 0x69, 0x73, 0x42, 0x09, 0x0a, 0x07, 0x5f, 0x76, 0x6f, 0x6c, 0x75, 0x6d, 0x65,
+	0x2a, 0x9a, 0x01, 0x0a, 0x05, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x0f, 0x0a, 0x0b, 0x53, 0x54,
+	0x41, 0x52, 0x54, 0x5f, 0x51, 0x55, 0x45, 0x55, 0x45, 0x10, 0x00, 0x12, 0x11, 0x0a, 0x0d, 0x51,
+	0x55, 0x45, 0x55, 0x45, 0x5f, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12, 0x08,
+	0x0a, 0x04, 0x53, 0x54, 0x4f, 0x50, 0x10, 0x02, 0x12, 0x09, 0x0a, 0x05, 0x50, 0x41, 0x55, 0x53,
+	0x45, 0x10, 0x03, 0x12, 0x0a, 0x0a, 0x06, 0x52, 0x45, 0x53, 0x55, 0x4d, 0x45, 0x10, 0x04, 0x12,
+	0x09, 0x0a, 0x05, 0x45, 0x4e, 0x44, 0x45, 0x44, 0x10, 0x05, 0x12, 0x08, 0x0a, 0x04, 0x4e, 0x45,
+	0x58, 0x54, 0x10, 0x06, 0x12, 0x0c, 0x0a, 0x08, 0x50, 0x52, 0x45, 0x56, 0x49, 0x4f, 0x55, 0x53,
+	0x10, 0x07, 0x12, 0x0e, 0x0a, 0x0a, 0x53, 0x45, 0x54, 0x5f, 0x56, 0x4f, 0x4c, 0x55, 0x4d, 0x45,
+	0x10, 0x08, 0x12, 0x08, 0x0a, 0x04, 0x53, 0x45, 0x45, 0x4b, 0x10, 0x09, 0x12, 0x0f, 0x0a, 0x0b,
+	0x51, 0x55, 0x45, 0x55, 0x45, 0x5f, 0x45, 0x4e, 0x44, 0x45, 0x44, 0x10, 0x0a, 0x32, 0x82, 0x05,
 	0x0a, 0x06, 0x50, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x12, 0x3e, 0x0a, 0x08, 0x53, 0x65, 0x74, 0x51,
 	0x75, 0x65, 0x75, 0x65, 0x12, 0x18, 0x2e, 0x70, 0x6c, 0x61, 0x79, 0x65, 0x72, 0x5f, 0x72, 0x70,
 	0x63, 0x2e, 0x51, 0x75, 0x65, 0x75, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16,
@@ -365,41 +449,44 @@ func file_player_rpc_proto_rawDescGZIP() []byte {
 	return file_player_rpc_proto_rawDescData
 }
 
+var file_player_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_player_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_player_rpc_proto_goTypes = []interface{}{
-	(*QueueRequest)(nil),      // 0: player_rpc.QueueRequest
-	(*AddToQueueRequest)(nil), // 1: player_rpc.AddToQueueRequest
-	(*SeekRequest)(nil),       // 2: player_rpc.SeekRequest
-	(*SetVolumeRequest)(nil),  // 3: player_rpc.SetVolumeRequest
-	(*EventResponse)(nil),     // 4: player_rpc.EventResponse
-	(*emptypb.Empty)(nil),     // 5: google.protobuf.Empty
+	(Event)(0),                // 0: player_rpc.Event
+	(*QueueRequest)(nil),      // 1: player_rpc.QueueRequest
+	(*AddToQueueRequest)(nil), // 2: player_rpc.AddToQueueRequest
+	(*SeekRequest)(nil),       // 3: player_rpc.SeekRequest
+	(*SetVolumeRequest)(nil),  // 4: player_rpc.SetVolumeRequest
+	(*EventResponse)(nil),     // 5: player_rpc.EventResponse
+	(*emptypb.Empty)(nil),     // 6: google.protobuf.Empty
 }
 var file_player_rpc_proto_depIdxs = []int32{
-	0,  // 0: player_rpc.Player.SetQueue:input_type -> player_rpc.QueueRequest
-	1,  // 1: player_rpc.Player.AddToQueue:input_type -> player_rpc.AddToQueueRequest
-	5,  // 2: player_rpc.Player.Pause:input_type -> google.protobuf.Empty
-	5,  // 3: player_rpc.Player.Stop:input_type -> google.protobuf.Empty
-	5,  // 4: player_rpc.Player.Resume:input_type -> google.protobuf.Empty
-	2,  // 5: player_rpc.Player.Seek:input_type -> player_rpc.SeekRequest
-	3,  // 6: player_rpc.Player.SetVolume:input_type -> player_rpc.SetVolumeRequest
-	5,  // 7: player_rpc.Player.Next:input_type -> google.protobuf.Empty
-	5,  // 8: player_rpc.Player.Previous:input_type -> google.protobuf.Empty
-	5,  // 9: player_rpc.Player.SubscribeEvents:input_type -> google.protobuf.Empty
-	5,  // 10: player_rpc.Player.SetQueue:output_type -> google.protobuf.Empty
-	5,  // 11: player_rpc.Player.AddToQueue:output_type -> google.protobuf.Empty
-	5,  // 12: player_rpc.Player.Pause:output_type -> google.protobuf.Empty
-	5,  // 13: player_rpc.Player.Stop:output_type -> google.protobuf.Empty
-	5,  // 14: player_rpc.Player.Resume:output_type -> google.protobuf.Empty
-	5,  // 15: player_rpc.Player.Seek:output_type -> google.protobuf.Empty
-	5,  // 16: player_rpc.Player.SetVolume:output_type -> google.protobuf.Empty
-	5,  // 17: player_rpc.Player.Next:output_type -> google.protobuf.Empty
-	5,  // 18: player_rpc.Player.Previous:output_type -> google.protobuf.Empty
-	4,  // 19: player_rpc.Player.SubscribeEvents:output_type -> player_rpc.EventResponse
-	10, // [10:20] is the sub-list for method output_type
-	0,  // [0:10] is the sub-list for method input_type
-	0,  // [0:0] is the sub-list for extension type_name
-	0,  // [0:0] is the sub-list for extension extendee
-	0,  // [0:0] is the sub-list for field type_name
+	0,  // 0: player_rpc.EventResponse.event:type_name -> player_rpc.Event
+	1,  // 1: player_rpc.Player.SetQueue:input_type -> player_rpc.QueueRequest
+	2,  // 2: player_rpc.Player.AddToQueue:input_type -> player_rpc.AddToQueueRequest
+	6,  // 3: player_rpc.Player.Pause:input_type -> google.protobuf.Empty
+	6,  // 4: player_rpc.Player.Stop:input_type -> google.protobuf.Empty
+	6,  // 5: player_rpc.Player.Resume:input_type -> google.protobuf.Empty
+	3,  // 6: player_rpc.Player.Seek:input_type -> player_rpc.SeekRequest
+	4,  // 7: player_rpc.Player.SetVolume:input_type -> player_rpc.SetVolumeRequest
+	6,  // 8: player_rpc.Player.Next:input_type -> google.protobuf.Empty
+	6,  // 9: player_rpc.Player.Previous:input_type -> google.protobuf.Empty
+	6,  // 10: player_rpc.Player.SubscribeEvents:input_type -> google.protobuf.Empty
+	6,  // 11: player_rpc.Player.SetQueue:output_type -> google.protobuf.Empty
+	6,  // 12: player_rpc.Player.AddToQueue:output_type -> google.protobuf.Empty
+	6,  // 13: player_rpc.Player.Pause:output_type -> google.protobuf.Empty
+	6,  // 14: player_rpc.Player.Stop:output_type -> google.protobuf.Empty
+	6,  // 15: player_rpc.Player.Resume:output_type -> google.protobuf.Empty
+	6,  // 16: player_rpc.Player.Seek:output_type -> google.protobuf.Empty
+	6,  // 17: player_rpc.Player.SetVolume:output_type -> google.protobuf.Empty
+	6,  // 18: player_rpc.Player.Next:output_type -> google.protobuf.Empty
+	6,  // 19: player_rpc.Player.Previous:output_type -> google.protobuf.Empty
+	5,  // 20: player_rpc.Player.SubscribeEvents:output_type -> player_rpc.EventResponse
+	11, // [11:21] is the sub-list for method output_type
+	1,  // [1:11] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_player_rpc_proto_init() }
@@ -475,13 +562,14 @@ func file_player_rpc_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_player_rpc_proto_rawDesc,
-			NumEnums:      0,
+			NumEnums:      1,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_player_rpc_proto_goTypes,
 		DependencyIndexes: file_player_rpc_proto_depIdxs,
+		EnumInfos:         file_player_rpc_proto_enumTypes,
 		MessageInfos:      file_player_rpc_proto_msgTypes,
 	}.Build()
 	File_player_rpc_proto = out.File

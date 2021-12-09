@@ -27,6 +27,7 @@ type PlatuneClient struct {
 	managementClient platune.ManagementClient
 	searchClient     *platune.Management_SearchClient
 	syncClient       *platune.Management_SyncClient
+	eventClient      *platune.Player_SubscribeEventsClient
 	statusChan       StatusChan
 }
 
@@ -56,6 +57,22 @@ func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, ctx contex
 			if p.syncClient != nil {
 				p.initSyncClient() //nolint:errcheck
 			}
+			if p.eventClient != nil {
+				p.initEventClient() //nolint:errcheck
+			}
+		}
+	}
+}
+
+func (p *PlatuneClient) subscribeEvents() {
+	p.initEventClient()
+	queue := []string{}
+	for {
+		msg, _ := (*p.eventClient).Recv()
+		switch msg.Event {
+		case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED:
+			queue = msg.Queue
+			println(queue)
 		}
 	}
 }
@@ -73,6 +90,7 @@ func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
 	client := &PlatuneClient{playerClient: playerClient, managementClient: managementClient, statusChan: statusChan}
+	go client.subscribeEvents()
 	go client.monitorConnectionState(conn, ctx)
 	return client
 }
@@ -162,6 +180,14 @@ func (p *PlatuneClient) Seek(time string) {
 	p.runCommand("Seeked to "+time, func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Seek(ctx, &platune.SeekRequest{Millis: totalMillis})
 	})
+}
+
+func (p *PlatuneClient) initEventClient() error {
+	ctx := context.Background()
+	sync, err := p.playerClient.SubscribeEvents(ctx, &emptypb.Empty{})
+
+	p.eventClient = &sync
+	return err
 }
 
 func (p *PlatuneClient) initSyncClient() error {
