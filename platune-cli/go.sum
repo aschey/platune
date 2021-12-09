@@ -52,6 +52,8 @@ github.com/armon/go-metrics v0.0.0-20180917152333-f0300d1749da/go.mod h1:Q73ZrmV
 github.com/armon/go-radix v0.0.0-20180808171621-7fddfc383310/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
 github.com/aschey/go-prompt v0.2.7-0.20211208061300-87eb62061f81 h1:KSiqyAhgmYJf9pBM+ILEqBLzp8/UMzyx+2V/dgSe55o=
 github.com/aschey/go-prompt v0.2.7-0.20211208061300-87eb62061f81/go.mod h1:yw+gzqQDyqHWCEAm2EV+xLvCeYzuHWsglqTtwxE6dBE=
+github.com/aschey/go-prompt v0.2.7-0.20211209043908-7200c2a6d10b h1:jPn7YylxXtrKvIzz7THjdciYpsstfTYV64I79Xg6X+8=
+github.com/aschey/go-prompt v0.2.7-0.20211209043908-7200c2a6d10b/go.mod h1:yw+gzqQDyqHWCEAm2EV+xLvCeYzuHWsglqTtwxE6dBE=
 github.com/atomicgo/cursor v0.0.1 h1:xdogsqa6YYlLfM+GyClC/Lchf7aiMerFiZQn7soTOoU=
 github.com/atomicgo/cursor v0.0.1/go.mod h1:cBON2QmmrysudxNBFthvMtN32r3jxVRIvzkUiF/RuIk=
 github.com/atotto/clipboard v0.1.2/go.mod h1:ZY9tmq7sm5xIbd9bOK4onWV4S6X0u6GY7Vn0Yu86PYI=

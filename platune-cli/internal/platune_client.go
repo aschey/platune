@@ -6,10 +6,8 @@ import (
 	"io"
 	"math"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	platune "github.com/aschey/platune/client"
@@ -66,9 +64,9 @@ func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, queue []st
 		queuePos--
 		playingStatus = "▶ Playing" //queue[queuePos]
 	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
-		playingStatus = "⏹ Stopped"
+		playingStatus = " Stopped"
 	case platune.Event_PAUSE:
-		playingStatus = "⏸︎ Paused"
+		playingStatus = " Paused"
 	case platune.Event_RESUME:
 		playingStatus = queue[queuePos]
 	}
@@ -95,9 +93,9 @@ func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, 
 	case connectivity.Idle:
 		return stateStr, 0
 	case connectivity.Ready:
-		return "✓ " + stateStr, 2
+		return " " + stateStr, 2
 	case connectivity.Shutdown, connectivity.TransientFailure:
-		return "✗ " + stateStr, 2
+		return " " + stateStr, 2
 	default:
 		return "", 0
 	}
@@ -107,15 +105,11 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 	queue := []string{}
 	queuePos := 0
 	connectionStatus := ""
-	playingStatus := "⏹ Stopped"
+	playingStatus := " Stopped"
 	// Need to add extra padding if starting with a non-ascii character
 	extraChars := 2
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(
-		sigCh,
-		syscall.SIGWINCH,
-	)
+	sigCh := getSignalChannel()
 
 	for {
 		select {
