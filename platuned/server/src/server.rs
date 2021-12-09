@@ -96,7 +96,7 @@ async fn run_server(
         .build()
         .with_context(|| "Error building tonic server")?;
 
-    let player = PlayerImpl::new(platune_player);
+    let player = PlayerImpl::new(platune_player, shutdown_tx.clone());
 
     let management = ManagementImpl::new(manager, shutdown_tx.clone());
     let builder = Server::builder()

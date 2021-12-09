@@ -221,22 +221,12 @@ pub async fn test_sync_delete() {
     assert_eq!(0, deleted2.len());
 }
 
+#[derive(Default)]
 pub struct SongTest {
     title: Option<&'static str>,
     artist: Option<&'static str>,
     album_artist: Option<&'static str>,
     album: Option<&'static str>,
-}
-
-impl Default for SongTest {
-    fn default() -> Self {
-        Self {
-            title: None,
-            artist: None,
-            album_artist: None,
-            album: None,
-        }
-    }
 }
 
 #[derive(Debug)]

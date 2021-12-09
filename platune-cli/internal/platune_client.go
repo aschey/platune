@@ -58,13 +58,13 @@ func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, queue []st
 	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED:
 		queue = msg.Queue
 		queuePos = 0
-		playingStatus = queue[queuePos]
+		playingStatus = "▶ Playing" //queue[queuePos]
 	case platune.Event_ENDED, platune.Event_NEXT:
 		queuePos++
-		playingStatus = queue[queuePos]
+		playingStatus = "▶ Playing" //queue[queuePos]
 	case platune.Event_PREVIOUS:
 		queuePos--
-		playingStatus = queue[queuePos]
+		playingStatus = "▶ Playing" //queue[queuePos]
 	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
 		playingStatus = "⏹ Stopped"
 	case platune.Event_PAUSE:
@@ -75,7 +75,7 @@ func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, queue []st
 	return queue, queuePos, playingStatus
 }
 
-func (p *PlatuneClient) handleStateChange(newState connectivity.State) string {
+func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, int) {
 	if newState == connectivity.Ready {
 		if p.searchClient != nil {
 			p.initSearchClient() //nolint:errcheck
@@ -91,15 +91,15 @@ func (p *PlatuneClient) handleStateChange(newState connectivity.State) string {
 	stateStr := newState.String()
 	switch newState {
 	case connectivity.Connecting:
-		return stateStr + "..."
+		return stateStr + "...", 0
 	case connectivity.Idle:
-		return stateStr
+		return stateStr, 0
 	case connectivity.Ready:
-		return "✓ " + stateStr
+		return "✓ " + stateStr, 2
 	case connectivity.Shutdown, connectivity.TransientFailure:
-		return "✗ " + stateStr
+		return "✗ " + stateStr, 2
 	default:
-		return ""
+		return "", 0
 	}
 }
 
@@ -108,6 +108,8 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 	queuePos := 0
 	connectionStatus := ""
 	playingStatus := "⏹ Stopped"
+	// Need to add extra padding if starting with a non-ascii character
+	extraChars := 2
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(
@@ -118,15 +120,17 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 	for {
 		select {
 		case msg := <-eventCh:
-			queue, queuePos, playingStatus = p.handlePlayerEvent(msg, queue, queuePos, playingStatus)
+			if msg != nil {
+				queue, queuePos, playingStatus = p.handlePlayerEvent(msg, queue, queuePos, playingStatus)
+			}
 		case newState := <-stateCh:
-			connectionStatus = p.handleStateChange(newState)
+			connectionStatus, extraChars = p.handleStateChange(newState)
 		case <-sigCh:
 		}
 		size, _ := consolesize.GetConsoleSize()
 		connectionStatusFormatted := lipgloss.NewStyle().Render(connectionStatus)
 		playingStatusFormatted := lipgloss.NewStyle().
-			Width(size - len(connectionStatusFormatted) + 2).
+			Width(size - len(connectionStatusFormatted) + extraChars).
 			Align(lipgloss.Right).
 			Render(playingStatus)
 		formattedStatus := lipgloss.JoinHorizontal(lipgloss.Bottom, connectionStatusFormatted, playingStatusFormatted)

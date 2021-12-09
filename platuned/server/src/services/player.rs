@@ -3,16 +3,21 @@ use crate::rpc::*;
 use std::{pin::Pin, sync::Arc};
 
 use libplatune_player::platune_player::*;
+use tokio::sync::broadcast::{self, error::RecvError};
 use tonic::{Request, Response, Status};
 use tracing::error;
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer>,
+    shutdown_tx: broadcast::Sender<()>,
 }
 
 impl PlayerImpl {
-    pub fn new(player: Arc<PlatunePlayer>) -> Self {
-        PlayerImpl { player }
+    pub fn new(player: Arc<PlatunePlayer>, shutdown_tx: broadcast::Sender<()>) -> Self {
+        PlayerImpl {
+            player,
+            shutdown_tx,
+        }
     }
 }
 
@@ -106,9 +111,11 @@ impl Player for PlayerImpl {
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut ended_rx = self.player.subscribe();
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
-            while let Ok(msg) = ended_rx.recv().await {
+            while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.recv() => Err(RecvError::Closed) }
+            {
                 match &msg {
                     PlayerEvent::SetVolume(volume) => tx
                         .send(Ok(EventResponse {
