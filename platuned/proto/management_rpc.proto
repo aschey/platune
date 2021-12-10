@@ -44,7 +44,7 @@ message LookupRequest {
 }
 
 message SongResponse {
-  optional LookupEntry Song = 1;
+  optional LookupEntry song = 1;
 }
 
 message LookupEntry {
