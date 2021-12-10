@@ -26,6 +26,7 @@ type ManagementClient interface {
 	GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*RegisteredMountMessage, error)
 	Search(ctx context.Context, opts ...grpc.CallOption) (Management_SearchClient, error)
 	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*LookupResponse, error)
+	GetSongByPath(ctx context.Context, in *PathMessage, opts ...grpc.CallOption) (*SongResponse, error)
 	GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error)
 	DeleteTracks(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
@@ -146,6 +147,15 @@ func (c *managementClient) Lookup(ctx context.Context, in *LookupRequest, opts .
 	return out, nil
 }
 
+func (c *managementClient) GetSongByPath(ctx context.Context, in *PathMessage, opts ...grpc.CallOption) (*SongResponse, error) {
+	out := new(SongResponse)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/GetSongByPath", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *managementClient) GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error) {
 	out := new(GetDeletedResponse)
 	err := c.cc.Invoke(ctx, "/management_rpc.Management/GetDeleted", in, out, opts...)
@@ -175,6 +185,7 @@ type ManagementServer interface {
 	GetRegisteredMount(context.Context, *emptypb.Empty) (*RegisteredMountMessage, error)
 	Search(Management_SearchServer) error
 	Lookup(context.Context, *LookupRequest) (*LookupResponse, error)
+	GetSongByPath(context.Context, *PathMessage) (*SongResponse, error)
 	GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error)
 	DeleteTracks(context.Context, *IdMessage) (*emptypb.Empty, error)
 	mustEmbedUnimplementedManagementServer()
@@ -204,6 +215,9 @@ func (UnimplementedManagementServer) Search(Management_SearchServer) error {
 }
 func (UnimplementedManagementServer) Lookup(context.Context, *LookupRequest) (*LookupResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Lookup not implemented")
+}
+func (UnimplementedManagementServer) GetSongByPath(context.Context, *PathMessage) (*SongResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSongByPath not implemented")
 }
 func (UnimplementedManagementServer) GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDeleted not implemented")
@@ -361,6 +375,24 @@ func _Management_Lookup_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Management_GetSongByPath_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PathMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).GetSongByPath(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/GetSongByPath",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).GetSongByPath(ctx, req.(*PathMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Management_GetDeleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -423,6 +455,10 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Lookup",
 			Handler:    _Management_Lookup_Handler,
+		},
+		{
+			MethodName: "GetSongByPath",
+			Handler:    _Management_GetSongByPath_Handler,
 		},
 		{
 			MethodName: "GetDeleted",

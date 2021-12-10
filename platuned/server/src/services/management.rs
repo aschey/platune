@@ -239,4 +239,27 @@ impl Management for ManagementImpl {
 
         Ok(Response::new(()))
     }
+
+    async fn get_song_by_path(
+        &self,
+        request: Request<PathMessage>,
+    ) -> Result<Response<SongResponse>, Status> {
+        let request = request.into_inner();
+
+        let manager = self.manager.read().await;
+        match manager.get_song_by_path(request.path).await {
+            Ok(Some(e)) => Ok(Response::new(SongResponse {
+                song: Some(LookupEntry {
+                    artist: e.artist,
+                    album_artist: e.album_artist,
+                    album: e.album,
+                    song: e.song,
+                    path: e.path,
+                    track: e.track,
+                }),
+            })),
+            Ok(None) => Ok(Response::new(SongResponse { song: None })),
+            Err(e) => Err(format_error(format!("Error getting track {:?}", e))),
+        }
+    }
 }

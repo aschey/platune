@@ -11,6 +11,7 @@ pub mod platune_player {
     use tracing::{error, warn};
 
     pub use crate::enums::PlayerEvent;
+    pub use crate::enums::PlayerState;
     use crate::{
         enums::Command,
         event_loop::{ended_loop, main_loop},

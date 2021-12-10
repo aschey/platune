@@ -1,4 +1,4 @@
-use crate::path_mut::PathMut;
+use crate::path_util::PathMut;
 use crate::search::search_engine::SearchEngine;
 use crate::search::search_options::SearchOptions;
 use crate::search::search_result::SearchResult;
@@ -121,6 +121,29 @@ impl Database {
             EntryType::Artist => self.all_by_artists(correlation_ids).await,
             EntryType::AlbumArtist => self.all_by_album_artists(correlation_ids).await,
         }
+    }
+
+    pub(crate) async fn get_song_by_path(
+        &self,
+        path: String,
+    ) -> Result<Option<LookupEntry>, DbError> {
+        sqlx::query_as!(
+            LookupEntry,
+            "
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
+            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            FROM song s
+            INNER JOIN artist ar ON ar.artist_id = s.artist_id
+            INNER JOIN album al ON al.album_id = s.album_id
+            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            WHERE s.song_path = ?
+            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ",
+            path
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
     }
 
     async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {

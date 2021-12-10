@@ -15,17 +15,24 @@ pub(crate) enum Command {
     Shutdown,
 }
 
+#[derive(Clone, Debug)]
+pub struct PlayerState {
+    pub volume: f32,
+    pub queue: Vec<String>,
+    pub queue_position: usize,
+}
+
 #[derive(Clone, Debug, Display)]
 pub enum PlayerEvent {
-    StartQueue(Vec<String>),
-    QueueUpdated(Vec<String>),
-    Stop,
-    Pause,
-    Resume,
-    Ended,
-    Next,
-    Previous,
-    SetVolume(f32),
-    Seek(u64),
-    QueueEnded,
+    StartQueue(PlayerState),
+    QueueUpdated(PlayerState),
+    Stop(PlayerState),
+    Pause(PlayerState),
+    Resume(PlayerState),
+    Ended(PlayerState),
+    Next(PlayerState),
+    Previous(PlayerState),
+    SetVolume(PlayerState),
+    Seek(PlayerState, u64),
+    QueueEnded(PlayerState),
 }

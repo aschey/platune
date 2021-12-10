@@ -98,7 +98,7 @@ async fn init_play(
 
     assert_matches!(
         receiver.timed_recv().await,
-        Some(PlayerEvent::StartQueue(queue)) if queue == song_queue
+        Some(PlayerEvent::StartQueue(state)) if state.queue == song_queue
     );
     (player, receiver, songs)
 }
@@ -108,12 +108,12 @@ async fn init_play(
 async fn test_basic(num_songs: usize) {
     let (player, mut receiver, songs) = init_play(num_songs).await;
     for _ in songs {
-        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended));
+        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
     }
 
     assert_matches!(
         timed_await(receiver.recv()).await.unwrap(),
-        Ok(PlayerEvent::QueueEnded)
+        Ok(PlayerEvent::QueueEnded(_))
     );
     player.join().unwrap();
 }
@@ -135,13 +135,16 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
     for (i, _) in songs.iter().enumerate() {
         if i == pause_index {
             player.pause().unwrap();
-            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Pause));
+            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Pause(_)));
             player.resume().unwrap();
-            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Resume));
+            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Resume(_)));
         }
-        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended));
+        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
     }
-    assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::QueueEnded));
+    assert_matches!(
+        receiver.timed_recv().await,
+        Some(PlayerEvent::QueueEnded(_))
+    );
     player.join().unwrap();
 }
 
@@ -162,11 +165,14 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     for (i, _) in songs.iter().enumerate() {
         if i == seek_index {
             player.seek(seek_time).unwrap();
-            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(millis)) if millis == seek_time);
+            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(_,millis)) if millis == seek_time);
         }
-        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended));
+        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
     }
 
-    assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::QueueEnded));
+    assert_matches!(
+        receiver.timed_recv().await,
+        Some(PlayerEvent::QueueEnded(_))
+    );
     player.join().unwrap();
 }

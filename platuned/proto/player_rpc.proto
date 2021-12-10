@@ -40,8 +40,9 @@ message AddToQueueRequest { repeated string songs = 1; }
 message SeekRequest { uint64 millis = 1; }
 message SetVolumeRequest { float volume = 1; }
 message EventResponse {
-  repeated string queue = 1;
-  Event event = 2;
-  optional uint64 millis = 3;
-  optional float volume = 4;
+  Event event = 1;
+  repeated string queue = 2;
+  uint32 queue_position = 3;
+  float volume = 4;
+  optional uint64 seek_millis = 5;
 }

@@ -20,7 +20,7 @@ use tokio::{
 };
 use tracing::{debug, error, info};
 
-use crate::{consts::MIN_WORDS, db_error::DbError};
+use crate::{consts::MIN_WORDS, db_error::DbError, path_util::clean_file_path};
 
 use super::{dir_read::DirRead, sync_dal::SyncDAL};
 
@@ -314,7 +314,7 @@ impl SyncEngine {
             {
                 let file_path = dir.path();
                 if let Some(metadata) = SyncEngine::parse_metadata(&file_path)? {
-                    let file_path_str = SyncEngine::clean_file_path(&file_path, mount);
+                    let file_path_str = clean_file_path(&file_path, mount);
                     tags_tx
                         .send(Some((metadata, file_path_str, file_path)))
                         .await
@@ -362,20 +362,5 @@ impl SyncEngine {
         }
 
         Ok(song_metadata)
-    }
-
-    fn clean_file_path(file_path: &Path, mount: &Option<String>) -> String {
-        let mut file_path_str = file_path.to_string_lossy().to_string();
-        if cfg!(windows) {
-            file_path_str = file_path_str.replace(r"\", r"/");
-        }
-
-        if let Some(ref mount) = mount {
-            if file_path_str.starts_with(&mount[..]) {
-                file_path_str = file_path_str.replace(&mount[..], "");
-            }
-        }
-
-        file_path_str
     }
 }

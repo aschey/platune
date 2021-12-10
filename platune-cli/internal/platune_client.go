@@ -55,8 +55,9 @@ func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, queue []st
 	switch msg.Event {
 	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED:
 		queue = msg.Queue
-		queuePos = 0
-		playingStatus = "▶ Playing" //queue[queuePos]
+		queuePos = int(msg.QueuePosition)
+		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: msg.Queue[msg.QueuePosition]})
+		playingStatus = "ﱘ " + res.Song.Song //"▶ Playing" //queue[queuePos]
 	case platune.Event_ENDED, platune.Event_NEXT:
 		queuePos++
 		playingStatus = "▶ Playing" //queue[queuePos]

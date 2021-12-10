@@ -5,7 +5,7 @@ use crate::{
     config::Config,
     database::{Database, DeletedEntry, LookupEntry},
     db_error::DbError,
-    path_mut::PathMut,
+    path_util::{clean_file_path, update_path, PathMut},
     sync::progress_stream::ProgressStream,
 };
 use regex::Regex;
@@ -146,15 +146,40 @@ impl Manager {
         Ok(res)
     }
 
+    pub async fn get_song_by_path<P>(&self, path: P) -> Result<Option<LookupEntry>, DbError>
+    where
+        P: AsRef<Path>,
+    {
+        let mount = self.get_registered_mount().await;
+        let path = clean_file_path(&path, &mount);
+
+        let res = self.db.get_song_by_path(path).await?;
+        match res {
+            Some(mut res) => {
+                self.update_path(&mut res).await;
+                Ok(Some(res))
+            }
+            None => Ok(None),
+        }
+    }
+
     async fn update_paths<T>(&self, paths: &mut Vec<T>)
     where
         T: PathMut,
     {
         if let Some(mount) = self.get_registered_mount().await {
-            let mount = Path::new(&mount);
             for entry in paths.iter_mut() {
-                entry.update_path(mount.join(entry.get_path()).to_string_lossy().to_string())
+                update_path(entry, &mount);
             }
+        }
+    }
+
+    async fn update_path<T>(&self, path: &mut T)
+    where
+        T: PathMut,
+    {
+        if let Some(mount) = self.get_registered_mount().await {
+            update_path(path, &mount);
         }
     }
 

@@ -280,6 +280,54 @@
       "nullable": []
     }
   },
+  "93823da09a2a854dd33bba0b441f38b01e2a184d92b43864f324abafd6fd1158": {
+    "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, \n            al.album_name album, aa.album_artist_name album_artist, s.track_number track\n            FROM song s\n            INNER JOIN artist ar ON ar.artist_id = s.artist_id\n            INNER JOIN album al ON al.album_id = s.album_id\n            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id\n            WHERE s.song_path = ?\n            ORDER BY aa.album_artist_id, al.album_id, s.track_number;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "name": "artist",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "song",
+          "ordinal": 1,
+          "type_info": "Text"
+        },
+        {
+          "name": "path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 4,
+          "type_info": "Text"
+        },
+        {
+          "name": "track",
+          "ordinal": 5,
+          "type_info": "Int64"
+        }
+      ],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "a65c7e93559c7ebc8727338a22594b8da6a7c719aaf106db041e6cfe509b2a0e": {
     "query": "\n        UPDATE song\n            SET modified_date = $2,\n            artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),\n            song_title = $4,\n            album_id = (SELECT album_id FROM album WHERE album_name = $5),\n            track_number = $6,\n            disc_number = $7,\n            song_year = $8,\n            song_month = $9,\n            song_day = $10,\n            duration = $11,\n            sample_rate = $12,\n            bit_rate = $13,\n            file_size = $14,\n            album_art_path = $15,\n            fingerprint = $16\n        WHERE song_path = $1 AND fingerprint != $16;\n        ",
     "describe": {

@@ -26,6 +26,16 @@ fn format_error(msg: String) -> Status {
     Status::internal(msg)
 }
 
+fn get_event_response(event: Event, state: PlayerState, seek_millis: Option<u64>) -> EventResponse {
+    EventResponse {
+        event: event.into(),
+        queue: state.queue,
+        queue_position: state.queue_position as u32,
+        volume: state.volume,
+        seek_millis,
+    }
+}
+
 #[tonic::async_trait]
 impl Player for PlayerImpl {
     async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
@@ -116,65 +126,28 @@ impl Player for PlayerImpl {
         tokio::spawn(async move {
             while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.recv() => Err(RecvError::Closed) }
             {
-                match &msg {
-                    PlayerEvent::SetVolume(volume) => tx
-                        .send(Ok(EventResponse {
-                            queue: vec![],
-                            event: Event::SetVolume.into(),
-                            millis: None,
-                            volume: Some(*volume),
-                        }))
-                        .await
-                        .unwrap_or_default(),
-                    PlayerEvent::Seek(millis) => tx
-                        .send(Ok(EventResponse {
-                            queue: vec![],
-                            event: Event::Seek.into(),
-                            millis: Some(*millis),
-                            volume: None,
-                        }))
-                        .await
-                        .unwrap_or_default(),
-                    PlayerEvent::StartQueue(queue) => tx
-                        .send(Ok(EventResponse {
-                            queue: queue.clone(),
-                            event: Event::StartQueue.into(),
-                            millis: None,
-                            volume: None,
-                        }))
-                        .await
-                        .unwrap_or_default(),
-                    PlayerEvent::QueueUpdated(queue) => tx
-                        .send(Ok(EventResponse {
-                            queue: queue.clone(),
-                            event: Event::QueueUpdated.into(),
-                            millis: None,
-                            volume: None,
-                        }))
-                        .await
-                        .unwrap_or_default(),
-                    _ => tx
-                        .send(Ok(EventResponse {
-                            queue: vec![],
-                            event: match msg {
-                                PlayerEvent::Stop => Event::Stop.into(),
-                                PlayerEvent::Pause => Event::Pause.into(),
-                                PlayerEvent::Resume => Event::Resume.into(),
-                                PlayerEvent::Ended => Event::Ended.into(),
-                                PlayerEvent::Next => Event::Next.into(),
-                                PlayerEvent::Previous => Event::Previous.into(),
-                                PlayerEvent::QueueEnded => Event::QueueEnded.into(),
-                                _ => unreachable!(
-                                    "Encountered unhandled event {:?}",
-                                    msg.to_string()
-                                ),
-                            },
-                            millis: None,
-                            volume: None,
-                        }))
-                        .await
-                        .unwrap_or_default(),
-                }
+                tx.send(Ok(match msg {
+                    PlayerEvent::Stop(state) => get_event_response(Event::Stop, state, None),
+                    PlayerEvent::Pause(state) => get_event_response(Event::Pause, state, None),
+                    PlayerEvent::Resume(state) => get_event_response(Event::Resume, state, None),
+                    PlayerEvent::Ended(state) => get_event_response(Event::Ended, state, None),
+                    PlayerEvent::Next(state) => get_event_response(Event::Next, state, None),
+                    PlayerEvent::StartQueue(state) => {
+                        get_event_response(Event::StartQueue, state, None)
+                    }
+                    PlayerEvent::Seek(state, seek_millis) => {
+                        get_event_response(Event::Stop, state, Some(seek_millis))
+                    }
+                    PlayerEvent::Previous(state) => {
+                        get_event_response(Event::Previous, state, None)
+                    }
+                    PlayerEvent::QueueEnded(state) => {
+                        get_event_response(Event::QueueEnded, state, None)
+                    }
+                    _ => unreachable!("Encountered unhandled event {:?}", msg.to_string()),
+                }))
+                .await
+                .unwrap_or_default()
             }
         });
         Ok(Response::new(Box::pin(

@@ -9,20 +9,18 @@ use rodio::{Decoder, OutputStreamHandle, PlayError, Sink as RodioSink};
 use tokio::sync::broadcast;
 use tracing::{error, info};
 
-use crate::enums::PlayerEvent;
+use crate::enums::{PlayerEvent, PlayerState};
 #[cfg(feature = "runtime-tokio")]
 use crate::http_stream_reader::HttpStreamReader;
 
 pub(crate) struct Player {
     sink: RodioSink,
-    queue: Vec<String>,
+    state: PlayerState,
     event_tx: broadcast::Sender<PlayerEvent>,
-    position: usize,
     finish_tx: Sender<Receiver<()>>,
     handle: OutputStreamHandle,
     ignore_count: usize,
     queued_count: usize,
-    volume: f32,
 }
 
 impl Player {
@@ -35,14 +33,16 @@ impl Player {
 
         Ok(Self {
             sink,
-            queue: vec![],
-            event_tx,
-            position: 0,
             finish_tx,
             handle,
+            event_tx,
+            state: PlayerState {
+                queue: vec![],
+                volume: 0.5,
+                queue_position: 0,
+            },
             ignore_count: 0,
             queued_count: 0,
-            volume: 0.5,
         })
     }
 
@@ -98,36 +98,42 @@ impl Player {
             self.signal_finish();
         }
         self.event_tx
-            .send(PlayerEvent::StartQueue(self.queue.clone()))
+            .send(PlayerEvent::StartQueue(self.state.clone()))
             .unwrap_or_default();
     }
 
     pub(crate) fn play(&mut self) {
         self.sink.play();
-        self.event_tx.send(PlayerEvent::Resume).unwrap_or_default();
+        self.event_tx
+            .send(PlayerEvent::Resume(self.state.clone()))
+            .unwrap_or_default();
     }
 
     pub(crate) fn pause(&mut self) {
         self.sink.pause();
-        self.event_tx.send(PlayerEvent::Pause).unwrap_or_default();
+        self.event_tx
+            .send(PlayerEvent::Pause(self.state.clone()))
+            .unwrap_or_default();
     }
 
     pub(crate) fn set_volume(&mut self, volume: f32) {
         self.sink.set_volume(volume);
-        self.volume = volume;
+        self.state.volume = volume;
     }
 
     pub(crate) fn seek(&mut self, millis: u64) {
         self.sink.seek(Duration::from_millis(millis));
         self.event_tx
-            .send(PlayerEvent::Seek(millis))
+            .send(PlayerEvent::Seek(self.state.clone(), millis))
             .unwrap_or_default();
     }
 
     pub(crate) fn stop(&mut self) {
         self.reset();
-        self.position = 0;
-        self.event_tx.send(PlayerEvent::Stop).unwrap_or_default();
+        self.state.queue_position = 0;
+        self.event_tx
+            .send(PlayerEvent::Stop(self.state.clone()))
+            .unwrap_or_default();
     }
 
     fn ignore_ended(&mut self) {
@@ -146,7 +152,7 @@ impl Player {
                 return;
             }
         };
-        self.sink.set_volume(self.volume);
+        self.sink.set_volume(self.state.volume);
     }
 
     pub(crate) fn on_ended(&mut self) {
@@ -161,13 +167,18 @@ impl Player {
         } else {
             info!("Not ignoring ended event");
         }
-        self.event_tx.send(PlayerEvent::Ended).unwrap_or_default();
-        if self.position < self.queue.len() - 1 {
-            self.position += 1;
-            info!("Incrementing position. New position: {}", self.position);
+        self.event_tx
+            .send(PlayerEvent::Ended(self.state.clone()))
+            .unwrap_or_default();
+        if self.state.queue_position < self.state.queue.len() - 1 {
+            self.state.queue_position += 1;
+            info!(
+                "Incrementing position. New position: {}",
+                self.state.queue_position
+            );
         } else {
             self.event_tx
-                .send(PlayerEvent::QueueEnded)
+                .send(PlayerEvent::QueueEnded(self.state.clone()))
                 .unwrap_or_default();
         }
 
@@ -193,8 +204,8 @@ impl Player {
 
     pub(crate) fn set_queue(&mut self, queue: Vec<String>) {
         self.reset();
-        self.position = 0;
-        self.queue = queue;
+        self.state.queue_position = 0;
+        self.state.queue = queue;
         self.start();
     }
 
@@ -209,7 +220,7 @@ impl Player {
         if self.queued_count == 0 {
             self.set_queue(vec![song]);
         } else {
-            self.queue.push(song.clone());
+            self.state.queue.push(song.clone());
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
             // so we need to add it here explicitly
             if self.queued_count == 1 {
@@ -218,51 +229,56 @@ impl Player {
             }
 
             self.event_tx
-                .send(PlayerEvent::QueueUpdated(self.queue.clone()))
+                .send(PlayerEvent::QueueUpdated(self.state.clone()))
                 .unwrap_or_default();
         }
     }
 
     pub(crate) fn get_current(&self) -> Option<String> {
-        self.get_position(self.position)
+        self.get_position(self.state.queue_position)
     }
 
     pub(crate) fn get_next(&self) -> Option<String> {
-        self.get_position(self.position + 1)
+        self.get_position(self.state.queue_position + 1)
     }
 
     fn get_position(&self, position: usize) -> Option<String> {
-        self.queue.get(position).map(String::to_owned)
+        self.state.queue.get(position).map(String::to_owned)
     }
 
     pub(crate) fn go_next(&mut self) {
-        if self.position < self.queue.len() - 1 {
+        if self.state.queue_position < self.state.queue.len() - 1 {
             info!(
                 "Current position: {}, Going to previous track.",
-                self.position
+                self.state.queue_position
             );
-            self.position += 1;
+            self.state.queue_position += 1;
             self.reset();
             self.start();
-            self.event_tx.send(PlayerEvent::Next).unwrap_or_default();
+            self.event_tx
+                .send(PlayerEvent::Next(self.state.clone()))
+                .unwrap_or_default();
         } else {
             info!("Already at beginning. Not going to previous track.");
         }
     }
 
     pub(crate) fn go_previous(&mut self) {
-        if self.position > 0 {
-            info!("Current position: {}, Going to next track.", self.position);
-            self.position -= 1;
+        if self.state.queue_position > 0 {
+            info!(
+                "Current position: {}, Going to next track.",
+                self.state.queue_position
+            );
+            self.state.queue_position -= 1;
             self.reset();
             self.start();
             self.event_tx
-                .send(PlayerEvent::Previous)
+                .send(PlayerEvent::Previous(self.state.clone()))
                 .unwrap_or_default();
         } else {
             info!(
                 "Current position: {}. Already at end. Not going to next track.",
-                self.position
+                self.state.queue_position
             );
         }
     }

@@ -138,6 +138,26 @@ func (mr *MockManagementClientMockRecorder) GetRegisteredMount(ctx, in interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegisteredMount", reflect.TypeOf((*MockManagementClient)(nil).GetRegisteredMount), varargs...)
 }
 
+// GetSongByPath mocks base method.
+func (m *MockManagementClient) GetSongByPath(ctx context.Context, in *v2.PathMessage, opts ...grpc.CallOption) (*v2.SongResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetSongByPath", varargs...)
+	ret0, _ := ret[0].(*v2.SongResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSongByPath indicates an expected call of GetSongByPath.
+func (mr *MockManagementClientMockRecorder) GetSongByPath(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSongByPath", reflect.TypeOf((*MockManagementClient)(nil).GetSongByPath), varargs...)
+}
+
 // Lookup mocks base method.
 func (m *MockManagementClient) Lookup(ctx context.Context, in *v2.LookupRequest, opts ...grpc.CallOption) (*v2.LookupResponse, error) {
 	m.ctrl.T.Helper()
@@ -574,6 +594,21 @@ func (m *MockManagementServer) GetRegisteredMount(arg0 context.Context, arg1 *em
 func (mr *MockManagementServerMockRecorder) GetRegisteredMount(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRegisteredMount", reflect.TypeOf((*MockManagementServer)(nil).GetRegisteredMount), arg0, arg1)
+}
+
+// GetSongByPath mocks base method.
+func (m *MockManagementServer) GetSongByPath(arg0 context.Context, arg1 *v2.PathMessage) (*v2.SongResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSongByPath", arg0, arg1)
+	ret0, _ := ret[0].(*v2.SongResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSongByPath indicates an expected call of GetSongByPath.
+func (mr *MockManagementServerMockRecorder) GetSongByPath(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSongByPath", reflect.TypeOf((*MockManagementServer)(nil).GetSongByPath), arg0, arg1)
 }
 
 // Lookup mocks base method.
