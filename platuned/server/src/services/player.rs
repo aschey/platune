@@ -135,6 +135,9 @@ impl Player for PlayerImpl {
                     PlayerEvent::StartQueue(state) => {
                         get_event_response(Event::StartQueue, state, None)
                     }
+                    PlayerEvent::QueueUpdated(state) => {
+                        get_event_response(Event::QueueUpdated, state, None)
+                    }
                     PlayerEvent::Seek(state, seek_millis) => {
                         get_event_response(Event::Stop, state, Some(seek_millis))
                     }
