@@ -51,31 +51,24 @@ func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 	}
 }
 
-func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, currentSong *platune.LookupEntry) (string, string, *platune.LookupEntry) {
+func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, currentSong *platune.LookupEntry) (string, string, string, *platune.LookupEntry) {
 	switch msg.Event {
 	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED, platune.Event_ENDED, platune.Event_NEXT, platune.Event_PREVIOUS:
 		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: msg.Queue[msg.QueuePosition]})
-		//playingStatus = " ﱘ " + res.Song.Song + " ﴁ " + res.Song.Artist //"▶ Playing" //queue[queuePos]
-		// currentSong = res.Song
-		// playingStatus = "  1:00/5:23 "
-		return " ", " 1:00/5:23 ", res.Song
-	// case platune.Event_ENDED, platune.Event_NEXT:
-	// 	playingStatus = "▶ Playing" //queue[queuePos]
-	// case platune.Event_PREVIOUS:
-	// 	playingStatus = "▶ Playing" //queue[queuePos]
+		return "", "14", "1:00/5:23", res.Song
 	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
-		return " ", " Stopped ", currentSong
+		return "", "9", "Stopped", currentSong
 	case platune.Event_PAUSE:
-		return " ", " Paused ", currentSong
+		return "", "11", "Paused", currentSong
 	case platune.Event_RESUME:
-		return " ", " 1:00/5:23 ", currentSong //queue[queuePos]
+		return "", "14", "1:00/5:23", currentSong
 	default:
-		return "", "", currentSong
+		return "", "0", "", currentSong
 	}
 
 }
 
-func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, string) {
+func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, string, string) {
 	if newState == connectivity.Ready {
 		if p.searchClient != nil {
 			p.initSearchClient() //nolint:errcheck
@@ -90,26 +83,41 @@ func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, 
 
 	switch newState {
 	case connectivity.Connecting:
-		return "", " Connecting... "
+		return "", "0", "Connecting..."
 	case connectivity.Idle:
-		return "", " Idle "
+		return "", "0", "Idle"
 	case connectivity.Ready:
-		return " ", " Connected "
+		return "", "10", "Connected"
 	case connectivity.Shutdown, connectivity.TransientFailure:
-		return " ", " Disconnected "
+		return "", "9", "Disconnected"
 	default:
-		return "", ""
+		return "", "0", ""
 	}
 }
 
 func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh chan connectivity.State) {
-	// queue := []string{}
-	// queuePos := 0
+	defaultStyle := lipgloss.NewStyle().
+		Background(lipgloss.Color("8"))
+
+	infoIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color("14"))
+	textStyle := defaultStyle.Copy().Foreground(lipgloss.Color("15"))
+
+	separator := defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render(" ")
+
+	connectionIconColor := ""
+	playingIconColor := ""
+
 	connectionStatus := ""
 	connectionIcon := ""
+
+	songIcon := infoIconStyle.Render("ﱘ ")
+	albumIcon := infoIconStyle.Render(" ")
+	artistIcon := infoIconStyle.Render("ﴁ ")
+	spacer := textStyle.Render(" ")
+
 	var currentSong *platune.LookupEntry = nil
-	playingStatus := " Stopped "
-	playingIcon := " "
+	playingStatus := textStyle.Render("Stopped")
+	playingIcon := textStyle.Render(" ")
 
 	sigCh := getSignalChannel()
 
@@ -117,111 +125,79 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 		select {
 		case msg := <-eventCh:
 			if msg != nil {
-				playingIcon, playingStatus, currentSong = p.handlePlayerEvent(msg, currentSong)
+				playingIcon, playingIconColor, playingStatus, currentSong = p.handlePlayerEvent(msg, currentSong)
+				playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
+				playingStatus = textStyle.Render(playingStatus)
+				playingIcon = playingIconStyle.Render(playingIcon + " ")
 			}
 		case newState := <-stateCh:
-			connectionIcon, connectionStatus = p.handleStateChange(newState)
+			connectionIcon, connectionIconColor, connectionStatus = p.handleStateChange(newState)
+			connectionStatus = textStyle.Render(connectionStatus)
+			connectionIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(connectionIconColor))
+			connectionIcon = connectionIconStyle.Render(connectionIcon + " ")
 		case <-sigCh:
 		}
 		size, _ := consolesize.GetConsoleSize()
 
-		song := ""
-		songIcon := ""
-
-		album := ""
-		albumIcon := ""
-
-		artist := ""
-		artistIcon := ""
-
-		extraSongChars := 0
-		separator := ""
-		connectionIconFormatted := lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Foreground(lipgloss.Color("14")).
-			Render(connectionIcon)
-		connectionStatusFormatted := lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Foreground(lipgloss.Color("15")).
-			Render(connectionStatus + " ")
-
+		paddingWidth := 2
+		formattedStatus := ""
 		if currentSong != nil {
-			extraSongChars = -12
-			separator = lipgloss.NewStyle().
-				Background(lipgloss.Color("8")).
-				Foreground(lipgloss.Color("15")).
-				Render(" ")
+			extraSongChars := -12
 
-			songIcon = lipgloss.NewStyle().
-				Background(lipgloss.Color("8")).
-				Foreground(lipgloss.Color("14")).
-				Render("ﱘ ")
-			song = lipgloss.NewStyle().
-				Background(lipgloss.Color("8")).
-				Foreground(lipgloss.Color("15")).
-				Render(currentSong.Song + " ")
+			song := textStyle.Render(currentSong.Song)
+			album := textStyle.Render(currentSong.Album)
+			artist := textStyle.Render(currentSong.Artist)
 
-			albumIcon = lipgloss.NewStyle().
+			middleBar := lipgloss.NewStyle().
 				Background(lipgloss.Color("8")).
-				Foreground(lipgloss.Color("14")).
-				Render(" ")
-			album = lipgloss.NewStyle().
-				Background(lipgloss.Color("8")).
-				Foreground(lipgloss.Color("15")).
-				Render(currentSong.Album + " ")
+				Width(size -
+					lipgloss.Width(connectionStatus) -
+					lipgloss.Width(connectionIcon) -
+					lipgloss.Width(playingStatus) -
+					lipgloss.Width(playingIcon) -
+					lipgloss.Width(song) -
+					lipgloss.Width(album) -
+					lipgloss.Width(artist) -
+					paddingWidth +
+					extraSongChars).
+				Align(lipgloss.Right).
+				Render("")
 
-			artistIcon = lipgloss.NewStyle().
+			formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
+				connectionIcon,
+				connectionStatus,
+				middleBar,
+				playingIcon,
+				playingStatus,
+				separator,
+				songIcon,
+				song,
+				separator,
+				albumIcon,
+				album,
+				separator,
+				artistIcon,
+				artist)
+		} else {
+			middleBar := lipgloss.NewStyle().
 				Background(lipgloss.Color("8")).
-				Foreground(lipgloss.Color("14")).
-				Render("ﴁ ")
-			artist = lipgloss.NewStyle().
-				Background(lipgloss.Color("8")).
-				Foreground(lipgloss.Color("15")).
-				Render(currentSong.Artist + " ")
+				Width(size -
+					lipgloss.Width(connectionStatus) -
+					lipgloss.Width(connectionIcon) -
+					lipgloss.Width(playingStatus) -
+					lipgloss.Width(playingIcon) -
+					paddingWidth).
+				Align(lipgloss.Right).
+				Render("")
+
+			formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
+				connectionIcon,
+				connectionStatus,
+				middleBar,
+				playingIcon,
+				playingStatus)
 		}
-
-		playingIconFormatted := lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Foreground(lipgloss.Color("14")).
-			Render(playingIcon)
-		playingStatusFormatted := lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Foreground(lipgloss.Color("15")).
-			// Width(size - len(connectionStatus) + extraChars).
-			// Align(lipgloss.Right).
-			Render(playingStatus)
-
-		middleBar := lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Width(size -
-				lipgloss.Width(connectionStatusFormatted) -
-				lipgloss.Width(connectionIconFormatted) -
-				lipgloss.Width(playingStatusFormatted) -
-				lipgloss.Width(playingIconFormatted) -
-				lipgloss.Width(song) -
-				lipgloss.Width(album) -
-				lipgloss.Width(artist) +
-				extraSongChars).
-			Align(lipgloss.Right).
-			Render("")
-
-		formattedStatus := lipgloss.JoinHorizontal(lipgloss.Bottom,
-			connectionIconFormatted,
-			connectionStatusFormatted,
-			middleBar,
-			playingIconFormatted,
-			playingStatusFormatted,
-			separator,
-			songIcon,
-			song,
-			separator,
-			albumIcon,
-			album,
-			separator,
-			artistIcon,
-			artist)
-
-		p.statusChan <- formattedStatus
+		p.statusChan <- lipgloss.JoinHorizontal(lipgloss.Bottom, spacer, formattedStatus, spacer)
 
 	}
 }

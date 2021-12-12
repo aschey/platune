@@ -20,7 +20,7 @@ runtime-tokio = ["tokio"]
 anyhow = "1.0.44"
 futures-util = "0.3.17"
 reqwest = {version = "0.11.6", features = ["stream"]}
-rodio = {git = "https://github.com/aschey/rodio", rev = "21c40d2f9480ac879a1b598e93cb0c0b4c004d7d", default-features = false, features = ["symphonia-all", "vorbis"]}
+rodio = {git = "https://github.com/aschey/rodio", rev = "61a80073869e850f5d83acde49704168bec9b0b0", default-features = false, features = ["symphonia-all", "vorbis"]}
 strum = {version = "0.22.0", features = ["derive"]}
 tempfile = "3.2.0"
 tokio = {version = "1.12.0", features = ["rt-multi-thread"], optional = true}
