@@ -6,7 +6,10 @@ mod event_loop;
 #[cfg(feature = "runtime-tokio")]
 mod http_stream_reader;
 mod player;
+mod timer;
 pub mod platune_player {
+    use std::sync::mpsc;
+    use std::sync::mpsc::SyncSender;
     use tokio::sync::broadcast;
     use tracing::{error, warn};
 
@@ -17,13 +20,14 @@ pub mod platune_player {
         event_loop::{ended_loop, main_loop},
     };
     use std::fs::remove_file;
+    use std::time::Duration;
 
     #[derive(Debug, Clone)]
-    pub struct SendError(String);
+    pub struct PlayerError(String);
 
     #[derive(Debug)]
     pub struct PlatunePlayer {
-        cmd_sender: std::sync::mpsc::SyncSender<Command>,
+        cmd_sender: SyncSender<Command>,
         event_tx: broadcast::Sender<PlayerEvent>,
     }
 
@@ -83,70 +87,78 @@ pub mod platune_player {
             self.event_tx.subscribe()
         }
 
-        pub fn set_queue(&self, queue: Vec<String>) -> Result<(), SendError> {
+        pub fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::SetQueue(queue))
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn add_to_queue(&self, songs: Vec<String>) -> Result<(), SendError> {
+        pub fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::AddToQueue(songs))
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn seek(&self, millis: u64) -> Result<(), SendError> {
+        pub fn seek(&self, millis: u64) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Seek(millis))
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn start(&self) -> Result<(), SendError> {
-            self.cmd_sender
-                .send(Command::Start)
-                .map_err(|e| SendError(format!("{:?}", e)))
+        pub fn get_current_time(&self) -> Result<Duration, PlayerError> {
+            let (current_time_tx, current_time_rx) = mpsc::channel();
+            match self
+                .cmd_sender
+                .send(Command::GetCurrentTime(current_time_tx))
+            {
+                Ok(()) => match current_time_rx.recv() {
+                    Ok(current_time) => Ok(current_time),
+                    Err(e) => Err(PlayerError(format!("{:?}", e))),
+                },
+                Err(e) => Err(PlayerError(format!("{:?}", e))),
+            }
         }
 
-        pub fn stop(&self) -> Result<(), SendError> {
+        pub fn stop(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Stop)
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn set_volume(&self, volume: f32) -> Result<(), SendError> {
+        pub fn set_volume(&self, volume: f32) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::SetVolume(volume))
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn pause(&self) -> Result<(), SendError> {
+        pub fn pause(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Pause)
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn resume(&self) -> Result<(), SendError> {
+        pub fn resume(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Resume)
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn next(&self) -> Result<(), SendError> {
+        pub fn next(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Next)
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn previous(&self) -> Result<(), SendError> {
+        pub fn previous(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Previous)
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn join(&self) -> Result<(), SendError> {
+        pub fn join(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Shutdown)
-                .map_err(|e| SendError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))
         }
     }
 

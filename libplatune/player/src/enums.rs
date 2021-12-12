@@ -1,3 +1,4 @@
+use std::{sync::mpsc::Sender, time::Duration};
 use strum::Display;
 #[derive(Debug, Clone)]
 pub(crate) enum Command {
@@ -7,7 +8,7 @@ pub(crate) enum Command {
     SetVolume(f32),
     Pause,
     Resume,
-    Start,
+    GetCurrentTime(Sender<Duration>),
     Stop,
     Ended,
     Next,

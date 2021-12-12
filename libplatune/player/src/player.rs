@@ -9,9 +9,12 @@ use rodio::{Decoder, OutputStreamHandle, PlayError, Sink as RodioSink};
 use tokio::sync::broadcast;
 use tracing::{error, info};
 
-use crate::enums::{PlayerEvent, PlayerState};
 #[cfg(feature = "runtime-tokio")]
 use crate::http_stream_reader::HttpStreamReader;
+use crate::{
+    enums::{PlayerEvent, PlayerState},
+    timer::Timer,
+};
 
 pub(crate) struct Player {
     sink: RodioSink,
@@ -21,6 +24,7 @@ pub(crate) struct Player {
     handle: OutputStreamHandle,
     ignore_count: usize,
     queued_count: usize,
+    current_time: Timer,
 }
 
 impl Player {
@@ -43,6 +47,7 @@ impl Player {
             },
             ignore_count: 0,
             queued_count: 0,
+            current_time: Timer::default(),
         })
     }
 
@@ -88,22 +93,25 @@ impl Player {
         info!("Queued count {}", self.queued_count);
     }
 
-    pub(crate) fn start(&mut self) {
+    fn start(&mut self) {
         if let Some(path) = self.get_current() {
             self.append_file(path);
             self.signal_finish();
+            self.current_time.start();
+
+            self.event_tx
+                .send(PlayerEvent::StartQueue(self.state.clone()))
+                .unwrap_or_default();
         }
         if let Some(path) = self.get_next() {
             self.append_file(path);
             self.signal_finish();
         }
-        self.event_tx
-            .send(PlayerEvent::StartQueue(self.state.clone()))
-            .unwrap_or_default();
     }
 
     pub(crate) fn play(&mut self) {
         self.sink.play();
+        self.current_time.resume();
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
             .unwrap_or_default();
@@ -111,6 +119,7 @@ impl Player {
 
     pub(crate) fn pause(&mut self) {
         self.sink.pause();
+        self.current_time.pause();
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
             .unwrap_or_default();
@@ -123,6 +132,7 @@ impl Player {
 
     pub(crate) fn seek(&mut self, millis: u64) {
         self.sink.seek(Duration::from_millis(millis));
+        self.current_time.set_time(Duration::from_millis(millis));
         self.event_tx
             .send(PlayerEvent::Seek(self.state.clone(), millis))
             .unwrap_or_default();
@@ -131,9 +141,14 @@ impl Player {
     pub(crate) fn stop(&mut self) {
         self.reset();
         self.state.queue_position = 0;
+        self.current_time.stop();
         self.event_tx
             .send(PlayerEvent::Stop(self.state.clone()))
             .unwrap_or_default();
+    }
+
+    pub(crate) fn get_curent_time(&self) -> Duration {
+        self.current_time.elapsed()
     }
 
     fn ignore_ended(&mut self) {
@@ -145,6 +160,7 @@ impl Player {
     fn reset(&mut self) {
         self.ignore_ended();
         self.sink.stop();
+        self.current_time.stop();
         self.sink = match rodio::Sink::try_new(&self.handle) {
             Ok(sink) => sink,
             Err(e) => {
@@ -172,6 +188,7 @@ impl Player {
             .unwrap_or_default();
         if self.state.queue_position < self.state.queue.len() - 1 {
             self.state.queue_position += 1;
+            self.current_time.start();
             info!(
                 "Incrementing position. New position: {}",
                 self.state.queue_position

@@ -58,6 +58,26 @@ func (mr *MockPlayerClientMockRecorder) AddToQueue(ctx, in interface{}, opts ...
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddToQueue", reflect.TypeOf((*MockPlayerClient)(nil).AddToQueue), varargs...)
 }
 
+// GetCurrentStatus mocks base method.
+func (m *MockPlayerClient) GetCurrentStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*v2.StatusResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetCurrentStatus", varargs...)
+	ret0, _ := ret[0].(*v2.StatusResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCurrentStatus indicates an expected call of GetCurrentStatus.
+func (mr *MockPlayerClientMockRecorder) GetCurrentStatus(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentStatus", reflect.TypeOf((*MockPlayerClient)(nil).GetCurrentStatus), varargs...)
+}
+
 // Next mocks base method.
 func (m *MockPlayerClient) Next(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
@@ -397,6 +417,21 @@ func (m *MockPlayerServer) AddToQueue(arg0 context.Context, arg1 *v2.AddToQueueR
 func (mr *MockPlayerServerMockRecorder) AddToQueue(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddToQueue", reflect.TypeOf((*MockPlayerServer)(nil).AddToQueue), arg0, arg1)
+}
+
+// GetCurrentStatus mocks base method.
+func (m *MockPlayerServer) GetCurrentStatus(arg0 context.Context, arg1 *emptypb.Empty) (*v2.StatusResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCurrentStatus", arg0, arg1)
+	ret0, _ := ret[0].(*v2.StatusResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCurrentStatus indicates an expected call of GetCurrentStatus.
+func (mr *MockPlayerServerMockRecorder) GetCurrentStatus(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentStatus", reflect.TypeOf((*MockPlayerServer)(nil).GetCurrentStatus), arg0, arg1)
 }
 
 // Next mocks base method.

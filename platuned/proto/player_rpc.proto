@@ -6,6 +6,7 @@ option java_outer_classname = "PlayerProto";
 option go_package = "github.com/aschey/platune";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 package player_rpc;
 
 service Player {
@@ -18,6 +19,7 @@ service Player {
   rpc SetVolume(SetVolumeRequest) returns (google.protobuf.Empty) {}
   rpc Next(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc Previous(google.protobuf.Empty) returns (google.protobuf.Empty) {}
+  rpc GetCurrentStatus(google.protobuf.Empty) returns (StatusResponse) {}
   rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse) {}
 }
 
@@ -35,6 +37,12 @@ enum Event {
   QUEUE_ENDED=10;
 }
 
+enum PlayerStatus {
+  PLAYING = 0;
+  STOPPED = 1;
+  PAUSED = 2;
+}
+
 message QueueRequest { repeated string queue = 1; }
 message AddToQueueRequest { repeated string songs = 1; }
 message SeekRequest { uint64 millis = 1; }
@@ -45,4 +53,9 @@ message EventResponse {
   uint32 queue_position = 3;
   float volume = 4;
   optional uint64 seek_millis = 5;
+}
+message StatusResponse {
+  PlayerStatus status = 1;
+  optional google.protobuf.Timestamp progress = 2;
+  optional google.protobuf.Timestamp retrieval_time = 3;
 }

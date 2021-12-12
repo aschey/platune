@@ -28,6 +28,7 @@ type PlayerClient interface {
 	SetVolume(ctx context.Context, in *SetVolumeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Next(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	Previous(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetCurrentStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatusResponse, error)
 	SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Player_SubscribeEventsClient, error)
 }
 
@@ -120,6 +121,15 @@ func (c *playerClient) Previous(ctx context.Context, in *emptypb.Empty, opts ...
 	return out, nil
 }
 
+func (c *playerClient) GetCurrentStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatusResponse, error) {
+	out := new(StatusResponse)
+	err := c.cc.Invoke(ctx, "/player_rpc.Player/GetCurrentStatus", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *playerClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Player_SubscribeEventsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &Player_ServiceDesc.Streams[0], "/player_rpc.Player/SubscribeEvents", opts...)
 	if err != nil {
@@ -165,6 +175,7 @@ type PlayerServer interface {
 	SetVolume(context.Context, *SetVolumeRequest) (*emptypb.Empty, error)
 	Next(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	Previous(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	GetCurrentStatus(context.Context, *emptypb.Empty) (*StatusResponse, error)
 	SubscribeEvents(*emptypb.Empty, Player_SubscribeEventsServer) error
 	mustEmbedUnimplementedPlayerServer()
 }
@@ -199,6 +210,9 @@ func (UnimplementedPlayerServer) Next(context.Context, *emptypb.Empty) (*emptypb
 }
 func (UnimplementedPlayerServer) Previous(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Previous not implemented")
+}
+func (UnimplementedPlayerServer) GetCurrentStatus(context.Context, *emptypb.Empty) (*StatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCurrentStatus not implemented")
 }
 func (UnimplementedPlayerServer) SubscribeEvents(*emptypb.Empty, Player_SubscribeEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeEvents not implemented")
@@ -378,6 +392,24 @@ func _Player_Previous_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Player_GetCurrentStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PlayerServer).GetCurrentStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/player_rpc.Player/GetCurrentStatus",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PlayerServer).GetCurrentStatus(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Player_SubscribeEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(emptypb.Empty)
 	if err := stream.RecvMsg(m); err != nil {
@@ -441,6 +473,10 @@ var Player_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Previous",
 			Handler:    _Player_Previous_Handler,
+		},
+		{
+			MethodName: "GetCurrentStatus",
+			Handler:    _Player_GetCurrentStatus_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

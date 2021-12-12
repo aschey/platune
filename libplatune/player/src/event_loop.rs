@@ -59,9 +59,6 @@ pub(crate) fn main_loop(
             Command::Pause => {
                 queue.pause();
             }
-            Command::Start => {
-                queue.start();
-            }
             Command::Resume => {
                 queue.play();
             }
@@ -76,6 +73,10 @@ pub(crate) fn main_loop(
             }
             Command::Previous => {
                 queue.go_previous();
+            }
+            Command::GetCurrentTime(current_time_tx) => {
+                let current_time = queue.get_curent_time();
+                current_time_tx.send(current_time);
             }
             Command::Shutdown => {
                 return;

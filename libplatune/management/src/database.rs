@@ -29,6 +29,7 @@ pub struct LookupEntry {
     pub song: String,
     pub path: String,
     pub track: i64,
+    pub duration_millis: i64,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -130,7 +131,7 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
             al.album_name album, aa.album_artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
@@ -150,7 +151,7 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
             al.album_name album, aa.album_artist_name album_artist, s.track_number track
             FROM artist ar
             INNER JOIN song s ON s.artist_id = ar.artist_id
@@ -173,7 +174,7 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
             al.album_name album, aa.album_artist_name album_artist, s.track_number track
             FROM album_artist aa
             INNER JOIN album al ON al.album_artist_id = aa.album_artist_id
@@ -192,7 +193,7 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
             al.album_name album, aa.album_artist_name album_artist, s.track_number track 
             FROM album al
             INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
@@ -212,7 +213,7 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
             al.album_name album, aa.album_artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id

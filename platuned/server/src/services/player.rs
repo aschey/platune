@@ -113,6 +113,19 @@ impl Player for PlayerImpl {
         }
     }
 
+    async fn get_current_status(&self, _: Request<()>) -> Result<Response<StatusResponse>, Status> {
+        let timestamp = self.player.get_current_time().unwrap();
+
+        Ok(Response::new(StatusResponse {
+            progress: Some(prost_types::Timestamp {
+                seconds: timestamp.as_secs() as i64,
+                nanos: timestamp.subsec_nanos() as i32,
+            }),
+            retrieval_time: None,
+            status: PlayerStatus::Playing.into(),
+        }))
+    }
+
     type SubscribeEventsStream =
         Pin<Box<dyn futures::Stream<Item = Result<EventResponse, Status>> + Send + Sync + 'static>>;
 

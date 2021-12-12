@@ -142,6 +142,7 @@ impl Management for ManagementImpl {
                 song: e.song,
                 path: e.path,
                 track: e.track,
+                duration_millis: e.duration_millis,
             })
             .collect();
         Ok(Response::new(LookupResponse { entries }))
@@ -256,6 +257,7 @@ impl Management for ManagementImpl {
                     song: e.song,
                     path: e.path,
                     track: e.track,
+                    duration_millis: e.duration_millis,
                 }),
             })),
             Ok(None) => Ok(Response::new(SongResponse { song: None })),

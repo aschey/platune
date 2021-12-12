@@ -15,6 +15,7 @@ futures = "0.3.17"
 libplatune-management = {path = "../../libplatune/management"}
 libplatune-player = {path = "../../libplatune/player"}
 prost = "0.9.0"
+prost-types = "0.9.0"
 tokio = {version = "1.12.0", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.7", features = ["net"]}
 tonic = "0.6.0"

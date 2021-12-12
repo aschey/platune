@@ -54,6 +54,7 @@ message LookupEntry {
   string song = 4;
   string path = 5;
   int64 track = 6;
+  int64 duration_millis = 7;
 }
 
 message LookupResponse { repeated LookupEntry entries = 1; }
