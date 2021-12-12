@@ -102,7 +102,7 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 	infoIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color("14"))
 	textStyle := defaultStyle.Copy().Foreground(lipgloss.Color("15"))
 
-	separator := defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render(" ")
+	separator := defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render("  ")
 
 	connectionIconColor := ""
 	playingIconColor := ""
@@ -142,8 +142,6 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 		paddingWidth := 2
 		formattedStatus := ""
 		if currentSong != nil {
-			extraSongChars := -12
-
 			song := textStyle.Render(currentSong.Song)
 			album := textStyle.Render(currentSong.Album)
 			artist := textStyle.Render(currentSong.Artist)
@@ -155,11 +153,14 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 					lipgloss.Width(connectionIcon) -
 					lipgloss.Width(playingStatus) -
 					lipgloss.Width(playingIcon) -
+					lipgloss.Width(songIcon) -
 					lipgloss.Width(song) -
+					lipgloss.Width(albumIcon) -
 					lipgloss.Width(album) -
+					lipgloss.Width(artistIcon) -
 					lipgloss.Width(artist) -
-					paddingWidth +
-					extraSongChars).
+					(lipgloss.Width(separator) * 3) -
+					paddingWidth).
 				Align(lipgloss.Right).
 				Render("")
 
