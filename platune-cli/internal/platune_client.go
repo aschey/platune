@@ -175,6 +175,10 @@ func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, 
 	}
 }
 
+func formatTime(time time.Time) string {
+	return fmt.Sprintf("%02d:%02d:%02d", int(time.Hour()), int(time.Minute()), int(time.Second()))
+}
+
 func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh chan connectivity.State) {
 	defaultStyle := lipgloss.NewStyle().
 		Background(lipgloss.Color("8"))
@@ -206,7 +210,6 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 	playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
 	playingStatus := textStyle.Render(event.status)
 	playingIcon := playingIconStyle.Render(event.icon + " ")
-	//currentProgress := event.progress
 
 	for {
 		select {
@@ -218,7 +221,6 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 				playingIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
 				playingStatus = textStyle.Render(event.status)
 				playingIcon = playingIconStyle.Render(event.icon + " ")
-				//currentProgress = event.progress
 			}
 		case newState := <-stateCh:
 			connectionIcon, connectionIconColor, connectionStatus = p.handleStateChange(newState)
@@ -226,7 +228,7 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 			connectionIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(connectionIconColor))
 			connectionIcon = connectionIconStyle.Render(connectionIcon + " ")
 		case <-ticker.C:
-
+			// Timer tick, don't need to do anything except re-render
 		case <-sigCh:
 			// Resize event, don't need to do anything except re-render
 		}
@@ -238,13 +240,20 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 			song := textStyle.Render(currentSong.Song)
 			album := textStyle.Render(currentSong.Album)
 			artist := textStyle.Render(currentSong.Artist)
+			renderStatus := playingStatus
+			if lipgloss.Width(playingStatus) == 0 {
+				z := time.Unix(0, 0).UTC()
+				newTime := z.Add(timer.elapsed())
+				newText := fmt.Sprintf("%s/%s", formatTime(newTime), formatTime(currentSong.Duration.AsTime()))
+				renderStatus = textStyle.Render(newText)
+			}
 
 			middleBar := lipgloss.NewStyle().
 				Background(lipgloss.Color("8")).
 				Width(size -
 					lipgloss.Width(connectionStatus) -
 					lipgloss.Width(connectionIcon) -
-					lipgloss.Width(playingStatus) -
+					lipgloss.Width(renderStatus) -
 					lipgloss.Width(playingIcon) -
 					lipgloss.Width(songIcon) -
 					lipgloss.Width(song) -
@@ -262,7 +271,7 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 				connectionStatus,
 				middleBar,
 				playingIcon,
-				playingStatus,
+				renderStatus,
 				separator,
 				songIcon,
 				song,
