@@ -112,7 +112,7 @@ func (p *PlatuneClient) handlePlayerStatus(timer *timer, status *platune.StatusR
 	switch status.Status {
 	case platune.PlayerStatus_PLAYING:
 		progress := status.Progress.AsTime()
-		println(progress.UnixMilli())
+
 		timer.start()
 		timer.setTime(progress.UnixMilli())
 
