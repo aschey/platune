@@ -114,15 +114,27 @@ impl Player for PlayerImpl {
     }
 
     async fn get_current_status(&self, _: Request<()>) -> Result<Response<StatusResponse>, Status> {
-        let timestamp = self.player.get_current_time().unwrap();
+        let status = self.player.get_current_status().unwrap();
 
         Ok(Response::new(StatusResponse {
-            progress: Some(prost_types::Timestamp {
-                seconds: timestamp.as_secs() as i64,
-                nanos: timestamp.subsec_nanos() as i32,
-            }),
-            retrieval_time: None,
-            status: PlayerStatus::Playing.into(),
+            progress: status
+                .current_time
+                .map(|current_time| prost_types::Timestamp {
+                    seconds: current_time.as_secs() as i64,
+                    nanos: current_time.subsec_nanos() as i32,
+                }),
+            retrieval_time: status
+                .retrieval_time
+                .map(|retrieval_time| prost_types::Timestamp {
+                    seconds: retrieval_time.as_secs() as i64,
+                    nanos: retrieval_time.subsec_nanos() as i32,
+                }),
+            status: match status.status {
+                AudioStatus::Playing => crate::rpc::PlayerStatus::Playing.into(),
+                AudioStatus::Paused => crate::rpc::PlayerStatus::Paused.into(),
+                AudioStatus::Stopped => crate::rpc::PlayerStatus::Stopped.into(),
+            },
+            current_song: status.current_song,
         }))
     }
 
@@ -152,7 +164,7 @@ impl Player for PlayerImpl {
                         get_event_response(Event::QueueUpdated, state, None)
                     }
                     PlayerEvent::Seek(state, seek_millis) => {
-                        get_event_response(Event::Stop, state, Some(seek_millis))
+                        get_event_response(Event::Seek, state, Some(seek_millis))
                     }
                     PlayerEvent::Previous(state) => {
                         get_event_response(Event::Previous, state, None)

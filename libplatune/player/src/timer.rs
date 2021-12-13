@@ -12,6 +12,13 @@ pub(crate) struct Timer {
     pause_time: Duration,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) enum TimerStatus {
+    Started,
+    Paused,
+    Stopped,
+}
+
 impl Timer {
     pub(crate) fn start(&mut self) {
         self.pause_start = None;
@@ -50,14 +57,23 @@ impl Timer {
         }
     }
 
-    pub(crate) fn elapsed(&self) -> Duration {
+    pub(crate) fn elapsed(&self) -> Option<Duration> {
+        let now = Instant::now();
         let current_pause_time = match self.pause_start {
-            Some(pause_start) => Instant::now() - pause_start,
+            Some(pause_start) => now - pause_start,
             None => Duration::default(),
         };
-        match self.start {
-            Some(start) => Instant::now() - start - self.pause_time - current_pause_time,
-            None => Duration::default(),
+        self.start
+            .map(|start| now - start - self.pause_time - current_pause_time)
+    }
+
+    pub(crate) fn status(&self) -> TimerStatus {
+        if self.pause_start.is_some() {
+            TimerStatus::Paused
+        } else if self.start.is_some() {
+            TimerStatus::Started
+        } else {
+            TimerStatus::Stopped
         }
     }
 }

@@ -58,4 +58,5 @@ message StatusResponse {
   PlayerStatus status = 1;
   optional google.protobuf.Timestamp progress = 2;
   optional google.protobuf.Timestamp retrieval_time = 3;
+  optional string current_song = 4;
 }

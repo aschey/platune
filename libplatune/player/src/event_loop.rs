@@ -4,7 +4,7 @@ use tokio::sync::broadcast;
 use tracing::{error, info};
 
 use crate::{
-    enums::{Command, PlayerEvent},
+    dto::{command::Command, player_event::PlayerEvent},
     player::Player,
 };
 
@@ -74,9 +74,9 @@ pub(crate) fn main_loop(
             Command::Previous => {
                 queue.go_previous();
             }
-            Command::GetCurrentTime(current_time_tx) => {
-                let current_time = queue.get_curent_time();
-                current_time_tx.send(current_time);
+            Command::GetCurrentStatus(current_status_tx) => {
+                let current_status = queue.get_current_status();
+                current_status_tx.send(current_status);
             }
             Command::Shutdown => {
                 return;

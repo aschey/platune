@@ -1,7 +1,7 @@
 #[cfg(all(feature = "runtime-tokio", feature = "runtime-async-std"))]
 compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
 
-mod enums;
+mod dto;
 mod event_loop;
 #[cfg(feature = "runtime-tokio")]
 mod http_stream_reader;
@@ -13,14 +13,15 @@ pub mod platune_player {
     use tokio::sync::broadcast;
     use tracing::{error, warn};
 
-    pub use crate::enums::PlayerEvent;
-    pub use crate::enums::PlayerState;
+    pub use crate::dto::audio_status::AudioStatus;
+    pub use crate::dto::player_event::PlayerEvent;
+    pub use crate::dto::player_state::PlayerState;
+    pub use crate::dto::player_status::PlayerStatus;
     use crate::{
-        enums::Command,
+        dto::command::Command,
         event_loop::{ended_loop, main_loop},
     };
     use std::fs::remove_file;
-    use std::time::Duration;
 
     #[derive(Debug, Clone)]
     pub struct PlayerError(String);
@@ -105,14 +106,14 @@ pub mod platune_player {
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn get_current_time(&self) -> Result<Duration, PlayerError> {
-            let (current_time_tx, current_time_rx) = mpsc::channel();
+        pub fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
+            let (current_status_tx, current_status_rx) = mpsc::channel();
             match self
                 .cmd_sender
-                .send(Command::GetCurrentTime(current_time_tx))
+                .send(Command::GetCurrentStatus(current_status_tx))
             {
-                Ok(()) => match current_time_rx.recv() {
-                    Ok(current_time) => Ok(current_time),
+                Ok(()) => match current_status_rx.recv() {
+                    Ok(current_status) => Ok(current_status),
                     Err(e) => Err(PlayerError(format!("{:?}", e))),
                 },
                 Err(e) => Err(PlayerError(format!("{:?}", e))),

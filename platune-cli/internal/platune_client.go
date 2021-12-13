@@ -39,6 +39,7 @@ func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, connCh cha
 		conn.Connect()
 		conn.WaitForStateChange(ctx, state)
 		newState := conn.GetState()
+
 		connCh <- newState
 	}
 }
@@ -51,21 +52,100 @@ func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 	}
 }
 
-func (p *PlatuneClient) handlePlayerEvent(msg *platune.EventResponse, currentSong *platune.LookupEntry) (string, string, string, *platune.LookupEntry) {
+type playerEvent struct {
+	icon    string
+	color   string
+	status  string
+	newSong *platune.LookupEntry
+}
+
+type eventInput struct {
+	currentSong *platune.LookupEntry
+}
+
+func (p *PlatuneClient) handlePlayerEvent(timer *timer, msg *platune.EventResponse, eventInput eventInput) playerEvent {
 	switch msg.Event {
 	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED, platune.Event_ENDED, platune.Event_NEXT, platune.Event_PREVIOUS:
 		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: msg.Queue[msg.QueuePosition]})
-		return "", "14", "1:00/5:23", res.Song
+		timer.setTime(0)
+		return playerEvent{
+			icon:    "",
+			color:   "14",
+			newSong: res.Song,
+		}
+	case platune.Event_SEEK:
+		timer.setTime(int64(*msg.SeekMillis))
+		return playerEvent{
+			icon:    "",
+			color:   "14",
+			newSong: eventInput.currentSong,
+		}
 	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
-		return "", "9", "Stopped", currentSong
+		timer.stop()
+		return playerEvent{
+			icon:    "",
+			color:   "9",
+			status:  "Stopped",
+			newSong: nil,
+		}
 	case platune.Event_PAUSE:
-		return "", "11", "Paused", currentSong
+		timer.pause()
+		return playerEvent{
+			icon:    "",
+			color:   "11",
+			status:  "Paused",
+			newSong: eventInput.currentSong,
+		}
 	case platune.Event_RESUME:
-		return "", "14", "1:00/5:23", currentSong
+		timer.resume()
+		return playerEvent{
+			icon:    "",
+			color:   "14",
+			newSong: eventInput.currentSong,
+		}
 	default:
-		return "", "0", "", currentSong
+		return playerEvent{}
 	}
+}
 
+func (p *PlatuneClient) handlePlayerStatus(timer *timer, status *platune.StatusResponse) playerEvent {
+	switch status.Status {
+	case platune.PlayerStatus_PLAYING:
+		progress := status.Progress.AsTime()
+		println(progress.UnixMilli())
+		timer.start()
+		timer.setTime(progress.UnixMilli())
+
+		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: *status.CurrentSong})
+
+		return playerEvent{
+			icon:    "",
+			color:   "14",
+			newSong: res.Song,
+		}
+	case platune.PlayerStatus_STOPPED:
+		timer.stop()
+		return playerEvent{
+			icon:    "",
+			color:   "9",
+			status:  "Stopped",
+			newSong: nil,
+		}
+	case platune.PlayerStatus_PAUSED:
+		timer.pause()
+		progress := status.Progress.AsTime()
+		timer.setTime(progress.UnixMilli())
+		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: *status.CurrentSong})
+
+		return playerEvent{
+			icon:    "",
+			color:   "11",
+			status:  "Paused",
+			newSong: res.Song,
+		}
+	default:
+		return playerEvent{}
+	}
 }
 
 func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, string, string) {
@@ -105,7 +185,6 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 	separator := defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render("  ")
 
 	connectionIconColor := ""
-	playingIconColor := ""
 
 	connectionStatus := ""
 	connectionIcon := ""
@@ -115,27 +194,41 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 	artistIcon := infoIconStyle.Render("ﴁ ")
 	spacer := textStyle.Render(" ")
 
-	var currentSong *platune.LookupEntry = nil
-	playingStatus := textStyle.Render("Stopped")
-	playingIcon := textStyle.Render(" ")
-
 	sigCh := getSignalChannel()
+	ticker := time.NewTicker(500 * time.Millisecond)
+	timer := timer{}
+
+	currentStatus, _ := p.playerClient.GetCurrentStatus(context.Background(), &emptypb.Empty{})
+	event := p.handlePlayerStatus(&timer, currentStatus)
+
+	currentSong := event.newSong
+	playingIconColor := event.color
+	playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
+	playingStatus := textStyle.Render(event.status)
+	playingIcon := playingIconStyle.Render(event.icon + " ")
+	//currentProgress := event.progress
 
 	for {
 		select {
 		case msg := <-eventCh:
 			if msg != nil {
-				playingIcon, playingIconColor, playingStatus, currentSong = p.handlePlayerEvent(msg, currentSong)
-				playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
-				playingStatus = textStyle.Render(playingStatus)
-				playingIcon = playingIconStyle.Render(playingIcon + " ")
+				event := p.handlePlayerEvent(&timer, msg, eventInput{currentSong: event.newSong})
+				currentSong = event.newSong
+				playingIconColor = event.color
+				playingIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
+				playingStatus = textStyle.Render(event.status)
+				playingIcon = playingIconStyle.Render(event.icon + " ")
+				//currentProgress = event.progress
 			}
 		case newState := <-stateCh:
 			connectionIcon, connectionIconColor, connectionStatus = p.handleStateChange(newState)
 			connectionStatus = textStyle.Render(connectionStatus)
 			connectionIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(connectionIconColor))
 			connectionIcon = connectionIconStyle.Render(connectionIcon + " ")
+		case <-ticker.C:
+
 		case <-sigCh:
+			// Resize event, don't need to do anything except re-render
 		}
 		size, _ := consolesize.GetConsoleSize()
 
@@ -199,7 +292,6 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 				playingStatus)
 		}
 		p.statusChan <- lipgloss.JoinHorizontal(lipgloss.Bottom, spacer, formattedStatus, spacer)
-
 	}
 }
 
@@ -216,11 +308,14 @@ func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
 	client := &PlatuneClient{playerClient: playerClient, managementClient: managementClient, statusChan: statusChan}
-	eventCh := make(chan *platune.EventResponse)
+
+	eventCh := make(chan *platune.EventResponse, 1)
 	go client.subscribeEvents(eventCh)
-	connCh := make(chan connectivity.State)
+	connCh := make(chan connectivity.State, 1)
 	go client.monitorConnectionState(conn, connCh, ctx)
+
 	go client.eventLoop(eventCh, connCh)
+
 	return client
 }
 

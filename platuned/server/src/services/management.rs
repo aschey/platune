@@ -4,8 +4,10 @@ use anyhow::Result;
 use futures::StreamExt;
 use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
+use prost_types::Timestamp;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tonic::Request;
 use tonic::Streaming;
@@ -142,7 +144,10 @@ impl Management for ManagementImpl {
                 song: e.song,
                 path: e.path,
                 track: e.track,
-                duration_millis: e.duration_millis,
+                duration: Some(Timestamp {
+                    seconds: Duration::from_millis(e.duration_millis as u64).as_secs() as i64,
+                    nanos: Duration::from_millis(e.duration_millis as u64).subsec_nanos() as i32,
+                }),
             })
             .collect();
         Ok(Response::new(LookupResponse { entries }))
@@ -257,7 +262,11 @@ impl Management for ManagementImpl {
                     song: e.song,
                     path: e.path,
                     track: e.track,
-                    duration_millis: e.duration_millis,
+                    duration: Some(Timestamp {
+                        seconds: Duration::from_millis(e.duration_millis as u64).as_secs() as i64,
+                        nanos: Duration::from_millis(e.duration_millis as u64).subsec_nanos()
+                            as i32,
+                    }),
                 }),
             })),
             Ok(None) => Ok(Response::new(SongResponse { song: None })),

@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::{BufReader, Read, Seek},
     sync::mpsc::{Receiver, Sender},
-    time::Duration,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
 use rodio::{Decoder, OutputStreamHandle, PlayError, Sink as RodioSink};
@@ -12,8 +12,11 @@ use tracing::{error, info};
 #[cfg(feature = "runtime-tokio")]
 use crate::http_stream_reader::HttpStreamReader;
 use crate::{
-    enums::{PlayerEvent, PlayerState},
-    timer::Timer,
+    dto::{
+        audio_status::AudioStatus, player_event::PlayerEvent, player_state::PlayerState,
+        player_status::PlayerStatus,
+    },
+    timer::{Timer, TimerStatus},
 };
 
 pub(crate) struct Player {
@@ -147,8 +150,20 @@ impl Player {
             .unwrap_or_default();
     }
 
-    pub(crate) fn get_curent_time(&self) -> Duration {
-        self.current_time.elapsed()
+    pub(crate) fn get_current_status(&self) -> PlayerStatus {
+        let current_time = self.current_time.elapsed();
+        PlayerStatus {
+            current_time,
+            retrieval_time: current_time
+                .map(|_| SystemTime::now().duration_since(UNIX_EPOCH).ok())
+                .flatten(),
+            status: match self.current_time.status() {
+                TimerStatus::Paused => AudioStatus::Paused,
+                TimerStatus::Started => AudioStatus::Playing,
+                TimerStatus::Stopped => AudioStatus::Stopped,
+            },
+            current_song: self.get_current(),
+        }
     }
 
     fn ignore_ended(&mut self) {
@@ -233,7 +248,7 @@ impl Player {
     }
 
     fn add_one_to_queue(&mut self, song: String) {
-        // Queue as not currently running, need to start it
+        // Queue is not currently running, need to start it
         if self.queued_count == 0 {
             self.set_queue(vec![song]);
         } else {
@@ -251,11 +266,11 @@ impl Player {
         }
     }
 
-    pub(crate) fn get_current(&self) -> Option<String> {
+    fn get_current(&self) -> Option<String> {
         self.get_position(self.state.queue_position)
     }
 
-    pub(crate) fn get_next(&self) -> Option<String> {
+    fn get_next(&self) -> Option<String> {
         self.get_position(self.state.queue_position + 1)
     }
 
