@@ -198,18 +198,21 @@ impl Player {
         } else {
             info!("Not ignoring ended event");
         }
-        self.event_tx
-            .send(PlayerEvent::Ended(self.state.clone()))
-            .unwrap_or_default();
         if self.state.queue_position < self.state.queue.len() - 1 {
             self.state.queue_position += 1;
             self.current_time.start();
+            self.event_tx
+                .send(PlayerEvent::Ended(self.state.clone()))
+                .unwrap_or_default();
             info!(
                 "Incrementing position. New position: {}",
                 self.state.queue_position
             );
         } else {
             self.current_time.stop();
+            self.event_tx
+                .send(PlayerEvent::Ended(self.state.clone()))
+                .unwrap_or_default();
             self.event_tx
                 .send(PlayerEvent::QueueEnded(self.state.clone()))
                 .unwrap_or_default();

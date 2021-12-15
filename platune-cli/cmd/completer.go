@@ -41,7 +41,7 @@ func (state *cmdState) completerMode(in prompt.Document, returnChan chan []promp
 		suggestionMap := map[string]prompt.Suggest{}
 		for _, r := range state.lookupResult {
 			album := r.Album
-			if strings.Trim(r.Album, " ") == "" {
+			if strings.TrimSpace(r.Album) == "" {
 				album = "[Untitled]"
 			}
 			suggestionMap[album] = prompt.Suggest{Text: album, Metadata: r}
