@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::{BufReader, Read, Seek},
     sync::mpsc::{Receiver, Sender},
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use rodio::{Decoder, OutputStreamHandle, PlayError, Sink as RodioSink};
@@ -209,6 +209,7 @@ impl Player {
                 self.state.queue_position
             );
         } else {
+            self.current_time.stop();
             self.event_tx
                 .send(PlayerEvent::QueueEnded(self.state.clone()))
                 .unwrap_or_default();
