@@ -597,9 +597,52 @@ func TestSetQueueExecutor(t *testing.T) {
 	defer ctrl.Finish()
 
 	playerMock := test.NewMockPlayerClient(ctrl)
+	mgmtMock := test.NewMockManagementClient(ctrl)
+	path := "/test/path/1"
+
+	playerMock.EXPECT().SetQueue(gomock.Any(), &platune.QueueRequest{Queue: []string{path, path}})
+
+	entries := []*platune.LookupEntry{{Artist: "artist name", Album: "album 1", Song: "song name", Path: path, Track: 1}}
+	mgmtMock.EXPECT().Lookup(gomock.Any(), &platune.LookupRequest{
+		EntryType:      platune.EntryType_SONG,
+		CorrelationIds: []int32{1}}).
+		Return(&platune.LookupResponse{Entries: entries}, nil).Times(2)
+
+	client := internal.NewTestClient(playerMock, mgmtMock)
+	deleted := deleted.NewDeleted(&client)
+	state := NewState(&client, deleted, make(internal.StatusChan))
+
+	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
+
+	suggests := []prompt.Suggest{{Text: "song name", Metadata: &platune.SearchResult{
+		EntryType:      platune.EntryType_SONG,
+		CorrelationIds: []int32{1},
+	}}}
+
+	state.executor("song name", &suggests[0], suggests)
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
+	testza.AssertLen(t, state.currentQueue, 1)
+
+	state.executor("song name", &suggests[0], suggests)
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
+	testza.AssertLen(t, state.currentQueue, 2)
+
+	testza.AssertEqual(t, path, state.currentQueue[0].Path)
+	testza.AssertEqual(t, path, state.currentQueue[1].Path)
+
+	state.executor("", nil, []prompt.Suggest{})
+	testza.AssertEqual(t, mode.NormalMode, state.mode.First())
+}
+
+func TestSetQueueExecutorFile(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	playerMock := test.NewMockPlayerClient(ctrl)
 	matcher := test.NewMatcher(func(arg interface{}) bool {
 		queue := arg.(*platune.QueueRequest).Queue
-		return strings.HasSuffix(queue[0], "root.go")
+		return strings.HasSuffix(queue[0], "root.go") && strings.HasSuffix(queue[1], "root.go")
 	})
 	playerMock.EXPECT().SetQueue(gomock.Any(), matcher)
 
@@ -613,10 +656,16 @@ func TestSetQueueExecutor(t *testing.T) {
 
 	suggests := []prompt.Suggest{{Text: "root.go", Metadata: "root.go"}}
 	state.executor("root.go", &suggests[0], suggests)
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
 	testza.AssertLen(t, state.currentQueue, 1)
+
+	state.executor("root.go", &suggests[0], suggests)
+	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
+	testza.AssertLen(t, state.currentQueue, 2)
 
 	testza.AssertTrue(t, strings.HasSuffix(state.currentQueue[0].Path, "root.go"), "root.go should've been added to the queue")
 	state.executor("", nil, []prompt.Suggest{})
+	testza.AssertEqual(t, mode.NormalMode, state.mode.First())
 }
 
 func TestSetQueueExecutorInvalidFile(t *testing.T) {

@@ -18,10 +18,10 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest, suggestions
 	if selected == nil {
 		// User did not explicitly choose a result
 		// See if we can find a match instead
-		text := strings.Trim(strings.ToLower(in), " ")
+		text := strings.TrimSpace(strings.ToLower(in))
 		if strings.HasPrefix(text, addQueueCmdText) && state.mode.Current() == mode.NormalMode {
 			cmds := strings.SplitN(text, " ", 2)
-			text = strings.Trim(cmds[len(cmds)-1], " ")
+			text = strings.TrimSpace(cmds[len(cmds)-1])
 		}
 		for _, suggestion := range suggestions {
 			if strings.ToLower(suggestion.Text) == text {
@@ -42,20 +42,21 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest, suggestions
 	}
 
 	if state.mode.First() == mode.NormalMode && len(state.currentQueue) > 0 {
-		if isSetQueueMode {
+		if isSetQueueMode && strings.TrimSpace(in) == "" {
 			state.client.SetQueueFromSearchResults(state.currentQueue, true)
-		} else {
+			state.currentQueue = []*platune.LookupEntry{}
+		} else if !isSetQueueMode {
 			state.client.AddSearchResultsToQueue(state.currentQueue, true)
+			state.currentQueue = []*platune.LookupEntry{}
 		}
 
-		state.currentQueue = []*platune.LookupEntry{}
 	}
 }
 
 func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 	switch state.mode.Current() {
 	case mode.SetQueueMode:
-		if strings.Trim(in, " ") == "" {
+		if strings.TrimSpace(in) == "" {
 			state.mode = mode.NewDefaultMode()
 		} else {
 			pathInput, err := getPathInput(in, selected)
@@ -76,7 +77,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		newResults := []*platune.LookupEntry{}
 		for _, r := range state.lookupResult {
 			album := r.Album
-			if strings.Trim(r.Album, " ") == "" {
+			if strings.TrimSpace(r.Album) == "" {
 				album = "[Untitled]"
 			}
 			if album == in {
@@ -189,7 +190,7 @@ func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode mo
 			state.mode.Set(mode.SongMode)
 			state.lookupResult = lookupResult.Entries
 		case platune.EntryType_SONG:
-			state.mode = mode.NewDefaultMode()
+			state.mode.Reset()
 			state.currentQueue = append(state.currentQueue, lookupResult.Entries...)
 		}
 	} else {
