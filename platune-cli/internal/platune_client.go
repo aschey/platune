@@ -47,8 +47,10 @@ func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, connCh cha
 func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 	p.initEventClient()
 	for {
-		msg, _ := (*p.eventClient).Recv()
-		eventCh <- msg
+		msg, err := (*p.eventClient).Recv()
+		if err == nil {
+			eventCh <- msg
+		}
 	}
 }
 
