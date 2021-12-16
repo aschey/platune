@@ -121,6 +121,9 @@ impl Player {
     }
 
     pub(crate) fn pause(&mut self) {
+        if self.state.queue.is_empty() {
+            return;
+        }
         self.sink.pause();
         self.current_time.pause();
         self.event_tx

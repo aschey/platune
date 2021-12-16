@@ -25,20 +25,23 @@ func NewStatusChan() StatusChan {
 }
 
 type PlatuneClient struct {
-	playerClient     platune.PlayerClient
-	managementClient platune.ManagementClient
-	searchClient     *platune.Management_SearchClient
-	syncClient       *platune.Management_SyncClient
-	eventClient      *platune.Player_SubscribeEventsClient
-	statusChan       StatusChan
+	conn                *grpc.ClientConn
+	playerClient        platune.PlayerClient
+	managementClient    platune.ManagementClient
+	searchClient        *platune.Management_SearchClient
+	syncClient          *platune.Management_SyncClient
+	eventClient         *platune.Player_SubscribeEventsClient
+	statusChan          StatusChan
+	waitForStatusChange chan struct{}
+	statusChanged       chan struct{}
 }
 
-func (p *PlatuneClient) monitorConnectionState(conn *grpc.ClientConn, connCh chan connectivity.State, ctx context.Context) {
+func (p *PlatuneClient) monitorConnectionState(connCh chan connectivity.State, ctx context.Context) {
 	for {
-		state := conn.GetState()
-		conn.Connect()
-		conn.WaitForStateChange(ctx, state)
-		newState := conn.GetState()
+		state := p.conn.GetState()
+		p.conn.Connect()
+		p.conn.WaitForStateChange(ctx, state)
+		newState := p.conn.GetState()
 
 		connCh <- newState
 	}
@@ -51,6 +54,15 @@ func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 		if err == nil {
 			eventCh <- msg
 		}
+	}
+}
+
+func (p *PlatuneClient) retryConnection() {
+	state := p.conn.GetState()
+	if state == connectivity.TransientFailure || state == connectivity.Shutdown {
+		p.waitForStatusChange <- struct{}{}
+		p.conn.ResetConnectBackoff()
+		<-p.statusChanged
 	}
 }
 
@@ -161,6 +173,12 @@ func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, 
 		if p.eventClient != nil {
 			p.initEventClient() //nolint:errcheck
 		}
+	}
+
+	select {
+	case <-p.waitForStatusChange:
+		p.statusChanged <- struct{}{}
+	default:
 	}
 
 	switch newState {
@@ -318,12 +336,19 @@ func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
 
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
-	client := &PlatuneClient{playerClient: playerClient, managementClient: managementClient, statusChan: statusChan}
+	client := &PlatuneClient{
+		conn:                conn,
+		playerClient:        playerClient,
+		managementClient:    managementClient,
+		statusChan:          statusChan,
+		statusChanged:       make(chan struct{}, 1),
+		waitForStatusChange: make(chan struct{}, 1),
+	}
 
 	eventCh := make(chan *platune.EventResponse, 1)
 	go client.subscribeEvents(eventCh)
 	connCh := make(chan connectivity.State, 1)
-	go client.monitorConnectionState(conn, connCh, ctx)
+	go client.monitorConnectionState(connCh, ctx)
 
 	go client.eventLoop(eventCh, connCh)
 
@@ -434,6 +459,7 @@ func (p *PlatuneClient) initSyncClient() error {
 }
 
 func (p *PlatuneClient) Sync() <-chan *platune.Progress {
+	p.retryConnection()
 	if err := p.initSyncClient(); err != nil {
 		fmt.Println(err)
 	}
@@ -466,6 +492,7 @@ func (p *PlatuneClient) initSearchClient() error {
 }
 
 func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchResponse, error) {
+	p.retryConnection()
 	if p.searchClient == nil {
 		if err := p.initSearchClient(); err != nil {
 			fmt.Println(err)
@@ -481,6 +508,7 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 }
 
 func (p *PlatuneClient) Lookup(entryType platune.EntryType, correlationIds []int32) *platune.LookupResponse {
+	p.retryConnection()
 	ctx := context.Background()
 	response, err := p.managementClient.Lookup(ctx, &platune.LookupRequest{EntryType: entryType, CorrelationIds: correlationIds})
 	if err != nil {
@@ -491,6 +519,7 @@ func (p *PlatuneClient) Lookup(entryType platune.EntryType, correlationIds []int
 }
 
 func (p *PlatuneClient) GetAllFolders() {
+	p.retryConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	allFolders, err := p.managementClient.GetAllFolders(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -513,6 +542,7 @@ func (p *PlatuneClient) SetMount(mount string) {
 }
 
 func (p *PlatuneClient) GetDeleted() *platune.GetDeletedResponse {
+	p.retryConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	deleted, err := p.managementClient.GetDeleted(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -530,6 +560,7 @@ func (p *PlatuneClient) DeleteTracks(ids []int64) {
 }
 
 func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
+	p.retryConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	_, err := cmdFunc(ctx)
 	cancel()
