@@ -93,11 +93,7 @@ type playerEvent struct {
 	newSong *platune.LookupEntry
 }
 
-type eventInput struct {
-	currentSong *platune.LookupEntry
-}
-
-func (p *PlatuneClient) handlePlayerEvent(timer *timer, msg *platune.EventResponse, eventInput eventInput) playerEvent {
+func (p *PlatuneClient) handlePlayerEvent(timer *timer, msg *platune.EventResponse, currentSong *platune.LookupEntry) playerEvent {
 	switch msg.Event {
 	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED, platune.Event_ENDED, platune.Event_NEXT, platune.Event_PREVIOUS:
 		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: msg.Queue[msg.QueuePosition]})
@@ -112,7 +108,7 @@ func (p *PlatuneClient) handlePlayerEvent(timer *timer, msg *platune.EventRespon
 		return playerEvent{
 			icon:    "",
 			color:   "14",
-			newSong: eventInput.currentSong,
+			newSong: currentSong,
 		}
 	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
 		timer.stop()
@@ -128,14 +124,14 @@ func (p *PlatuneClient) handlePlayerEvent(timer *timer, msg *platune.EventRespon
 			icon:    "",
 			color:   "11",
 			status:  "Paused",
-			newSong: eventInput.currentSong,
+			newSong: currentSong,
 		}
 	case platune.Event_RESUME:
 		timer.resume()
 		return playerEvent{
 			icon:    "",
 			color:   "14",
-			newSong: eventInput.currentSong,
+			newSong: currentSong,
 		}
 	default:
 		return playerEvent{}
@@ -251,7 +247,7 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 		select {
 		case msg := <-eventCh:
 			if msg != nil {
-				event := p.handlePlayerEvent(&timer, msg, eventInput{currentSong: event.newSong})
+				event := p.handlePlayerEvent(&timer, msg, currentSong)
 				currentSong = event.newSong
 				playingIconColor = event.color
 				playingIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
@@ -260,9 +256,7 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 			}
 		case newState := <-stateCh:
 			connectionIcon, connectionIconColor, connectionStatus := p.handleStateChange(newState)
-			//connectionStatus = textStyle.Render(connectionStatus)
 			connectionIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(connectionIconColor))
-			//connectionIcon = connectionIconStyle.Render(connectionIcon + " ")
 			renderParams.connection = label{icon: connectionIcon, text: connectionStatus}.render(connectionIconStyle)
 		case <-ticker.C:
 			// Timer tick, don't need to do anything except re-render
