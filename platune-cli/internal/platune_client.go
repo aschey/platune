@@ -18,6 +18,17 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var (
+	defaultStyle  = lipgloss.NewStyle().Background(lipgloss.Color("8"))
+	infoIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color("14"))
+	textStyle     = defaultStyle.Copy().Foreground(lipgloss.Color("15"))
+	separator     = defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render("  ")
+	songIcon      = "ﱘ"
+	albumIcon     = ""
+	artistIcon    = "ﴁ"
+	spacer        = textStyle.Render(" ")
+)
+
 type StatusChan chan string
 
 func NewStatusChan() StatusChan {
@@ -51,6 +62,11 @@ func (p *PlatuneClient) monitorConnectionState(connCh chan connectivity.State, c
 func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 	p.initEventClient()
 	for {
+		if (*p.eventClient) == nil {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
 		msg, err := (*p.eventClient).Recv()
 		if err == nil {
 			eventCh <- msg
@@ -127,6 +143,14 @@ func (p *PlatuneClient) handlePlayerEvent(timer *timer, msg *platune.EventRespon
 }
 
 func (p *PlatuneClient) handlePlayerStatus(timer *timer, status *platune.StatusResponse) playerEvent {
+	if status == nil {
+		return playerEvent{
+			icon:    "",
+			color:   "9",
+			status:  "Stopped",
+			newSong: nil,
+		}
+	}
 	switch status.Status {
 	case platune.PlayerStatus_PLAYING:
 		progress := status.Progress.AsTime()
@@ -204,36 +228,24 @@ func formatTime(time time.Time) string {
 }
 
 func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh chan connectivity.State) {
-	defaultStyle := lipgloss.NewStyle().
-		Background(lipgloss.Color("8"))
-
-	infoIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color("14"))
-	textStyle := defaultStyle.Copy().Foreground(lipgloss.Color("15"))
-
-	separator := defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render("  ")
-
-	connectionIconColor := ""
-
-	connectionStatus := ""
-	connectionIcon := ""
-
-	songIcon := infoIconStyle.Render("ﱘ ")
-	albumIcon := infoIconStyle.Render(" ")
-	artistIcon := infoIconStyle.Render("ﴁ ")
-	spacer := textStyle.Render(" ")
-
+	p.renderStatusBar(renderParams{connection: textStyle.Render(" Connecting...")})
 	sigCh := getSignalChannel()
 	ticker := time.NewTicker(500 * time.Millisecond)
-	timer := timer{}
 
 	currentStatus, _ := p.playerClient.GetCurrentStatus(context.Background(), &emptypb.Empty{})
+	timer := timer{}
 	event := p.handlePlayerStatus(&timer, currentStatus)
 
-	currentSong := event.newSong
 	playingIconColor := event.color
 	playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
-	playingStatus := textStyle.Render(event.status)
-	playingIcon := playingIconStyle.Render(event.icon + " ")
+	currentSong := event.newSong
+	renderParams := renderParams{
+		timer:        &timer,
+		connection:   "",
+		playingIcon:  playingIconStyle.Render(event.icon + " "),
+		renderStatus: textStyle.Render(event.status),
+	}
+	p.renderStatusBar(renderParams)
 
 	for {
 		select {
@@ -243,89 +255,118 @@ func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh c
 				currentSong = event.newSong
 				playingIconColor = event.color
 				playingIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
-				playingStatus = textStyle.Render(event.status)
-				playingIcon = playingIconStyle.Render(event.icon + " ")
+				renderParams.renderStatus = textStyle.Render(event.status)
+				renderParams.playingIcon = playingIconStyle.Render(event.icon + " ")
 			}
 		case newState := <-stateCh:
-			connectionIcon, connectionIconColor, connectionStatus = p.handleStateChange(newState)
-			connectionStatus = textStyle.Render(connectionStatus)
+			connectionIcon, connectionIconColor, connectionStatus := p.handleStateChange(newState)
+			//connectionStatus = textStyle.Render(connectionStatus)
 			connectionIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(connectionIconColor))
-			connectionIcon = connectionIconStyle.Render(connectionIcon + " ")
+			//connectionIcon = connectionIconStyle.Render(connectionIcon + " ")
+			renderParams.connection = label{icon: connectionIcon, text: connectionStatus}.render(connectionIconStyle)
 		case <-ticker.C:
 			// Timer tick, don't need to do anything except re-render
 		case <-sigCh:
 			// Resize event, don't need to do anything except re-render
 		}
-		size, _ := consolesize.GetConsoleSize()
 
-		paddingWidth := 2
-		formattedStatus := ""
 		if currentSong != nil {
-			song := textStyle.Render(currentSong.Song)
-			album := textStyle.Render(currentSong.Album)
-			artist := textStyle.Render(currentSong.Artist)
-			renderStatus := playingStatus
-			if lipgloss.Width(playingStatus) == 0 {
-				z := time.Unix(0, 0).UTC()
-				newTime := z.Add(timer.elapsed())
-				newText := fmt.Sprintf("%s/%s", formatTime(newTime), formatTime(currentSong.Duration.AsTime()))
-				renderStatus = textStyle.Render(newText)
+			renderParams.songInfo = &songInfo{
+				currentSong: *currentSong,
+				artist:      label{icon: artistIcon, text: currentSong.Artist}.render(infoIconStyle),
+				album:       label{icon: albumIcon, text: currentSong.Album}.render(infoIconStyle),
+				song:        label{icon: songIcon, text: currentSong.Song}.render(infoIconStyle),
 			}
-
-			middleBar := lipgloss.NewStyle().
-				Background(lipgloss.Color("8")).
-				Width(size -
-					lipgloss.Width(connectionStatus) -
-					lipgloss.Width(connectionIcon) -
-					lipgloss.Width(renderStatus) -
-					lipgloss.Width(playingIcon) -
-					lipgloss.Width(songIcon) -
-					lipgloss.Width(song) -
-					lipgloss.Width(albumIcon) -
-					lipgloss.Width(album) -
-					lipgloss.Width(artistIcon) -
-					lipgloss.Width(artist) -
-					(lipgloss.Width(separator) * 3) -
-					paddingWidth).
-				Align(lipgloss.Right).
-				Render("")
-
-			formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
-				connectionIcon,
-				connectionStatus,
-				middleBar,
-				playingIcon,
-				renderStatus,
-				separator,
-				songIcon,
-				song,
-				separator,
-				albumIcon,
-				album,
-				separator,
-				artistIcon,
-				artist)
 		} else {
-			middleBar := lipgloss.NewStyle().
-				Background(lipgloss.Color("8")).
-				Width(size -
-					lipgloss.Width(connectionStatus) -
-					lipgloss.Width(connectionIcon) -
-					lipgloss.Width(playingStatus) -
-					lipgloss.Width(playingIcon) -
-					paddingWidth).
-				Align(lipgloss.Right).
-				Render("")
-
-			formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
-				connectionIcon,
-				connectionStatus,
-				middleBar,
-				playingIcon,
-				playingStatus)
+			renderParams.songInfo = nil
 		}
-		p.statusChan <- lipgloss.JoinHorizontal(lipgloss.Bottom, spacer, formattedStatus, spacer)
+		p.renderStatusBar(renderParams)
 	}
+}
+
+type label struct {
+	icon string
+	text string
+}
+
+func (l label) render(iconStyle lipgloss.Style) string {
+	return fmt.Sprintf("%s%s", iconStyle.Render(l.icon), textStyle.Render(" "+l.text))
+}
+
+type songInfo struct {
+	currentSong platune.LookupEntry
+	song        string
+	album       string
+	artist      string
+}
+
+type renderParams struct {
+	songInfo *songInfo
+	timer    *timer
+
+	connection string
+
+	playingIcon  string
+	renderStatus string
+}
+
+func (p *PlatuneClient) renderStatusBar(params renderParams) {
+	size, _ := consolesize.GetConsoleSize()
+
+	paddingWidth := 2
+	formattedStatus := ""
+	if params.songInfo != nil {
+		renderStatus := params.renderStatus
+		if lipgloss.Width(params.renderStatus) == 0 {
+			z := time.Unix(0, 0).UTC()
+			newTime := z.Add(params.timer.elapsed())
+			newText := fmt.Sprintf("%s/%s", formatTime(newTime), formatTime(params.songInfo.currentSong.Duration.AsTime()))
+			renderStatus = textStyle.Render(newText)
+		}
+
+		middleBar := lipgloss.NewStyle().
+			Background(lipgloss.Color("8")).
+			Width(size -
+				lipgloss.Width(params.connection) -
+				lipgloss.Width(renderStatus) -
+				lipgloss.Width(params.playingIcon) -
+				lipgloss.Width(params.songInfo.song) -
+				lipgloss.Width(params.songInfo.album) -
+				lipgloss.Width(params.songInfo.artist) -
+				(lipgloss.Width(separator) * 3) -
+				paddingWidth).
+			Align(lipgloss.Right).
+			Render("")
+
+		formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
+			params.connection,
+			middleBar,
+			params.playingIcon,
+			renderStatus,
+			separator,
+			params.songInfo.song,
+			separator,
+			params.songInfo.album,
+			separator,
+			params.songInfo.artist)
+	} else {
+		middleBar := lipgloss.NewStyle().
+			Background(lipgloss.Color("8")).
+			Width(size -
+				lipgloss.Width(params.connection) -
+				lipgloss.Width(params.playingIcon) -
+				lipgloss.Width(params.renderStatus) -
+				paddingWidth).
+			Align(lipgloss.Right).
+			Render("")
+
+		formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
+			params.connection,
+			middleBar,
+			params.playingIcon,
+			params.renderStatus)
+	}
+	p.statusChan <- lipgloss.JoinHorizontal(lipgloss.Bottom, spacer, formattedStatus, spacer)
 }
 
 func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
