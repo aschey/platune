@@ -21,6 +21,11 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 	return string(state.mode.Current()), true
 }
 
+func (state *cmdState) RunInteractive() int {
+	state.client.StartEventLoop()
+	return state.curPrompt.Run()
+}
+
 func NewState(client *internal.PlatuneClient, deleted *deleted.Deleted, statusChan internal.StatusChan) *cmdState {
 	state := cmdState{
 		mode:         mode.NewDefaultMode(),

@@ -34,6 +34,7 @@ type PlatuneClient struct {
 	statusChan          StatusChan
 	waitForStatusChange chan struct{}
 	statusChanged       chan struct{}
+	interactive         bool
 }
 
 func (p *PlatuneClient) monitorConnectionState(connCh chan connectivity.State, ctx context.Context) {
@@ -58,6 +59,9 @@ func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 }
 
 func (p *PlatuneClient) retryConnection() {
+	if !p.interactive {
+		return
+	}
 	state := p.conn.GetState()
 	if state == connectivity.TransientFailure || state == connectivity.Shutdown {
 		p.waitForStatusChange <- struct{}{}
@@ -332,7 +336,6 @@ func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	ctx := context.Background()
 
 	playerClient := platune.NewPlayerClient(conn)
 	managementClient := platune.NewManagementClient(conn)
@@ -345,14 +348,20 @@ func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
 		waitForStatusChange: make(chan struct{}, 1),
 	}
 
-	eventCh := make(chan *platune.EventResponse, 1)
-	go client.subscribeEvents(eventCh)
-	connCh := make(chan connectivity.State, 1)
-	go client.monitorConnectionState(connCh, ctx)
-
-	go client.eventLoop(eventCh, connCh)
-
 	return client
+}
+
+func (p *PlatuneClient) StartEventLoop() {
+	p.interactive = true
+
+	eventCh := make(chan *platune.EventResponse, 1)
+	go p.subscribeEvents(eventCh)
+
+	connCh := make(chan connectivity.State, 1)
+	ctx := context.Background()
+	go p.monitorConnectionState(connCh, ctx)
+
+	go p.eventLoop(eventCh, connCh)
 }
 
 func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
