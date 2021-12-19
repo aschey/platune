@@ -1,0 +1,29 @@
+[package]
+authors = ["aschey <aschey13@gmail.com>"]
+name = "platune-core"
+version = "0.1.0"
+
+edition = "2021"
+
+[lib]
+name = "platune_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "player"
+path = "src/main.rs"
+
+[features]
+
+[dependencies]
+anyhow = "1.0.51"
+cpal = "0.13.4"
+futures-util = "0.3.19"
+rb = "0.3.2"
+reqwest = "0.11.7"
+symphonia = {version = "0.4.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
+tempfile = "3.2.0"
+tokio = {version = "1.15.0", features = ["rt-multi-thread", "macros"]}
+tracing = "0.1.29"
+
+[dev-dependencies]
