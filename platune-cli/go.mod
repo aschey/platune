@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/MarvinJWendt/testza v0.2.12
-	github.com/aschey/go-prompt v0.2.7-0.20211215043327-f325eedfa3a0
+	github.com/aschey/go-prompt v0.2.7-0.20211219014443-47e06fafa70b
 	github.com/aschey/platune/client v0.0.0
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/charmbracelet/bubbles v0.9.0
@@ -24,7 +24,7 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1
 	golang.org/x/net v0.0.0-20211205041911-012df41ee64c // indirect
-	golang.org/x/sys v0.0.0-20211214234402-4825e8c3871d // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/genproto v0.0.0-20211203200212-54befc351ae9 // indirect
 	google.golang.org/grpc v1.42.0
