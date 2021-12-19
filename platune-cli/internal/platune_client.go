@@ -212,17 +212,18 @@ func (p *PlatuneClient) initSyncClient() error {
 
 func (p *PlatuneClient) Sync() <-chan *platune.Progress {
 	p.retryConnection()
-	out := make(chan *platune.Progress)
+
 	if err := p.initSyncClient(); err != nil {
 		fmt.Println(err)
-		return out
+		return nil
 	}
 
 	sync := *p.syncClient
 	if sync == nil {
 		fmt.Println("Not connected")
-		return out
+		return nil
 	}
+	out := make(chan *platune.Progress)
 	go func() {
 		defer close(out)
 		for {

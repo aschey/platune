@@ -24,8 +24,13 @@ func syncProgress(client *internal.PlatuneClient, deleted *deleted.Deleted) {
 				lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(":percent"),
 				lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Render(":elapsed"))))
 
+	sync := client.Sync()
+	if sync == nil {
+		return
+	}
+
 	start := time.Now()
-	for progress := range client.Sync() {
+	for progress := range sync {
 		b.Update(int(progress.Percentage*1000),
 			bar.Context{bar.Ctx("elapsed", time.Since(start).Round(time.Millisecond*10).String())})
 	}

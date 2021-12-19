@@ -1,7 +1,10 @@
 use sqlx::{Pool, Sqlite};
-use tokio::sync::{
-    broadcast::{channel, Sender},
-    oneshot,
+use tokio::{
+    runtime::Runtime,
+    sync::{
+        broadcast::{channel, Sender},
+        oneshot,
+    },
 };
 use tracing::error;
 
@@ -47,7 +50,7 @@ impl SyncController {
             let pool = self.pool.clone();
 
             tokio::task::spawn_blocking(move || {
-                let rt = tokio::runtime::Runtime::new().unwrap();
+                let rt = Runtime::new().unwrap();
                 let mut engine = SyncEngine::new(folders, pool, mount, tx);
                 rt.block_on(engine.start());
                 if let Err(e) = finished_tx.send(()) {
