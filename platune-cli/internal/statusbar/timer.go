@@ -1,4 +1,4 @@
-package internal
+package statusbar
 
 import "time"
 

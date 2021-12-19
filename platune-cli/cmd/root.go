@@ -11,6 +11,7 @@ import (
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/deleted"
 	"github.com/aschey/platune/cli/v2/internal/search"
+	"github.com/aschey/platune/cli/v2/internal/statusbar"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"go.uber.org/fx"
@@ -149,7 +150,9 @@ func Execute() {
 		fx.Provide(internal.NewPlatuneClient),
 		fx.Provide(search.NewSearch),
 		fx.Provide(deleted.NewDeleted),
-		fx.Provide(internal.NewStatusChan),
+		fx.Provide(statusbar.NewStatusChan),
+		fx.Provide(statusbar.NewStatusBar),
+		fx.Provide(internal.NewStatusNotifier),
 		fx.WithLogger(func(logger *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: logger}
 		}),

@@ -15,6 +15,7 @@ import (
 	"github.com/aschey/platune/cli/v2/internal/deleted"
 	"github.com/aschey/platune/cli/v2/internal/mode"
 	"github.com/aschey/platune/cli/v2/internal/search"
+	"github.com/aschey/platune/cli/v2/internal/statusbar"
 	"github.com/aschey/platune/cli/v2/test"
 	platune "github.com/aschey/platune/client"
 	"github.com/golang/mock/gomock"
@@ -62,7 +63,7 @@ func runTest(t *testing.T, expected string, client *internal.PlatuneClient, args
 	deleted := deleted.NewDeleted(client)
 	search := search.NewSearch(client)
 
-	state := NewState(client, deleted, make(internal.StatusChan))
+	state := NewState(client, deleted, make(statusbar.StatusChan), nil)
 
 	outStr, err := testza.CaptureStdout(func(out io.Writer) error {
 		return start(rootCmd, ctx, client, state, deleted, search)
@@ -130,7 +131,7 @@ func testInteractive(t *testing.T, searchQuery string, searchResults []*platune.
 
 	client := internal.NewTestClient(playerMock, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted, make(internal.StatusChan))
+	state := NewState(&client, deleted, make(statusbar.StatusChan), nil)
 
 	if !isAddQueue {
 		initSetQueuePrompt(t, state)
@@ -313,7 +314,7 @@ func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	client := internal.NewTestClient(nil, mock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted, make(internal.StatusChan))
+	state := NewState(&client, deleted, make(statusbar.StatusChan), nil)
 
 	if !isAddQueue {
 		initSetQueuePrompt(t, state)
@@ -583,7 +584,7 @@ func TestAddFolderCompleter(t *testing.T) {
 
 	client := internal.NewTestClient(playerClient, mgmtClient)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted, make(internal.StatusChan))
+	state := NewState(&client, deleted, make(statusbar.StatusChan), nil)
 
 	resultChan := make(chan []prompt.Suggest, 1)
 	state.completer(*doc, resultChan)
@@ -610,7 +611,7 @@ func TestSetQueueExecutor(t *testing.T) {
 
 	client := internal.NewTestClient(playerMock, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted, make(internal.StatusChan))
+	state := NewState(&client, deleted, make(statusbar.StatusChan), nil)
 
 	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
@@ -649,7 +650,7 @@ func TestSetQueueExecutorFile(t *testing.T) {
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	client := internal.NewTestClient(playerMock, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted, make(internal.StatusChan))
+	state := NewState(&client, deleted, make(statusbar.StatusChan), nil)
 
 	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
@@ -675,7 +676,7 @@ func TestSetQueueExecutorInvalidFile(t *testing.T) {
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	client := internal.NewTestClient(nil, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
-	state := NewState(&client, deleted, make(internal.StatusChan))
+	state := NewState(&client, deleted, make(statusbar.StatusChan), nil)
 
 	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())

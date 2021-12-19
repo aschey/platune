@@ -11,58 +11,61 @@ import (
 	"time"
 
 	platune "github.com/aschey/platune/client"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/nathan-fiscaletti/consolesize-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var (
-	defaultStyle  = lipgloss.NewStyle().Background(lipgloss.Color("8"))
-	infoIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color("14"))
-	textStyle     = defaultStyle.Copy().Foreground(lipgloss.Color("15"))
-	separator     = defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render("  ")
-	songIcon      = "ﱘ"
-	albumIcon     = ""
-	artistIcon    = "ﴁ"
-	spacer        = textStyle.Render(" ")
-)
-
-type StatusChan chan string
-
-func NewStatusChan() StatusChan {
-	return make(StatusChan, 128)
-}
-
 type PlatuneClient struct {
-	conn                *grpc.ClientConn
-	playerClient        platune.PlayerClient
-	managementClient    platune.ManagementClient
-	searchClient        *platune.Management_SearchClient
-	syncClient          *platune.Management_SyncClient
-	eventClient         *platune.Player_SubscribeEventsClient
-	statusChan          StatusChan
-	waitForStatusChange chan struct{}
-	statusChanged       chan struct{}
-	interactive         bool
+	conn             *grpc.ClientConn
+	playerClient     platune.PlayerClient
+	managementClient platune.ManagementClient
+	searchClient     *platune.Management_SearchClient
+	syncClient       *platune.Management_SyncClient
+	eventClient      *platune.Player_SubscribeEventsClient
+	statusNotifier   *StatusNotifier
+	attemptReconnect bool
 }
 
-func (p *PlatuneClient) monitorConnectionState(connCh chan connectivity.State, ctx context.Context) {
-	for {
-		state := p.conn.GetState()
-		p.conn.Connect()
-		p.conn.WaitForStateChange(ctx, state)
-		newState := p.conn.GetState()
-
-		connCh <- newState
+func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
+	var opts []grpc.DialOption
+	opts = append(opts, grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:50051", opts...)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+
+	playerClient := platune.NewPlayerClient(conn)
+	managementClient := platune.NewManagementClient(conn)
+	client := &PlatuneClient{
+		conn:             conn,
+		playerClient:     playerClient,
+		managementClient: managementClient,
+		statusNotifier:   statusNotifier,
+	}
+
+	return client
 }
 
-func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
-	p.initEventClient()
+func (p *PlatuneClient) EnableReconnect() {
+	p.attemptReconnect = true
+}
+
+func (p *PlatuneClient) GetConnection() *grpc.ClientConn {
+	return p.conn
+}
+
+func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
+	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
+}
+
+func (p *PlatuneClient) SubscribeEvents(eventCh chan *platune.EventResponse) {
+	if err := p.initEventClient(); err != nil {
+		fmt.Println(err)
+	}
 	for {
-		if (*p.eventClient) == nil {
+		if *p.eventClient == nil {
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
@@ -75,332 +78,37 @@ func (p *PlatuneClient) subscribeEvents(eventCh chan *platune.EventResponse) {
 }
 
 func (p *PlatuneClient) retryConnection() {
-	if !p.interactive {
+	if !p.attemptReconnect {
 		return
 	}
 	state := p.conn.GetState()
 	if state == connectivity.TransientFailure || state == connectivity.Shutdown {
-		p.waitForStatusChange <- struct{}{}
 		p.conn.ResetConnectBackoff()
-		<-p.statusChanged
+		p.statusNotifier.WaitForStatusChange()
 	}
 }
 
-type playerEvent struct {
-	icon    string
-	color   string
-	status  string
-	newSong *platune.LookupEntry
-}
-
-func (p *PlatuneClient) handlePlayerEvent(timer *timer, msg *platune.EventResponse, currentSong *platune.LookupEntry) playerEvent {
-	switch msg.Event {
-	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED, platune.Event_ENDED, platune.Event_NEXT, platune.Event_PREVIOUS:
-		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: msg.Queue[msg.QueuePosition]})
-		timer.setTime(0)
-		return playerEvent{
-			icon:    "",
-			color:   "14",
-			newSong: res.Song,
-		}
-	case platune.Event_SEEK:
-		timer.setTime(int64(*msg.SeekMillis))
-		return playerEvent{
-			icon:    "",
-			color:   "14",
-			newSong: currentSong,
-		}
-	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
-		timer.stop()
-		return playerEvent{
-			icon:    "",
-			color:   "9",
-			status:  "Stopped",
-			newSong: nil,
-		}
-	case platune.Event_PAUSE:
-		timer.pause()
-		return playerEvent{
-			icon:    "",
-			color:   "11",
-			status:  "Paused",
-			newSong: currentSong,
-		}
-	case platune.Event_RESUME:
-		timer.resume()
-		return playerEvent{
-			icon:    "",
-			color:   "14",
-			newSong: currentSong,
-		}
-	default:
-		return playerEvent{}
-	}
-}
-
-func (p *PlatuneClient) handlePlayerStatus(timer *timer, status *platune.StatusResponse) playerEvent {
-	if status == nil {
-		return playerEvent{
-			icon:    "",
-			color:   "9",
-			status:  "Stopped",
-			newSong: nil,
-		}
-	}
-	switch status.Status {
-	case platune.PlayerStatus_PLAYING:
-		progress := status.Progress.AsTime()
-
-		timer.start()
-		timer.setTime(progress.UnixMilli())
-
-		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: *status.CurrentSong})
-
-		return playerEvent{
-			icon:    "",
-			color:   "14",
-			newSong: res.Song,
-		}
-	case platune.PlayerStatus_STOPPED:
-		timer.stop()
-		return playerEvent{
-			icon:    "",
-			color:   "9",
-			status:  "Stopped",
-			newSong: nil,
-		}
-	case platune.PlayerStatus_PAUSED:
-		timer.pause()
-		progress := status.Progress.AsTime()
-		timer.setTime(progress.UnixMilli())
-		res, _ := p.managementClient.GetSongByPath(context.Background(), &platune.PathMessage{Path: *status.CurrentSong})
-
-		return playerEvent{
-			icon:    "",
-			color:   "11",
-			status:  "Paused",
-			newSong: res.Song,
-		}
-	default:
-		return playerEvent{}
-	}
-}
-
-func (p *PlatuneClient) handleStateChange(newState connectivity.State) (string, string, string) {
-	if newState == connectivity.Ready {
-		if p.searchClient != nil {
-			p.initSearchClient() //nolint:errcheck
-		}
-		if p.syncClient != nil {
-			p.initSyncClient() //nolint:errcheck
-		}
-		if p.eventClient != nil {
-			p.initEventClient() //nolint:errcheck
-		}
-	}
-
-	select {
-	case <-p.waitForStatusChange:
-		p.statusChanged <- struct{}{}
-	default:
-	}
-
-	switch newState {
-	case connectivity.Connecting:
-		return "", "0", "Connecting..."
-	case connectivity.Idle:
-		return "", "0", "Idle"
-	case connectivity.Ready:
-		return "", "10", "Connected"
-	case connectivity.Shutdown, connectivity.TransientFailure:
-		return "", "9", "Disconnected"
-	default:
-		return "", "0", ""
-	}
-}
-
-func formatTime(time time.Time) string {
-	return fmt.Sprintf("%02d:%02d:%02d", int(time.Hour()), int(time.Minute()), int(time.Second()))
-}
-
-func (p *PlatuneClient) eventLoop(eventCh chan *platune.EventResponse, stateCh chan connectivity.State) {
-	p.renderStatusBar(renderParams{connection: textStyle.Render(" Connecting...")})
-	sigCh := getSignalChannel()
-	ticker := time.NewTicker(500 * time.Millisecond)
-
-	currentStatus, _ := p.playerClient.GetCurrentStatus(context.Background(), &emptypb.Empty{})
-	timer := timer{}
-	event := p.handlePlayerStatus(&timer, currentStatus)
-
-	playingIconColor := event.color
-	playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
-	currentSong := event.newSong
-	renderParams := renderParams{
-		timer:        &timer,
-		connection:   "",
-		playingIcon:  playingIconStyle.Render(event.icon + " "),
-		renderStatus: textStyle.Render(event.status),
-	}
-	p.renderStatusBar(renderParams)
-
-	for {
-		select {
-		case msg := <-eventCh:
-			if msg != nil {
-				event := p.handlePlayerEvent(&timer, msg, currentSong)
-				currentSong = event.newSong
-				playingIconColor = event.color
-				playingIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
-				renderParams.renderStatus = textStyle.Render(event.status)
-				renderParams.playingIcon = playingIconStyle.Render(event.icon + " ")
-			}
-		case newState := <-stateCh:
-			connectionIcon, connectionIconColor, connectionStatus := p.handleStateChange(newState)
-			connectionIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(connectionIconColor))
-			renderParams.connection = label{icon: connectionIcon, text: connectionStatus}.render(connectionIconStyle)
-		case <-ticker.C:
-			// Timer tick, don't need to do anything except re-render
-		case <-sigCh:
-			// Resize event, don't need to do anything except re-render
-		}
-
-		if currentSong != nil {
-			renderParams.songInfo = &songInfo{
-				currentSong: *currentSong,
-				artist:      label{icon: artistIcon, text: currentSong.Artist}.render(infoIconStyle),
-				album:       label{icon: albumIcon, text: currentSong.Album}.render(infoIconStyle),
-				song:        label{icon: songIcon, text: currentSong.Song}.render(infoIconStyle),
-			}
-		} else {
-			renderParams.songInfo = nil
-		}
-		p.renderStatusBar(renderParams)
-	}
-}
-
-type label struct {
-	icon string
-	text string
-}
-
-func (l label) render(iconStyle lipgloss.Style) string {
-	return fmt.Sprintf("%s%s", iconStyle.Render(l.icon), textStyle.Render(" "+l.text))
-}
-
-type songInfo struct {
-	currentSong platune.LookupEntry
-	song        string
-	album       string
-	artist      string
-}
-
-type renderParams struct {
-	songInfo *songInfo
-	timer    *timer
-
-	connection string
-
-	playingIcon  string
-	renderStatus string
-}
-
-func (p *PlatuneClient) renderStatusBar(params renderParams) {
-	size, _ := consolesize.GetConsoleSize()
-
-	paddingWidth := 2
-	formattedStatus := ""
-	if params.songInfo != nil {
-		renderStatus := params.renderStatus
-		if lipgloss.Width(params.renderStatus) == 0 {
-			z := time.Unix(0, 0).UTC()
-			newTime := z.Add(params.timer.elapsed())
-			newText := fmt.Sprintf("%s/%s", formatTime(newTime), formatTime(params.songInfo.currentSong.Duration.AsTime()))
-			renderStatus = textStyle.Render(newText)
-		}
-
-		middleBar := lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Width(size -
-				lipgloss.Width(params.connection) -
-				lipgloss.Width(renderStatus) -
-				lipgloss.Width(params.playingIcon) -
-				lipgloss.Width(params.songInfo.song) -
-				lipgloss.Width(params.songInfo.album) -
-				lipgloss.Width(params.songInfo.artist) -
-				(lipgloss.Width(separator) * 3) -
-				paddingWidth).
-			Align(lipgloss.Right).
-			Render("")
-
-		formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
-			params.connection,
-			middleBar,
-			params.playingIcon,
-			renderStatus,
-			separator,
-			params.songInfo.song,
-			separator,
-			params.songInfo.album,
-			separator,
-			params.songInfo.artist)
-	} else {
-		middleBar := lipgloss.NewStyle().
-			Background(lipgloss.Color("8")).
-			Width(size -
-				lipgloss.Width(params.connection) -
-				lipgloss.Width(params.playingIcon) -
-				lipgloss.Width(params.renderStatus) -
-				paddingWidth).
-			Align(lipgloss.Right).
-			Render("")
-
-		formattedStatus = lipgloss.JoinHorizontal(lipgloss.Bottom,
-			params.connection,
-			middleBar,
-			params.playingIcon,
-			params.renderStatus)
-	}
-	p.statusChan <- lipgloss.JoinHorizontal(lipgloss.Bottom, spacer, formattedStatus, spacer)
-}
-
-func NewPlatuneClient(statusChan StatusChan) *PlatuneClient {
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
-	conn, err := grpc.Dial("localhost:50051", opts...)
+func (p *PlatuneClient) GetCurrentStatus() *platune.StatusResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	status, err := p.playerClient.GetCurrentStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
 	}
 
-	playerClient := platune.NewPlayerClient(conn)
-	managementClient := platune.NewManagementClient(conn)
-	client := &PlatuneClient{
-		conn:                conn,
-		playerClient:        playerClient,
-		managementClient:    managementClient,
-		statusChan:          statusChan,
-		statusChanged:       make(chan struct{}, 1),
-		waitForStatusChange: make(chan struct{}, 1),
+	return status
+}
+
+func (p *PlatuneClient) ResetStreams() {
+	if p.searchClient != nil {
+		p.initSearchClient() //nolint:errcheck
 	}
-
-	return client
-}
-
-func (p *PlatuneClient) StartEventLoop() {
-	p.interactive = true
-
-	eventCh := make(chan *platune.EventResponse, 1)
-	go p.subscribeEvents(eventCh)
-
-	connCh := make(chan connectivity.State, 1)
-	ctx := context.Background()
-	go p.monitorConnectionState(connCh, ctx)
-
-	go p.eventLoop(eventCh, connCh)
-}
-
-func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
-	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
+	if p.syncClient != nil {
+		p.initSyncClient() //nolint:errcheck
+	}
+	if p.eventClient != nil {
+		p.initEventClient() //nolint:errcheck
+	}
 }
 
 func (p *PlatuneClient) SetQueueFromSearchResults(entries []*platune.LookupEntry, printMsg bool) {
@@ -488,9 +196,9 @@ func (p *PlatuneClient) Seek(time string) {
 
 func (p *PlatuneClient) initEventClient() error {
 	ctx := context.Background()
-	sync, err := p.playerClient.SubscribeEvents(ctx, &emptypb.Empty{})
+	events, err := p.playerClient.SubscribeEvents(ctx, &emptypb.Empty{})
 
-	p.eventClient = &sync
+	p.eventClient = &events
 	return err
 }
 
@@ -504,12 +212,17 @@ func (p *PlatuneClient) initSyncClient() error {
 
 func (p *PlatuneClient) Sync() <-chan *platune.Progress {
 	p.retryConnection()
+	out := make(chan *platune.Progress)
 	if err := p.initSyncClient(); err != nil {
 		fmt.Println(err)
+		return out
 	}
 
-	out := make(chan *platune.Progress)
 	sync := *p.syncClient
+	if sync == nil {
+		fmt.Println("Not connected")
+		return out
+	}
 	go func() {
 		defer close(out)
 		for {
@@ -532,6 +245,7 @@ func (p *PlatuneClient) initSearchClient() error {
 	ctx := context.Background()
 	search, err := p.managementClient.Search(ctx)
 	p.searchClient = &search
+
 	return err
 }
 
@@ -539,11 +253,14 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 	p.retryConnection()
 	if p.searchClient == nil {
 		if err := p.initSearchClient(); err != nil {
-			fmt.Println(err)
+			return nil, err
 		}
 	}
 
 	searchClient := *p.searchClient
+	if searchClient == nil {
+		return nil, fmt.Errorf("Not connected")
+	}
 	if err := searchClient.Send(req); err != nil {
 		return nil, err
 	}
@@ -565,11 +282,12 @@ func (p *PlatuneClient) Lookup(entryType platune.EntryType, correlationIds []int
 func (p *PlatuneClient) GetAllFolders() {
 	p.retryConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	allFolders, err := p.managementClient.GetAllFolders(ctx, &emptypb.Empty{})
 	if err != nil {
 		fmt.Println(err)
 	}
-	cancel()
+
 	fmt.Println(PrettyPrintList(allFolders.Folders))
 }
 
@@ -585,14 +303,25 @@ func (p *PlatuneClient) SetMount(mount string) {
 	})
 }
 
+func (p *PlatuneClient) GetSongByPath(path string) *platune.SongResponse {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	song, err := p.managementClient.GetSongByPath(ctx, &platune.PathMessage{Path: path})
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	return song
+}
+
 func (p *PlatuneClient) GetDeleted() *platune.GetDeletedResponse {
 	p.retryConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	deleted, err := p.managementClient.GetDeleted(ctx, &emptypb.Empty{})
 	if err != nil {
 		fmt.Println(err)
 	}
-	cancel()
 
 	return deleted
 }
@@ -606,8 +335,8 @@ func (p *PlatuneClient) DeleteTracks(ids []int64) {
 func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
 	p.retryConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	_, err := cmdFunc(ctx)
-	cancel()
 	if err != nil {
 		fmt.Println(err)
 		return

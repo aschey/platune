@@ -5,6 +5,7 @@ import (
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/deleted"
 	"github.com/aschey/platune/cli/v2/internal/mode"
+	"github.com/aschey/platune/cli/v2/internal/statusbar"
 	platune "github.com/aschey/platune/client"
 )
 
@@ -14,6 +15,7 @@ type cmdState struct {
 	lookupResult []*platune.LookupEntry
 	curPrompt    *prompt.Prompt
 	client       *internal.PlatuneClient
+	statusBar    *statusbar.StatusBar
 	deleted      *deleted.Deleted
 }
 
@@ -22,15 +24,16 @@ func (state *cmdState) changeLivePrefix() (string, bool) {
 }
 
 func (state *cmdState) RunInteractive() int {
-	state.client.StartEventLoop()
+	state.statusBar.StartEventLoop()
 	return state.curPrompt.Run()
 }
 
-func NewState(client *internal.PlatuneClient, deleted *deleted.Deleted, statusChan internal.StatusChan) *cmdState {
+func NewState(client *internal.PlatuneClient, deleted *deleted.Deleted, statusChan statusbar.StatusChan, statusBar *statusbar.StatusBar) *cmdState {
 	state := cmdState{
 		mode:         mode.NewDefaultMode(),
 		currentQueue: []*platune.LookupEntry{},
 		client:       client,
+		statusBar:    statusBar,
 		deleted:      deleted,
 	}
 	state.curPrompt = prompt.New(
