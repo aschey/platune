@@ -15,28 +15,28 @@ name = "bench"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.44"
+anyhow = "1.0.51"
 async-channel = "1.6.1"
-concread = "0.2.19"
+concread = "0.2.20"
 directories = "4.0.1"
 dotenv = "0.15.0"
-futures = "0.3.17"
-itertools = "0.10.1"
+futures = "0.3.19"
+itertools = "0.10.3"
 katatsuki = {git = "https://github.com/aschey/seiri", rev = "a643a0ec242622a83c4f5d08aa79a3dca2302ca1"}
 lazy_static = "1.4.0"
 log = "0.4.14"
 regex = "1.5.4"
 rusqlite = {version = "0.25.3", default-features = false, features = ["load_extension"]}
 sqlx = {version = "0.5.9", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}
-strum = {version = "0.22.0", features = ["derive"]}
+strum = {version = "0.23.0", features = ["derive"]}
 thiserror = "1.0.30"
-tokio = {version = "1.12.0", features = ["rt-multi-thread", "macros"]}
-tokio-stream = {version = "0.1.7", features = ["net", "sync"]}
+tokio = {version = "1.15.0", features = ["rt-multi-thread", "macros"]}
+tokio-stream = {version = "0.1.8", features = ["net", "sync"]}
 tracing = "0.1.29"
 
 [dev-dependencies]
 criterion = {version = "0.3.5", features = ["async_tokio"]}
 ctor = "0.1.21"
-rstest = "0.11.0"
+rstest = "0.12.0"
 tempfile = "3.2.0"
-tracing-subscriber = "0.3.1"
+tracing-subscriber = "0.3.3"

@@ -20,7 +20,7 @@ use crate::{
     },
     spellfix::acquire_with_spellfix,
 };
-use concread::arcache::ARCache;
+use concread::arcache::{ARCache, ARCacheBuilder};
 use itertools::Itertools;
 use regex::Regex;
 use sqlx::{pool::PoolConnection, Pool, Row, Sqlite};
@@ -36,7 +36,8 @@ const MAX_TERMS: usize = 20;
 
 impl SearchEngine {
     pub(crate) fn new(pool: Pool<Sqlite>) -> Self {
-        let cache = Arc::new(ARCache::new_size(25, 25));
+        let builder = ARCacheBuilder::new().set_size(25, 25);
+        let cache = Arc::new(builder.build().unwrap());
         Self { pool, cache }
     }
 
