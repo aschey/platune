@@ -21,7 +21,6 @@ type PlatuneClient struct {
 	playerClient     platune.PlayerClient
 	managementClient platune.ManagementClient
 	searchClient     *platune.Management_SearchClient
-	syncClient       *platune.Management_SyncClient
 	eventClient      *platune.Player_SubscribeEventsClient
 	statusNotifier   *StatusNotifier
 	attemptReconnect bool
@@ -102,9 +101,6 @@ func (p *PlatuneClient) GetCurrentStatus() *platune.StatusResponse {
 func (p *PlatuneClient) ResetStreams() {
 	if p.searchClient != nil {
 		p.initSearchClient() //nolint:errcheck
-	}
-	if p.syncClient != nil {
-		p.initSyncClient() //nolint:errcheck
 	}
 	if p.eventClient != nil {
 		p.initEventClient() //nolint:errcheck
@@ -202,36 +198,30 @@ func (p *PlatuneClient) initEventClient() error {
 	return err
 }
 
-func (p *PlatuneClient) initSyncClient() error {
+func (p *PlatuneClient) initSyncClient() (platune.Management_SyncClient, error) {
 	ctx := context.Background()
 	sync, err := p.managementClient.Sync(ctx, &emptypb.Empty{})
 
-	p.syncClient = &sync
-	return err
+	return sync, err
 }
 
 func (p *PlatuneClient) Sync() <-chan *platune.Progress {
 	p.retryConnection()
 
-	if err := p.initSyncClient(); err != nil {
+	syncClient, err := p.initSyncClient()
+	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
 
-	sync := *p.syncClient
-	if sync == nil {
-		fmt.Println("Not connected")
-		return nil
-	}
 	out := make(chan *platune.Progress)
 	go func() {
 		defer close(out)
 		for {
-			progress, err := sync.Recv()
+			progress, err := syncClient.Recv()
 			if err == nil {
 				out <- progress
 			} else if err == io.EOF {
-				p.syncClient = nil
 				return
 			} else {
 				fmt.Println(err)

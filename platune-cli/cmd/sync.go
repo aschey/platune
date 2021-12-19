@@ -15,7 +15,6 @@ const syncDescription = "Syncs the database with the configured folders to impor
 const syncCmdText = "sync"
 
 func syncProgress(client *internal.PlatuneClient, deleted *deleted.Deleted) {
-
 	b := bar.NewWithOpts(
 		bar.WithDimensions(1000, 30),
 		bar.WithFormat(
