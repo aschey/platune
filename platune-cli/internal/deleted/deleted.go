@@ -26,7 +26,6 @@ var (
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
 	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
-	subtle            = lipgloss.AdaptiveColor{Light: "#D9DCCF", Dark: "#383838"}
 	buttonStyle       = lipgloss.NewStyle().
 				Foreground(lipgloss.Color("#FFF7DB")).
 				Background(lipgloss.Color("#888B7E")).

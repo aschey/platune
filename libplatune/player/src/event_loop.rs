@@ -76,7 +76,9 @@ pub(crate) fn main_loop(
             }
             Command::GetCurrentStatus(current_status_tx) => {
                 let current_status = queue.get_current_status();
-                current_status_tx.send(current_status);
+                if let Err(e) = current_status_tx.send(current_status) {
+                    error!("Error sending player status {:?}", e);
+                }
             }
             Command::Shutdown => {
                 return;
