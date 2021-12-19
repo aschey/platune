@@ -18,7 +18,7 @@ use tokio::{
     task::JoinHandle,
     time::timeout,
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::{consts::MIN_WORDS, db_error::DbError, path_util::clean_file_path};
 
@@ -109,7 +109,7 @@ impl SyncEngine {
             }
         }
         if let Err(e) = self.tx.send(None) {
-            error!("Error sending message to clients {:?}", e);
+            warn!("Error sending message to clients {:?}", e);
         }
     }
 
@@ -142,9 +142,12 @@ impl SyncEngine {
                             .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
                         break;
                     }
-                    self.tx
+                    if let Err(e) = self
+                        .tx
                         .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
-                        .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
+                    {
+                        warn!("Error sending progress message to receiver: {:?}", e);
+                    }
 
                     if total_dirs == dirs_processed {
                         break;
@@ -156,9 +159,12 @@ impl SyncEngine {
                         "Found dir. Dirs processed: {} Total dirs: {}",
                         dirs_processed, total_dirs
                     );
-                    self.tx
+                    if let Err(e) = self
+                        .tx
                         .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
-                        .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
+                    {
+                        warn!("Error sending progress message to receiver: {:?}", e);
+                    }
                 }
                 Ok(None) => {
                     break;
