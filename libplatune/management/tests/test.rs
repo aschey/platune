@@ -3,6 +3,7 @@ use libplatune_management::{config::Config, database::Database, manager::Manager
 use rstest::*;
 use std::{
     fs::{self, create_dir, create_dir_all},
+    path::Path,
     time::Duration,
 };
 use tempfile::TempDir;
@@ -158,14 +159,7 @@ pub async fn test_sync_multiple() {
     assert_eq!(vec![0., 1.], msgs);
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-pub async fn test_sync_delete() {
-    let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
-    let music_dir = tempdir.path().join("configdir");
-    let inner_dir = music_dir.join("folder1");
-    create_dir_all(inner_dir.clone()).unwrap();
-
+async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager) {
     fs::copy(
         "../player/tests/assets/test.mp3",
         inner_dir.join("test.mp3"),
@@ -197,6 +191,17 @@ pub async fn test_sync_delete() {
     // sync twice after deleting to ensure no unique constraint errors
     let mut receiver = manager.sync().await.unwrap();
     while receiver.next().await.is_some() {}
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+pub async fn test_sync_delete() {
+    let tempdir = TempDir::new().unwrap();
+    let (db, mut manager) = setup(&tempdir).await;
+    let music_dir = tempdir.path().join("configdir");
+    let inner_dir = music_dir.join("folder1");
+    create_dir_all(inner_dir.clone()).unwrap();
+
+    setup_delete(&inner_dir, &music_dir, &mut manager).await;
 
     let deleted = manager.get_deleted_songs().await.unwrap();
 
@@ -204,6 +209,42 @@ pub async fn test_sync_delete() {
         .delete_tracks(vec![deleted[0].song_id])
         .await
         .unwrap();
+
+    let deleted2 = manager.get_deleted_songs().await.unwrap();
+
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
+
+    let last_song = inner_dir.join("test3.mp3");
+
+    assert_eq!(1, deleted.len());
+    assert_eq!(
+        deleted[0].song_path,
+        last_song.to_string_lossy().to_string().replace("\\", "/")
+    );
+
+    // TODO: add test to check if number of songs decreased once we have an endpoint to get all songs
+    assert_eq!(0, deleted2.len());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+pub async fn test_sync_delete_and_readd() {
+    let tempdir = TempDir::new().unwrap();
+    let (db, mut manager) = setup(&tempdir).await;
+    let music_dir = tempdir.path().join("configdir");
+    let inner_dir = music_dir.join("folder1");
+    create_dir_all(inner_dir.clone()).unwrap();
+
+    setup_delete(&inner_dir, &music_dir, &mut manager).await;
+    let deleted = manager.get_deleted_songs().await.unwrap();
+
+    let last_song = inner_dir.join("test3.mp3");
+
+    fs::copy("../player/tests/assets/test3.mp3", last_song.clone()).unwrap();
+
+    let mut receiver = manager.sync().await.unwrap();
+    while receiver.next().await.is_some() {}
 
     let deleted2 = manager.get_deleted_songs().await.unwrap();
 

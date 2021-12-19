@@ -84,11 +84,25 @@ impl<'a> SyncDAL<'a> {
     }
 
     pub(crate) async fn update_missing_songs(&mut self) -> Result<(), DbError> {
+        // Add songs not found in the last scan attempt to the list of deleted songs
         sqlx::query!(
             "
             INSERT INTO deleted_song(song_id)
             SELECT song_id FROM song WHERE last_scanned_date < ?
             ON CONFLICT DO NOTHING;
+            ",
+            self.timestamp
+        )
+        .execute(&mut self.tran)
+        .await
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+
+        // If a song was previously missing but was found in the most recent scan,
+        // remove it from the list of deleted songs
+        sqlx::query!(
+            "
+            DELETE FROM deleted_song as ds
+            WHERE EXISTS(SELECT 1 FROM song s WHERE s.song_id = ds.song_id AND s.last_scanned_date = ?)
             ",
             self.timestamp
         )

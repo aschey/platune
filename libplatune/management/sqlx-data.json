@@ -304,6 +304,16 @@
       "nullable": []
     }
   },
+  "a46da2c08a969e2fb83eadd3e286d0947fe9cdfddab52a39ca2e54b4c6fe297d": {
+    "query": "\n            DELETE FROM deleted_song as ds\n            WHERE EXISTS(SELECT 1 FROM song s WHERE s.song_id = ds.song_id AND s.last_scanned_date = ?)\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 1
+      },
+      "nullable": []
+    }
+  },
   "a65c7e93559c7ebc8727338a22594b8da6a7c719aaf106db041e6cfe509b2a0e": {
     "query": "\n        UPDATE song\n            SET modified_date = $2,\n            artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),\n            song_title = $4,\n            album_id = (SELECT album_id FROM album WHERE album_name = $5),\n            track_number = $6,\n            disc_number = $7,\n            song_year = $8,\n            song_month = $9,\n            song_day = $10,\n            duration = $11,\n            sample_rate = $12,\n            bit_rate = $13,\n            file_size = $14,\n            album_art_path = $15,\n            fingerprint = $16\n        WHERE song_path = $1 AND fingerprint != $16;\n        ",
     "describe": {
