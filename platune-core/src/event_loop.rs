@@ -1,12 +1,12 @@
 use std::{
     io::{Read, Seek},
     path::PathBuf,
-    sync::mpsc::{Receiver, Sender, SyncSender},
+    sync::mpsc::{Receiver, Sender, SyncSender, TryRecvError},
 };
 
 use symphonia::core::{
     codecs::DecoderOptions,
-    formats::FormatOptions,
+    formats::{FormatOptions, SeekMode, SeekTo},
     io::{MediaSource, MediaSourceStream},
     meta::MetadataOptions,
     probe::Hint,
@@ -16,11 +16,22 @@ use tracing::{error, info};
 
 use crate::{
     dto::{command::Command, player_event::PlayerEvent},
+    output::CpalAudioOutput,
     player::Player,
     source::{FileExt, Source},
 };
 
-pub(crate) fn decode_loop(path_rx: Receiver<Box<dyn Source>>) {
+enum DecoderCommand {
+    Seek(u64),
+    Pause,
+}
+
+pub(crate) fn decode_loop(
+    path_rx: Receiver<Box<dyn Source>>,
+    cmd_receiver: Receiver<DecoderCommand>,
+) {
+    let output = CpalAudioOutput::try_open().unwrap();
+
     while let Ok(source) = path_rx.recv() {
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
@@ -52,23 +63,44 @@ pub(crate) fn decode_loop(path_rx: Receiver<Box<dyn Source>>) {
             .n_frames
             .map(|frames| track.codec_params.start_ts + frames);
 
-        loop {
-            let packet = reader.next_packet().unwrap();
-            if packet.track_id() != track_id {
-                continue;
-            }
-
-            match decoder.decode(&packet) {
-                Ok(decoded) => {
-                    let spec = *decoded.spec();
-                    // print progress
-                    //packet.pts();
-
-                    // send decoded to output
+        let config_loaded = false;
+        match cmd_receiver.try_recv() {
+            Ok(command) => match command {
+                DecoderCommand::Seek(millis) => {
+                    reader.seek(
+                        SeekMode::Coarse,
+                        SeekTo::TimeStamp {
+                            ts: millis,
+                            track_id,
+                        },
+                    );
                 }
-                Err(e) => {
+                DecoderCommand::Pause => {}
+            },
+            Err(TryRecvError::Empty) => {
+                let packet = reader.next_packet().unwrap();
+                if packet.track_id() != track_id {
                     continue;
                 }
+
+                match decoder.decode(&packet) {
+                    Ok(decoded) => {
+                        let spec = *decoded.spec();
+                        if !config_loaded {
+                            output.set_sample_buf(spec, decoded.capacity() as u64);
+                            config_loaded = true;
+                        }
+                        // print progress
+                        //packet.pts();
+                        output.write(decoded);
+                    }
+                    Err(e) => {
+                        continue;
+                    }
+                }
+            }
+            Err(TryRecvError::Disconnected) => {
+                break;
             }
         }
     }

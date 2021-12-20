@@ -16,6 +16,7 @@ use symphonia::core::units::Duration;
 pub trait AudioOutput {
     fn write(&mut self, decoded: AudioBufferRef<'_>) -> Result<()>;
     fn flush(&mut self);
+    fn set_sample_buf(&self, spec: SignalSpec, duration: Duration);
 }
 
 #[allow(dead_code)]
@@ -46,7 +47,7 @@ impl AudioOutputSample for i16 {}
 impl AudioOutputSample for u16 {}
 
 impl CpalAudioOutput {
-    pub fn try_open(spec: SignalSpec, duration: Duration) -> Result<Box<dyn AudioOutput>> {
+    pub fn try_open() -> Result<Box<dyn AudioOutput>> {
         // Get default host.
         let host = cpal::default_host();
 
@@ -69,15 +70,9 @@ impl CpalAudioOutput {
 
         // Select proper playback routine based on sample format.
         match config.sample_format() {
-            cpal::SampleFormat::F32 => {
-                CpalAudioOutputImpl::<f32>::try_open(spec, duration, &device)
-            }
-            cpal::SampleFormat::I16 => {
-                CpalAudioOutputImpl::<i16>::try_open(spec, duration, &device)
-            }
-            cpal::SampleFormat::U16 => {
-                CpalAudioOutputImpl::<u16>::try_open(spec, duration, &device)
-            }
+            cpal::SampleFormat::F32 => CpalAudioOutputImpl::<f32>::try_open(&device),
+            cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(&device),
+            cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(&device),
         }
     }
 }
@@ -87,20 +82,17 @@ where
     T: AudioOutputSample,
 {
     ring_buf_producer: rb::Producer<T>,
-    sample_buf: SampleBuffer<T>,
+    sample_buf: Option<SampleBuffer<T>>,
     stream: cpal::Stream,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn try_open(
-        spec: SignalSpec,
-        duration: Duration,
-        device: &cpal::Device,
-    ) -> Result<Box<dyn AudioOutput>> {
+    pub fn try_open(device: &cpal::Device) -> Result<Box<dyn AudioOutput>> {
         // Output audio stream config.
+        let supported_config = device.default_input_config().unwrap();
         let config = cpal::StreamConfig {
-            channels: spec.channels.count() as cpal::ChannelCount,
-            sample_rate: cpal::SampleRate(spec.rate),
+            channels: supported_config.channels(),
+            sample_rate: cpal::SampleRate(44_100),
             buffer_size: cpal::BufferSize::Default,
         };
 
@@ -135,11 +127,9 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             return Err(AudioOutputError::PlayStreamError);
         }
 
-        let sample_buf = SampleBuffer::<T>::new(duration, spec);
-
         Ok(Box::new(CpalAudioOutputImpl {
             ring_buf_producer,
-            sample_buf,
+            sample_buf: None,
             stream,
         }))
     }
@@ -154,13 +144,14 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
 
         // Audio samples must be interleaved for cpal. Interleave the samples in the audio
         // buffer into the sample buffer.
-        self.sample_buf.copy_interleaved_ref(decoded);
+        if let Some(sample_buf) = self.sample_buf {
+            sample_buf.copy_interleaved_ref(decoded);
+            // Write all the interleaved samples to the ring buffer.
+            let mut samples = sample_buf.samples();
 
-        // Write all the interleaved samples to the ring buffer.
-        let mut samples = self.sample_buf.samples();
-
-        while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
-            samples = &samples[written..];
+            while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
+                samples = &samples[written..];
+            }
         }
 
         Ok(())
@@ -170,13 +161,13 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         // Flush is best-effort, ignore the returned result.
         let _ = self.stream.pause();
     }
+
+    fn set_sample_buf(&self, spec: SignalSpec, duration: Duration) {
+        self.sample_buf = Some(SampleBuffer::<T>::new(duration, spec));
+    }
 }
 
 // #[cfg(target_os = "linux")]
 // pub fn try_open(spec: SignalSpec, duration: Duration) -> Result<Box<dyn AudioOutput>> {
 //     pulseaudio::PulseAudioOutput::try_open(spec, duration)
 // }
-
-pub fn try_open(spec: SignalSpec, duration: Duration) -> Result<Box<dyn AudioOutput>> {
-    CpalAudioOutput::try_open(spec, duration)
-}
