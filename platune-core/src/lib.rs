@@ -6,6 +6,8 @@ mod player;
 mod source;
 mod timer;
 pub mod platune_player {
+    use cpal::traits::{DeviceTrait, HostTrait};
+    use rb::{Consumer, Producer, SpscRb, RB};
     use std::sync::mpsc::SyncSender;
     use std::{sync::mpsc, thread};
     use tokio::sync::broadcast;
@@ -15,7 +17,8 @@ pub mod platune_player {
     pub use crate::dto::player_event::PlayerEvent;
     pub use crate::dto::player_state::PlayerState;
     pub use crate::dto::player_status::PlayerStatus;
-    use crate::event_loop::decode_loop;
+    use crate::event_loop::{audio_loop, decode_loop};
+    use crate::output::AudioOutputSample;
     use crate::{
         dto::command::Command,
         event_loop::{ended_loop, main_loop},
@@ -51,10 +54,36 @@ pub mod platune_player {
             let event_tx_ = event_tx.clone();
             let main_loop_fn = || main_loop(finish_rx, tx_, event_tx_, queue_tx);
             let ended_loop_fn = || ended_loop(rx, finish_tx_);
-            let decoder_fn = || decode_loop(queue_rx);
+
             thread::spawn(main_loop_fn);
             thread::spawn(ended_loop_fn);
-            thread::spawn(decoder_fn);
+
+            let host = cpal::default_host();
+
+            // Instantiate a ring buffer capable of buffering 8K (arbitrarily chosen) samples.
+            match host
+                .default_output_device()
+                .unwrap()
+                .default_output_config()
+                .unwrap()
+                .sample_format()
+            {
+                cpal::SampleFormat::I16 => {
+                    let ring_buf = SpscRb::<i16>::new(8 * 1024);
+                    thread::spawn(|| decode_loop(queue_rx, ring_buf.producer()));
+                    thread::spawn(|| audio_loop(ring_buf.consumer()));
+                }
+                cpal::SampleFormat::U16 => {
+                    let ring_buf = SpscRb::<u16>::new(8 * 1024);
+                    thread::spawn(|| decode_loop(queue_rx, ring_buf.producer()));
+                    thread::spawn(|| audio_loop(ring_buf.consumer()));
+                }
+                cpal::SampleFormat::F32 => {
+                    let ring_buf = SpscRb::<f32>::new(8 * 1024);
+                    thread::spawn(|| decode_loop(queue_rx, ring_buf.producer()));
+                    thread::spawn(|| audio_loop(ring_buf.consumer()));
+                }
+            }
 
             PlatunePlayer {
                 cmd_sender: finish_tx,
