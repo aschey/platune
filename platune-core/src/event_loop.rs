@@ -4,40 +4,23 @@ use std::{
     sync::mpsc::{Receiver, Sender, SyncSender},
 };
 
-use rb::{Consumer, Producer, RbProducer};
 use symphonia::core::{
-    audio::{SampleBuffer, SignalSpec},
     codecs::DecoderOptions,
-    conv::ConvertibleSample,
     formats::FormatOptions,
     io::{MediaSource, MediaSourceStream},
     meta::MetadataOptions,
     probe::Hint,
-    sample::Sample,
-    units::Duration,
 };
 use tokio::sync::broadcast;
 use tracing::{error, info};
 
 use crate::{
     dto::{command::Command, player_event::PlayerEvent},
-    output::{AudioOutputSample, CpalAudioOutput},
     player::Player,
     source::{FileExt, Source},
 };
 
-enum OutputCommand {
-    NewTrack(SignalSpec, Duration),
-}
-
-pub(crate) fn audio_loop<T: AudioOutputSample>(ring_buf_consumer: Consumer<T>) {
-    let output = CpalAudioOutput::try_open(ring_buf_consumer).unwrap();
-}
-
-pub(crate) fn decode_loop<T: AudioOutputSample>(
-    path_rx: Receiver<Box<dyn Source>>,
-    ring_buf_producer: Producer<T>,
-) {
+pub(crate) fn decode_loop(path_rx: Receiver<Box<dyn Source>>) {
     while let Ok(source) = path_rx.recv() {
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
@@ -78,25 +61,10 @@ pub(crate) fn decode_loop<T: AudioOutputSample>(
             match decoder.decode(&packet) {
                 Ok(decoded) => {
                     let spec = *decoded.spec();
-                    let duration = decoded.capacity() as u64;
-                    let sample_buf = SampleBuffer::new(duration, spec);
                     // print progress
                     //packet.pts();
 
-                    // Do nothing if there are no audio frames.
-                    if decoded.frames() == 0 {
-                        continue;
-                    }
-
-                    // Audio samples must be interleaved for cpal. Interleave the samples in the audio
-                    // buffer into the sample buffer.
-                    sample_buf.copy_interleaved_ref(decoded);
-                    // Write all the interleaved samples to the ring buffer.
-                    let mut samples = sample_buf.samples();
-
-                    while let Some(written) = ring_buf_producer.write_blocking(samples) {
-                        samples = &samples[written..];
-                    }
+                    // send decoded to output
                 }
                 Err(e) => {
                     continue;
