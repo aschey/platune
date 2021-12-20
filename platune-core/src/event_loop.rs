@@ -25,13 +25,9 @@ pub(crate) fn decode_loop(path_rx: Receiver<Box<dyn Source>>) {
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
 
-        // if let Some(extension) = path.extension() {
-        //     if let Some(extension_str) = extension.to_str() {
-        //         hint.with_extension(extension_str);
-        //     }
-        // }
-
-        //let source = Box::new(File::open(path).unwrap());
+        if let Some(extension) = source.get_file_ext() {
+            hint.with_extension(&extension);
+        }
 
         let mss = MediaSourceStream::new(source.as_media_source(), Default::default());
 
@@ -94,22 +90,17 @@ pub(crate) fn main_loop(
     receiver: Receiver<Command>,
     finish_rx: Sender<Receiver<()>>,
     event_tx: broadcast::Sender<PlayerEvent>,
+    queue_sender: Sender<Box<dyn Source>>,
 ) {
-    let (_stream, handle) = match rodio::OutputStream::try_default() {
-        Ok((stream, handle)) => (stream, handle),
-        Err(e) => {
-            error!("Error creating audio output stream {:?}", e);
-            return;
-        }
-    };
+    // let (_stream, handle) = match rodio::OutputStream::try_default() {
+    //     Ok((stream, handle)) => (stream, handle),
+    //     Err(e) => {
+    //         error!("Error creating audio output stream {:?}", e);
+    //         return;
+    //     }
+    // };
 
-    let mut queue = match Player::new(finish_rx, event_tx, handle) {
-        Ok(player) => player,
-        Err(e) => {
-            error!("Error creating audio sink {:?}", e);
-            return;
-        }
-    };
+    let mut queue = Player::new(finish_rx, event_tx, queue_sender);
 
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);

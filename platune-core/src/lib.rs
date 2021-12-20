@@ -1,12 +1,13 @@
 mod dto;
 mod event_loop;
 mod http_stream_reader;
+mod output;
 mod player;
 mod source;
 mod timer;
 pub mod platune_player {
-    use std::sync::mpsc;
     use std::sync::mpsc::SyncSender;
+    use std::{sync::mpsc, thread};
     use tokio::sync::broadcast;
     use tracing::{error, warn};
 
@@ -14,6 +15,7 @@ pub mod platune_player {
     pub use crate::dto::player_event::PlayerEvent;
     pub use crate::dto::player_state::PlayerState;
     pub use crate::dto::player_status::PlayerStatus;
+    use crate::event_loop::decode_loop;
     use crate::{
         dto::command::Command,
         event_loop::{ended_loop, main_loop},
@@ -44,15 +46,15 @@ pub mod platune_player {
             let tx_ = tx;
             let (finish_tx, finish_rx) = std::sync::mpsc::sync_channel(32);
             let finish_tx_ = finish_tx.clone();
+            let (queue_tx, queue_rx) = std::sync::mpsc::channel();
 
             let event_tx_ = event_tx.clone();
-            let main_loop_fn = || main_loop(finish_rx, tx_, event_tx_);
+            let main_loop_fn = || main_loop(finish_rx, tx_, event_tx_, queue_tx);
             let ended_loop_fn = || ended_loop(rx, finish_tx_);
-            #[cfg(feature = "runtime-tokio")]
-            {
-                tokio::task::spawn_blocking(main_loop_fn);
-                tokio::task::spawn_blocking(ended_loop_fn);
-            }
+            let decoder_fn = || decode_loop(queue_rx);
+            thread::spawn(main_loop_fn);
+            thread::spawn(ended_loop_fn);
+            thread::spawn(decoder_fn);
 
             PlatunePlayer {
                 cmd_sender: finish_tx,
