@@ -15,8 +15,9 @@ use symphonia::core::units::Duration;
 
 pub trait AudioOutput {
     fn write(&mut self, decoded: AudioBufferRef<'_>) -> Result<()>;
+    fn write_empty(&mut self);
     fn flush(&mut self);
-    fn set_sample_buf(&self, spec: SignalSpec, duration: Duration);
+    fn set_sample_buf(&mut self, spec: SignalSpec, duration: Duration);
 }
 
 #[allow(dead_code)]
@@ -144,7 +145,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
 
         // Audio samples must be interleaved for cpal. Interleave the samples in the audio
         // buffer into the sample buffer.
-        if let Some(sample_buf) = self.sample_buf {
+        if let Some(sample_buf) = &mut self.sample_buf {
             sample_buf.copy_interleaved_ref(decoded);
             // Write all the interleaved samples to the ring buffer.
             let mut samples = sample_buf.samples();
@@ -157,12 +158,16 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         Ok(())
     }
 
+    fn write_empty(&mut self) {
+        self.ring_buf_producer.write_blocking(&[T::default()]);
+    }
+
     fn flush(&mut self) {
         // Flush is best-effort, ignore the returned result.
         let _ = self.stream.pause();
     }
 
-    fn set_sample_buf(&self, spec: SignalSpec, duration: Duration) {
+    fn set_sample_buf(&mut self, spec: SignalSpec, duration: Duration) {
         self.sample_buf = Some(SampleBuffer::<T>::new(duration, spec));
     }
 }

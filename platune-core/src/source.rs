@@ -52,7 +52,7 @@ impl<T: Read + Seek + Send> Seek for ReadSeekSource<T> {
 
 impl<T: Read + Seek + Send> FileExt for ReadSeekSource<T> {
     fn get_file_ext(&self) -> Option<String> {
-        self.extension
+        self.extension.clone()
     }
 }
 

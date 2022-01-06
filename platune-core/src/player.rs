@@ -14,6 +14,7 @@ use crate::{
         audio_status::AudioStatus, player_event::PlayerEvent, player_state::PlayerState,
         player_status::PlayerStatus,
     },
+    event_loop::DecoderCommand,
     http_stream_reader::HttpStreamReader,
     source::{ReadSeekSource, Source},
     timer::{Timer, TimerStatus},
@@ -29,6 +30,7 @@ pub(crate) struct Player {
     queued_count: usize,
     current_time: Timer,
     queue_sender: Sender<Box<dyn Source>>,
+    cmd_sender: Sender<DecoderCommand>,
 }
 
 impl Player {
@@ -37,6 +39,7 @@ impl Player {
         event_tx: broadcast::Sender<PlayerEvent>,
         //handle: OutputStreamHandle,
         queue_sender: Sender<Box<dyn Source>>,
+        cmd_sender: Sender<DecoderCommand>,
     ) -> Self {
         //let sink = rodio::Sink::try_new(&handle)?;
 
@@ -54,6 +57,7 @@ impl Player {
             queued_count: 0,
             queue_sender,
             current_time: Timer::default(),
+            cmd_sender,
         }
     }
 
@@ -70,7 +74,7 @@ impl Player {
 
     fn append_file(&mut self, path: String) {
         if path.starts_with("http") {
-            let parts: Vec<&str> = path.rsplitn(1, ".").collect();
+            let parts: Vec<&str> = path.rsplitn(2, '.').collect();
             let extension = if parts.len() > 1 {
                 Some(parts[1].to_owned())
             } else {
@@ -92,7 +96,7 @@ impl Player {
                 extension,
             )));
         } else {
-            let file = match File::open(path) {
+            let file = match File::open(&path) {
                 Ok(file) => file,
                 Err(e) => {
                     error!("Error opening file {:?}", e);
@@ -130,7 +134,7 @@ impl Player {
     }
 
     pub(crate) fn play(&mut self) {
-        self.sink.play();
+        self.cmd_sender.send(DecoderCommand::Play);
         self.current_time.resume();
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
@@ -141,7 +145,7 @@ impl Player {
         if self.state.queue.is_empty() {
             return;
         }
-        self.sink.pause();
+        self.cmd_sender.send(DecoderCommand::Pause);
         self.current_time.pause();
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
@@ -149,12 +153,12 @@ impl Player {
     }
 
     pub(crate) fn set_volume(&mut self, volume: f32) {
-        self.sink.set_volume(volume);
+        //self.sink.set_volume(volume);
         self.state.volume = volume;
     }
 
     pub(crate) fn seek(&mut self, millis: u64) {
-        self.sink.seek(Duration::from_millis(millis));
+        self.cmd_sender.send(DecoderCommand::Seek(millis));
         self.current_time.set_time(Duration::from_millis(millis));
         self.event_tx
             .send(PlayerEvent::Seek(self.state.clone(), millis))
@@ -194,16 +198,16 @@ impl Player {
 
     fn reset(&mut self) {
         self.ignore_ended();
-        self.sink.stop();
+        //self.sink.stop();
         self.current_time.stop();
-        self.sink = match rodio::Sink::try_new(&self.handle) {
-            Ok(sink) => sink,
-            Err(e) => {
-                error!("Error creating audio sink {:?}", e);
-                return;
-            }
-        };
-        self.sink.set_volume(self.state.volume);
+        // self.sink = match rodio::Sink::try_new(&self.handle) {
+        //     Ok(sink) => sink,
+        //     Err(e) => {
+        //         error!("Error creating audio sink {:?}", e);
+        //         return;
+        //     }
+        // };
+        // self.sink.set_volume(self.state.volume);
     }
 
     pub(crate) fn on_ended(&mut self) {
@@ -246,16 +250,16 @@ impl Player {
 
     fn signal_finish(&mut self) {
         info!("Sending finish receiver");
-        let receiver = match self.sink.get_current_receiver() {
-            Some(receiver) => receiver,
-            None => {
-                error!("Unable to trigger song ended event because no receiver was found");
-                return;
-            }
-        };
-        if let Err(e) = self.finish_tx.send(receiver) {
-            error!("Error sending song ended event {:?}", e);
-        }
+        // let receiver = match self.sink.get_current_receiver() {
+        //     Some(receiver) => receiver,
+        //     None => {
+        //         error!("Unable to trigger song ended event because no receiver was found");
+        //         return;
+        //     }
+        // };
+        // if let Err(e) = self.finish_tx.send(receiver) {
+        //     error!("Error sending song ended event {:?}", e);
+        // }
     }
 
     pub(crate) fn set_queue(&mut self, queue: Vec<String>) {

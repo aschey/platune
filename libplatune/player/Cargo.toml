@@ -21,7 +21,7 @@ anyhow = "1.0.51"
 futures-util = "0.3.19"
 reqwest = {version = "0.11.7", features = ["stream"]}
 rodio = {git = "https://github.com/aschey/rodio", rev = "61a80073869e850f5d83acde49704168bec9b0b0", default-features = false, features = ["symphonia-all", "vorbis"]}
-strum = {version = "0.23.0", features = ["derive"]}
+strum = { version = "0.23.0", features = ["derive"] }
 tempfile = "3.2.0"
 tokio = {version = "1.15.0", features = ["rt-multi-thread"], optional = true}
 tracing = "0.1.29"

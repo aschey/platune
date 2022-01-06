@@ -5,6 +5,7 @@ use std::{
 };
 
 use symphonia::core::{
+    audio::AudioBufferRef,
     codecs::DecoderOptions,
     formats::{FormatOptions, SeekMode, SeekTo},
     io::{MediaSource, MediaSourceStream},
@@ -21,17 +22,18 @@ use crate::{
     source::{FileExt, Source},
 };
 
-enum DecoderCommand {
+pub enum DecoderCommand {
     Seek(u64),
     Pause,
+    Play,
 }
 
 pub(crate) fn decode_loop(
     path_rx: Receiver<Box<dyn Source>>,
     cmd_receiver: Receiver<DecoderCommand>,
 ) {
-    let output = CpalAudioOutput::try_open().unwrap();
-
+    let mut output = CpalAudioOutput::try_open().unwrap();
+    let mut paused = false;
     while let Ok(source) = path_rx.recv() {
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
@@ -63,44 +65,51 @@ pub(crate) fn decode_loop(
             .n_frames
             .map(|frames| track.codec_params.start_ts + frames);
 
-        let config_loaded = false;
-        match cmd_receiver.try_recv() {
-            Ok(command) => match command {
-                DecoderCommand::Seek(millis) => {
-                    reader.seek(
-                        SeekMode::Coarse,
-                        SeekTo::TimeStamp {
-                            ts: millis,
-                            track_id,
-                        },
-                    );
-                }
-                DecoderCommand::Pause => {}
-            },
-            Err(TryRecvError::Empty) => {
-                let packet = reader.next_packet().unwrap();
-                if packet.track_id() != track_id {
-                    continue;
-                }
-
-                match decoder.decode(&packet) {
-                    Ok(decoded) => {
-                        let spec = *decoded.spec();
-                        if !config_loaded {
-                            output.set_sample_buf(spec, decoded.capacity() as u64);
-                            config_loaded = true;
-                        }
-                        // print progress
-                        //packet.pts();
-                        output.write(decoded);
+        let mut config_loaded = false;
+        loop {
+            match cmd_receiver.try_recv() {
+                Ok(command) => match command {
+                    DecoderCommand::Play => paused = false,
+                    DecoderCommand::Seek(millis) => {
+                        reader.seek(
+                            SeekMode::Coarse,
+                            SeekTo::TimeStamp {
+                                ts: millis,
+                                track_id,
+                            },
+                        );
                     }
-                    Err(e) => {
+                    DecoderCommand::Pause => paused = true,
+                },
+                Err(TryRecvError::Empty) => {
+                    if paused {
+                        output.write_empty();
                         continue;
                     }
+                    let packet = reader.next_packet().unwrap();
+                    if packet.track_id() != track_id {
+                        continue;
+                    }
+
+                    match decoder.decode(&packet) {
+                        Ok(decoded) => {
+                            let spec = *decoded.spec();
+                            if !config_loaded {
+                                output.set_sample_buf(spec, decoded.capacity() as u64);
+                                config_loaded = true;
+                            }
+                            // print progress
+                            //packet.pts();
+                            output.write(decoded);
+                        }
+                        Err(e) => {
+                            continue;
+                        }
+                    }
                 }
-            }
-            Err(TryRecvError::Disconnected) => {
-                break;
+                Err(TryRecvError::Disconnected) => {
+                    break;
+                }
             }
         }
     }
@@ -123,6 +132,7 @@ pub(crate) fn main_loop(
     finish_rx: Sender<Receiver<()>>,
     event_tx: broadcast::Sender<PlayerEvent>,
     queue_sender: Sender<Box<dyn Source>>,
+    cmd_sender: Sender<DecoderCommand>,
 ) {
     // let (_stream, handle) = match rodio::OutputStream::try_default() {
     //     Ok((stream, handle)) => (stream, handle),
@@ -132,7 +142,7 @@ pub(crate) fn main_loop(
     //     }
     // };
 
-    let mut queue = Player::new(finish_rx, event_tx, queue_sender);
+    let mut queue = Player::new(finish_rx, event_tx, queue_sender, cmd_sender);
 
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);
