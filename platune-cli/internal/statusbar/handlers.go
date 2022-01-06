@@ -106,16 +106,16 @@ func (s *StatusBar) handleStateChange(newState connectivity.State) (string, stri
 		s.platuneClient.ResetStreams()
 	}
 
-	s.statusNotifier.NotifyStatusChanged()
-
 	switch newState {
 	case connectivity.Connecting:
 		return "", "0", "Connecting..."
 	case connectivity.Idle:
 		return "", "0", "Idle"
 	case connectivity.Ready:
+		s.statusNotifier.NotifyStatusChanged()
 		return "", "10", "Connected"
 	case connectivity.Shutdown, connectivity.TransientFailure:
+		s.statusNotifier.NotifyStatusChanged()
 		return "", "9", "Disconnected"
 	default:
 		return "", "0", ""
