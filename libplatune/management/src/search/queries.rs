@@ -73,7 +73,7 @@ pub(crate) fn get_full_spellfix_query(terms: &[&str]) -> String {
         .enumerate()
         .map(|(i, _)| get_spellfix_query(i + 1))
         .collect_vec()
-        .join(" union all ");
+        .join(" UNION ALL ");
 
     full_query
 }

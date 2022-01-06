@@ -43,11 +43,11 @@ impl SearchEngine {
 
     pub(crate) async fn search(
         &self,
-        mut query: &str,
+        query: &str,
         options: SearchOptions<'_>,
     ) -> Result<Vec<SearchResult>, DbError> {
-        query = query.trim();
-        let res = match self.cache.read().get(query) {
+        let query = query.trim().to_lowercase();
+        let res = match self.cache.read().get(&query) {
             Some(val) => {
                 info!("Using cache for search {}", query);
                 val.to_owned()
@@ -55,7 +55,7 @@ impl SearchEngine {
             None => {
                 let start = Instant::now();
                 // Parse out artist filter if it was supplied
-                let (adj_query, artist_filter) = self.split_artist_filter(query).await?;
+                let (adj_query, artist_filter) = self.split_artist_filter(&query).await?;
 
                 let res = self
                     .search_helper(&adj_query, &adj_query, options, artist_filter)
