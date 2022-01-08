@@ -24,9 +24,9 @@ pub(crate) struct Player {
     //sink: RodioSink,
     state: PlayerState,
     event_tx: broadcast::Sender<PlayerEvent>,
-    finish_tx: Sender<Receiver<()>>,
+    //finish_tx: Sender<Receiver<()>>,
     // handle: OutputStreamHandle,
-    ignore_count: usize,
+    //ignore_count: usize,
     queued_count: usize,
     current_time: Timer,
     queue_sender: Sender<Box<dyn Source>>,
@@ -35,7 +35,7 @@ pub(crate) struct Player {
 
 impl Player {
     pub(crate) fn new(
-        finish_tx: Sender<Receiver<()>>,
+        //finish_tx: Sender<Receiver<()>>,
         event_tx: broadcast::Sender<PlayerEvent>,
         //handle: OutputStreamHandle,
         queue_sender: Sender<Box<dyn Source>>,
@@ -45,7 +45,7 @@ impl Player {
 
         Self {
             //sink,
-            finish_tx,
+            //finish_tx,
             //handle,
             event_tx,
             state: PlayerState {
@@ -53,7 +53,7 @@ impl Player {
                 volume: 0.5,
                 queue_position: 0,
             },
-            ignore_count: 0,
+            //ignore_count: 0,
             queued_count: 0,
             queue_sender,
             current_time: Timer::default(),
@@ -90,11 +90,13 @@ impl Player {
             let file_len = http_reader.file_len;
             let reader = BufReader::new(http_reader);
 
-            self.queue_sender.send(Box::new(ReadSeekSource::new(
-                reader,
-                Some(file_len),
-                extension,
-            )));
+            self.queue_sender
+                .send(Box::new(ReadSeekSource::new(
+                    reader,
+                    Some(file_len),
+                    extension,
+                )))
+                .unwrap();
         } else {
             let file = match File::open(&path) {
                 Ok(file) => file,
@@ -110,7 +112,8 @@ impl Player {
             let reader = BufReader::new(file);
 
             self.queue_sender
-                .send(Box::new(ReadSeekSource::new(reader, Some(len), extension)));
+                .send(Box::new(ReadSeekSource::new(reader, Some(len), extension)))
+                .unwrap();
         }
 
         self.queued_count += 1;
@@ -134,7 +137,7 @@ impl Player {
     }
 
     pub(crate) fn play(&mut self) {
-        self.cmd_sender.send(DecoderCommand::Play);
+        self.cmd_sender.send(DecoderCommand::Play).unwrap();
         self.current_time.resume();
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
@@ -145,7 +148,7 @@ impl Player {
         if self.state.queue.is_empty() {
             return;
         }
-        self.cmd_sender.send(DecoderCommand::Pause);
+        self.cmd_sender.send(DecoderCommand::Pause).unwrap();
         self.current_time.pause();
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
@@ -158,7 +161,7 @@ impl Player {
     }
 
     pub(crate) fn seek(&mut self, millis: u64) {
-        self.cmd_sender.send(DecoderCommand::Seek(millis));
+        self.cmd_sender.send(DecoderCommand::Seek(millis)).unwrap();
         self.current_time.set_time(Duration::from_millis(millis));
         self.event_tx
             .send(PlayerEvent::Seek(self.state.clone(), millis))
@@ -191,9 +194,9 @@ impl Player {
     }
 
     fn ignore_ended(&mut self) {
-        self.ignore_count = self.queued_count;
+        //self.ignore_count = self.queued_count;
 
-        info!("Ignore count {}", self.ignore_count);
+        //info!("Ignore count {}", self.ignore_count);
     }
 
     fn reset(&mut self) {
@@ -214,14 +217,14 @@ impl Player {
         info!("Received ended event");
         self.queued_count -= 1;
         info!("Queued count {}", self.queued_count);
-        if self.ignore_count > 0 {
-            info!("Ignoring ended event");
-            self.ignore_count -= 1;
-            info!("Ignore count {}", self.ignore_count);
-            return;
-        } else {
-            info!("Not ignoring ended event");
-        }
+        // if self.ignore_count > 0 {
+        //     info!("Ignoring ended event");
+        //     self.ignore_count -= 1;
+        //     info!("Ignore count {}", self.ignore_count);
+        //     return;
+        // } else {
+        //     info!("Not ignoring ended event");
+        // }
         if self.state.queue_position < self.state.queue.len() - 1 {
             self.state.queue_position += 1;
             self.current_time.start();

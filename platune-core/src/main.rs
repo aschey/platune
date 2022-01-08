@@ -1,10 +1,7 @@
 use std::{fs::File, path::Path};
 
 use symphonia::core::{
-    codecs::DecoderOptions,
-    formats::{FormatOptions, FormatReader},
-    io::MediaSourceStream,
-    meta::MetadataOptions,
+    codecs::DecoderOptions, formats::FormatOptions, io::MediaSourceStream, meta::MetadataOptions,
     probe::Hint,
 };
 
@@ -26,7 +23,7 @@ fn main() {
     let format_opts = FormatOptions::default();
     let metadata_opts = MetadataOptions::default();
 
-    let mut probed = symphonia::default::get_probe()
+    let probed = symphonia::default::get_probe()
         .format(&hint, mss, &format_opts, &metadata_opts)
         .unwrap();
 

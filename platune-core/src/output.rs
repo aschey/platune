@@ -14,10 +14,10 @@ use symphonia::core::conv::ConvertibleSample;
 use symphonia::core::units::Duration;
 
 pub trait AudioOutput {
-    fn write(&mut self, decoded: AudioBufferRef<'_>) -> Result<()>;
+    fn write(&mut self, decoded: AudioBufferRef<'_>);
     fn write_empty(&mut self);
     fn flush(&mut self);
-    fn set_sample_buf(&mut self, spec: SignalSpec, duration: Duration);
+    fn init_track(&mut self, spec: SignalSpec, duration: Duration);
 }
 
 #[allow(dead_code)]
@@ -34,7 +34,7 @@ pub type Result<T> = result::Result<T, AudioOutputError>;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rb::*;
 
-use tracing::error;
+use tracing::{error, info};
 
 pub struct CpalAudioOutput;
 
@@ -85,6 +85,7 @@ where
     ring_buf_producer: rb::Producer<T>,
     sample_buf: Option<SampleBuffer<T>>,
     stream: cpal::Stream,
+    silence_skipped: bool,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
@@ -132,15 +133,16 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             ring_buf_producer,
             sample_buf: None,
             stream,
+            silence_skipped: false,
         }))
     }
 }
 
 impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
-    fn write(&mut self, decoded: AudioBufferRef<'_>) -> Result<()> {
+    fn write(&mut self, decoded: AudioBufferRef<'_>) {
         // Do nothing if there are no audio frames.
         if decoded.frames() == 0 {
-            return Ok(());
+            return;
         }
 
         // Audio samples must be interleaved for cpal. Interleave the samples in the audio
@@ -149,17 +151,25 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
             sample_buf.copy_interleaved_ref(decoded);
             // Write all the interleaved samples to the ring buffer.
             let mut samples = sample_buf.samples();
+            if !self.silence_skipped {
+                match samples.iter().position(|s| *s != T::MID) {
+                    Some(index) => {
+                        info!("Skipped {} silent samples", index);
+                        samples = &samples[index..];
+                        self.silence_skipped = true;
+                    }
+                    None => return,
+                }
+            }
 
             while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
                 samples = &samples[written..];
             }
         }
-
-        Ok(())
     }
 
     fn write_empty(&mut self) {
-        self.ring_buf_producer.write_blocking(&[T::default()]);
+        self.ring_buf_producer.write_blocking(&[T::MID]);
     }
 
     fn flush(&mut self) {
@@ -167,8 +177,9 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         let _ = self.stream.pause();
     }
 
-    fn set_sample_buf(&mut self, spec: SignalSpec, duration: Duration) {
+    fn init_track(&mut self, spec: SignalSpec, duration: Duration) {
         self.sample_buf = Some(SampleBuffer::<T>::new(duration, spec));
+        self.silence_skipped = false;
     }
 }
 

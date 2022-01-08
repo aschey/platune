@@ -1,14 +1,9 @@
-use std::{
-    io::{Read, Seek},
-    path::PathBuf,
-    sync::mpsc::{Receiver, Sender, SyncSender, TryRecvError},
-};
+use std::sync::mpsc::{Receiver, Sender, SyncSender, TryRecvError};
 
 use symphonia::core::{
-    audio::AudioBufferRef,
     codecs::DecoderOptions,
     formats::{FormatOptions, SeekMode, SeekTo},
-    io::{MediaSource, MediaSourceStream},
+    io::MediaSourceStream,
     meta::MetadataOptions,
     probe::Hint,
 };
@@ -19,7 +14,7 @@ use crate::{
     dto::{command::Command, player_event::PlayerEvent},
     output::CpalAudioOutput,
     player::Player,
-    source::{FileExt, Source},
+    source::Source,
 };
 
 pub enum DecoderCommand {
@@ -31,6 +26,7 @@ pub enum DecoderCommand {
 pub(crate) fn decode_loop(
     path_rx: Receiver<Box<dyn Source>>,
     cmd_receiver: Receiver<DecoderCommand>,
+    player_cmd_sender: SyncSender<Command>,
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
     let mut paused = false;
@@ -47,7 +43,7 @@ pub(crate) fn decode_loop(
         let format_opts = FormatOptions::default();
         let metadata_opts = MetadataOptions::default();
 
-        let mut probed = symphonia::default::get_probe()
+        let probed = symphonia::default::get_probe()
             .format(&hint, mss, &format_opts, &metadata_opts)
             .unwrap();
 
@@ -65,19 +61,37 @@ pub(crate) fn decode_loop(
             .n_frames
             .map(|frames| track.codec_params.start_ts + frames);
 
-        let mut config_loaded = false;
+        while let Ok(packet) = reader.next_packet() {
+            if packet.track_id() != track_id {
+                continue;
+            }
+            match decoder.decode(&packet) {
+                Ok(decoded) => {
+                    let spec = *decoded.spec();
+                    output.init_track(spec, decoded.capacity() as u64);
+                    output.write(decoded);
+                    break;
+                }
+                Err(e) => {
+                    continue;
+                }
+            }
+        }
+
         loop {
             match cmd_receiver.try_recv() {
                 Ok(command) => match command {
                     DecoderCommand::Play => paused = false,
                     DecoderCommand::Seek(millis) => {
-                        reader.seek(
-                            SeekMode::Coarse,
-                            SeekTo::TimeStamp {
-                                ts: millis,
-                                track_id,
-                            },
-                        );
+                        reader
+                            .seek(
+                                SeekMode::Coarse,
+                                SeekTo::TimeStamp {
+                                    ts: millis,
+                                    track_id,
+                                },
+                            )
+                            .unwrap();
                     }
                     DecoderCommand::Pause => paused = true,
                 },
@@ -86,20 +100,21 @@ pub(crate) fn decode_loop(
                         output.write_empty();
                         continue;
                     }
-                    let packet = reader.next_packet().unwrap();
+                    let packet = match reader.next_packet() {
+                        Ok(packet) => packet,
+                        Err(_) => {
+                            player_cmd_sender.send(Command::Ended).unwrap();
+                            break;
+                        }
+                    };
                     if packet.track_id() != track_id {
                         continue;
                     }
 
                     match decoder.decode(&packet) {
                         Ok(decoded) => {
-                            let spec = *decoded.spec();
-                            if !config_loaded {
-                                output.set_sample_buf(spec, decoded.capacity() as u64);
-                                config_loaded = true;
-                            }
                             // print progress
-                            //packet.pts();
+                            // packet.pts();
                             output.write(decoded);
                         }
                         Err(e) => {
@@ -115,21 +130,21 @@ pub(crate) fn decode_loop(
     }
 }
 
-pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSender<Command>) {
-    while let Ok(ended_receiver) = receiver.recv() {
-        // Strange platform-specific behavior here
-        // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
-        // after the first event if the queue is stopped
-        ended_receiver.recv().unwrap_or_default();
-        if let Err(e) = request_tx.send(Command::Ended) {
-            error!("Error sending song ended message {:?}", e);
-        }
-    }
-}
+// pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSender<Command>) {
+//     while let Ok(ended_receiver) = receiver.recv() {
+//         // Strange platform-specific behavior here
+//         // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
+//         // after the first event if the queue is stopped
+//         ended_receiver.recv().unwrap_or_default();
+//         if let Err(e) = request_tx.send(Command::Ended) {
+//             error!("Error sending song ended message {:?}", e);
+//         }
+//     }
+// }
 
 pub(crate) fn main_loop(
     receiver: Receiver<Command>,
-    finish_rx: Sender<Receiver<()>>,
+    //finish_rx: Sender<Receiver<()>>,
     event_tx: broadcast::Sender<PlayerEvent>,
     queue_sender: Sender<Box<dyn Source>>,
     cmd_sender: Sender<DecoderCommand>,
@@ -142,7 +157,7 @@ pub(crate) fn main_loop(
     //     }
     // };
 
-    let mut queue = Player::new(finish_rx, event_tx, queue_sender, cmd_sender);
+    let mut queue = Player::new(event_tx, queue_sender, cmd_sender);
 
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);
