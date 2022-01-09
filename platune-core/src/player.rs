@@ -21,12 +21,8 @@ use crate::{
 };
 
 pub(crate) struct Player {
-    //sink: RodioSink,
     state: PlayerState,
     event_tx: broadcast::Sender<PlayerEvent>,
-    //finish_tx: Sender<Receiver<()>>,
-    // handle: OutputStreamHandle,
-    //ignore_count: usize,
     queued_count: usize,
     current_time: Timer,
     queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
@@ -36,26 +32,18 @@ pub(crate) struct Player {
 
 impl Player {
     pub(crate) fn new(
-        //finish_tx: Sender<Receiver<()>>,
         event_tx: broadcast::Sender<PlayerEvent>,
-        //handle: OutputStreamHandle,
         queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
         queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
         cmd_sender: Sender<DecoderCommand>,
     ) -> Self {
-        //let sink = rodio::Sink::try_new(&handle)?;
-
         Self {
-            //sink,
-            //finish_tx,
-            //handle,
             event_tx,
             state: PlayerState {
                 queue: vec![],
                 volume: 0.5,
                 queue_position: 0,
             },
-            //ignore_count: 0,
             queued_count: 0,
             queue_tx,
             queue_rx,
@@ -63,17 +51,6 @@ impl Player {
             cmd_sender,
         }
     }
-
-    // fn append_decoder<R: Read + Seek + Send + 'static>(&mut self, reader: R) {
-    //     let decoder = match Decoder::new(reader) {
-    //         Ok(decoder) => decoder,
-    //         Err(e) => {
-    //             error!("Error creating decoder {:?}", e);
-    //             return;
-    //         }
-    //     };
-    //     self.sink.append(decoder);
-    // }
 
     fn append_file(&mut self, path: String) {
         if path.starts_with("http") {
@@ -98,7 +75,6 @@ impl Player {
                 .send(Box::new(ReadSeekSource::new(
                     reader,
                     Some(file_len),
-                    path,
                     extension,
                 )))
                 .unwrap();
@@ -118,12 +94,7 @@ impl Player {
 
             info!("Sending source {}", path);
             self.queue_tx
-                .send(Box::new(ReadSeekSource::new(
-                    reader,
-                    Some(len),
-                    path,
-                    extension,
-                )))
+                .send(Box::new(ReadSeekSource::new(reader, Some(len), extension)))
                 .unwrap();
         }
 

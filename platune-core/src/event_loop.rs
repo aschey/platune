@@ -35,7 +35,7 @@ pub(crate) fn decode_loop(
     let mut paused = false;
 
     while let Ok(source) = queue_rx.recv() {
-        info!("Got source {}", source);
+        info!("Got source {:?}", source);
         output.resume();
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
