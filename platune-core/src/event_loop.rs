@@ -30,11 +30,11 @@ pub enum DecoderCommand {
 pub(crate) fn decode_loop(
     queue_rx: Receiver<Box<dyn Source>>,
     cmd_receiver: Receiver<DecoderCommand>,
-    player_cmd_sender: Sender<Command>,
+    player_cmd_sender: tokio::sync::mpsc::Sender<Command>,
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
     let mut paused = false;
-
+    let mut timestamp: u64 = 0;
     while let Ok(source) = queue_rx.recv() {
         info!("Got source {:?}", source);
         output.resume();
@@ -126,7 +126,7 @@ pub(crate) fn decode_loop(
                     let packet = match reader.next_packet() {
                         Ok(packet) => packet,
                         Err(_) => {
-                            player_cmd_sender.send(Command::Ended).unwrap();
+                            player_cmd_sender.try_send(Command::Ended).unwrap();
                             break;
                         }
                     };
@@ -136,8 +136,7 @@ pub(crate) fn decode_loop(
 
                     match decoder.decode(&packet) {
                         Ok(decoded) => {
-                            // print progress
-                            // packet.pts();
+                            timestamp = packet.pts();
                             output.write(decoded);
                         }
                         Err(e) => {
@@ -153,8 +152,8 @@ pub(crate) fn decode_loop(
     }
 }
 
-pub(crate) fn main_loop(
-    receiver: Receiver<Command>,
+pub(crate) async fn main_loop(
+    mut receiver: tokio::sync::mpsc::Receiver<Command>,
     event_tx: broadcast::Sender<PlayerEvent>,
     queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
     queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
@@ -162,7 +161,7 @@ pub(crate) fn main_loop(
 ) {
     let mut queue = Player::new(event_tx, queue_tx, queue_rx, cmd_sender);
 
-    while let Ok(next_command) = receiver.recv() {
+    while let Some(next_command) = receiver.recv().await {
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {

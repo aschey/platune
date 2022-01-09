@@ -6,7 +6,7 @@ mod player;
 mod source;
 mod timer;
 pub mod platune_player {
-    use crossbeam_channel::{unbounded, Sender};
+    use crossbeam_channel::unbounded;
     use std::thread;
     use tokio::sync::broadcast;
     use tracing::{error, warn};
@@ -24,7 +24,7 @@ pub mod platune_player {
 
     #[derive(Debug)]
     pub struct PlatunePlayer {
-        cmd_sender: Sender<Command>,
+        cmd_sender: tokio::sync::mpsc::Sender<Command>,
         event_tx: broadcast::Sender<PlayerEvent>,
     }
 
@@ -39,18 +39,18 @@ pub mod platune_player {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
-            let (cmd_tx, cmd_rx) = unbounded();
+            let event_tx_ = event_tx.clone();
+            let (cmd_tx, cmd_rx) = tokio::sync::mpsc::channel(32);
             let cmd_tx_ = cmd_tx.clone();
             let (queue_tx, queue_rx) = crossbeam_channel::bounded(2);
             let queue_rx_ = queue_rx.clone();
             let (decoder_tx, decoder_rx) = unbounded();
 
-            let event_tx_ = event_tx.clone();
-            let main_loop_fn = || main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx);
-            //let ended_loop_fn = || ended_loop(rx, finish_tx_);
+            let main_loop_fn =
+                async move { main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx).await };
             let decoder_fn = || decode_loop(queue_rx_, decoder_rx, cmd_tx_);
-            thread::spawn(main_loop_fn);
-            //thread::spawn(ended_loop_fn);
+
+            tokio::spawn(main_loop_fn);
             thread::spawn(decoder_fn);
 
             PlatunePlayer {
@@ -84,29 +84,33 @@ pub mod platune_player {
             self.event_tx.subscribe()
         }
 
-        pub fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
+        pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::SetQueue(queue))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
+        pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::AddToQueue(songs))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn seek(&self, millis: u64) -> Result<(), PlayerError> {
+        pub async fn seek(&self, millis: u64) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Seek(millis))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
+        pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
             let (current_status_tx, current_status_rx) = unbounded();
             match self
                 .cmd_sender
                 .send(Command::GetCurrentStatus(current_status_tx))
+                .await
             {
                 Ok(()) => match current_status_rx.recv() {
                     Ok(current_status) => Ok(current_status),
@@ -116,52 +120,58 @@ pub mod platune_player {
             }
         }
 
-        pub fn stop(&self) -> Result<(), PlayerError> {
+        pub async fn stop(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Stop)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn set_volume(&self, volume: f32) -> Result<(), PlayerError> {
+        pub async fn set_volume(&self, volume: f32) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::SetVolume(volume))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn pause(&self) -> Result<(), PlayerError> {
+        pub async fn pause(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Pause)
+                .try_send(Command::Pause)
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn resume(&self) -> Result<(), PlayerError> {
+        pub async fn resume(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Resume)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn next(&self) -> Result<(), PlayerError> {
+        pub async fn next(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Next)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn previous(&self) -> Result<(), PlayerError> {
+        pub async fn previous(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Previous)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn join(&self) -> Result<(), PlayerError> {
+        pub async fn join(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send(Command::Shutdown)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
     }
 
     impl Drop for PlatunePlayer {
         fn drop(&mut self) {
-            if let Err(e) = self.cmd_sender.send(Command::Shutdown) {
+            if let Err(e) = self.cmd_sender.try_send(Command::Shutdown) {
                 // Receiver may already be terminated so this may not be an error
                 warn!("Unable to send shutdown command {:?}", e);
             }
