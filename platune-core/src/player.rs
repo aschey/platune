@@ -80,7 +80,7 @@ impl Player {
             } else {
                 None
             };
-            let http_reader = match HttpStreamReader::new(path) {
+            let http_reader = match HttpStreamReader::new(path.to_owned()) {
                 Ok(http_reader) => http_reader,
                 Err(e) => {
                     error!("Error downloading http file {:?}", e);
@@ -94,6 +94,7 @@ impl Player {
                 .send(Box::new(ReadSeekSource::new(
                     reader,
                     Some(file_len),
+                    path,
                     extension,
                 )))
                 .unwrap();
@@ -111,8 +112,14 @@ impl Player {
                 .map(|e| e.to_str().unwrap().to_owned());
             let reader = BufReader::new(file);
 
+            info!("Sending source {}", path);
             self.queue_sender
-                .send(Box::new(ReadSeekSource::new(reader, Some(len), extension)))
+                .send(Box::new(ReadSeekSource::new(
+                    reader,
+                    Some(len),
+                    path,
+                    extension,
+                )))
                 .unwrap();
         }
 
@@ -170,6 +177,7 @@ impl Player {
 
     pub(crate) fn stop(&mut self) {
         self.reset();
+        self.queued_count = 0;
         self.state.queue_position = 0;
         self.current_time.stop();
         self.event_tx
@@ -201,6 +209,7 @@ impl Player {
 
     fn reset(&mut self) {
         self.ignore_ended();
+        self.cmd_sender.send(DecoderCommand::Stop).unwrap();
         //self.sink.stop();
         self.current_time.stop();
         // self.sink = match rodio::Sink::try_new(&self.handle) {
@@ -252,7 +261,7 @@ impl Player {
     }
 
     fn signal_finish(&mut self) {
-        info!("Sending finish receiver");
+        //info!("Sending finish receiver");
         // let receiver = match self.sink.get_current_receiver() {
         //     Some(receiver) => receiver,
         //     None => {
@@ -266,7 +275,11 @@ impl Player {
     }
 
     pub(crate) fn set_queue(&mut self, queue: Vec<String>) {
-        self.reset();
+        // Don't need to send stop signal if no sources are playing
+        if self.queued_count > 0 {
+            self.reset();
+        }
+
         self.state.queue_position = 0;
         self.state.queue = queue;
         self.start();

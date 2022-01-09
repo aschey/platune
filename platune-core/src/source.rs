@@ -1,28 +1,39 @@
-use std::io::{Read, Result, Seek, SeekFrom};
+use std::{
+    fmt::Display,
+    io::{Read, Result, Seek, SeekFrom},
+};
 
 use symphonia::core::io::MediaSource;
 
 pub struct ReadSeekSource<T: Read + Seek + Send> {
     inner: T,
     len: Option<u64>,
+    name: String,
     pub extension: Option<String>,
+}
+
+impl<T: Read + Seek + Send> Display for ReadSeekSource<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.name)
+    }
 }
 
 pub trait FileExt {
     fn get_file_ext(&self) -> Option<String>;
 }
 
-pub trait Source: MediaSource + FileExt {
+pub trait Source: MediaSource + FileExt + Display {
     fn as_media_source(self: Box<Self>) -> Box<dyn MediaSource>;
 }
 
 impl<T: Read + Seek + Send> ReadSeekSource<T> {
     /// Instantiates a new `ReadSeekSource<T>` by taking ownership and wrapping the provided
     /// `Read + Seek`er.
-    pub fn new(inner: T, len: Option<u64>, extension: Option<String>) -> Self {
+    pub fn new(inner: T, len: Option<u64>, name: String, extension: Option<String>) -> Self {
         ReadSeekSource {
             inner,
             len,
+            name,
             extension,
         }
     }

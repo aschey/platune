@@ -9,6 +9,7 @@
 
 use std::result;
 
+use cpal::Stream;
 use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
 use symphonia::core::conv::ConvertibleSample;
 use symphonia::core::units::Duration;
@@ -18,6 +19,8 @@ pub trait AudioOutput {
     fn write_empty(&mut self);
     fn flush(&mut self);
     fn init_track(&mut self, spec: SignalSpec, duration: Duration);
+    fn stop(&mut self);
+    fn resume(&mut self);
 }
 
 #[allow(dead_code)]
@@ -84,12 +87,28 @@ where
 {
     ring_buf_producer: rb::Producer<T>,
     sample_buf: Option<SampleBuffer<T>>,
-    stream: cpal::Stream,
+    stream: Option<cpal::Stream>,
     silence_skipped: bool,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
     pub fn try_open(device: &cpal::Device) -> Result<Box<dyn AudioOutput>> {
+        // Instantiate a ring buffer capable of buffering 8K (arbitrarily chosen) samples.
+        let ring_buf = SpscRb::<T>::new(8 * 1024);
+        let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
+
+        match CpalAudioOutputImpl::<T>::create_stream(device, ring_buf_consumer) {
+            Ok(stream) => Ok(Box::new(CpalAudioOutputImpl {
+                ring_buf_producer,
+                sample_buf: None,
+                stream: Some(stream),
+                silence_skipped: false,
+            })),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn create_stream(device: &cpal::Device, ring_buf_consumer: Consumer<T>) -> Result<Stream> {
         // Output audio stream config.
         let supported_config = device.default_input_config().unwrap();
         let config = cpal::StreamConfig {
@@ -97,10 +116,6 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             sample_rate: cpal::SampleRate(44_100),
             buffer_size: cpal::BufferSize::Default,
         };
-
-        // Instantiate a ring buffer capable of buffering 8K (arbitrarily chosen) samples.
-        let ring_buf = SpscRb::new(8 * 1024);
-        let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let stream_result = device.build_output_stream(
             &config,
@@ -129,12 +144,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             return Err(AudioOutputError::PlayStreamError);
         }
 
-        Ok(Box::new(CpalAudioOutputImpl {
-            ring_buf_producer,
-            sample_buf: None,
-            stream,
-            silence_skipped: false,
-        }))
+        Ok(stream)
     }
 }
 
@@ -174,7 +184,29 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
 
     fn flush(&mut self) {
         // Flush is best-effort, ignore the returned result.
-        let _ = self.stream.pause();
+        if let Some(stream) = &self.stream {
+            let _ = stream.pause();
+            stream.play().unwrap();
+        }
+    }
+
+    fn stop(&mut self) {
+        self.stream = None;
+    }
+
+    fn resume(&mut self) {
+        if self.stream.is_some() {
+            return;
+        }
+
+        let host = cpal::default_host();
+        // Get the default audio output device.
+        let device = host.default_output_device().unwrap();
+        let ring_buf = SpscRb::<T>::new(8 * 1024);
+        let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
+        let stream = CpalAudioOutputImpl::<T>::create_stream(&device, ring_buf_consumer);
+        self.ring_buf_producer = ring_buf_producer;
+        self.stream = Some(stream.unwrap());
     }
 
     fn init_track(&mut self, spec: SignalSpec, duration: Duration) {

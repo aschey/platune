@@ -17,10 +17,12 @@ use crate::{
     source::Source,
 };
 
+#[derive(Debug)]
 pub enum DecoderCommand {
     Seek(u64),
     Pause,
     Play,
+    Stop,
 }
 
 pub(crate) fn decode_loop(
@@ -30,7 +32,10 @@ pub(crate) fn decode_loop(
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
     let mut paused = false;
+
     while let Ok(source) = path_rx.recv() {
+        info!("Got source {}", source);
+        output.resume();
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
 
@@ -80,21 +85,30 @@ pub(crate) fn decode_loop(
 
         loop {
             match cmd_receiver.try_recv() {
-                Ok(command) => match command {
-                    DecoderCommand::Play => paused = false,
-                    DecoderCommand::Seek(millis) => {
-                        reader
-                            .seek(
-                                SeekMode::Coarse,
-                                SeekTo::TimeStamp {
-                                    ts: millis,
-                                    track_id,
-                                },
-                            )
-                            .unwrap();
+                Ok(command) => {
+                    info!("Got decoder command {:?}", command);
+                    match command {
+                        DecoderCommand::Play => paused = false,
+                        DecoderCommand::Stop => {
+                            output.stop();
+                            // Get rid of any pending sources
+                            while path_rx.try_recv().is_ok() {}
+                            break;
+                        }
+                        DecoderCommand::Seek(millis) => {
+                            reader
+                                .seek(
+                                    SeekMode::Coarse,
+                                    SeekTo::TimeStamp {
+                                        ts: millis,
+                                        track_id,
+                                    },
+                                )
+                                .unwrap();
+                        }
+                        DecoderCommand::Pause => paused = true,
                     }
-                    DecoderCommand::Pause => paused = true,
-                },
+                }
                 Err(TryRecvError::Empty) => {
                     if paused {
                         output.write_empty();
