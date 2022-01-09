@@ -1,9 +1,4 @@
-use std::{
-    fs::File,
-    io::BufReader,
-    path::Path,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{fs::File, io::BufReader, path::Path, time::Duration};
 
 use crossbeam_channel::Sender;
 use tokio::sync::broadcast;
@@ -12,7 +7,7 @@ use tracing::{error, info};
 use crate::{
     dto::{
         audio_status::AudioStatus, player_event::PlayerEvent, player_state::PlayerState,
-        player_status::PlayerStatus,
+        player_status::TrackStatus,
     },
     event_loop::DecoderCommand,
     http_stream_reader::HttpStreamReader,
@@ -146,8 +141,9 @@ impl Player {
     }
 
     pub(crate) fn seek(&mut self, millis: u64) {
-        self.cmd_sender.send(DecoderCommand::Seek(millis)).unwrap();
-        self.current_time.set_time(Duration::from_millis(millis));
+        let time = Duration::from_millis(millis);
+        self.cmd_sender.send(DecoderCommand::Seek(time)).unwrap();
+        self.current_time.set_time(time);
         self.event_tx
             .send(PlayerEvent::Seek(self.state.clone(), millis))
             .unwrap_or_default();
@@ -155,20 +151,14 @@ impl Player {
 
     pub(crate) fn stop(&mut self) {
         self.reset();
-        self.state.queue_position = 0;
         self.current_time.stop();
         self.event_tx
             .send(PlayerEvent::Stop(self.state.clone()))
             .unwrap_or_default();
     }
 
-    pub(crate) fn get_current_status(&self) -> PlayerStatus {
-        let current_time = self.current_time.elapsed();
-        PlayerStatus {
-            current_time,
-            retrieval_time: current_time
-                .map(|_| SystemTime::now().duration_since(UNIX_EPOCH).ok())
-                .flatten(),
+    pub(crate) fn get_current_status(&self) -> TrackStatus {
+        TrackStatus {
             status: match self.current_time.status() {
                 TimerStatus::Paused => AudioStatus::Paused,
                 TimerStatus::Started => AudioStatus::Playing,
@@ -178,17 +168,13 @@ impl Player {
         }
     }
 
-    fn ignore_ended(&mut self) {
-        //self.ignore_count = self.queued_count;
-
-        //info!("Ignore count {}", self.ignore_count);
-    }
-
     fn reset(&mut self) {
         // Get rid of any pending sources
         while self.queue_rx.try_recv().is_ok() {}
-        self.ignore_ended();
+        self.state.queue_position = 0;
+        self.state.queue = vec![];
         self.queued_count = 0;
+
         self.cmd_sender.send(DecoderCommand::Stop).unwrap();
         self.current_time.stop();
         self.cmd_sender
@@ -200,14 +186,7 @@ impl Player {
         info!("Received ended event");
         self.queued_count -= 1;
         info!("Queued count {}", self.queued_count);
-        // if self.ignore_count > 0 {
-        //     info!("Ignoring ended event");
-        //     self.ignore_count -= 1;
-        //     info!("Ignore count {}", self.ignore_count);
-        //     return;
-        // } else {
-        //     info!("Not ignoring ended event");
-        // }
+
         if self.state.queue_position < self.state.queue.len() - 1 {
             self.state.queue_position += 1;
             self.current_time.start();

@@ -6,16 +6,16 @@ mod player;
 mod source;
 mod timer;
 pub mod platune_player {
-    use crossbeam_channel::unbounded;
+    use crossbeam_channel::{bounded, unbounded, Sender};
     use std::thread;
     use tokio::sync::broadcast;
-    use tracing::{error, warn};
+    use tracing::{error, info, warn};
 
     pub use crate::dto::audio_status::AudioStatus;
     pub use crate::dto::player_event::PlayerEvent;
     pub use crate::dto::player_state::PlayerState;
     pub use crate::dto::player_status::PlayerStatus;
-    use crate::event_loop::decode_loop;
+    use crate::event_loop::{decode_loop, CurrentTime, DecoderCommand};
     use crate::{dto::command::Command, event_loop::main_loop};
     use std::fs::remove_file;
 
@@ -25,6 +25,7 @@ pub mod platune_player {
     #[derive(Debug)]
     pub struct PlatunePlayer {
         cmd_sender: tokio::sync::mpsc::Sender<Command>,
+        decoder_tx: Sender<DecoderCommand>,
         event_tx: broadcast::Sender<PlayerEvent>,
     }
 
@@ -45,9 +46,10 @@ pub mod platune_player {
             let (queue_tx, queue_rx) = crossbeam_channel::bounded(2);
             let queue_rx_ = queue_rx.clone();
             let (decoder_tx, decoder_rx) = unbounded();
+            let decoder_tx_ = decoder_tx.clone();
 
             let main_loop_fn =
-                async move { main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx).await };
+                async move { main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx_).await };
             let decoder_fn = || decode_loop(queue_rx_, decoder_rx, cmd_tx_);
 
             tokio::spawn(main_loop_fn);
@@ -56,6 +58,7 @@ pub mod platune_player {
             PlatunePlayer {
                 cmd_sender: cmd_tx,
                 event_tx,
+                decoder_tx,
             }
         }
 
@@ -106,17 +109,40 @@ pub mod platune_player {
         }
 
         pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
-            let (current_status_tx, current_status_rx) = unbounded();
-            match self
+            let (current_status_tx, current_status_rx) = tokio::sync::oneshot::channel();
+
+            let track_status = match self
                 .cmd_sender
                 .send(Command::GetCurrentStatus(current_status_tx))
                 .await
             {
-                Ok(()) => match current_status_rx.recv() {
-                    Ok(current_status) => Ok(current_status),
-                    Err(e) => Err(PlayerError(format!("{:?}", e))),
+                Ok(()) => match current_status_rx.await {
+                    Ok(current_status) => current_status,
+                    Err(e) => return Err(PlayerError(format!("{:?}", e))),
                 },
-                Err(e) => Err(PlayerError(format!("{:?}", e))),
+                Err(e) => return Err(PlayerError(format!("{:?}", e))),
+            };
+
+            match track_status.status {
+                AudioStatus::Stopped => Ok(PlayerStatus {
+                    current_time: CurrentTime {
+                        current_time: None,
+                        retrieval_time: None,
+                    },
+                    track_status,
+                }),
+                _ => {
+                    let (decoder_time_tx, decoder_time_rx) = tokio::sync::oneshot::channel();
+                    self.decoder_tx
+                        .send(DecoderCommand::GetCurrentTime(decoder_time_tx))
+                        .unwrap();
+                    let current_time = decoder_time_rx.await.unwrap();
+
+                    Ok(PlayerStatus {
+                        current_time,
+                        track_status,
+                    })
+                }
             }
         }
 
@@ -136,7 +162,8 @@ pub mod platune_player {
 
         pub async fn pause(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .try_send(Command::Pause)
+                .send(Command::Pause)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 

@@ -1,15 +1,7 @@
-use std::{thread::sleep, time::Duration};
-
-use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use symphonia::core::{
-    codecs::DecoderOptions,
-    formats::{FormatOptions, SeekMode, SeekTo},
-    io::MediaSourceStream,
-    meta::MetadataOptions,
-    probe::Hint,
+use std::{
+    thread::sleep,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use tokio::sync::broadcast;
-use tracing::{error, info};
 
 use crate::{
     dto::{command::Command, player_event::PlayerEvent},
@@ -17,14 +9,48 @@ use crate::{
     player::Player,
     source::Source,
 };
+use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use std::fmt::Debug;
+use symphonia::core::{
+    codecs::DecoderOptions,
+    formats::{FormatOptions, SeekMode, SeekTo},
+    io::MediaSourceStream,
+    meta::MetadataOptions,
+    probe::Hint,
+    units::Time,
+};
+use tokio::sync::broadcast;
+use tracing::{error, info};
 
-#[derive(Debug)]
-pub enum DecoderCommand {
-    Seek(u64),
+pub(crate) enum DecoderCommand {
+    Seek(Duration),
     Pause,
     Play,
     Stop,
     SetVolume(f32),
+    GetCurrentTime(tokio::sync::oneshot::Sender<CurrentTime>),
+}
+
+impl Debug for DecoderCommand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Seek(arg0) => f.debug_tuple("Seek").field(arg0).finish(),
+            Self::Pause => write!(f, "Pause"),
+            Self::Play => write!(f, "Play"),
+            Self::Stop => write!(f, "Stop"),
+            Self::SetVolume(arg0) => f.debug_tuple("SetVolume").field(arg0).finish(),
+            Self::GetCurrentTime(_) => f
+                .debug_tuple("GetCurrentTime")
+                .field(&"channel".to_owned())
+                .finish(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CurrentTime {
+    pub current_time: Option<Duration>,
+    pub retrieval_time: Option<Duration>,
 }
 
 pub(crate) fn decode_loop(
@@ -57,6 +83,7 @@ pub(crate) fn decode_loop(
         let mut reader = probed.format;
         let track = reader.default_track().unwrap();
         let track_id = track.id;
+        let time_base = track.codec_params.time_base.unwrap();
         let decode_opts = DecoderOptions { verify: true };
         let mut decoder = symphonia::default::get_codecs()
             .make(&track.codec_params, &decode_opts)
@@ -98,13 +125,17 @@ pub(crate) fn decode_loop(
                             output.stop();
                             break;
                         }
-                        DecoderCommand::Seek(millis) => {
+                        DecoderCommand::Seek(time) => {
+                            let nanos_per_sec = 1_000_000_000.0;
                             reader
                                 .seek(
                                     SeekMode::Coarse,
-                                    SeekTo::TimeStamp {
-                                        ts: millis,
-                                        track_id,
+                                    SeekTo::Time {
+                                        time: Time::new(
+                                            time.as_secs(),
+                                            time.subsec_nanos() as f64 / nanos_per_sec,
+                                        ),
+                                        track_id: Some(track_id),
                                     },
                                 )
                                 .unwrap();
@@ -115,6 +146,18 @@ pub(crate) fn decode_loop(
                         }
                         DecoderCommand::SetVolume(volume) => {
                             output.set_volume(volume);
+                        }
+                        DecoderCommand::GetCurrentTime(sender) => {
+                            let time = time_base.calc_time(timestamp);
+                            let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
+                            sender
+                                .send(CurrentTime {
+                                    current_time: Some(Duration::from_millis(millis)),
+                                    retrieval_time: Some(
+                                        SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
+                                    ),
+                                })
+                                .unwrap();
                         }
                     }
                 }
@@ -155,8 +198,8 @@ pub(crate) fn decode_loop(
 pub(crate) async fn main_loop(
     mut receiver: tokio::sync::mpsc::Receiver<Command>,
     event_tx: broadcast::Sender<PlayerEvent>,
-    queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
-    queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
+    queue_tx: Sender<Box<dyn Source>>,
+    queue_rx: Receiver<Box<dyn Source>>,
     cmd_sender: Sender<DecoderCommand>,
 ) {
     let mut queue = Player::new(event_tx, queue_tx, queue_rx, cmd_sender);

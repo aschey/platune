@@ -42,6 +42,7 @@ async fn main() {
 
     let collector = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
+        .with(console_subscriber::spawn())
         .with({
             #[allow(clippy::let_and_return)]
             let layer = Layer::new()

@@ -5,7 +5,7 @@ use std::{pin::Pin, sync::Arc};
 use platune_core::platune_player::*;
 use tokio::sync::broadcast::{self, error::RecvError};
 use tonic::{Request, Response, Status};
-use tracing::error;
+use tracing::{error, info};
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer>,
@@ -119,22 +119,23 @@ impl Player for PlayerImpl {
         Ok(Response::new(StatusResponse {
             progress: status
                 .current_time
+                .current_time
                 .map(|current_time| prost_types::Timestamp {
                     seconds: current_time.as_secs() as i64,
                     nanos: current_time.subsec_nanos() as i32,
                 }),
-            retrieval_time: status
-                .retrieval_time
-                .map(|retrieval_time| prost_types::Timestamp {
+            retrieval_time: status.current_time.retrieval_time.map(|retrieval_time| {
+                prost_types::Timestamp {
                     seconds: retrieval_time.as_secs() as i64,
                     nanos: retrieval_time.subsec_nanos() as i32,
-                }),
-            status: match status.status {
+                }
+            }),
+            status: match status.track_status.status {
                 AudioStatus::Playing => crate::rpc::PlayerStatus::Playing.into(),
                 AudioStatus::Paused => crate::rpc::PlayerStatus::Paused.into(),
                 AudioStatus::Stopped => crate::rpc::PlayerStatus::Stopped.into(),
             },
-            current_song: status.current_song,
+            current_song: status.track_status.current_song,
         }))
     }
 
@@ -151,6 +152,7 @@ impl Player for PlayerImpl {
         tokio::spawn(async move {
             while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.recv() => Err(RecvError::Closed) }
             {
+                info!("Server received event {:?}", msg);
                 tx.send(Ok(match msg {
                     PlayerEvent::Stop(state) => get_event_response(Event::Stop, state, None),
                     PlayerEvent::Pause(state) => get_event_response(Event::Pause, state, None),

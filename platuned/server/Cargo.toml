@@ -9,6 +9,7 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0.51"
 async-stream = "0.3.2"
+console-subscriber = "0.1.0"
 directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.19"
