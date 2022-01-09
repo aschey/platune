@@ -1,15 +1,6 @@
-// Symphonia
-// Copyright (c) 2019-2021 The Project Symphonia Developers.
-//
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at https://mozilla.org/MPL/2.0/.
-
-//! Platform-dependant Audio Outputs
-
-use std::result;
-
 use cpal::Stream;
+use std::ops::Mul;
+use std::result;
 use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
 use symphonia::core::conv::ConvertibleSample;
 use symphonia::core::units::Duration;
@@ -43,7 +34,7 @@ use tracing::{error, info};
 pub struct CpalAudioOutput;
 
 trait AudioOutputSample:
-    cpal::Sample + ConvertibleSample + RawSample + std::ops::Mul<Output = Self> + Send + 'static
+    cpal::Sample + ConvertibleSample + RawSample + Mul<Output = Self> + Send + 'static
 {
 }
 

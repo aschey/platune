@@ -9,10 +9,6 @@ edition = "2021"
 name = "platune_core"
 path = "src/lib.rs"
 
-[[bin]]
-name = "player"
-path = "src/main.rs"
-
 [features]
 
 [dependencies]
