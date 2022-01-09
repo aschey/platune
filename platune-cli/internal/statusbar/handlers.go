@@ -69,10 +69,10 @@ func (s *StatusBar) handlePlayerStatus(timer *timer, status *platune.StatusRespo
 	}
 	switch status.Status {
 	case platune.PlayerStatus_PLAYING:
-		progress := status.Progress.AsTime()
+		progress := status.Progress.AsDuration()
 
 		timer.start()
-		timer.setTime(progress.UnixMilli())
+		timer.setTime(progress.Milliseconds())
 
 		res := s.platuneClient.GetSongByPath(*status.CurrentSong)
 
@@ -86,8 +86,8 @@ func (s *StatusBar) handlePlayerStatus(timer *timer, status *platune.StatusRespo
 		return stoppedEvent
 	case platune.PlayerStatus_PAUSED:
 		timer.pause()
-		progress := status.Progress.AsTime()
-		timer.setTime(progress.UnixMilli())
+		progress := status.Progress.AsDuration()
+		timer.setTime(progress.Milliseconds())
 		res := s.platuneClient.GetSongByPath(*status.CurrentSong)
 
 		return playerEvent{

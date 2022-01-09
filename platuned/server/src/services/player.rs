@@ -122,16 +122,11 @@ impl Player for PlayerImpl {
             progress: status
                 .current_time
                 .current_time
-                .map(|current_time| prost_types::Timestamp {
-                    seconds: current_time.as_secs() as i64,
-                    nanos: current_time.subsec_nanos() as i32,
-                }),
-            retrieval_time: status.current_time.retrieval_time.map(|retrieval_time| {
-                prost_types::Timestamp {
-                    seconds: retrieval_time.as_secs() as i64,
-                    nanos: retrieval_time.subsec_nanos() as i32,
-                }
-            }),
+                .map(prost_types::Duration::from),
+            retrieval_time: status
+                .current_time
+                .retrieval_time
+                .map(prost_types::Duration::from),
             status: match status.track_status.status {
                 AudioStatus::Playing => crate::rpc::PlayerStatus::Playing.into(),
                 AudioStatus::Paused => crate::rpc::PlayerStatus::Paused.into(),

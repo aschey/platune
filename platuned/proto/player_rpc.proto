@@ -6,7 +6,6 @@ option java_outer_classname = "PlayerProto";
 option go_package = "github.com/aschey/platune";
 
 import "google/protobuf/empty.proto";
-import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 package player_rpc;
 
@@ -57,7 +56,7 @@ message EventResponse {
 }
 message StatusResponse {
   PlayerStatus status = 1;
-  optional google.protobuf.Timestamp progress = 2;
-  optional google.protobuf.Timestamp retrieval_time = 3;
+  optional google.protobuf.Duration progress = 2;
+  optional google.protobuf.Duration retrieval_time = 3;
   optional string current_song = 4;
 }
