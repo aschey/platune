@@ -1,10 +1,11 @@
+use std::fmt::Debug;
 use std::{
     fmt::Display,
     io::{Read, Result, Seek, SeekFrom},
 };
-
 use symphonia::core::io::MediaSource;
 
+#[derive(Debug)]
 pub struct ReadSeekSource<T: Read + Seek + Send> {
     inner: T,
     len: Option<u64>,
@@ -22,7 +23,7 @@ pub trait FileExt {
     fn get_file_ext(&self) -> Option<String>;
 }
 
-pub trait Source: MediaSource + FileExt + Display {
+pub trait Source: MediaSource + FileExt + Display + Debug {
     fn as_media_source(self: Box<Self>) -> Box<dyn MediaSource>;
 }
 
@@ -67,7 +68,7 @@ impl<T: Read + Seek + Send> FileExt for ReadSeekSource<T> {
     }
 }
 
-impl<T: Read + Seek + Send + 'static> Source for ReadSeekSource<T> {
+impl<T: Read + Seek + Send + Debug + 'static> Source for ReadSeekSource<T> {
     fn as_media_source(self: Box<Self>) -> Box<dyn MediaSource> {
         self
     }

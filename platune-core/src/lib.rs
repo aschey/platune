@@ -41,13 +41,14 @@ pub mod platune_player {
             let (event_tx, _) = broadcast::channel(32);
             let (cmd_tx, cmd_rx) = std::sync::mpsc::sync_channel(32);
             let cmd_tx_ = cmd_tx.clone();
-            let (queue_tx, queue_rx) = std::sync::mpsc::channel();
+            let (queue_tx, queue_rx) = crossbeam_channel::bounded(2);
+            let queue_rx_ = queue_rx.clone();
             let (decoder_tx, decoder_rx) = std::sync::mpsc::channel();
 
             let event_tx_ = event_tx.clone();
-            let main_loop_fn = || main_loop(cmd_rx, event_tx_, queue_tx, decoder_tx);
+            let main_loop_fn = || main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx);
             //let ended_loop_fn = || ended_loop(rx, finish_tx_);
-            let decoder_fn = || decode_loop(queue_rx, decoder_rx, cmd_tx_);
+            let decoder_fn = || decode_loop(queue_rx_, decoder_rx, cmd_tx_);
             thread::spawn(main_loop_fn);
             //thread::spawn(ended_loop_fn);
             thread::spawn(decoder_fn);

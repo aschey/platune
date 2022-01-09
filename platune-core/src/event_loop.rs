@@ -30,14 +30,14 @@ pub enum DecoderCommand {
 }
 
 pub(crate) fn decode_loop(
-    path_rx: Receiver<Box<dyn Source>>,
+    queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
     cmd_receiver: Receiver<DecoderCommand>,
     player_cmd_sender: SyncSender<Command>,
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
     let mut paused = false;
 
-    while let Ok(source) = path_rx.recv() {
+    while let Ok(source) = queue_rx.recv() {
         info!("Got source {}", source);
         output.resume();
         // Create a hint to help the format registry guess what format reader is appropriate.
@@ -98,8 +98,6 @@ pub(crate) fn decode_loop(
                         }
                         DecoderCommand::Stop => {
                             output.stop();
-                            // Get rid of any pending sources
-                            while path_rx.try_recv().is_ok() {}
                             break;
                         }
                         DecoderCommand::Seek(millis) => {
@@ -170,7 +168,8 @@ pub(crate) fn main_loop(
     receiver: Receiver<Command>,
     //finish_rx: Sender<Receiver<()>>,
     event_tx: broadcast::Sender<PlayerEvent>,
-    queue_sender: Sender<Box<dyn Source>>,
+    queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
+    queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
     cmd_sender: Sender<DecoderCommand>,
 ) {
     // let (_stream, handle) = match rodio::OutputStream::try_default() {
@@ -180,8 +179,7 @@ pub(crate) fn main_loop(
     //         return;
     //     }
     // };
-
-    let mut queue = Player::new(event_tx, queue_sender, cmd_sender);
+    let mut queue = Player::new(event_tx, queue_tx, queue_rx, cmd_sender);
 
     while let Ok(next_command) = receiver.recv() {
         info!("Got command {:?}", next_command);

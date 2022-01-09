@@ -13,6 +13,7 @@ use std::{
 use tempfile::{Builder, NamedTempFile};
 use tracing::{error, info};
 
+#[derive(Debug)]
 pub(crate) struct HttpStreamReader {
     output_reader: BufReader<NamedTempFile>,
     bytes_written: Arc<AtomicU32>,

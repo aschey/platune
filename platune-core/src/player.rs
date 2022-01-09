@@ -29,7 +29,8 @@ pub(crate) struct Player {
     //ignore_count: usize,
     queued_count: usize,
     current_time: Timer,
-    queue_sender: Sender<Box<dyn Source>>,
+    queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
+    queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
     cmd_sender: Sender<DecoderCommand>,
 }
 
@@ -38,7 +39,8 @@ impl Player {
         //finish_tx: Sender<Receiver<()>>,
         event_tx: broadcast::Sender<PlayerEvent>,
         //handle: OutputStreamHandle,
-        queue_sender: Sender<Box<dyn Source>>,
+        queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
+        queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
         cmd_sender: Sender<DecoderCommand>,
     ) -> Self {
         //let sink = rodio::Sink::try_new(&handle)?;
@@ -55,7 +57,8 @@ impl Player {
             },
             //ignore_count: 0,
             queued_count: 0,
-            queue_sender,
+            queue_tx,
+            queue_rx,
             current_time: Timer::default(),
             cmd_sender,
         }
@@ -90,7 +93,8 @@ impl Player {
             let file_len = http_reader.file_len;
             let reader = BufReader::new(http_reader);
 
-            self.queue_sender
+            info!("Sending source {}", path);
+            self.queue_tx
                 .send(Box::new(ReadSeekSource::new(
                     reader,
                     Some(file_len),
@@ -113,7 +117,7 @@ impl Player {
             let reader = BufReader::new(file);
 
             info!("Sending source {}", path);
-            self.queue_sender
+            self.queue_tx
                 .send(Box::new(ReadSeekSource::new(
                     reader,
                     Some(len),
@@ -177,7 +181,6 @@ impl Player {
 
     pub(crate) fn stop(&mut self) {
         self.reset();
-        self.queued_count = 0;
         self.state.queue_position = 0;
         self.current_time.stop();
         self.event_tx
@@ -208,7 +211,10 @@ impl Player {
     }
 
     fn reset(&mut self) {
+        // Get rid of any pending sources
+        while self.queue_rx.try_recv().is_ok() {}
         self.ignore_ended();
+        self.queued_count = 0;
         self.cmd_sender.send(DecoderCommand::Stop).unwrap();
         //self.sink.stop();
         self.current_time.stop();

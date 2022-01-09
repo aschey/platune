@@ -97,7 +97,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
-        match CpalAudioOutputImpl::<T>::create_stream(device, ring_buf_consumer) {
+        match Self::create_stream(device, ring_buf_consumer) {
             Ok(stream) => Ok(Box::new(CpalAudioOutputImpl {
                 ring_buf_producer,
                 sample_buf: None,
@@ -204,7 +204,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         let device = host.default_output_device().unwrap();
         let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
-        let stream = CpalAudioOutputImpl::<T>::create_stream(&device, ring_buf_consumer);
+        let stream = Self::create_stream(&device, ring_buf_consumer);
         self.ring_buf_producer = ring_buf_producer;
         self.stream = Some(stream.unwrap());
     }
