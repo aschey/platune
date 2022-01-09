@@ -13,8 +13,8 @@ import (
 	platune "github.com/aschey/platune/client"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type PlatuneClient struct {
@@ -188,7 +188,7 @@ func (p *PlatuneClient) Seek(seekTime string) {
 	}
 	p.runCommand("Seeked to "+seekTime, func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Seek(ctx, &platune.SeekRequest{
-			Time: timestamppb.New(time.UnixMilli(int64(totalMillis))),
+			Time: durationpb.New(time.Duration(totalMillis * uint64(time.Millisecond))),
 		})
 	})
 }

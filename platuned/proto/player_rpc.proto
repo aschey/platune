@@ -7,6 +7,7 @@ option go_package = "github.com/aschey/platune";
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
 package player_rpc;
 
 service Player {
@@ -45,7 +46,7 @@ enum PlayerStatus {
 
 message QueueRequest { repeated string queue = 1; }
 message AddToQueueRequest { repeated string songs = 1; }
-message SeekRequest { google.protobuf.Timestamp time = 1; }
+message SeekRequest { google.protobuf.Duration time = 1; }
 message SetVolumeRequest { float volume = 1; }
 message EventResponse {
   Event event = 1;

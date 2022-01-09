@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/MarvinJWendt/testza"
 	"github.com/aschey/go-prompt"
@@ -200,7 +201,7 @@ func TestSeek(t *testing.T) {
 
 	for _, tc := range testCases {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			return uint64(arg.(*platune.SeekRequest).Time.AsTime().UnixMilli()) == tc.expected
+			return arg.(*platune.SeekRequest).Time.AsDuration() == time.Duration(tc.expected*uint64(time.Millisecond))
 		})
 		runPlayerTest(t, fmt.Sprintf("Seeked to %s\n", tc.formatStr), func(expect *test.MockPlayerClientMockRecorder) {
 			expect.Seek(gomock.Any(), matcher)
