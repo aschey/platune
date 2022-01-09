@@ -139,6 +139,9 @@ impl Player {
 
     pub(crate) fn set_volume(&mut self, volume: f32) {
         //self.sink.set_volume(volume);
+        self.cmd_sender
+            .send(DecoderCommand::SetVolume(volume))
+            .unwrap();
         self.state.volume = volume;
     }
 
@@ -187,16 +190,10 @@ impl Player {
         self.ignore_ended();
         self.queued_count = 0;
         self.cmd_sender.send(DecoderCommand::Stop).unwrap();
-        //self.sink.stop();
         self.current_time.stop();
-        // self.sink = match rodio::Sink::try_new(&self.handle) {
-        //     Ok(sink) => sink,
-        //     Err(e) => {
-        //         error!("Error creating audio sink {:?}", e);
-        //         return;
-        //     }
-        // };
-        // self.sink.set_volume(self.state.volume);
+        self.cmd_sender
+            .send(DecoderCommand::SetVolume(self.state.volume))
+            .unwrap();
     }
 
     pub(crate) fn on_ended(&mut self) {

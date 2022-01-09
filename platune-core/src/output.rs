@@ -21,6 +21,7 @@ pub trait AudioOutput {
     fn init_track(&mut self, spec: SignalSpec, duration: Duration);
     fn stop(&mut self);
     fn resume(&mut self);
+    fn set_volume(&mut self, volume: f32);
 }
 
 #[allow(dead_code)]
@@ -42,7 +43,7 @@ use tracing::{error, info};
 pub struct CpalAudioOutput;
 
 trait AudioOutputSample:
-    cpal::Sample + ConvertibleSample + RawSample + std::marker::Send + 'static
+    cpal::Sample + ConvertibleSample + RawSample + std::ops::Mul<Output = Self> + Send + 'static
 {
 }
 
@@ -89,6 +90,8 @@ where
     sample_buf: Option<SampleBuffer<T>>,
     stream: Option<cpal::Stream>,
     silence_skipped: bool,
+    volume: T,
+    buf: Vec<T>,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
@@ -103,6 +106,8 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
                 sample_buf: None,
                 stream: Some(stream),
                 silence_skipped: false,
+                buf: Vec::<T>::new(),
+                volume: T::from(&1.0),
             })),
             Err(e) => Err(e),
         }
@@ -161,6 +166,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
             sample_buf.copy_interleaved_ref(decoded);
             // Write all the interleaved samples to the ring buffer.
             let mut samples = sample_buf.samples();
+
             if !self.silence_skipped {
                 match samples.iter().position(|s| *s != T::MID) {
                     Some(index) => {
@@ -171,7 +177,15 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
                     None => return,
                 }
             }
+            if samples.len() > self.buf.len() {
+                self.buf.clear();
+                self.buf.resize(samples.len(), T::default());
+            }
 
+            for (i, sample) in samples.iter().enumerate() {
+                self.buf[i] = *sample * self.volume;
+            }
+            samples = &self.buf[..samples.len()];
             while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
                 samples = &samples[written..];
             }
@@ -213,9 +227,8 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.sample_buf = Some(SampleBuffer::<T>::new(duration, spec));
         self.silence_skipped = false;
     }
-}
 
-// #[cfg(target_os = "linux")]
-// pub fn try_open(spec: SignalSpec, duration: Duration) -> Result<Box<dyn AudioOutput>> {
-//     pulseaudio::PulseAudioOutput::try_open(spec, duration)
-// }
+    fn set_volume(&mut self, volume: f32) {
+        self.volume = T::from(&volume);
+    }
+}

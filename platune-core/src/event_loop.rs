@@ -24,6 +24,7 @@ pub enum DecoderCommand {
     Pause,
     Play,
     Stop,
+    SetVolume(f32),
 }
 
 pub(crate) fn decode_loop(
@@ -112,6 +113,9 @@ pub(crate) fn decode_loop(
                             paused = true;
                             output.stop();
                         }
+                        DecoderCommand::SetVolume(volume) => {
+                            output.set_volume(volume);
+                        }
                     }
                 }
                 Err(TryRecvError::Empty) => {
@@ -149,33 +153,13 @@ pub(crate) fn decode_loop(
     }
 }
 
-// pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSender<Command>) {
-//     while let Ok(ended_receiver) = receiver.recv() {
-//         // Strange platform-specific behavior here
-//         // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
-//         // after the first event if the queue is stopped
-//         ended_receiver.recv().unwrap_or_default();
-//         if let Err(e) = request_tx.send(Command::Ended) {
-//             error!("Error sending song ended message {:?}", e);
-//         }
-//     }
-// }
-
 pub(crate) fn main_loop(
     receiver: Receiver<Command>,
-    //finish_rx: Sender<Receiver<()>>,
     event_tx: broadcast::Sender<PlayerEvent>,
     queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
     queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
     cmd_sender: Sender<DecoderCommand>,
 ) {
-    // let (_stream, handle) = match rodio::OutputStream::try_default() {
-    //     Ok((stream, handle)) => (stream, handle),
-    //     Err(e) => {
-    //         error!("Error creating audio output stream {:?}", e);
-    //         return;
-    //     }
-    // };
     let mut queue = Player::new(event_tx, queue_tx, queue_rx, cmd_sender);
 
     while let Ok(next_command) = receiver.recv() {
