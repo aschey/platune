@@ -1,4 +1,8 @@
-use std::sync::mpsc::{Receiver, Sender, SyncSender, TryRecvError};
+use std::{
+    sync::mpsc::{Receiver, Sender, SyncSender, TryRecvError},
+    thread::sleep,
+    time::Duration,
+};
 
 use symphonia::core::{
     codecs::DecoderOptions,
@@ -87,8 +91,11 @@ pub(crate) fn decode_loop(
             match cmd_receiver.try_recv() {
                 Ok(command) => {
                     info!("Got decoder command {:?}", command);
+                    paused = false;
                     match command {
-                        DecoderCommand::Play => paused = false,
+                        DecoderCommand::Play => {
+                            output.resume();
+                        }
                         DecoderCommand::Stop => {
                             output.stop();
                             // Get rid of any pending sources
@@ -106,12 +113,15 @@ pub(crate) fn decode_loop(
                                 )
                                 .unwrap();
                         }
-                        DecoderCommand::Pause => paused = true,
+                        DecoderCommand::Pause => {
+                            paused = true;
+                            output.stop();
+                        }
                     }
                 }
                 Err(TryRecvError::Empty) => {
                     if paused {
-                        output.write_empty();
+                        sleep(Duration::from_millis(10));
                         continue;
                     }
                     let packet = match reader.next_packet() {
