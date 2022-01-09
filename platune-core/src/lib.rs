@@ -6,10 +6,11 @@ mod player;
 mod source;
 mod timer;
 pub mod platune_player {
-    use crossbeam_channel::{bounded, unbounded, Sender};
+    use crossbeam_channel::{unbounded, Sender};
     use std::thread;
+    use std::time::Duration;
     use tokio::sync::broadcast;
-    use tracing::{error, info, warn};
+    use tracing::{error, warn};
 
     pub use crate::dto::audio_status::AudioStatus;
     pub use crate::dto::player_event::PlayerEvent;
@@ -101,9 +102,9 @@ pub mod platune_player {
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub async fn seek(&self, millis: u64) -> Result<(), PlayerError> {
+        pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Seek(millis))
+                .send(Command::Seek(time))
                 .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use strum::Display;
 
 use super::player_state::PlayerState;
@@ -13,6 +15,6 @@ pub enum PlayerEvent {
     Next(PlayerState),
     Previous(PlayerState),
     SetVolume(PlayerState),
-    Seek(PlayerState, u64),
+    Seek(PlayerState, Duration),
     QueueEnded(PlayerState),
 }

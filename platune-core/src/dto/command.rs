@@ -1,11 +1,11 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, time::Duration};
 
 use super::player_status::TrackStatus;
 
 pub(crate) enum Command {
     SetQueue(Vec<String>),
     AddToQueue(Vec<String>),
-    Seek(u64),
+    Seek(Duration),
     SetVolume(f32),
     Pause,
     Resume,

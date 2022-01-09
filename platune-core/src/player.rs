@@ -140,12 +140,11 @@ impl Player {
         self.state.volume = volume;
     }
 
-    pub(crate) fn seek(&mut self, millis: u64) {
-        let time = Duration::from_millis(millis);
+    pub(crate) fn seek(&mut self, time: Duration) {
         self.cmd_sender.send(DecoderCommand::Seek(time)).unwrap();
         self.current_time.set_time(time);
         self.event_tx
-            .send(PlayerEvent::Seek(self.state.clone(), millis))
+            .send(PlayerEvent::Seek(self.state.clone(), time))
             .unwrap_or_default();
     }
 

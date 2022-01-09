@@ -200,7 +200,7 @@ func TestSeek(t *testing.T) {
 
 	for _, tc := range testCases {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			return arg.(*platune.SeekRequest).Millis == tc.expected
+			return uint64(arg.(*platune.SeekRequest).Time.AsTime().UnixMilli()) == tc.expected
 		})
 		runPlayerTest(t, fmt.Sprintf("Seeked to %s\n", tc.formatStr), func(expect *test.MockPlayerClientMockRecorder) {
 			expect.Seek(gomock.Any(), matcher)

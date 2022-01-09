@@ -14,6 +14,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type PlatuneClient struct {
@@ -173,8 +174,8 @@ func (p *PlatuneClient) SetQueue(queue []string, printMsg bool) {
 	})
 }
 
-func (p *PlatuneClient) Seek(time string) {
-	timeParts := strings.Split(time, ":")
+func (p *PlatuneClient) Seek(seekTime string) {
+	timeParts := strings.Split(seekTime, ":")
 	totalMillis := uint64(0)
 	for i := 0; i < len(timeParts); i++ {
 		intVal, err := strconv.ParseUint(timeParts[i], 10, 64)
@@ -185,8 +186,10 @@ func (p *PlatuneClient) Seek(time string) {
 		pos := float64(len(timeParts) - 1 - i)
 		totalMillis += uint64(math.Pow(60, pos)) * intVal * 1000
 	}
-	p.runCommand("Seeked to "+time, func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.Seek(ctx, &platune.SeekRequest{Millis: totalMillis})
+	p.runCommand("Seeked to "+seekTime, func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.playerClient.Seek(ctx, &platune.SeekRequest{
+			Time: timestamppb.New(time.UnixMilli(int64(totalMillis))),
+		})
 	})
 }
 

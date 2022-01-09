@@ -1,6 +1,6 @@
 use crate::player_server::Player;
 use crate::rpc::*;
-use std::{pin::Pin, sync::Arc};
+use std::{pin::Pin, sync::Arc, time::Duration};
 
 use platune_core::platune_player::*;
 use tokio::sync::broadcast::{self, error::RecvError};
@@ -100,7 +100,9 @@ impl Player for PlayerImpl {
     }
 
     async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<()>, Status> {
-        match self.player.seek(request.into_inner().millis).await {
+        let time = request.into_inner().time.unwrap();
+        let nanos = time.seconds * 1_000_000_000 + time.nanos as i64;
+        match self.player.seek(Duration::from_nanos(nanos as u64)).await {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!("Error seeking: {:?}", e))),
         }
@@ -165,8 +167,8 @@ impl Player for PlayerImpl {
                     PlayerEvent::QueueUpdated(state) => {
                         get_event_response(Event::QueueUpdated, state, None)
                     }
-                    PlayerEvent::Seek(state, seek_millis) => {
-                        get_event_response(Event::Seek, state, Some(seek_millis))
+                    PlayerEvent::Seek(state, time) => {
+                        get_event_response(Event::Seek, state, Some(time.as_millis() as u64))
                     }
                     PlayerEvent::Previous(state) => {
                         get_event_response(Event::Previous, state, None)
