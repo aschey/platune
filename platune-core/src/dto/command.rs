@@ -1,4 +1,4 @@
-use std::sync::mpsc::Sender;
+use crossbeam_channel::Sender;
 
 use super::player_status::PlayerStatus;
 #[derive(Debug, Clone)]

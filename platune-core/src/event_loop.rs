@@ -1,9 +1,6 @@
-use std::{
-    sync::mpsc::{Receiver, Sender, SyncSender, TryRecvError},
-    thread::sleep,
-    time::Duration,
-};
+use std::{thread::sleep, time::Duration};
 
+use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use symphonia::core::{
     codecs::DecoderOptions,
     formats::{FormatOptions, SeekMode, SeekTo},
@@ -30,9 +27,9 @@ pub enum DecoderCommand {
 }
 
 pub(crate) fn decode_loop(
-    queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
+    queue_rx: Receiver<Box<dyn Source>>,
     cmd_receiver: Receiver<DecoderCommand>,
-    player_cmd_sender: SyncSender<Command>,
+    player_cmd_sender: Sender<Command>,
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
     let mut paused = false;

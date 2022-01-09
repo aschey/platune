@@ -6,8 +6,8 @@ mod player;
 mod source;
 mod timer;
 pub mod platune_player {
-    use std::sync::mpsc::SyncSender;
-    use std::{sync::mpsc, thread};
+    use crossbeam_channel::{unbounded, Sender};
+    use std::thread;
     use tokio::sync::broadcast;
     use tracing::{error, warn};
 
@@ -24,7 +24,7 @@ pub mod platune_player {
 
     #[derive(Debug)]
     pub struct PlatunePlayer {
-        cmd_sender: SyncSender<Command>,
+        cmd_sender: Sender<Command>,
         event_tx: broadcast::Sender<PlayerEvent>,
     }
 
@@ -39,11 +39,11 @@ pub mod platune_player {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
-            let (cmd_tx, cmd_rx) = std::sync::mpsc::sync_channel(32);
+            let (cmd_tx, cmd_rx) = unbounded();
             let cmd_tx_ = cmd_tx.clone();
             let (queue_tx, queue_rx) = crossbeam_channel::bounded(2);
             let queue_rx_ = queue_rx.clone();
-            let (decoder_tx, decoder_rx) = std::sync::mpsc::channel();
+            let (decoder_tx, decoder_rx) = unbounded();
 
             let event_tx_ = event_tx.clone();
             let main_loop_fn = || main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx);
@@ -103,7 +103,7 @@ pub mod platune_player {
         }
 
         pub fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
-            let (current_status_tx, current_status_rx) = mpsc::channel();
+            let (current_status_tx, current_status_rx) = unbounded();
             match self
                 .cmd_sender
                 .send(Command::GetCurrentStatus(current_status_tx))

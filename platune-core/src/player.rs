@@ -1,11 +1,11 @@
 use std::{
     fs::File,
-    io::{BufReader, Read, Seek},
+    io::BufReader,
     path::Path,
-    sync::mpsc::{Receiver, Sender},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+use crossbeam_channel::Sender;
 use tokio::sync::broadcast;
 use tracing::{error, info};
 
