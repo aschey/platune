@@ -12,17 +12,16 @@ use crate::{
     event_loop::DecoderCommand,
     http_stream_reader::HttpStreamReader,
     source::{ReadSeekSource, Source},
-    timer::{Timer, TimerStatus},
 };
 
 pub(crate) struct Player {
     state: PlayerState,
     event_tx: broadcast::Sender<PlayerEvent>,
     queued_count: usize,
-    current_time: Timer,
     queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
     queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
     cmd_sender: Sender<DecoderCommand>,
+    audio_status: AudioStatus,
 }
 
 impl Player {
@@ -42,8 +41,8 @@ impl Player {
             queued_count: 0,
             queue_tx,
             queue_rx,
-            current_time: Timer::default(),
             cmd_sender,
+            audio_status: AudioStatus::Stopped,
         }
     }
 
@@ -100,8 +99,7 @@ impl Player {
     fn start(&mut self) {
         if let Some(path) = self.get_current() {
             self.append_file(path);
-            self.signal_finish();
-            self.current_time.start();
+            self.audio_status = AudioStatus::Playing;
 
             self.event_tx
                 .send(PlayerEvent::StartQueue(self.state.clone()))
@@ -109,13 +107,12 @@ impl Player {
         }
         if let Some(path) = self.get_next() {
             self.append_file(path);
-            self.signal_finish();
         }
     }
 
     pub(crate) fn play(&mut self) {
         self.cmd_sender.send(DecoderCommand::Play).unwrap();
-        self.current_time.resume();
+        self.audio_status = AudioStatus::Playing;
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
             .unwrap_or_default();
@@ -126,14 +123,13 @@ impl Player {
             return;
         }
         self.cmd_sender.send(DecoderCommand::Pause).unwrap();
-        self.current_time.pause();
+        self.audio_status = AudioStatus::Paused;
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
             .unwrap_or_default();
     }
 
     pub(crate) fn set_volume(&mut self, volume: f32) {
-        //self.sink.set_volume(volume);
         self.cmd_sender
             .send(DecoderCommand::SetVolume(volume))
             .unwrap();
@@ -142,7 +138,6 @@ impl Player {
 
     pub(crate) fn seek(&mut self, time: Duration) {
         self.cmd_sender.send(DecoderCommand::Seek(time)).unwrap();
-        self.current_time.set_time(time);
         self.event_tx
             .send(PlayerEvent::Seek(self.state.clone(), time))
             .unwrap_or_default();
@@ -150,7 +145,6 @@ impl Player {
 
     pub(crate) fn stop(&mut self) {
         self.reset();
-        self.current_time.stop();
         self.event_tx
             .send(PlayerEvent::Stop(self.state.clone()))
             .unwrap_or_default();
@@ -158,11 +152,7 @@ impl Player {
 
     pub(crate) fn get_current_status(&self) -> TrackStatus {
         TrackStatus {
-            status: match self.current_time.status() {
-                TimerStatus::Paused => AudioStatus::Paused,
-                TimerStatus::Started => AudioStatus::Playing,
-                TimerStatus::Stopped => AudioStatus::Stopped,
-            },
+            status: self.audio_status.clone(),
             current_song: self.get_current(),
         }
     }
@@ -173,12 +163,9 @@ impl Player {
         self.state.queue_position = 0;
         self.state.queue = vec![];
         self.queued_count = 0;
+        self.audio_status = AudioStatus::Stopped;
 
         self.cmd_sender.send(DecoderCommand::Stop).unwrap();
-        self.current_time.stop();
-        self.cmd_sender
-            .send(DecoderCommand::SetVolume(self.state.volume))
-            .unwrap();
     }
 
     pub(crate) fn on_ended(&mut self) {
@@ -188,7 +175,6 @@ impl Player {
 
         if self.state.queue_position < self.state.queue.len() - 1 {
             self.state.queue_position += 1;
-            self.current_time.start();
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
                 .unwrap_or_default();
@@ -197,7 +183,7 @@ impl Player {
                 self.state.queue_position
             );
         } else {
-            self.current_time.stop();
+            self.audio_status = AudioStatus::Stopped;
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
                 .unwrap_or_default();
@@ -208,22 +194,7 @@ impl Player {
 
         if let Some(file) = self.get_next() {
             self.append_file(file);
-            self.signal_finish();
         }
-    }
-
-    fn signal_finish(&mut self) {
-        //info!("Sending finish receiver");
-        // let receiver = match self.sink.get_current_receiver() {
-        //     Some(receiver) => receiver,
-        //     None => {
-        //         error!("Unable to trigger song ended event because no receiver was found");
-        //         return;
-        //     }
-        // };
-        // if let Err(e) = self.finish_tx.send(receiver) {
-        //     error!("Error sending song ended event {:?}", e);
-        // }
     }
 
     pub(crate) fn set_queue(&mut self, queue: Vec<String>) {
@@ -253,7 +224,6 @@ impl Player {
             // so we need to add it here explicitly
             if self.queued_count == 1 {
                 self.append_file(song);
-                self.signal_finish();
             }
 
             self.event_tx
