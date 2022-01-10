@@ -9,9 +9,10 @@ use crate::{
         audio_status::AudioStatus, player_event::PlayerEvent, player_state::PlayerState,
         player_status::TrackStatus,
     },
-    event_loop::DecoderCommand,
+    event_loop::{DecoderCommand, DecoderResponse},
     http_stream_reader::HttpStreamReader,
     source::{ReadSeekSource, Source},
+    TwoWaySender,
 };
 
 pub(crate) struct Player {
@@ -20,7 +21,7 @@ pub(crate) struct Player {
     queued_count: usize,
     queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
     queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
-    cmd_sender: Sender<DecoderCommand>,
+    cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     audio_status: AudioStatus,
 }
 
@@ -29,7 +30,7 @@ impl Player {
         event_tx: broadcast::Sender<PlayerEvent>,
         queue_tx: crossbeam_channel::Sender<Box<dyn Source>>,
         queue_rx: crossbeam_channel::Receiver<Box<dyn Source>>,
-        cmd_sender: Sender<DecoderCommand>,
+        cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     ) -> Self {
         Self {
             event_tx,
@@ -114,31 +115,32 @@ impl Player {
         self.state.queue.is_empty()
     }
 
-    pub(crate) fn play(&mut self) {
+    pub(crate) async fn play(&mut self) {
         if self.is_empty() {
             return;
         }
-        self.cmd_sender.send(DecoderCommand::Play).unwrap();
+        self.cmd_sender.send(DecoderCommand::Play).await.unwrap();
         self.audio_status = AudioStatus::Playing;
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
             .unwrap_or_default();
     }
 
-    pub(crate) fn pause(&mut self) {
+    pub(crate) async fn pause(&mut self) {
         if self.is_empty() {
             return;
         }
-        self.cmd_sender.send(DecoderCommand::Pause).unwrap();
+        self.cmd_sender.send(DecoderCommand::Pause).await.unwrap();
         self.audio_status = AudioStatus::Paused;
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
             .unwrap_or_default();
     }
 
-    pub(crate) fn set_volume(&mut self, volume: f32) {
+    pub(crate) async fn set_volume(&mut self, volume: f32) {
         self.cmd_sender
             .send(DecoderCommand::SetVolume(volume))
+            .await
             .unwrap();
         self.state.volume = volume;
     }
@@ -147,25 +149,29 @@ impl Player {
         if self.is_empty() {
             return;
         }
-        let (seek_tx, seek_rx) = tokio::sync::oneshot::channel();
-        self.cmd_sender
-            .send(DecoderCommand::Seek(time, seek_tx))
-            .unwrap();
 
-        match seek_rx.await {
-            Ok(Ok(seek_result)) => {
-                info!("Seeked to {:?}", seek_result.actual_ts);
-                self.event_tx
-                    .send(PlayerEvent::Seek(self.state.clone(), time))
-                    .unwrap_or_default();
-            }
-            Ok(Err(e)) => warn!("Error seeking: {:?}", e),
-            Err(e) => error!("Error receiving seek result: {:?}", e),
+        match self
+            .cmd_sender
+            .get_response(DecoderCommand::Seek(time))
+            .await
+            .unwrap()
+        {
+            DecoderResponse::SeekResponse(seek_result) => match seek_result {
+                Some(seek_result) => {
+                    info!("Seeked to {:?}", seek_result);
+                    self.event_tx
+                        .send(PlayerEvent::Seek(self.state.clone(), time))
+                        .unwrap_or_default();
+                }
+                None => warn!("Error seeking"),
+                //Err(e) => error!("Error receiving seek result: {:?}", e),
+            },
+            _ => unreachable!(),
         }
     }
 
-    pub(crate) fn stop(&mut self) {
-        self.reset();
+    pub(crate) async fn stop(&mut self) {
+        self.reset().await;
         self.state.queue_position = 0;
         self.state.queue = vec![];
         self.queued_count = 0;
@@ -181,11 +187,11 @@ impl Player {
         }
     }
 
-    fn reset(&mut self) {
+    async fn reset(&mut self) {
         // Get rid of any pending sources
         while self.queue_rx.try_recv().is_ok() {}
         self.audio_status = AudioStatus::Stopped;
-        self.cmd_sender.send(DecoderCommand::Stop).unwrap();
+        self.cmd_sender.send(DecoderCommand::Stop).await.unwrap();
     }
 
     pub(crate) fn on_ended(&mut self) {
@@ -217,10 +223,10 @@ impl Player {
         }
     }
 
-    pub(crate) fn set_queue(&mut self, queue: Vec<String>) {
+    pub(crate) async fn set_queue(&mut self, queue: Vec<String>) {
         // Don't need to send stop signal if no sources are playing
         if self.queued_count > 0 {
-            self.reset();
+            self.reset().await;
         }
 
         self.state.queue_position = 0;
@@ -228,16 +234,16 @@ impl Player {
         self.start();
     }
 
-    pub(crate) fn add_to_queue(&mut self, songs: Vec<String>) {
+    pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) {
         for song in songs {
-            self.add_one_to_queue(song);
+            self.add_one_to_queue(song).await;
         }
     }
 
-    fn add_one_to_queue(&mut self, song: String) {
+    async fn add_one_to_queue(&mut self, song: String) {
         // Queue is not currently running, need to start it
         if self.queued_count == 0 {
-            self.set_queue(vec![song]);
+            self.set_queue(vec![song]).await;
         } else {
             self.state.queue.push(song.clone());
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
@@ -264,7 +270,7 @@ impl Player {
         self.state.queue.get(position).map(String::to_owned)
     }
 
-    pub(crate) fn go_next(&mut self) {
+    pub(crate) async fn go_next(&mut self) {
         let queue_len = self.state.queue.len();
         // need to check for length > 0 first because an unsigned value of 0 - 1 panics
         if queue_len > 0 && self.state.queue_position < queue_len - 1 {
@@ -273,7 +279,7 @@ impl Player {
                 self.state.queue_position
             );
             self.state.queue_position += 1;
-            self.reset();
+            self.reset().await;
             self.start();
             self.event_tx
                 .send(PlayerEvent::Next(self.state.clone()))
@@ -286,14 +292,14 @@ impl Player {
         }
     }
 
-    pub(crate) fn go_previous(&mut self) {
+    pub(crate) async fn go_previous(&mut self) {
         if self.state.queue_position > 0 {
             info!(
                 "Current position: {}, Going to previous track.",
                 self.state.queue_position
             );
             self.state.queue_position -= 1;
-            self.reset();
+            self.reset().await;
             self.start();
             self.event_tx
                 .send(PlayerEvent::Previous(self.state.clone()))

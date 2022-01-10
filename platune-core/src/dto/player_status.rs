@@ -1,7 +1,7 @@
 use super::audio_status::AudioStatus;
 use crate::event_loop::CurrentTime;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct TrackStatus {
     pub status: AudioStatus,
     pub current_song: Option<String>,

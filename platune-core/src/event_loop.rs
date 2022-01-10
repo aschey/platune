@@ -4,10 +4,11 @@ use std::{
 };
 
 use crate::{
-    dto::{command::Command, player_event::PlayerEvent},
+    dto::{command::Command, player_event::PlayerEvent, player_status::TrackStatus},
     output::CpalAudioOutput,
     player::Player,
     source::Source,
+    TwoWayReceiver, TwoWayReceiverAsync, TwoWaySender, TwoWaySenderAsync,
 };
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use std::fmt::Debug;
@@ -17,27 +18,40 @@ use symphonia::core::{
     io::MediaSourceStream,
     meta::MetadataOptions,
     probe::Hint,
-    units::Time,
+    units::{Time, TimeStamp},
 };
 use tokio::sync::broadcast;
 use tracing::{error, info};
 
+#[derive(Clone, Debug)]
+pub(crate) enum DecoderResponse {
+    SeekResponse(Option<TimeStamp>),
+    CurrentTimeResponse(CurrentTime),
+}
+
+#[derive(Clone, Debug)]
+pub(crate) enum PlayerResponse {
+    StatusResponse(TrackStatus),
+}
+
+#[derive(Clone)]
 pub(crate) enum DecoderCommand {
     Seek(
         Duration,
-        tokio::sync::oneshot::Sender<symphonia::core::errors::Result<SeekedTo>>,
+        //tokio::sync::oneshot::Sender<symphonia::core::errors::Result<SeekedTo>>,
     ),
     Pause,
     Play,
     Stop,
     SetVolume(f32),
-    GetCurrentTime(tokio::sync::oneshot::Sender<CurrentTime>),
+    //tokio::sync::oneshot::Sender<CurrentTime>
+    GetCurrentTime,
 }
 
 impl Debug for DecoderCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Seek(arg0, _) => f
+            Self::Seek(arg0) => f
                 .debug_tuple("Seek")
                 .field(arg0)
                 .field(&"sender".to_owned())
@@ -46,7 +60,7 @@ impl Debug for DecoderCommand {
             Self::Play => write!(f, "Play"),
             Self::Stop => write!(f, "Stop"),
             Self::SetVolume(arg0) => f.debug_tuple("SetVolume").field(arg0).finish(),
-            Self::GetCurrentTime(_) => f
+            Self::GetCurrentTime => f
                 .debug_tuple("GetCurrentTime")
                 .field(&"channel".to_owned())
                 .finish(),
@@ -54,7 +68,7 @@ impl Debug for DecoderCommand {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CurrentTime {
     pub current_time: Option<Duration>,
     pub retrieval_time: Option<Duration>,
@@ -62,8 +76,8 @@ pub struct CurrentTime {
 
 pub(crate) fn decode_loop(
     queue_rx: Receiver<Box<dyn Source>>,
-    cmd_receiver: Receiver<DecoderCommand>,
-    player_cmd_sender: tokio::sync::mpsc::Sender<Command>,
+    mut cmd_receiver: TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_sender: TwoWaySenderAsync<Command, PlayerResponse>,
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
     let mut paused = false;
@@ -132,9 +146,9 @@ pub(crate) fn decode_loop(
                             output.stop();
                             break;
                         }
-                        DecoderCommand::Seek(time, seek_tx) => {
+                        DecoderCommand::Seek(time) => {
                             let nanos_per_sec = 1_000_000_000.0;
-                            let seek_result = reader.seek(
+                            match reader.seek(
                                 SeekMode::Coarse,
                                 SeekTo::Time {
                                     time: Time::new(
@@ -143,9 +157,25 @@ pub(crate) fn decode_loop(
                                     ),
                                     track_id: Some(track_id),
                                 },
-                            );
-                            if seek_tx.send(seek_result).is_err() {
-                                error!("Unable to send seek result");
+                            ) {
+                                Ok(seeked_to) => {
+                                    if cmd_receiver
+                                        .respond(DecoderResponse::SeekResponse(Some(
+                                            seeked_to.actual_ts,
+                                        )))
+                                        .is_err()
+                                    {
+                                        error!("Unable to send seek result");
+                                    }
+                                }
+                                Err(e) => {
+                                    if cmd_receiver
+                                        .respond(DecoderResponse::SeekResponse(None))
+                                        .is_err()
+                                    {
+                                        error!("Unable to send seek result");
+                                    }
+                                }
                             }
                         }
                         DecoderCommand::Pause => {
@@ -155,16 +185,16 @@ pub(crate) fn decode_loop(
                         DecoderCommand::SetVolume(volume) => {
                             output.set_volume(volume);
                         }
-                        DecoderCommand::GetCurrentTime(sender) => {
+                        DecoderCommand::GetCurrentTime => {
                             let time = time_base.calc_time(timestamp);
                             let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
-                            sender
-                                .send(CurrentTime {
+                            cmd_receiver
+                                .respond(DecoderResponse::CurrentTimeResponse(CurrentTime {
                                     current_time: Some(Duration::from_millis(millis)),
                                     retrieval_time: Some(
                                         SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
                                     ),
-                                })
+                                }))
                                 .unwrap();
                         }
                     }
@@ -204,11 +234,11 @@ pub(crate) fn decode_loop(
 }
 
 pub(crate) async fn main_loop(
-    mut receiver: tokio::sync::mpsc::Receiver<Command>,
+    mut receiver: TwoWayReceiverAsync<Command, PlayerResponse>,
     event_tx: broadcast::Sender<PlayerEvent>,
     queue_tx: Sender<Box<dyn Source>>,
     queue_rx: Receiver<Box<dyn Source>>,
-    cmd_sender: Sender<DecoderCommand>,
+    cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
 ) {
     let mut queue = Player::new(event_tx, queue_tx, queue_rx, cmd_sender);
 
@@ -216,39 +246,39 @@ pub(crate) async fn main_loop(
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {
-                queue.set_queue(songs);
+                queue.set_queue(songs).await;
             }
             Command::AddToQueue(song) => {
-                queue.add_to_queue(song);
+                queue.add_to_queue(song).await;
             }
             Command::Seek(millis) => {
                 queue.seek(millis).await;
             }
             Command::SetVolume(volume) => {
-                queue.set_volume(volume);
+                queue.set_volume(volume).await;
             }
             Command::Pause => {
-                queue.pause();
+                queue.pause().await;
             }
             Command::Resume => {
-                queue.play();
+                queue.play().await;
             }
             Command::Stop => {
-                queue.stop();
+                queue.stop().await;
             }
             Command::Ended => {
                 queue.on_ended();
             }
             Command::Next => {
-                queue.go_next();
+                queue.go_next().await;
             }
             Command::Previous => {
-                queue.go_previous();
+                queue.go_previous().await;
             }
-            Command::GetCurrentStatus(current_status_tx) => {
+            Command::GetCurrentStatus => {
                 let current_status = queue.get_current_status();
-                if let Err(e) = current_status_tx.send(current_status) {
-                    error!("Error sending player status {:?}", e);
+                if let Err(e) = receiver.respond(PlayerResponse::StatusResponse(current_status)) {
+                    error!("Error sending player status");
                 }
             }
             Command::Shutdown => {

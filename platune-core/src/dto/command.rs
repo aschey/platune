@@ -2,6 +2,7 @@ use std::{fmt::Debug, time::Duration};
 
 use super::player_status::TrackStatus;
 
+#[derive(Clone)]
 pub(crate) enum Command {
     SetQueue(Vec<String>),
     AddToQueue(Vec<String>),
@@ -9,7 +10,7 @@ pub(crate) enum Command {
     SetVolume(f32),
     Pause,
     Resume,
-    GetCurrentStatus(tokio::sync::oneshot::Sender<TrackStatus>),
+    GetCurrentStatus,
     Stop,
     Ended,
     Next,
@@ -26,7 +27,7 @@ impl Debug for Command {
             Self::SetVolume(arg0) => f.debug_tuple("SetVolume").field(arg0).finish(),
             Self::Pause => write!(f, "Pause"),
             Self::Resume => write!(f, "Resume"),
-            Self::GetCurrentStatus(_) => f
+            Self::GetCurrentStatus => f
                 .debug_tuple("GetCurrentStatus")
                 .field(&"channel".to_owned())
                 .finish(),
