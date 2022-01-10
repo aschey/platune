@@ -13,7 +13,7 @@ use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use std::fmt::Debug;
 use symphonia::core::{
     codecs::DecoderOptions,
-    formats::{FormatOptions, SeekMode, SeekTo},
+    formats::{FormatOptions, SeekMode, SeekTo, SeekedTo},
     io::MediaSourceStream,
     meta::MetadataOptions,
     probe::Hint,
@@ -23,7 +23,10 @@ use tokio::sync::broadcast;
 use tracing::{error, info};
 
 pub(crate) enum DecoderCommand {
-    Seek(Duration),
+    Seek(
+        Duration,
+        tokio::sync::oneshot::Sender<symphonia::core::errors::Result<SeekedTo>>,
+    ),
     Pause,
     Play,
     Stop,
@@ -34,7 +37,11 @@ pub(crate) enum DecoderCommand {
 impl Debug for DecoderCommand {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Seek(arg0) => f.debug_tuple("Seek").field(arg0).finish(),
+            Self::Seek(arg0, _) => f
+                .debug_tuple("Seek")
+                .field(arg0)
+                .field(&"sender".to_owned())
+                .finish(),
             Self::Pause => write!(f, "Pause"),
             Self::Play => write!(f, "Play"),
             Self::Stop => write!(f, "Stop"),
@@ -125,20 +132,21 @@ pub(crate) fn decode_loop(
                             output.stop();
                             break;
                         }
-                        DecoderCommand::Seek(time) => {
+                        DecoderCommand::Seek(time, seek_tx) => {
                             let nanos_per_sec = 1_000_000_000.0;
-                            reader
-                                .seek(
-                                    SeekMode::Coarse,
-                                    SeekTo::Time {
-                                        time: Time::new(
-                                            time.as_secs(),
-                                            time.subsec_nanos() as f64 / nanos_per_sec,
-                                        ),
-                                        track_id: Some(track_id),
-                                    },
-                                )
-                                .unwrap();
+                            let seek_result = reader.seek(
+                                SeekMode::Coarse,
+                                SeekTo::Time {
+                                    time: Time::new(
+                                        time.as_secs(),
+                                        time.subsec_nanos() as f64 / nanos_per_sec,
+                                    ),
+                                    track_id: Some(track_id),
+                                },
+                            );
+                            if seek_tx.send(seek_result).is_err() {
+                                error!("Unable to send seek result");
+                            }
                         }
                         DecoderCommand::Pause => {
                             paused = true;
@@ -214,7 +222,7 @@ pub(crate) async fn main_loop(
                 queue.add_to_queue(song);
             }
             Command::Seek(millis) => {
-                queue.seek(millis);
+                queue.seek(millis).await;
             }
             Command::SetVolume(volume) => {
                 queue.set_volume(volume);

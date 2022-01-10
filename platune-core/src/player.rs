@@ -2,7 +2,7 @@ use std::{fs::File, io::BufReader, path::Path, time::Duration};
 
 use crossbeam_channel::Sender;
 use tokio::sync::broadcast;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     dto::{
@@ -110,7 +110,14 @@ impl Player {
         }
     }
 
+    fn is_empty(&self) -> bool {
+        self.state.queue.is_empty()
+    }
+
     pub(crate) fn play(&mut self) {
+        if self.is_empty() {
+            return;
+        }
         self.cmd_sender.send(DecoderCommand::Play).unwrap();
         self.audio_status = AudioStatus::Playing;
         self.event_tx
@@ -119,7 +126,7 @@ impl Player {
     }
 
     pub(crate) fn pause(&mut self) {
-        if self.state.queue.is_empty() {
+        if self.is_empty() {
             return;
         }
         self.cmd_sender.send(DecoderCommand::Pause).unwrap();
@@ -136,15 +143,32 @@ impl Player {
         self.state.volume = volume;
     }
 
-    pub(crate) fn seek(&mut self, time: Duration) {
-        self.cmd_sender.send(DecoderCommand::Seek(time)).unwrap();
-        self.event_tx
-            .send(PlayerEvent::Seek(self.state.clone(), time))
-            .unwrap_or_default();
+    pub(crate) async fn seek(&mut self, time: Duration) {
+        if self.is_empty() {
+            return;
+        }
+        let (seek_tx, seek_rx) = tokio::sync::oneshot::channel();
+        self.cmd_sender
+            .send(DecoderCommand::Seek(time, seek_tx))
+            .unwrap();
+
+        match seek_rx.await {
+            Ok(Ok(seek_result)) => {
+                info!("Seeked to {:?}", seek_result.actual_ts);
+                self.event_tx
+                    .send(PlayerEvent::Seek(self.state.clone(), time))
+                    .unwrap_or_default();
+            }
+            Ok(Err(e)) => warn!("Error seeking: {:?}", e),
+            Err(e) => error!("Error receiving seek result: {:?}", e),
+        }
     }
 
     pub(crate) fn stop(&mut self) {
         self.reset();
+        self.state.queue_position = 0;
+        self.state.queue = vec![];
+        self.queued_count = 0;
         self.event_tx
             .send(PlayerEvent::Stop(self.state.clone()))
             .unwrap_or_default();
@@ -160,11 +184,7 @@ impl Player {
     fn reset(&mut self) {
         // Get rid of any pending sources
         while self.queue_rx.try_recv().is_ok() {}
-        self.state.queue_position = 0;
-        self.state.queue = vec![];
-        self.queued_count = 0;
         self.audio_status = AudioStatus::Stopped;
-
         self.cmd_sender.send(DecoderCommand::Stop).unwrap();
     }
 
@@ -245,9 +265,11 @@ impl Player {
     }
 
     pub(crate) fn go_next(&mut self) {
-        if self.state.queue_position < self.state.queue.len() - 1 {
+        let queue_len = self.state.queue.len();
+        // need to check for length > 0 first because an unsigned value of 0 - 1 panics
+        if queue_len > 0 && self.state.queue_position < queue_len - 1 {
             info!(
-                "Current position: {}, Going to previous track.",
+                "Current position: {}, Going to next track.",
                 self.state.queue_position
             );
             self.state.queue_position += 1;
@@ -257,14 +279,17 @@ impl Player {
                 .send(PlayerEvent::Next(self.state.clone()))
                 .unwrap_or_default();
         } else {
-            info!("Already at beginning. Not going to previous track.");
+            info!(
+                "Current position: {}. Already at end. Not going to next track.",
+                self.state.queue_position
+            );
         }
     }
 
     pub(crate) fn go_previous(&mut self) {
         if self.state.queue_position > 0 {
             info!(
-                "Current position: {}, Going to next track.",
+                "Current position: {}, Going to previous track.",
                 self.state.queue_position
             );
             self.state.queue_position -= 1;
@@ -275,7 +300,7 @@ impl Player {
                 .unwrap_or_default();
         } else {
             info!(
-                "Current position: {}. Already at end. Not going to next track.",
+                "Current position: {}. Already at beginning. Not going to previous track.",
                 self.state.queue_position
             );
         }
