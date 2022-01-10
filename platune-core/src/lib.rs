@@ -4,7 +4,7 @@ mod http_stream_reader;
 mod output;
 mod player;
 mod source;
-mod timer;
+
 pub mod platune_player {
     use crossbeam_channel::{unbounded, Sender};
     use std::thread;
