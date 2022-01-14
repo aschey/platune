@@ -1,3 +1,6 @@
+use cpal::Sample;
+use dasp::{Sample as DaspSample, Signal};
+use futures_util::StreamExt;
 use std::{
     thread::sleep,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -5,7 +8,7 @@ use std::{
 
 use crate::{
     dto::{command::Command, player_event::PlayerEvent, player_status::TrackStatus},
-    output::CpalAudioOutput,
+    output::{AudioOutput, CpalAudioOutput},
     player::Player,
     source::Source,
     TwoWayReceiver, TwoWayReceiverAsync, TwoWaySender, TwoWaySenderAsync,
@@ -13,12 +16,13 @@ use crate::{
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use std::fmt::Debug;
 use symphonia::core::{
+    audio::{AudioBufferRef, SampleBuffer},
     codecs::DecoderOptions,
-    formats::{FormatOptions, SeekMode, SeekTo, SeekedTo},
+    formats::{FormatOptions, FormatReader, Packet, SeekMode, SeekTo, SeekedTo},
     io::MediaSourceStream,
     meta::MetadataOptions,
     probe::Hint,
-    units::{Time, TimeStamp},
+    units::{Time, TimeBase, TimeStamp},
 };
 use tokio::sync::broadcast;
 use tracing::{error, info};
@@ -74,24 +78,252 @@ pub struct CurrentTime {
     pub retrieval_time: Option<Duration>,
 }
 
+pub(crate) struct Decoder<'a> {
+    cmd_receiver: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_sender: &'a TwoWaySenderAsync<Command, PlayerResponse>,
+    reader: Box<dyn FormatReader>,
+    decoder: Box<dyn symphonia::core::codecs::Decoder>,
+    buf: Vec<f32>,
+    buf_len: usize,
+    pos: usize,
+    track_id: u32,
+    silence_skipped: bool,
+    time_base: TimeBase,
+    timestamp: u64,
+    sample_buf: SampleBuffer<f32>,
+    volume: f32,
+    paused: bool,
+}
+
+impl<'a> Decoder<'a> {
+    pub(crate) fn new(
+        reader: Box<dyn FormatReader>,
+        decoder: Box<dyn symphonia::core::codecs::Decoder>,
+        buf: Vec<f32>,
+        time_base: TimeBase,
+        cmd_receiver: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
+        player_cmd_sender: &'a TwoWaySenderAsync<Command, PlayerResponse>,
+        sample_buf: SampleBuffer<f32>,
+        volume: f32,
+    ) -> Self {
+        // Create a hint to help the format registry guess what format reader is appropriate.
+        let track_id = reader.default_track().unwrap().id;
+        let buf_len = buf.len();
+        Self {
+            cmd_receiver,
+            player_cmd_sender,
+            reader,
+            decoder,
+            buf,
+            time_base,
+            track_id,
+            pos: 0,
+            silence_skipped: false,
+            timestamp: 0,
+            sample_buf,
+            volume,
+            buf_len,
+            paused: false,
+        }
+    }
+
+    fn process_output(&mut self, packet: &Packet) {
+        // Audio samples must be interleaved for cpal. Interleave the samples in the audio
+        // buffer into the sample buffer.
+        let decoded = self.decoder.decode(packet).unwrap();
+        self.sample_buf.copy_interleaved_ref(decoded);
+        // Write all the interleaved samples to the ring buffer.
+        let samples = self.sample_buf.samples();
+
+        // if !self.silence_skipped {
+        //     if let Some(index) = samples.iter().position(|s| *s != 0) {
+        //         info!("Skipped {} silent samples", index);
+        //         samples = &samples[index..];
+        //         self.silence_skipped = true;
+        //     }
+        // }
+        if samples.len() > self.buf.len() {
+            self.buf.clear();
+            self.buf.resize(samples.len(), 0.0);
+        }
+
+        for (i, sample) in samples.iter().enumerate() {
+            self.buf[i] = *sample; //* self.volume.to_i16();
+        }
+        self.buf_len = samples.len();
+    }
+
+    fn process_input(&mut self) -> bool {
+        match self.cmd_receiver.try_recv() {
+            Ok(command) => {
+                info!("Got decoder command {:?}", command);
+
+                match command {
+                    DecoderCommand::Play => {
+                        self.paused = false;
+                    }
+                    DecoderCommand::Stop => {
+                        return false;
+                    }
+                    DecoderCommand::Seek(time) => {
+                        let nanos_per_sec = 1_000_000_000.0;
+                        match self.reader.seek(
+                            SeekMode::Coarse,
+                            SeekTo::Time {
+                                time: Time::new(
+                                    time.as_secs(),
+                                    time.subsec_nanos() as f64 / nanos_per_sec,
+                                ),
+                                track_id: Some(self.track_id),
+                            },
+                        ) {
+                            Ok(seeked_to) => {
+                                if self
+                                    .cmd_receiver
+                                    .respond(DecoderResponse::SeekResponse(Some(
+                                        seeked_to.actual_ts,
+                                    )))
+                                    .is_err()
+                                {
+                                    error!("Unable to send seek result");
+                                }
+                            }
+                            Err(e) => {
+                                if self
+                                    .cmd_receiver
+                                    .respond(DecoderResponse::SeekResponse(None))
+                                    .is_err()
+                                {
+                                    error!("Unable to send seek result");
+                                }
+                            }
+                        }
+                    }
+                    DecoderCommand::Pause => {
+                        self.paused = true;
+                    }
+                    DecoderCommand::SetVolume(volume) => {
+                        self.volume = volume;
+                    }
+                    DecoderCommand::GetCurrentTime => {
+                        let time = self.time_base.calc_time(self.timestamp);
+                        let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
+                        self.cmd_receiver
+                            .respond(DecoderResponse::CurrentTimeResponse(CurrentTime {
+                                current_time: Some(Duration::from_millis(millis)),
+                                retrieval_time: Some(
+                                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
+                                ),
+                            }))
+                            .unwrap();
+                    }
+                }
+            }
+            Err(TryRecvError::Empty) => {}
+            Err(TryRecvError::Disconnected) => {}
+        }
+
+        true
+    }
+
+    fn get_next(&mut self) -> Option<&[f32]> {
+        // if self.pos < self.buf_len {
+        //     let ret = Some(self.buf[self.pos]);
+        //     self.pos += 1;
+        //     // if self.pos == self.buf.len() {
+        //     //     self.pos = 0;
+        //     //     self.buf = vec![];
+        //     // }
+        //     return ret;
+        // }
+
+        if !self.process_input() {
+            return None;
+        }
+        // if self.paused {
+        //     return Some(0.0);
+        // }
+
+        let packet = loop {
+            match self.reader.next_packet() {
+                Ok(packet) => {
+                    if packet.track_id() == self.track_id {
+                        break packet;
+                    }
+                }
+                Err(_) => {
+                    self.player_cmd_sender.try_send(Command::Ended).unwrap();
+                    return None;
+                }
+            };
+        };
+
+        self.timestamp = packet.pts();
+
+        self.process_output(&packet);
+        self.pos = 1;
+
+        //Some(self.buf[0])
+        Some(&self.buf[..self.buf_len])
+    }
+}
+
+impl<'a> Iterator for Decoder<'a> {
+    type Item = f32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos < self.buf_len {
+            let ret = Some(self.buf[self.pos]);
+            self.pos += 1;
+            // if self.pos == self.buf.len() {
+            //     self.pos = 0;
+            //     self.buf = vec![];
+            // }
+            return ret;
+        }
+
+        if !self.process_input() {
+            return None;
+        }
+        if self.paused {
+            return Some(0.0);
+        }
+
+        let packet = loop {
+            match self.reader.next_packet() {
+                Ok(packet) => {
+                    if packet.track_id() == self.track_id {
+                        break packet;
+                    }
+                }
+                Err(_) => {
+                    self.player_cmd_sender.try_send(Command::Ended).unwrap();
+                    return None;
+                }
+            };
+        };
+
+        self.timestamp = packet.pts();
+
+        self.process_output(&packet);
+        self.pos = 1;
+
+        Some(self.buf[0])
+    }
+}
+
 pub(crate) fn decode_loop(
     queue_rx: Receiver<Box<dyn Source>>,
     mut cmd_receiver: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_sender: TwoWaySenderAsync<Command, PlayerResponse>,
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
-    let mut paused = false;
-    let mut timestamp: u64 = 0;
     while let Ok(source) = queue_rx.recv() {
-        info!("Got source {:?}", source);
-        output.resume();
         // Create a hint to help the format registry guess what format reader is appropriate.
         let mut hint = Hint::new();
-
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);
         }
-
         let mss = MediaSourceStream::new(source.as_media_source(), Default::default());
 
         let format_opts = FormatOptions::default();
@@ -102,132 +334,68 @@ pub(crate) fn decode_loop(
             .unwrap();
 
         let mut reader = probed.format;
+
         let track = reader.default_track().unwrap();
         let track_id = track.id;
         let time_base = track.codec_params.time_base.unwrap();
         let decode_opts = DecoderOptions { verify: true };
-        let mut decoder = symphonia::default::get_codecs()
+        let mut symphonia_decoder = symphonia::default::get_codecs()
             .make(&track.codec_params, &decode_opts)
             .unwrap();
 
-        // track duration
-        let dur = track
-            .codec_params
-            .n_frames
-            .map(|frames| track.codec_params.start_ts + frames);
-
-        while let Ok(packet) = reader.next_packet() {
-            if packet.track_id() != track_id {
-                continue;
-            }
-            match decoder.decode(&packet) {
-                Ok(decoded) => {
-                    let spec = *decoded.spec();
-                    output.init_track(spec, decoded.capacity() as u64);
-                    output.write(decoded);
-                    break;
-                }
-                Err(e) => {
-                    continue;
-                }
-            }
-        }
-
-        loop {
-            match cmd_receiver.try_recv() {
-                Ok(command) => {
-                    info!("Got decoder command {:?}", command);
-                    paused = false;
-                    match command {
-                        DecoderCommand::Play => {
-                            output.resume();
-                        }
-                        DecoderCommand::Stop => {
-                            output.stop();
-                            break;
-                        }
-                        DecoderCommand::Seek(time) => {
-                            let nanos_per_sec = 1_000_000_000.0;
-                            match reader.seek(
-                                SeekMode::Coarse,
-                                SeekTo::Time {
-                                    time: Time::new(
-                                        time.as_secs(),
-                                        time.subsec_nanos() as f64 / nanos_per_sec,
-                                    ),
-                                    track_id: Some(track_id),
-                                },
-                            ) {
-                                Ok(seeked_to) => {
-                                    if cmd_receiver
-                                        .respond(DecoderResponse::SeekResponse(Some(
-                                            seeked_to.actual_ts,
-                                        )))
-                                        .is_err()
-                                    {
-                                        error!("Unable to send seek result");
-                                    }
-                                }
-                                Err(e) => {
-                                    if cmd_receiver
-                                        .respond(DecoderResponse::SeekResponse(None))
-                                        .is_err()
-                                    {
-                                        error!("Unable to send seek result");
-                                    }
-                                }
-                            }
-                        }
-                        DecoderCommand::Pause => {
-                            paused = true;
-                            output.stop();
-                        }
-                        DecoderCommand::SetVolume(volume) => {
-                            output.set_volume(volume);
-                        }
-                        DecoderCommand::GetCurrentTime => {
-                            let time = time_base.calc_time(timestamp);
-                            let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
-                            cmd_receiver
-                                .respond(DecoderResponse::CurrentTimeResponse(CurrentTime {
-                                    current_time: Some(Duration::from_millis(millis)),
-                                    retrieval_time: Some(
-                                        SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
-                                    ),
-                                }))
-                                .unwrap();
-                        }
-                    }
-                }
-                Err(TryRecvError::Empty) => {
-                    if paused {
-                        sleep(Duration::from_millis(10));
-                        continue;
-                    }
-                    let packet = match reader.next_packet() {
-                        Ok(packet) => packet,
-                        Err(_) => {
-                            player_cmd_sender.try_send(Command::Ended).unwrap();
-                            break;
-                        }
-                    };
+        let (samples, spec, sample_buf) = loop {
+            match reader.next_packet() {
+                Ok(packet) => {
                     if packet.track_id() != track_id {
                         continue;
                     }
-
-                    match decoder.decode(&packet) {
+                    match symphonia_decoder.decode(&packet) {
                         Ok(decoded) => {
-                            timestamp = packet.pts();
-                            output.write(decoded);
+                            let duration = decoded.capacity();
+                            let spec = *decoded.spec();
+                            let mut sample_buf = SampleBuffer::new(duration as u64, spec);
+                            sample_buf.copy_interleaved_ref(decoded);
+                            let samples = sample_buf.samples().to_owned();
+
+                            break (samples, spec, sample_buf);
                         }
                         Err(e) => {
                             continue;
                         }
                     }
                 }
-                Err(TryRecvError::Disconnected) => {
-                    break;
-                }
+                Err(e) => return,
+            }
+        };
+
+        let output_sample_rate = output.sample_rate();
+        let mut decoder = Decoder::new(
+            reader,
+            symphonia_decoder,
+            samples,
+            time_base,
+            &mut cmd_receiver,
+            &player_cmd_sender,
+            sample_buf,
+            1.0,
+        );
+        let mut signal = dasp::signal::from_interleaved_samples_iter(decoder);
+
+        let sinc = dasp::interpolate::linear::Linear::new(signal.next(), signal.next());
+        let new_signal = signal.from_hz_to_hz(sinc, spec.rate as f64, output_sample_rate);
+        let mut buf = vec![0.0; 4096];
+
+        let mut i = 0;
+
+        for frame in new_signal.until_exhausted() {
+            if i < buf.len() {
+                buf[i] = frame;
+            }
+            if i == buf.len() - 1 {
+                output.write(buf.as_slice());
+                i = 0;
+            } else {
+                i += 1;
             }
         }
     }
