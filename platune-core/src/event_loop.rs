@@ -269,7 +269,7 @@ impl<'a> Decoder<'a> {
 }
 
 impl<'a> Iterator for Decoder<'a> {
-    type Item = f32;
+    type Item = f64;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.pos < self.buf_len {
@@ -279,7 +279,7 @@ impl<'a> Iterator for Decoder<'a> {
             //     self.pos = 0;
             //     self.buf = vec![];
             // }
-            return ret;
+            return ret.map(f32::to_sample);
         }
 
         if !self.process_input() {
@@ -308,7 +308,7 @@ impl<'a> Iterator for Decoder<'a> {
         self.process_output(&packet);
         self.pos = 1;
 
-        Some(self.buf[0])
+        Some(f32::to_sample(self.buf[0]))
     }
 }
 
@@ -379,24 +379,33 @@ pub(crate) fn decode_loop(
             sample_buf,
             1.0,
         );
-        let mut signal = dasp::signal::from_interleaved_samples_iter(decoder);
 
-        let sinc = dasp::interpolate::linear::Linear::new(signal.next(), signal.next());
+        let mut signal = dasp::signal::from_interleaved_samples_iter(decoder);
+        let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
+        let l = [0.0; 2];
+        let r = [0.0; 2];
+        // l[0] = signal.next();
+        // l[1] = signal.next();
+        // r[0] = signal.next();
+        // r[1] = signal.next();
+        let sinc = dasp::interpolate::linear::Linear::new(l, r);
+        //let sinc = dasp::interpolate::sinc::Sinc::new(ring_buffer);
+
         let new_signal = signal.from_hz_to_hz(sinc, spec.rate as f64, output_sample_rate);
-        let mut buf = vec![0.0; 4096];
+        let mut buf = vec![0.0; 2048];
 
         let mut i = 0;
 
         for frame in new_signal.until_exhausted() {
-            if i < buf.len() {
-                buf[i] = frame;
-            }
-            if i == buf.len() - 1 {
+            if i == buf.len() {
                 output.write(buf.as_slice());
                 i = 0;
-            } else {
-                i += 1;
             }
+
+            buf[i] = frame[0].to_sample();
+            buf[i + 1] = frame[1].to_sample();
+
+            i += 2;
         }
     }
 }

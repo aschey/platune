@@ -15,7 +15,7 @@ path = "src/lib.rs"
 anyhow = "1.0.51"
 cpal = "0.13.4"
 crossbeam-channel = "0.5.2"
-dasp = {version = "0.11.0", features = ["ring_buffer", "signal", "interpolate", "interpolate-sinc", "interpolate-linear"]}
+dasp = {git = "https://github.com/RustAudio/dasp", rev = "66e8b83a5c926fde3ec7feab5dbe5982e6ce7b81", features = ["ring_buffer", "signal", "interpolate", "interpolate-sinc", "interpolate-linear"]}
 futures-util = "0.3.19"
 rb = "0.3.2"
 reqwest = {version = "0.11.7", features = ["stream"]}
