@@ -85,15 +85,16 @@ pub(crate) struct Decoder {
     player_cmd_sender: Rc<RefCell<TwoWaySenderAsync<Command, PlayerResponse>>>,
     reader: Box<dyn FormatReader>,
     decoder: Box<dyn symphonia::core::codecs::Decoder>,
-    buf: Vec<f32>,
+    buf: Vec<f64>,
     buf_len: usize,
     pos: usize,
     track_id: u32,
     silence_skipped: bool,
     time_base: TimeBase,
     timestamp: u64,
-    sample_buf: SampleBuffer<f32>,
+    sample_buf: SampleBuffer<f64>,
     volume: f32,
+    channels: usize,
     paused: bool,
 }
 
@@ -101,11 +102,12 @@ impl Decoder {
     pub(crate) fn new(
         reader: Box<dyn FormatReader>,
         decoder: Box<dyn symphonia::core::codecs::Decoder>,
-        buf: Vec<f32>,
+        buf: Vec<f64>,
         time_base: TimeBase,
         cmd_receiver: Rc<RefCell<TwoWayReceiver<DecoderCommand, DecoderResponse>>>,
         player_cmd_sender: Rc<RefCell<TwoWaySenderAsync<Command, PlayerResponse>>>,
-        sample_buf: SampleBuffer<f32>,
+        sample_buf: SampleBuffer<f64>,
+        channels: usize,
         volume: f32,
     ) -> Self {
         // Create a hint to help the format registry guess what format reader is appropriate.
@@ -123,6 +125,7 @@ impl Decoder {
             silence_skipped: false,
             timestamp: 0,
             sample_buf,
+            channels,
             volume,
             buf_len,
             paused: false,
@@ -144,15 +147,30 @@ impl Decoder {
         //         self.silence_skipped = true;
         //     }
         // }
-        if samples.len() > self.buf.len() {
-            self.buf.clear();
-            self.buf.resize(samples.len(), 0.0);
-        }
+        if self.channels == 1 {
+            if samples.len() * 2 > self.buf.len() {
+                self.buf.clear();
+                self.buf.resize(samples.len() * 2, 0.0);
+            }
 
-        for (i, sample) in samples.iter().enumerate() {
-            self.buf[i] = *sample; //* self.volume.to_i16();
+            let mut i = 0;
+            for sample in samples.iter() {
+                self.buf[i] = *sample; //* self.volume.to_i16();
+                self.buf[i + 1] = *sample;
+                i += 2;
+            }
+            self.buf_len = samples.len() * 2;
+        } else {
+            if samples.len() > self.buf.len() {
+                self.buf.clear();
+                self.buf.resize(samples.len(), 0.0);
+            }
+
+            for (i, sample) in samples.iter().enumerate() {
+                self.buf[i] = *sample; //* self.volume.to_i16();
+            }
+            self.buf_len = samples.len();
         }
-        self.buf_len = samples.len();
     }
 
     fn process_input(&mut self) -> bool {
@@ -231,7 +249,7 @@ impl Decoder {
         true
     }
 
-    fn get_next(&mut self) -> Option<&[f32]> {
+    fn get_next(&mut self) -> Option<&[f64]> {
         // if self.pos < self.buf_len {
         //     let ret = Some(self.buf[self.pos]);
         //     self.pos += 1;
@@ -287,7 +305,7 @@ impl Iterator for Decoder {
             //     self.pos = 0;
             //     self.buf = vec![];
             // }
-            return ret.map(f32::to_sample);
+            return ret;
         }
 
         if !self.process_input() {
@@ -319,7 +337,7 @@ impl Iterator for Decoder {
         self.process_output(&packet);
         self.pos = 1;
 
-        Some(f32::to_sample(self.buf[0]))
+        Some(self.buf[0])
     }
 }
 
@@ -380,7 +398,7 @@ pub(crate) fn decode_loop(
                 Err(e) => return,
             }
         };
-
+        let channels = spec.channels.count();
         let output_sample_rate = output.sample_rate();
 
         let mut decoder = Decoder::new(
@@ -391,6 +409,7 @@ pub(crate) fn decode_loop(
             cmd_rx.clone(),
             player_cmd_tx.clone(),
             sample_buf,
+            channels,
             1.0,
         );
         let l = [decoder.next().unwrap(), decoder.next().unwrap()];
