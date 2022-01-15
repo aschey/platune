@@ -1,4 +1,6 @@
 use cpal::{SampleRate, Stream};
+use dasp::Sample;
+use std::marker::PhantomData;
 use std::ops::Mul;
 use std::result;
 use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
@@ -6,7 +8,8 @@ use symphonia::core::conv::ConvertibleSample;
 use symphonia::core::units::Duration;
 
 pub trait AudioOutput {
-    fn write(&mut self, samples: &[f32]);
+    // fn write(&mut self, samples: &[f32]);
+    fn write_all(&mut self, sample_iter: Box<dyn Iterator<Item = [f64; 2]>>);
     fn write_empty(&mut self);
     fn flush(&mut self);
     //fn init_track(&mut self, spec: SignalSpec, duration: Duration);
@@ -36,7 +39,13 @@ use tracing::{error, info};
 pub struct CpalAudioOutput;
 
 trait AudioOutputSample:
-    cpal::Sample + ConvertibleSample + RawSample + Mul<Output = Self> + Send + 'static
+    cpal::Sample
+    + ConvertibleSample
+    + RawSample
+    + dasp::sample::FromSample<f64>
+    + Mul<Output = Self>
+    + Send
+    + 'static
 {
 }
 
@@ -68,9 +77,9 @@ impl CpalAudioOutput {
         let sample_rate = config.sample_rate();
         // Select proper playback routine based on sample format.
         match config.sample_format() {
-            cpal::SampleFormat::F32 => CpalAudioOutputImpl::<f32>::try_open(&device, sample_rate),
-            cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(&device, sample_rate),
-            cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(&device, sample_rate),
+            cpal::SampleFormat::F32 => CpalAudioOutputImpl::<f32>::try_open(device, sample_rate),
+            cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(device, sample_rate),
+            cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(device, sample_rate),
         }
     }
 }
@@ -79,31 +88,28 @@ struct CpalAudioOutputImpl<T: AudioOutputSample>
 where
     T: AudioOutputSample,
 {
-    ring_buf_producer: rb::Producer<f32>,
+    ring_buf_producer: rb::Producer<T>,
     sample_buf: Option<SampleBuffer<T>>,
     stream: Option<cpal::Stream>,
     silence_skipped: bool,
     volume: T,
-    buf: Vec<f32>,
+    buf: Vec<T>,
     sample_rate: f64,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn try_open(
-        device: &cpal::Device,
-        sample_rate: SampleRate,
-    ) -> Result<Box<dyn AudioOutput>> {
+    pub fn try_open(device: cpal::Device, sample_rate: SampleRate) -> Result<Box<dyn AudioOutput>> {
         // Instantiate a ring buffer capable of buffering 8K (arbitrarily chosen) samples.
-        let ring_buf = SpscRb::<f32>::new(8 * 1024);
+        let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
         let sample_rate_val = sample_rate.0 as f64;
-        match Self::create_stream(device, sample_rate, ring_buf_consumer) {
+        match Self::create_stream(&device, sample_rate, ring_buf_consumer) {
             Ok(stream) => Ok(Box::new(CpalAudioOutputImpl {
                 ring_buf_producer,
                 sample_buf: None,
                 stream: Some(stream),
                 silence_skipped: false,
-                buf: Vec::<f32>::new(),
+                buf: Vec::<T>::new(),
                 volume: T::from(&1.0),
                 sample_rate: sample_rate_val,
             })),
@@ -114,7 +120,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
     fn create_stream(
         device: &cpal::Device,
         sample_rate: SampleRate,
-        ring_buf_consumer: Consumer<f32>,
+        ring_buf_consumer: Consumer<T>,
     ) -> Result<Stream> {
         // Output audio stream config.
         let supported_config = device.default_output_config().unwrap();
@@ -126,12 +132,12 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
 
         let stream_result = device.build_output_stream(
             &config,
-            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 // Write out as many samples as possible from the ring buffer to the audio
                 // output.
                 let written = ring_buf_consumer.read(data).unwrap_or(0);
                 // Mute any remaining samples.
-                data[written..].iter_mut().for_each(|s| *s = 0.0);
+                data[written..].iter_mut().for_each(|s| *s = T::MID);
             },
             move |err| error!("audio output error: {}", err),
         );
@@ -156,47 +162,67 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
 }
 
 impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
-    fn write(&mut self, s: &[f32]) {
-        let mut samples = s;
-        while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
-            samples = &samples[written..];
+    fn write_all(&mut self, sample_iter: Box<dyn Iterator<Item = [f64; 2]>>) {
+        let mut buf = vec![T::MID; 2048];
+
+        let mut i = 0;
+
+        for frame in sample_iter {
+            if i == buf.len() {
+                let mut samples = &buf[..];
+                while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
+                    samples = &samples[written..];
+                }
+                i = 0;
+            }
+
+            buf[i] = frame[0].to_sample();
+            buf[i + 1] = frame[1].to_sample();
+
+            i += 2;
         }
-        // Do nothing if there are no audio frames.
-        // if decoded.frames() == 0 {
-        //     return;
-        // }
-
-        // // Audio samples must be interleaved for cpal. Interleave the samples in the audio
-        // // buffer into the sample buffer.
-        // if let Some(sample_buf) = &mut self.sample_buf {
-        //     sample_buf.copy_interleaved_ref(decoded);
-        //     // Write all the interleaved samples to the ring buffer.
-        //     let mut samples = sample_buf.samples();
-
-        //     if !self.silence_skipped {
-        //         match samples.iter().position(|s| *s != T::MID) {
-        //             Some(index) => {
-        //                 info!("Skipped {} silent samples", index);
-        //                 samples = &samples[index..];
-        //                 self.silence_skipped = true;
-        //             }
-        //             None => return,
-        //         }
-        //     }
-        //     if samples.len() > self.buf.len() {
-        //         self.buf.clear();
-        //         self.buf.resize(samples.len(), T::default());
-        //     }
-
-        //     for (i, sample) in samples.iter().enumerate() {
-        //         self.buf[i] = *sample * self.volume;
-        //     }
-        //     samples = &self.buf[..samples.len()];
-        //     while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
-        //         samples = &samples[written..];
-        //     }
-        // }
     }
+    // fn write(&mut self, s: &[f32]) {
+    //     let mut samples = s;
+    //     while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
+    //         samples = &samples[written..];
+    //     }
+    //     // Do nothing if there are no audio frames.
+    //     // if decoded.frames() == 0 {
+    //     //     return;
+    //     // }
+
+    //     // // Audio samples must be interleaved for cpal. Interleave the samples in the audio
+    //     // // buffer into the sample buffer.
+    //     // if let Some(sample_buf) = &mut self.sample_buf {
+    //     //     sample_buf.copy_interleaved_ref(decoded);
+    //     //     // Write all the interleaved samples to the ring buffer.
+    //     //     let mut samples = sample_buf.samples();
+
+    //     //     if !self.silence_skipped {
+    //     //         match samples.iter().position(|s| *s != T::MID) {
+    //     //             Some(index) => {
+    //     //                 info!("Skipped {} silent samples", index);
+    //     //                 samples = &samples[index..];
+    //     //                 self.silence_skipped = true;
+    //     //             }
+    //     //             None => return,
+    //     //         }
+    //     //     }
+    //     //     if samples.len() > self.buf.len() {
+    //     //         self.buf.clear();
+    //     //         self.buf.resize(samples.len(), T::default());
+    //     //     }
+
+    //     //     for (i, sample) in samples.iter().enumerate() {
+    //     //         self.buf[i] = *sample * self.volume;
+    //     //     }
+    //     //     samples = &self.buf[..samples.len()];
+    //     //     while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
+    //     //         samples = &samples[written..];
+    //     //     }
+    //     // }
+    // }
 
     fn write_empty(&mut self) {
         //self.ring_buf_producer.write_blocking(&[T::MID]);
@@ -222,7 +248,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         let host = cpal::default_host();
         // Get the default audio output device.
         let device = host.default_output_device().unwrap();
-        let ring_buf = SpscRb::<f32>::new(8 * 1024);
+        let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
         let stream = Self::create_stream(
             &device,

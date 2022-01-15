@@ -2,6 +2,8 @@ use cpal::Sample;
 use dasp::{Sample as DaspSample, Signal};
 use futures_util::StreamExt;
 use std::{
+    cell::RefCell,
+    rc::Rc,
     thread::sleep,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -78,9 +80,9 @@ pub struct CurrentTime {
     pub retrieval_time: Option<Duration>,
 }
 
-pub(crate) struct Decoder<'a> {
-    cmd_receiver: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    player_cmd_sender: &'a TwoWaySenderAsync<Command, PlayerResponse>,
+pub(crate) struct Decoder {
+    cmd_receiver: Rc<RefCell<TwoWayReceiver<DecoderCommand, DecoderResponse>>>,
+    player_cmd_sender: Rc<RefCell<TwoWaySenderAsync<Command, PlayerResponse>>>,
     reader: Box<dyn FormatReader>,
     decoder: Box<dyn symphonia::core::codecs::Decoder>,
     buf: Vec<f32>,
@@ -95,14 +97,14 @@ pub(crate) struct Decoder<'a> {
     paused: bool,
 }
 
-impl<'a> Decoder<'a> {
+impl Decoder {
     pub(crate) fn new(
         reader: Box<dyn FormatReader>,
         decoder: Box<dyn symphonia::core::codecs::Decoder>,
         buf: Vec<f32>,
         time_base: TimeBase,
-        cmd_receiver: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-        player_cmd_sender: &'a TwoWaySenderAsync<Command, PlayerResponse>,
+        cmd_receiver: Rc<RefCell<TwoWayReceiver<DecoderCommand, DecoderResponse>>>,
+        player_cmd_sender: Rc<RefCell<TwoWaySenderAsync<Command, PlayerResponse>>>,
         sample_buf: SampleBuffer<f32>,
         volume: f32,
     ) -> Self {
@@ -154,7 +156,7 @@ impl<'a> Decoder<'a> {
     }
 
     fn process_input(&mut self) -> bool {
-        match self.cmd_receiver.try_recv() {
+        match self.cmd_receiver.borrow_mut().try_recv() {
             Ok(command) => {
                 info!("Got decoder command {:?}", command);
 
@@ -180,6 +182,7 @@ impl<'a> Decoder<'a> {
                             Ok(seeked_to) => {
                                 if self
                                     .cmd_receiver
+                                    .borrow_mut()
                                     .respond(DecoderResponse::SeekResponse(Some(
                                         seeked_to.actual_ts,
                                     )))
@@ -191,6 +194,7 @@ impl<'a> Decoder<'a> {
                             Err(e) => {
                                 if self
                                     .cmd_receiver
+                                    .borrow_mut()
                                     .respond(DecoderResponse::SeekResponse(None))
                                     .is_err()
                                 {
@@ -209,6 +213,7 @@ impl<'a> Decoder<'a> {
                         let time = self.time_base.calc_time(self.timestamp);
                         let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
                         self.cmd_receiver
+                            .borrow_mut()
                             .respond(DecoderResponse::CurrentTimeResponse(CurrentTime {
                                 current_time: Some(Duration::from_millis(millis)),
                                 retrieval_time: Some(
@@ -252,7 +257,10 @@ impl<'a> Decoder<'a> {
                     }
                 }
                 Err(_) => {
-                    self.player_cmd_sender.try_send(Command::Ended).unwrap();
+                    self.player_cmd_sender
+                        .borrow_mut()
+                        .try_send(Command::Ended)
+                        .unwrap();
                     return None;
                 }
             };
@@ -268,7 +276,7 @@ impl<'a> Decoder<'a> {
     }
 }
 
-impl<'a> Iterator for Decoder<'a> {
+impl Iterator for Decoder {
     type Item = f64;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -297,7 +305,10 @@ impl<'a> Iterator for Decoder<'a> {
                     }
                 }
                 Err(_) => {
-                    self.player_cmd_sender.try_send(Command::Ended).unwrap();
+                    self.player_cmd_sender
+                        .borrow_mut()
+                        .try_send(Command::Ended)
+                        .unwrap();
                     return None;
                 }
             };
@@ -317,6 +328,8 @@ pub(crate) fn decode_loop(
     mut cmd_receiver: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_sender: TwoWaySenderAsync<Command, PlayerResponse>,
 ) {
+    let cmd_rx = Rc::new(RefCell::new(cmd_receiver));
+    let player_cmd_tx = Rc::new(RefCell::new(player_cmd_sender));
     let mut output = CpalAudioOutput::try_open().unwrap();
     while let Ok(source) = queue_rx.recv() {
         // Create a hint to help the format registry guess what format reader is appropriate.
@@ -369,44 +382,31 @@ pub(crate) fn decode_loop(
         };
 
         let output_sample_rate = output.sample_rate();
+
         let mut decoder = Decoder::new(
             reader,
             symphonia_decoder,
             samples,
             time_base,
-            &mut cmd_receiver,
-            &player_cmd_sender,
+            cmd_rx.clone(),
+            player_cmd_tx.clone(),
             sample_buf,
             1.0,
         );
+        let l = [decoder.next().unwrap(), decoder.next().unwrap()];
+        let r = [decoder.next().unwrap(), decoder.next().unwrap()];
 
         let mut signal = dasp::signal::from_interleaved_samples_iter(decoder);
-        let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
-        let l = [0.0; 2];
-        let r = [0.0; 2];
-        // l[0] = signal.next();
-        // l[1] = signal.next();
-        // r[0] = signal.next();
-        // r[1] = signal.next();
-        let sinc = dasp::interpolate::linear::Linear::new(l, r);
-        //let sinc = dasp::interpolate::sinc::Sinc::new(ring_buffer);
+        //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
 
-        let new_signal = signal.from_hz_to_hz(sinc, spec.rate as f64, output_sample_rate);
-        let mut buf = vec![0.0; 2048];
+        let converter = dasp::interpolate::linear::Linear::new(l, r);
+        //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
 
-        let mut i = 0;
+        let new_signal = signal.from_hz_to_hz(converter, spec.rate as f64, output_sample_rate);
+        let until = new_signal.until_exhausted();
+        let iter = Box::new(until);
 
-        for frame in new_signal.until_exhausted() {
-            if i == buf.len() {
-                output.write(buf.as_slice());
-                i = 0;
-            }
-
-            buf[i] = frame[0].to_sample();
-            buf[i + 1] = frame[1].to_sample();
-
-            i += 2;
-        }
+        output.write_all(iter);
     }
 }
 
