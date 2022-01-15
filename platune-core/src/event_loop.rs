@@ -18,8 +18,8 @@ use crate::{
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use std::fmt::Debug;
 use symphonia::core::{
-    audio::{AudioBufferRef, SampleBuffer},
-    codecs::DecoderOptions,
+    audio::{AudioBufferRef, SampleBuffer, SignalSpec},
+    codecs::{Decoder as SymphoniaDecoder, DecoderOptions},
     formats::{FormatOptions, FormatReader, Packet, SeekMode, SeekTo, SeekedTo},
     io::MediaSourceStream,
     meta::MetadataOptions,
@@ -76,33 +76,28 @@ pub struct CurrentTime {
     pub retrieval_time: Option<Duration>,
 }
 
-pub(crate) struct Decoder {
-    cmd_receiver: Rc<RefCell<TwoWayReceiver<DecoderCommand, DecoderResponse>>>,
-    player_cmd_sender: Rc<RefCell<TwoWaySenderAsync<Command, PlayerResponse>>>,
-    reader: Box<dyn FormatReader>,
-    decoder: Box<dyn symphonia::core::codecs::Decoder>,
-    buf: Vec<f64>,
-    buf_len: usize,
-    pos: usize,
-    track_id: u32,
-    silence_skipped: bool,
-    time_base: TimeBase,
-    timestamp: u64,
-    sample_buf: SampleBuffer<f64>,
-    volume: f64,
-    channels: usize,
+pub(crate) struct AudioProcessor {
+    state: Rc<RefCell<AudioProcessorState>>,
+    decoder: Decoder,
     paused: bool,
-    sample_rate: u32,
+}
+
+struct Decoder {
+    buf: Vec<f64>,
+    sample_buf: SampleBuffer<f64>,
+    decoder: Box<dyn SymphoniaDecoder>,
+    reader: Box<dyn FormatReader>,
+    time_base: TimeBase,
+    buf_len: usize,
+    spec: SignalSpec,
+    position: usize,
+    track_id: u32,
+    channels: usize,
+    timestamp: u64,
 }
 
 impl Decoder {
-    pub(crate) fn new(
-        cmd_receiver: Rc<RefCell<TwoWayReceiver<DecoderCommand, DecoderResponse>>>,
-        player_cmd_sender: Rc<RefCell<TwoWaySenderAsync<Command, PlayerResponse>>>,
-        source: Box<dyn Source>,
-        volume: f64,
-    ) -> Self {
-        // Create a hint to help the format registry guess what format reader is appropriate.
+    fn new(source: Box<dyn Source>) -> Self {
         let mut hint = Hint::new();
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);
@@ -122,36 +117,61 @@ impl Decoder {
         let mut reader = probed.format;
 
         let track = reader.default_track().unwrap();
-        let track_id = track.id;
+
         let time_base = track.codec_params.time_base.unwrap();
         let decode_opts = DecoderOptions { verify: true };
-        let mut symphonia_decoder = symphonia::default::get_codecs()
+        let mut decoder = symphonia::default::get_codecs()
             .make(&track.codec_params, &decode_opts)
             .unwrap();
+        let track = reader.default_track().unwrap();
+        let track_id = track.id;
 
-        let (samples, spec, sample_buf, pos) = loop {
+        let (buf, spec, sample_buf, position, timestamp) =
+            Self::process_first_packet(&mut reader, &mut decoder, track_id);
+
+        Self {
+            decoder,
+            reader,
+            time_base,
+            buf_len: buf.len(),
+            channels: spec.channels.count(),
+            track_id,
+            buf,
+            sample_buf,
+            spec,
+            position,
+            timestamp,
+        }
+    }
+
+    fn process_first_packet(
+        reader: &mut Box<dyn FormatReader>,
+        decoder: &mut Box<dyn SymphoniaDecoder>,
+        track_id: u32,
+    ) -> (Vec<f64>, SignalSpec, SampleBuffer<f64>, usize, u64) {
+        loop {
             match reader.next_packet() {
                 Ok(packet) => {
                     if packet.track_id() != track_id {
                         continue;
                     }
-                    match symphonia_decoder.decode(&packet) {
+                    match decoder.decode(&packet) {
                         Ok(decoded) => {
                             let duration = decoded.capacity();
                             let spec = *decoded.spec();
-                            let mut sample_buf = SampleBuffer::new(duration as u64, spec);
+                            let mut sample_buf = SampleBuffer::<f64>::new(duration as u64, spec);
                             sample_buf.copy_interleaved_ref(decoded);
-                            let pos: usize;
+                            let position: usize;
                             let samples = sample_buf.samples();
                             if let Some(index) = samples.iter().position(|s| *s != 0.0) {
                                 info!("Skipped {} silent samples", index);
-                                pos = index;
+                                position = index;
                             } else {
                                 info!("Skipped {} silent samples", samples.len());
                                 continue;
                             }
 
-                            break (samples.to_owned(), spec, sample_buf, pos);
+                            return (samples.to_owned(), spec, sample_buf, position, packet.ts());
                         }
                         Err(e) => {
                             continue;
@@ -160,33 +180,7 @@ impl Decoder {
                 }
                 Err(e) => {}
             }
-        };
-
-        let channels = spec.channels.count();
-        let track_id = reader.default_track().unwrap().id;
-        let buf_len = samples.len();
-        Self {
-            cmd_receiver,
-            player_cmd_sender,
-            reader,
-            decoder: symphonia_decoder,
-            buf: samples,
-            time_base,
-            track_id,
-            pos,
-            silence_skipped: false,
-            timestamp: 0,
-            sample_buf,
-            channels,
-            volume,
-            buf_len,
-            paused: false,
-            sample_rate: spec.rate,
         }
-    }
-
-    fn sample_rate(&self) -> u32 {
-        self.sample_rate
     }
 
     fn process_output(&mut self, packet: &Packet) {
@@ -205,8 +199,8 @@ impl Decoder {
 
             let mut i = 0;
             for sample in samples.iter() {
-                self.buf[i] = *sample * self.volume;
-                self.buf[i + 1] = *sample * self.volume;
+                self.buf[i] = *sample;
+                self.buf[i + 1] = *sample;
                 i += 2;
             }
             self.buf_len = samples.len() * 2;
@@ -217,15 +211,63 @@ impl Decoder {
             }
 
             for (i, sample) in samples.iter().enumerate() {
-                self.buf[i] = *sample * self.volume;
+                self.buf[i] = *sample;
             }
             self.buf_len = samples.len();
         }
     }
+}
+
+impl Iterator for Decoder {
+    type Item = f64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.position < self.buf_len {
+            let ret = Some(self.buf[self.position]);
+            self.position += 1;
+            return ret;
+        }
+
+        let packet = loop {
+            match self.reader.next_packet() {
+                Ok(packet) => {
+                    if packet.track_id() == self.track_id {
+                        break packet;
+                    }
+                }
+                Err(_) => {
+                    return None;
+                }
+            };
+        };
+
+        self.timestamp = packet.ts();
+
+        self.process_output(&packet);
+        self.position = 1;
+
+        Some(self.buf[0])
+    }
+}
+
+impl AudioProcessor {
+    fn new(source: Box<dyn Source>, state: Rc<RefCell<AudioProcessorState>>) -> Self {
+        let decoder = Decoder::new(source);
+
+        Self {
+            decoder,
+            state,
+            paused: false,
+        }
+    }
+
+    fn sample_rate(&self) -> u32 {
+        self.decoder.spec.rate
+    }
 
     fn process_input(&mut self) -> bool {
-        let mut cmd_receiver = self.cmd_receiver.borrow_mut();
-        match cmd_receiver.try_recv() {
+        let mut state = self.state.borrow_mut();
+        match state.cmd_rx.try_recv() {
             Ok(command) => {
                 info!("Got decoder command {:?}", command);
 
@@ -238,18 +280,19 @@ impl Decoder {
                     }
                     DecoderCommand::Seek(time) => {
                         let nanos_per_sec = 1_000_000_000.0;
-                        match self.reader.seek(
+                        match self.decoder.reader.seek(
                             SeekMode::Coarse,
                             SeekTo::Time {
                                 time: Time::new(
                                     time.as_secs(),
                                     time.subsec_nanos() as f64 / nanos_per_sec,
                                 ),
-                                track_id: Some(self.track_id),
+                                track_id: Some(self.decoder.track_id),
                             },
                         ) {
                             Ok(seeked_to) => {
-                                if cmd_receiver
+                                if state
+                                    .cmd_rx
                                     .respond(DecoderResponse::SeekResponse(Some(
                                         seeked_to.actual_ts,
                                     )))
@@ -259,9 +302,8 @@ impl Decoder {
                                 }
                             }
                             Err(e) => {
-                                if self
-                                    .cmd_receiver
-                                    .borrow_mut()
+                                if state
+                                    .cmd_rx
                                     .respond(DecoderResponse::SeekResponse(None))
                                     .is_err()
                                 {
@@ -274,13 +316,13 @@ impl Decoder {
                         self.paused = true;
                     }
                     DecoderCommand::SetVolume(volume) => {
-                        self.volume = volume;
+                        state.volume = volume;
                     }
                     DecoderCommand::GetCurrentTime => {
-                        let time = self.time_base.calc_time(self.timestamp);
+                        let time = self.decoder.time_base.calc_time(self.decoder.timestamp);
                         let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
-                        self.cmd_receiver
-                            .borrow_mut()
+                        state
+                            .cmd_rx
                             .respond(DecoderResponse::CurrentTimeResponse(CurrentTime {
                                 current_time: Some(Duration::from_millis(millis)),
                                 retrieval_time: Some(
@@ -299,64 +341,54 @@ impl Decoder {
     }
 }
 
-impl Iterator for Decoder {
+impl Iterator for AudioProcessor {
     type Item = f64;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos < self.buf_len {
-            let ret = Some(self.buf[self.pos]);
-            self.pos += 1;
-            return ret;
-        }
-
         if !self.process_input() {
             return None;
         }
+
         if self.paused {
             return Some(0.0);
         }
 
-        let packet = loop {
-            match self.reader.next_packet() {
-                Ok(packet) => {
-                    if packet.track_id() == self.track_id {
-                        break packet;
-                    }
-                }
-                Err(_) => {
-                    self.player_cmd_sender
-                        .borrow_mut()
-                        .try_send(Command::Ended)
-                        .unwrap();
-                    return None;
-                }
-            };
-        };
-
-        self.timestamp = packet.ts();
-
-        self.process_output(&packet);
-        self.pos = 1;
-
-        Some(self.buf[0])
+        let state = self.state.borrow_mut();
+        match self.decoder.next() {
+            Some(val) => Some(val * state.volume),
+            None => {
+                state.player_cmd_tx.try_send(Command::Ended).unwrap();
+                None
+            }
+        }
     }
+}
+
+struct AudioProcessorState {
+    cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
+    volume: f64,
 }
 
 pub(crate) fn decode_loop(
     queue_rx: Receiver<Box<dyn Source>>,
-    mut cmd_receiver: TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    player_cmd_sender: TwoWaySenderAsync<Command, PlayerResponse>,
+    cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
 ) {
-    let cmd_rx = Rc::new(RefCell::new(cmd_receiver));
-    let player_cmd_tx = Rc::new(RefCell::new(player_cmd_sender));
+    let processor_state = Rc::new(RefCell::new(AudioProcessorState {
+        cmd_rx,
+        player_cmd_tx,
+        volume: 1.0,
+    }));
     let mut output = CpalAudioOutput::try_open().unwrap();
     let output_sample_rate = output.sample_rate();
+
     while let Ok(source) = queue_rx.recv() {
-        let mut decoder = Decoder::new(cmd_rx.clone(), player_cmd_tx.clone(), source, 1.0);
-        let l = [decoder.next().unwrap(), decoder.next().unwrap()];
-        let r = [decoder.next().unwrap(), decoder.next().unwrap()];
-        let source_sample_rate = decoder.sample_rate();
-        let mut signal = dasp::signal::from_interleaved_samples_iter(decoder);
+        let mut processor = AudioProcessor::new(source, processor_state.clone());
+        let l = [processor.next().unwrap(), processor.next().unwrap()];
+        let r = [processor.next().unwrap(), processor.next().unwrap()];
+        let source_sample_rate = processor.sample_rate();
+        let mut signal = dasp::signal::from_interleaved_samples_iter(processor);
         //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
 
         let converter = dasp::interpolate::linear::Linear::new(l, r);
