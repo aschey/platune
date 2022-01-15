@@ -23,10 +23,15 @@ use tracing_subscriber::EnvFilter;
 
 fn set_panic_hook() {
     panic::set_hook(Box::new(|panic_info| {
-        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-            error!("panic occurred: {:?}", s);
+        if let Some(location) = panic_info.location() {
+            error!(
+                message = %panic_info,
+                panic.file = location.file(),
+                panic.line = location.line(),
+                panic.column = location.column(),
+            );
         } else {
-            error!("panic occurred: {:?}", panic_info);
+            error!(message = %panic_info);
         }
     }));
 }
@@ -37,8 +42,18 @@ async fn main() {
         ProjectDirs::from("", "", "platune").expect("Unable to find a valid home directory");
     let log_dir = proj_dirs.cache_dir();
     let file_appender = tracing_appender::rolling::hourly(log_dir, "platuned.log");
-    let (non_blocking_stdout, stdout_guard) = tracing_appender::non_blocking(stdout());
-    let (non_blocking_file, file_guard) = tracing_appender::non_blocking(file_appender);
+
+    // The default number of buffered lines is quite large and uses a ton of memory
+    // We aren't logging a ton of messages so setting this value somewhat low is fine in order to conserve memory
+    let (non_blocking_stdout, stdout_guard) =
+        tracing_appender::non_blocking::NonBlockingBuilder::default()
+            .buffered_lines_limit(256)
+            .finish(stdout());
+
+    let (non_blocking_file, file_guard) =
+        tracing_appender::non_blocking::NonBlockingBuilder::default()
+            .buffered_lines_limit(256)
+            .finish(file_appender);
 
     let collector = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))

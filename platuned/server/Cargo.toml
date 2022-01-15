@@ -23,7 +23,7 @@ tonic = "0.6.2"
 tonic-reflection = "0.3.0"
 tracing = "0.1.29"
 tracing-appender = "0.2.0"
-tracing-subscriber = {version = "0.3.3", features = ["local-time", "env-filter"]}
+tracing-subscriber = {version = "0.3.6", features = ["local-time", "env-filter"]}
 
 [target.'cfg(windows)'.dependencies]
 ctrlc = "3.2.1"
