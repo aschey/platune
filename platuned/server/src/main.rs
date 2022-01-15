@@ -18,10 +18,9 @@ use tracing::info;
 
 #[cfg(windows)]
 use tracing_subscriber::fmt::time::LocalTime;
-use tracing_subscriber::fmt::Layer;
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::EnvFilter;
-use tracing_subscriber::Layer as SubscriberLayer;
+use tracing_subscriber::{
+    filter::LevelFilter, fmt::Layer, layer::SubscriberExt, EnvFilter, Layer as SubscriberLayer,
+};
 
 fn set_panic_hook() {
     panic::set_hook(Box::new(|panic_info| {
@@ -77,7 +76,7 @@ async fn main() {
             #[cfg(windows)]
             let layer = layer.with_timer(LocalTime::rfc_3339());
 
-            layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO)
+            layer.with_filter(LevelFilter::INFO)
         })
         .with({
             #[allow(clippy::let_and_return)]
@@ -90,7 +89,7 @@ async fn main() {
             #[cfg(windows)]
             let layer = layer.with_timer(LocalTime::rfc_3339());
 
-            layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO)
+            layer.with_filter(LevelFilter::INFO)
         });
 
     #[cfg(feature = "console")]
