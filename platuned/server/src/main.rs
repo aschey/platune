@@ -15,11 +15,13 @@ use std::panic;
 use std::process::exit;
 use tracing::error;
 use tracing::info;
+
 #[cfg(windows)]
 use tracing_subscriber::fmt::time::LocalTime;
 use tracing_subscriber::fmt::Layer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::Layer as SubscriberLayer;
 
 fn set_panic_hook() {
     panic::set_hook(Box::new(|panic_info| {
@@ -45,19 +47,25 @@ async fn main() {
 
     // The default number of buffered lines is quite large and uses a ton of memory
     // We aren't logging a ton of messages so setting this value somewhat low is fine in order to conserve memory
+    let buffer_limit = 256;
     let (non_blocking_stdout, stdout_guard) =
         tracing_appender::non_blocking::NonBlockingBuilder::default()
-            .buffered_lines_limit(256)
+            .buffered_lines_limit(buffer_limit)
             .finish(stdout());
 
     let (non_blocking_file, file_guard) =
         tracing_appender::non_blocking::NonBlockingBuilder::default()
-            .buffered_lines_limit(256)
+            .buffered_lines_limit(buffer_limit)
             .finish(file_appender);
 
+    let level = if cfg!(feature = "console") {
+        tracing::Level::TRACE
+    } else {
+        tracing::Level::INFO
+    };
+
     let collector = tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
-        .with(console_subscriber::spawn())
+        .with(EnvFilter::from_default_env().add_directive(level.into()))
         .with({
             #[allow(clippy::let_and_return)]
             let layer = Layer::new()
@@ -69,7 +77,7 @@ async fn main() {
             #[cfg(windows)]
             let layer = layer.with_timer(LocalTime::rfc_3339());
 
-            layer
+            layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO)
         })
         .with({
             #[allow(clippy::let_and_return)]
@@ -82,8 +90,11 @@ async fn main() {
             #[cfg(windows)]
             let layer = layer.with_timer(LocalTime::rfc_3339());
 
-            layer
+            layer.with_filter(tracing_subscriber::filter::LevelFilter::INFO)
         });
+
+    #[cfg(feature = "console")]
+    let collector = collector.with(console_subscriber::spawn());
 
     // This has to be ran directly in the main function
     tracing::subscriber::set_global_default(collector)

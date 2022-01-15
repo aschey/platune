@@ -9,7 +9,7 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0.51"
 async-stream = "0.3.2"
-console-subscriber = "0.1.0"
+console-subscriber = {version = "0.1.0", features = ["parking_lot"], optional = true}
 directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.19"
@@ -24,6 +24,9 @@ tonic-reflection = "0.3.0"
 tracing = "0.1.29"
 tracing-appender = "0.2.0"
 tracing-subscriber = {version = "0.3.6", features = ["local-time", "env-filter"]}
+
+[features]
+console = ["console-subscriber", "tokio/tracing"]
 
 [target.'cfg(windows)'.dependencies]
 ctrlc = "3.2.1"
