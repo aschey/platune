@@ -291,7 +291,7 @@ func TestSetVolume(t *testing.T) {
 	runPlayerTest(t, "Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			volumeArg := arg.(*platune.SetVolumeRequest).Volume
-			return volumeArg == float32(volume)
+			return volumeArg == volume
 		})
 		expect.SetVolume(gomock.Any(), matcher)
 	}, setVolumeCmdText, fmt.Sprintf("%f", volume))

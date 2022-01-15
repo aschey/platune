@@ -7,7 +7,7 @@ pub(crate) enum Command {
     SetQueue(Vec<String>),
     AddToQueue(Vec<String>),
     Seek(Duration),
-    SetVolume(f32),
+    SetVolume(f64),
     Pause,
     Resume,
     GetCurrentStatus,

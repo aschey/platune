@@ -10,6 +10,7 @@ use symphonia::core::units::Duration;
 pub trait AudioOutput {
     // fn write(&mut self, samples: &[f32]);
     fn write_all(&mut self, sample_iter: Box<dyn Iterator<Item = [f64; 2]>>);
+    fn write_all_single(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>);
     fn write_empty(&mut self);
     fn flush(&mut self);
     //fn init_track(&mut self, spec: SignalSpec, duration: Duration);
@@ -180,6 +181,31 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
             buf[i + 1] = frame[1].to_sample();
 
             i += 2;
+        }
+    }
+
+    fn write_all_single(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>) {
+        let mut buf = vec![T::MID; 2048];
+
+        let mut i = 0;
+
+        for frame in sample_iter {
+            if i == buf.len() {
+                let mut samples = &buf[..];
+                while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
+                    samples = &samples[written..];
+                }
+                i = 0;
+            }
+
+            buf[i] = frame.to_sample();
+            i += 1;
+        }
+
+        let mut samples = &buf[..i];
+
+        while let Some(written) = self.ring_buf_producer.write_blocking(samples) {
+            samples = &samples[written..];
         }
     }
     // fn write(&mut self, s: &[f32]) {

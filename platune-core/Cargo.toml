@@ -20,7 +20,7 @@ futures-util = "0.3.19"
 rb = "0.3.2"
 reqwest = {version = "0.11.7", features = ["stream"]}
 strum = "0.23.0"
-symphonia = {version = "0.4.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
+symphonia = {git = "https://github.com/pdeljanov/Symphonia", rev = "9011735f1cbbb7d838aa59432033edf025454820", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 tempfile = "3.2.0"
 tokio = {version = "1.15.0", features = ["rt-multi-thread", "macros"]}
 tracing = "0.1.29"

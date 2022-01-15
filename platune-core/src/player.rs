@@ -137,7 +137,7 @@ impl Player {
             .unwrap_or_default();
     }
 
-    pub(crate) async fn set_volume(&mut self, volume: f32) {
+    pub(crate) async fn set_volume(&mut self, volume: f64) {
         self.cmd_sender
             .send(DecoderCommand::SetVolume(volume))
             .await

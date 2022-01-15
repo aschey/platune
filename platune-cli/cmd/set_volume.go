@@ -15,7 +15,7 @@ const setVolumeExampleText = "<value between 0 and 1>"
 var setVolumeUsage = fmt.Sprintf("%s %s", setVolumeCmdText, setVolumeExampleText)
 
 func runSetVolume(client *internal.PlatuneClient, args []string) {
-	vol, err := strconv.ParseFloat(args[0], 32)
+	vol, err := strconv.ParseFloat(args[0], 64)
 	errMsg := "Volume must be a number between 0 and 1"
 	if err != nil {
 		fmt.Println(errMsg)
@@ -25,7 +25,7 @@ func runSetVolume(client *internal.PlatuneClient, args []string) {
 		fmt.Println(errMsg)
 		return
 	}
-	client.SetVolume(float32(vol))
+	client.SetVolume(vol)
 }
 
 func newSetVolumeCmd() *cobra.Command {

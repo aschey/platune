@@ -158,7 +158,7 @@ func (p *PlatuneClient) AddToQueue(songs []string, printMsg bool) {
 	})
 }
 
-func (p *PlatuneClient) SetVolume(volume float32) {
+func (p *PlatuneClient) SetVolume(volume float64) {
 	p.runCommand("Set", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.SetVolume(ctx, &platune.SetVolumeRequest{Volume: volume})
 	})

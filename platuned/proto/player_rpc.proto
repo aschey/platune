@@ -46,12 +46,12 @@ enum PlayerStatus {
 message QueueRequest { repeated string queue = 1; }
 message AddToQueueRequest { repeated string songs = 1; }
 message SeekRequest { google.protobuf.Duration time = 1; }
-message SetVolumeRequest { float volume = 1; }
+message SetVolumeRequest { double volume = 1; }
 message EventResponse {
   Event event = 1;
   repeated string queue = 2;
   uint32 queue_position = 3;
-  float volume = 4;
+  double volume = 4;
   optional uint64 seek_millis = 5;
 }
 message StatusResponse {
