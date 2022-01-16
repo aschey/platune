@@ -1,22 +1,14 @@
-use cpal::Sample;
 use dasp::{
-    frame::NumChannels,
     interpolate::{linear::Linear, sinc::Sinc},
-    ring_buffer::{Fixed, Slice, SliceMut},
-    sample::{FromSample, ToSample},
+    ring_buffer::Fixed,
     signal::{
         from_interleaved_samples_iter, interpolate::Converter, FromInterleavedSamplesIterator,
         UntilExhausted,
     },
-    Frame, Sample as DaspSample, Signal,
+    Frame, Signal,
 };
-use futures_util::StreamExt;
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    thread::sleep,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+
+use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use crate::{
     audio_processor::{AudioProcessor, AudioProcessorState},
@@ -24,19 +16,11 @@ use crate::{
     output::{AudioOutput, CpalAudioOutput},
     player::Player,
     source::Source,
-    TwoWayReceiver, TwoWayReceiverAsync, TwoWaySender, TwoWaySenderAsync,
+    TwoWayReceiverAsync, TwoWaySender,
 };
-use crossbeam_channel::{Iter, Receiver, Sender, TryRecvError};
+use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use std::fmt::Debug;
-use symphonia::core::{
-    audio::{AudioBufferRef, SampleBuffer, SignalSpec},
-    codecs::{Decoder as SymphoniaDecoder, DecoderOptions},
-    formats::{FormatOptions, FormatReader, Packet, SeekMode, SeekTo, SeekedTo},
-    io::MediaSourceStream,
-    meta::MetadataOptions,
-    probe::Hint,
-    units::{Time, TimeBase, TimeStamp},
-};
+use symphonia::core::units::TimeStamp;
 use tokio::sync::broadcast;
 use tracing::{error, info};
 
@@ -95,52 +79,83 @@ enum InterpolateMode {
 
 pub(crate) fn decode_loop(
     queue_rx: Receiver<Box<dyn Source>>,
-    cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
+    processor_state: Rc<RefCell<AudioProcessorState>>,
 ) {
-    let processor_state = Rc::new(RefCell::new(AudioProcessorState {
-        cmd_rx,
-        player_cmd_tx,
-        volume: 1.0,
-    }));
-
     let mut output = CpalAudioOutput::try_open().unwrap();
+    let interpolate_mode = InterpolateMode::Linear;
+
+    loop {
+        match queue_rx.try_recv() {
+            Ok(source) => {
+                decode_source(
+                    source,
+                    processor_state.clone(),
+                    &interpolate_mode,
+                    &mut output,
+                );
+            }
+            Err(TryRecvError::Empty) => {
+                // If no pending source, stop the output to preserve cpu
+                output.stop();
+                match queue_rx.recv() {
+                    Ok(source) => {
+                        output.resume();
+                        decode_source(
+                            source,
+                            processor_state.clone(),
+                            &interpolate_mode,
+                            &mut output,
+                        );
+                    }
+                    Err(_) => break,
+                };
+            }
+            Err(TryRecvError::Disconnected) => {
+                break;
+            }
+        }
+    }
+}
+
+fn decode_source(
+    source: Box<dyn Source>,
+    processor_state: Rc<RefCell<AudioProcessorState>>,
+    interpolate_mode: &InterpolateMode,
+    output: &mut Box<dyn AudioOutput>,
+) {
     let output_sample_rate = output.sample_rate();
     let output_channels = output.channels();
-    let interpolate_mode = InterpolateMode::Linear;
-    while let Ok(source) = queue_rx.recv() {
-        let mut processor = AudioProcessor::new(source, output_channels, processor_state.clone());
-        match (output_channels, &interpolate_mode) {
-            (1, InterpolateMode::Linear) => {
-                let left = processor.next().unwrap();
-                let right = processor.next().unwrap();
-                let resampled = linear_resample(left, right, processor, output_sample_rate);
+    let mut processor = AudioProcessor::new(source, output_channels, processor_state);
+    match (output_channels, &interpolate_mode) {
+        (1, InterpolateMode::Linear) => {
+            let left = processor.next().unwrap();
+            let right = processor.next().unwrap();
+            let resampled = linear_resample(left, right, processor, output_sample_rate);
 
-                output.write_stream(resampled);
-            }
-            (2, InterpolateMode::Linear) => {
-                let left = [processor.next().unwrap(), processor.next().unwrap()];
-                let right = [processor.next().unwrap(), processor.next().unwrap()];
-                let resampled = linear_resample(left, right, processor, output_sample_rate);
-                let stereo_resampled = Box::new(StereoStream::new(resampled));
-
-                output.write_stream(stereo_resampled);
-            }
-            (1, InterpolateMode::Sinc) => {
-                let resampled = sinc_resample::<f64>(processor, output_sample_rate);
-
-                output.write_stream(Box::new(resampled));
-            }
-            (2, InterpolateMode::Sinc) => {
-                let resampled = sinc_resample::<[f64; 2]>(processor, output_sample_rate);
-
-                output.write_stream(Box::new(StereoStream::new(resampled)));
-            }
-            (_, InterpolateMode::None) => {
-                output.write_stream(Box::new(processor));
-            }
-            _ => {}
+            output.write_stream(resampled);
         }
+        (2, InterpolateMode::Linear) => {
+            let left = [processor.next().unwrap(), processor.next().unwrap()];
+            let right = [processor.next().unwrap(), processor.next().unwrap()];
+            let resampled = linear_resample(left, right, processor, output_sample_rate);
+            let stereo_resampled = Box::new(StereoStream::new(resampled));
+
+            output.write_stream(stereo_resampled);
+        }
+        (1, InterpolateMode::Sinc) => {
+            let resampled = sinc_resample::<f64>(processor, output_sample_rate);
+
+            output.write_stream(Box::new(resampled));
+        }
+        (2, InterpolateMode::Sinc) => {
+            let resampled = sinc_resample::<[f64; 2]>(processor, output_sample_rate);
+
+            output.write_stream(Box::new(StereoStream::new(resampled)));
+        }
+        (_, InterpolateMode::None) => {
+            output.write_stream(Box::new(processor));
+        }
+        _ => {}
     }
 }
 

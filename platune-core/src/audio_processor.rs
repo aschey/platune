@@ -15,6 +15,20 @@ pub(crate) struct AudioProcessorState {
     pub(crate) volume: f64,
 }
 
+impl AudioProcessorState {
+    pub(crate) fn new(
+        volume: f64,
+        cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
+        player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
+    ) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(Self {
+            cmd_rx,
+            player_cmd_tx,
+            volume,
+        }))
+    }
+}
+
 pub(crate) struct AudioProcessor {
     state: Rc<RefCell<AudioProcessorState>>,
     decoder: Decoder,

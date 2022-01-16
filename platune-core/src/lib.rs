@@ -10,12 +10,12 @@ mod player;
 mod source;
 
 pub mod platune_player {
-    use crossbeam_channel::{unbounded, Sender};
     use std::thread;
     use std::time::Duration;
     use tokio::sync::broadcast;
     use tracing::{error, warn};
 
+    use crate::audio_processor::AudioProcessorState;
     pub use crate::dto::audio_status::AudioStatus;
     pub use crate::dto::player_event::PlayerEvent;
     pub use crate::dto::player_state::PlayerState;
@@ -58,7 +58,11 @@ pub mod platune_player {
 
             let main_loop_fn =
                 async move { main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx_).await };
-            let decoder_fn = || decode_loop(queue_rx_, decoder_rx, cmd_tx_);
+
+            let decoder_fn = || {
+                let processor_state = AudioProcessorState::new(1.0, decoder_rx, cmd_tx_);
+                decode_loop(queue_rx_, processor_state);
+            };
 
             tokio::spawn(main_loop_fn);
             thread::spawn(decoder_fn);
