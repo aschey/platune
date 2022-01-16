@@ -363,6 +363,7 @@ impl AudioProcessor {
                     }
                     DecoderCommand::SetVolume(volume) => {
                         state.volume = volume;
+                        self.volume = volume;
                     }
                     DecoderCommand::GetCurrentTime => {
                         let time = self.decoder.time_base.calc_time(self.decoder.timestamp);
