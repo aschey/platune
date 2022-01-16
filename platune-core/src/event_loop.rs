@@ -1,9 +1,13 @@
 use cpal::Sample;
 use dasp::{
     frame::NumChannels,
-    interpolate::linear::Linear,
+    interpolate::{linear::Linear, sinc::Sinc},
+    ring_buffer::{Fixed, Slice, SliceMut},
     sample::{FromSample, ToSample},
-    signal::{interpolate::Converter, FromInterleavedSamplesIterator, UntilExhausted},
+    signal::{
+        from_interleaved_samples_iter, interpolate::Converter, FromInterleavedSamplesIterator,
+        UntilExhausted,
+    },
     Frame, Sample as DaspSample, Signal,
 };
 use futures_util::StreamExt;
@@ -393,6 +397,12 @@ struct AudioProcessorState {
     volume: f64,
 }
 
+enum InterpolateMode {
+    Linear,
+    Sinc,
+    None,
+}
+
 pub(crate) fn decode_loop(
     queue_rx: Receiver<Box<dyn Source>>,
     cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
@@ -403,27 +413,41 @@ pub(crate) fn decode_loop(
         player_cmd_tx,
         volume: 1.0,
     }));
+
     let mut output = CpalAudioOutput::try_open().unwrap();
     let output_sample_rate = output.sample_rate();
     let output_channels = output.channels();
-
+    let interpolate_mode = InterpolateMode::Sinc;
     while let Ok(source) = queue_rx.recv() {
         let mut processor = AudioProcessor::new(source, output_channels, processor_state.clone());
-        match output_channels {
-            1 => {
+        match (output_channels, &interpolate_mode) {
+            (1, InterpolateMode::Linear) => {
                 let left = processor.next().unwrap();
                 let right = processor.next().unwrap();
-                let resampled = get_resampled_stream(left, right, processor, output_sample_rate);
+                let resampled = linear_resample(left, right, processor, output_sample_rate);
+
+                output.write_stream(resampled);
+            }
+            (2, InterpolateMode::Linear) => {
+                let left = [processor.next().unwrap(), processor.next().unwrap()];
+                let right = [processor.next().unwrap(), processor.next().unwrap()];
+                let resampled = linear_resample(left, right, processor, output_sample_rate);
+                let stereo_resampled = Box::new(StereoStream::new(resampled));
+
+                output.write_stream(stereo_resampled);
+            }
+            (1, InterpolateMode::Sinc) => {
+                let resampled = sinc_resample::<f64>(processor, output_sample_rate);
 
                 output.write_stream(Box::new(resampled));
             }
-            2 => {
-                let left = [processor.next().unwrap(), processor.next().unwrap()];
-                let right = [processor.next().unwrap(), processor.next().unwrap()];
-                let resampled = get_resampled_stream(left, right, processor, output_sample_rate);
-                let iter = Box::new(StereoStream::new(Box::new(resampled)));
+            (2, InterpolateMode::Sinc) => {
+                let resampled = sinc_resample::<[f64; 2]>(processor, output_sample_rate);
 
-                output.write_stream(iter);
+                output.write_stream(Box::new(StereoStream::new(resampled)));
+            }
+            (_, InterpolateMode::None) => {
+                output.write_stream(Box::new(processor));
             }
             _ => {}
         }
@@ -465,24 +489,40 @@ impl Iterator for StereoStream {
     }
 }
 
-fn get_resampled_stream<T>(
+fn sinc_resample<T>(
+    processor: AudioProcessor,
+    output_sample_rate: f64,
+) -> Box<UntilExhausted<Converter<FromInterleavedSamplesIterator<AudioProcessor, T>, Sinc<[T; 128]>>>>
+where
+    T: Frame<Sample = f64>,
+{
+    let buf = [T::EQUILIBRIUM; 128];
+    let source_sample_rate = processor.sample_rate();
+    let signal = from_interleaved_samples_iter(processor);
+    let ring_buffer = Fixed::from(buf);
+
+    let converter = Sinc::new(ring_buffer);
+
+    let new_signal = signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
+    Box::new(new_signal.until_exhausted())
+}
+
+fn linear_resample<T>(
     left: T,
     right: T,
     processor: AudioProcessor,
     output_sample_rate: f64,
-) -> UntilExhausted<Converter<FromInterleavedSamplesIterator<AudioProcessor, T>, Linear<T>>>
+) -> Box<UntilExhausted<Converter<FromInterleavedSamplesIterator<AudioProcessor, T>, Linear<T>>>>
 where
     T: Frame<Sample = f64>,
 {
     let source_sample_rate = processor.sample_rate();
-    let signal = dasp::signal::from_interleaved_samples_iter(processor);
-    //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
+    let signal = from_interleaved_samples_iter(processor);
 
-    let converter = dasp::interpolate::linear::Linear::new(left, right);
-    //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
+    let converter = Linear::new(left, right);
 
     let new_signal = signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
-    new_signal.until_exhausted()
+    Box::new(new_signal.until_exhausted())
 }
 
 pub(crate) async fn main_loop(
