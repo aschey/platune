@@ -162,6 +162,7 @@ impl Decoder {
         decoder: &mut Box<dyn SymphoniaDecoder>,
         track_id: u32,
     ) -> (SignalSpec, SampleBuffer<f64>, usize, u64) {
+        let mut skipped_samples = 0;
         loop {
             match reader.next_packet() {
                 Ok(packet) => {
@@ -177,10 +178,11 @@ impl Decoder {
                             let position: usize;
                             let samples = sample_buf.samples();
                             if let Some(index) = samples.iter().position(|s| *s != 0.0) {
-                                info!("Skipped {} silent samples", index);
+                                skipped_samples += index;
+                                info!("Skipped {} silent samples", skipped_samples);
                                 position = index;
                             } else {
-                                info!("Skipped {} silent samples", samples.len());
+                                skipped_samples += samples.len();
                                 continue;
                             }
 
@@ -456,13 +458,13 @@ pub(crate) fn decode_loop(
 
 struct StereoStream {
     inner: Box<dyn Iterator<Item = [f64; 2]>>,
-    current: [f64; 2],
+    current: Option<[f64; 2]>,
     position: usize,
 }
 
 impl StereoStream {
     fn new(mut inner: Box<dyn Iterator<Item = [f64; 2]>>) -> Self {
-        let current = inner.next().unwrap();
+        let current = inner.next();
         Self {
             inner,
             current,
@@ -470,22 +472,23 @@ impl StereoStream {
         }
     }
 }
+
 impl Iterator for StereoStream {
     type Item = f64;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let next = self.current[self.position];
-        self.position += 1;
-        if self.position == 2 {
-            match self.inner.next() {
-                Some(next) => {
-                    self.current = next;
+        match self.current {
+            Some(current) => {
+                let next = current[self.position];
+                self.position += 1;
+                if self.position == 2 {
                     self.position = 0;
+                    self.current = self.inner.next();
                 }
-                None => return None,
+                Some(next)
             }
+            None => None,
         }
-        Some(next)
     }
 }
 
