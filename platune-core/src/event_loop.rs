@@ -2,8 +2,8 @@ use cpal::Sample;
 use dasp::{
     frame::NumChannels,
     interpolate::linear::Linear,
-    sample::ToSample,
-    signal::{interpolate::Converter, FromInterleavedSamplesIterator},
+    sample::{FromSample, ToSample},
+    signal::{interpolate::Converter, FromInterleavedSamplesIterator, UntilExhausted},
     Frame, Sample as DaspSample, Signal,
 };
 use futures_util::StreamExt;
@@ -411,36 +411,17 @@ pub(crate) fn decode_loop(
         let mut processor = AudioProcessor::new(source, output_channels, processor_state.clone());
         match output_channels {
             1 => {
-                let l = processor.next().unwrap();
-                let r = processor.next().unwrap();
-                let source_sample_rate = processor.sample_rate();
-                let mut signal = dasp::signal::from_interleaved_samples_iter(processor);
-                //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
+                let left = processor.next().unwrap();
+                let right = processor.next().unwrap();
+                let resampled = get_resampled_stream(left, right, processor, output_sample_rate);
 
-                let converter = dasp::interpolate::linear::Linear::new(l, r);
-                //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
-
-                let new_signal =
-                    signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
-                let until = new_signal.until_exhausted();
-                let iter = Box::new(until);
-
-                output.write_stream(iter);
+                output.write_stream(Box::new(resampled));
             }
             2 => {
-                let l = [processor.next().unwrap(), processor.next().unwrap()];
-                let r = [processor.next().unwrap(), processor.next().unwrap()];
-                let source_sample_rate = processor.sample_rate();
-                let mut signal = dasp::signal::from_interleaved_samples_iter(processor);
-                //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
-
-                let converter = dasp::interpolate::linear::Linear::new(l, r);
-                //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
-
-                let new_signal =
-                    signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
-                let until = new_signal.until_exhausted();
-                let iter = Box::new(StereoStream::new(Box::new(until)));
+                let left = [processor.next().unwrap(), processor.next().unwrap()];
+                let right = [processor.next().unwrap(), processor.next().unwrap()];
+                let resampled = get_resampled_stream(left, right, processor, output_sample_rate);
+                let iter = Box::new(StereoStream::new(Box::new(resampled)));
 
                 output.write_stream(iter);
             }
@@ -482,6 +463,26 @@ impl Iterator for StereoStream {
         }
         Some(next)
     }
+}
+
+fn get_resampled_stream<T>(
+    left: T,
+    right: T,
+    processor: AudioProcessor,
+    output_sample_rate: f64,
+) -> UntilExhausted<Converter<FromInterleavedSamplesIterator<AudioProcessor, T>, Linear<T>>>
+where
+    T: Frame<Sample = f64>,
+{
+    let source_sample_rate = processor.sample_rate();
+    let signal = dasp::signal::from_interleaved_samples_iter(processor);
+    //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
+
+    let converter = dasp::interpolate::linear::Linear::new(left, right);
+    //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
+
+    let new_signal = signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
+    new_signal.until_exhausted()
 }
 
 pub(crate) async fn main_loop(
