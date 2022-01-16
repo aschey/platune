@@ -89,7 +89,8 @@ pub struct CurrentTime {
 pub(crate) struct AudioProcessor {
     state: Rc<RefCell<AudioProcessorState>>,
     decoder: Decoder,
-    paused: bool,
+    volume: f64,
+    iteration: u16,
 }
 
 struct Decoder {
@@ -105,6 +106,7 @@ struct Decoder {
     input_channels: usize,
     output_channels: usize,
     timestamp: u64,
+    paused: bool,
 }
 
 impl Decoder {
@@ -154,7 +156,16 @@ impl Decoder {
             spec,
             position,
             timestamp,
+            paused: false,
         }
+    }
+
+    fn pause(&mut self) {
+        self.paused = true;
+    }
+
+    fn resume(&mut self) {
+        self.paused = false;
     }
 
     fn process_first_packet(
@@ -253,22 +264,27 @@ impl Iterator for Decoder {
             return ret;
         }
 
-        let packet = loop {
-            match self.reader.next_packet() {
-                Ok(packet) => {
-                    if packet.track_id() == self.track_id {
-                        break packet;
+        if self.paused {
+            self.buf.fill(0.0);
+        } else {
+            let packet = loop {
+                match self.reader.next_packet() {
+                    Ok(packet) => {
+                        if packet.track_id() == self.track_id {
+                            break packet;
+                        }
                     }
-                }
-                Err(_) => {
-                    return None;
-                }
+                    Err(_) => {
+                        return None;
+                    }
+                };
             };
-        };
 
-        self.timestamp = packet.ts();
+            self.timestamp = packet.ts();
 
-        self.process_output(&packet);
+            self.process_output(&packet);
+        }
+
         self.position = 1;
 
         Some(self.buf[0])
@@ -282,11 +298,12 @@ impl AudioProcessor {
         state: Rc<RefCell<AudioProcessorState>>,
     ) -> Self {
         let decoder = Decoder::new(source, output_channels);
-
+        let volume = state.borrow_mut().volume;
         Self {
             decoder,
             state,
-            paused: false,
+            volume,
+            iteration: 0,
         }
     }
 
@@ -302,7 +319,7 @@ impl AudioProcessor {
 
                 match command {
                     DecoderCommand::Play => {
-                        self.paused = false;
+                        self.decoder.resume();
                     }
                     DecoderCommand::Stop => {
                         return false;
@@ -342,7 +359,7 @@ impl AudioProcessor {
                         }
                     }
                     DecoderCommand::Pause => {
-                        self.paused = true;
+                        self.decoder.pause();
                     }
                     DecoderCommand::SetVolume(volume) => {
                         state.volume = volume;
@@ -374,18 +391,21 @@ impl Iterator for AudioProcessor {
     type Item = f64;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.process_input() {
-            return None;
+        // Reduce checks for user input to save CPU
+        if self.iteration == 2048 {
+            if !self.process_input() {
+                return None;
+            }
+            self.iteration = 0;
+        } else {
+            self.iteration += 1;
         }
 
-        if self.paused {
-            return Some(0.0);
-        }
-
-        let state = self.state.borrow_mut();
         match self.decoder.next() {
-            Some(val) => Some(val * state.volume),
+            Some(val) => Some(val * self.volume),
             None => {
+                self.process_input();
+                let state = self.state.borrow_mut();
                 state.player_cmd_tx.try_send(Command::Ended).unwrap();
                 None
             }
@@ -419,7 +439,7 @@ pub(crate) fn decode_loop(
     let mut output = CpalAudioOutput::try_open().unwrap();
     let output_sample_rate = output.sample_rate();
     let output_channels = output.channels();
-    let interpolate_mode = InterpolateMode::Sinc;
+    let interpolate_mode = InterpolateMode::Linear;
     while let Ok(source) = queue_rx.recv() {
         let mut processor = AudioProcessor::new(source, output_channels, processor_state.clone());
         match (output_channels, &interpolate_mode) {
