@@ -1,5 +1,11 @@
 use cpal::Sample;
-use dasp::{Sample as DaspSample, Signal};
+use dasp::{
+    frame::NumChannels,
+    interpolate::linear::Linear,
+    sample::ToSample,
+    signal::{interpolate::Converter, FromInterleavedSamplesIterator},
+    Frame, Sample as DaspSample, Signal,
+};
 use futures_util::StreamExt;
 use std::{
     cell::RefCell,
@@ -15,7 +21,7 @@ use crate::{
     source::Source,
     TwoWayReceiver, TwoWayReceiverAsync, TwoWaySender, TwoWaySenderAsync,
 };
-use crossbeam_channel::{Receiver, Sender, TryRecvError};
+use crossbeam_channel::{Iter, Receiver, Sender, TryRecvError};
 use std::fmt::Debug;
 use symphonia::core::{
     audio::{AudioBufferRef, SampleBuffer, SignalSpec},
@@ -92,12 +98,13 @@ struct Decoder {
     spec: SignalSpec,
     position: usize,
     track_id: u32,
-    channels: usize,
+    input_channels: usize,
+    output_channels: usize,
     timestamp: u64,
 }
 
 impl Decoder {
-    fn new(source: Box<dyn Source>) -> Self {
+    fn new(source: Box<dyn Source>, output_channels: usize) -> Self {
         let mut hint = Hint::new();
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);
@@ -126,15 +133,17 @@ impl Decoder {
         let track = reader.default_track().unwrap();
         let track_id = track.id;
 
-        let (buf, spec, sample_buf, position, timestamp) =
+        let (spec, sample_buf, position, timestamp) =
             Self::process_first_packet(&mut reader, &mut decoder, track_id);
+        let buf = sample_buf.samples().to_owned();
 
         Self {
             decoder,
             reader,
             time_base,
             buf_len: buf.len(),
-            channels: spec.channels.count(),
+            input_channels: spec.channels.count(),
+            output_channels,
             track_id,
             buf,
             sample_buf,
@@ -148,7 +157,7 @@ impl Decoder {
         reader: &mut Box<dyn FormatReader>,
         decoder: &mut Box<dyn SymphoniaDecoder>,
         track_id: u32,
-    ) -> (Vec<f64>, SignalSpec, SampleBuffer<f64>, usize, u64) {
+    ) -> (SignalSpec, SampleBuffer<f64>, usize, u64) {
         loop {
             match reader.next_packet() {
                 Ok(packet) => {
@@ -171,7 +180,7 @@ impl Decoder {
                                 continue;
                             }
 
-                            return (samples.to_owned(), spec, sample_buf, position, packet.ts());
+                            return (spec, sample_buf, position, packet.ts());
                         }
                         Err(e) => {
                             continue;
@@ -191,29 +200,43 @@ impl Decoder {
         // Write all the interleaved samples to the ring buffer.
         let samples = self.sample_buf.samples();
 
-        if self.channels == 1 {
-            if samples.len() * 2 > self.buf.len() {
-                self.buf.clear();
-                self.buf.resize(samples.len() * 2, 0.0);
-            }
+        match (self.input_channels, self.output_channels) {
+            (1, 2) => {
+                if samples.len() * 2 > self.buf.len() {
+                    self.buf.clear();
+                    self.buf.resize(samples.len() * 2, 0.0);
+                }
 
-            let mut i = 0;
-            for sample in samples.iter() {
-                self.buf[i] = *sample;
-                self.buf[i + 1] = *sample;
-                i += 2;
+                let mut i = 0;
+                for sample in samples.iter() {
+                    self.buf[i] = *sample;
+                    self.buf[i + 1] = *sample;
+                    i += 2;
+                }
+                self.buf_len = samples.len() * 2;
             }
-            self.buf_len = samples.len() * 2;
-        } else {
-            if samples.len() > self.buf.len() {
-                self.buf.clear();
-                self.buf.resize(samples.len(), 0.0);
-            }
+            (2, 1) => {
+                if samples.len() / 2 > self.buf.len() {
+                    self.buf.clear();
+                    self.buf.resize(samples.len() / 2, 0.0);
+                }
 
-            for (i, sample) in samples.iter().enumerate() {
-                self.buf[i] = *sample;
+                for (i, sample) in samples.chunks_exact(2).enumerate() {
+                    self.buf[i] = (sample[0] + sample[1]) / 2.0;
+                }
+                self.buf_len = samples.len() / 2;
             }
-            self.buf_len = samples.len();
+            _ => {
+                if samples.len() > self.buf.len() {
+                    self.buf.clear();
+                    self.buf.resize(samples.len(), 0.0);
+                }
+
+                for (i, sample) in samples.iter().enumerate() {
+                    self.buf[i] = *sample;
+                }
+                self.buf_len = samples.len();
+            }
         }
     }
 }
@@ -251,8 +274,12 @@ impl Iterator for Decoder {
 }
 
 impl AudioProcessor {
-    fn new(source: Box<dyn Source>, state: Rc<RefCell<AudioProcessorState>>) -> Self {
-        let decoder = Decoder::new(source);
+    fn new(
+        source: Box<dyn Source>,
+        output_channels: usize,
+        state: Rc<RefCell<AudioProcessorState>>,
+    ) -> Self {
+        let decoder = Decoder::new(source, output_channels);
 
         Self {
             decoder,
@@ -382,24 +409,82 @@ pub(crate) fn decode_loop(
     }));
     let mut output = CpalAudioOutput::try_open().unwrap();
     let output_sample_rate = output.sample_rate();
+    let output_channels = output.channels();
 
     while let Ok(source) = queue_rx.recv() {
-        let mut processor = AudioProcessor::new(source, processor_state.clone());
-        let l = [processor.next().unwrap(), processor.next().unwrap()];
-        let r = [processor.next().unwrap(), processor.next().unwrap()];
-        let source_sample_rate = processor.sample_rate();
-        let mut signal = dasp::signal::from_interleaved_samples_iter(processor);
-        //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
+        let mut processor = AudioProcessor::new(source, output_channels, processor_state.clone());
+        match output_channels {
+            1 => {
+                let l = processor.next().unwrap();
+                let r = processor.next().unwrap();
+                let source_sample_rate = processor.sample_rate();
+                let mut signal = dasp::signal::from_interleaved_samples_iter(processor);
+                //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
 
-        let converter = dasp::interpolate::linear::Linear::new(l, r);
-        //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
+                let converter = dasp::interpolate::linear::Linear::new(l, r);
+                //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
 
-        let new_signal =
-            signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
-        let until = new_signal.until_exhausted();
-        let iter = Box::new(until);
+                let new_signal =
+                    signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
+                let until = new_signal.until_exhausted();
+                let iter = Box::new(until);
 
-        output.write_all(iter);
+                output.write_stream(iter);
+            }
+            2 => {
+                let l = [processor.next().unwrap(), processor.next().unwrap()];
+                let r = [processor.next().unwrap(), processor.next().unwrap()];
+                let source_sample_rate = processor.sample_rate();
+                let mut signal = dasp::signal::from_interleaved_samples_iter(processor);
+                //let ring_buffer = dasp::ring_buffer::Fixed::from([[0.0, 0.0]; 100]);
+
+                let converter = dasp::interpolate::linear::Linear::new(l, r);
+                //let converter = dasp::interpolate::sinc::Sinc::new(ring_buffer);
+
+                let new_signal =
+                    signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
+                let until = new_signal.until_exhausted();
+                let iter = Box::new(StereoStream::new(Box::new(until)));
+
+                output.write_stream(iter);
+            }
+            _ => {}
+        }
+    }
+}
+
+struct StereoStream {
+    inner: Box<dyn Iterator<Item = [f64; 2]>>,
+    current: [f64; 2],
+    position: usize,
+}
+
+impl StereoStream {
+    fn new(mut inner: Box<dyn Iterator<Item = [f64; 2]>>) -> Self {
+        let current = inner.next().unwrap();
+        Self {
+            inner,
+            current,
+            position: 0,
+        }
+    }
+}
+impl Iterator for StereoStream {
+    type Item = f64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.current[self.position];
+        self.position += 1;
+        if self.position == 2 {
+            match self.inner.next() {
+                Some(next) => {
+                    self.current = next;
+                    self.position = 0;
+                }
+                None => return None,
+            }
+        }
+        Some(next)
     }
 }
 
