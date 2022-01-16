@@ -208,9 +208,7 @@ impl Decoder {
         // Write all the interleaved samples to the ring buffer.
         let samples_len = self.sample_buf.samples().len();
 
-        let input_channels = self.input_channels;
-        let output_channels = self.output_channels;
-        match (input_channels, output_channels) {
+        match (self.input_channels, self.output_channels) {
             (1, 2) => {
                 self.adjust_buffer_size(samples_len * 2);
 
