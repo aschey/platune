@@ -1,5 +1,7 @@
 use crossbeam_channel::{unbounded, Receiver, SendError, Sender, TryRecvError};
 
+mod audio_processor;
+mod decoder;
 mod dto;
 mod event_loop;
 mod http_stream_reader;
