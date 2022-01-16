@@ -192,50 +192,48 @@ impl Decoder {
         }
     }
 
+    fn adjust_buffer_size(&mut self, samples_length: usize) {
+        if samples_length > self.buf.len() {
+            self.buf.clear();
+            self.buf.resize(samples_length, 0.0);
+        }
+        self.buf_len = samples_length;
+    }
+
     fn process_output(&mut self, packet: &Packet) {
         // Audio samples must be interleaved for cpal. Interleave the samples in the audio
         // buffer into the sample buffer.
         let decoded = self.decoder.decode(packet).unwrap();
         self.sample_buf.copy_interleaved_ref(decoded);
         // Write all the interleaved samples to the ring buffer.
-        let samples = self.sample_buf.samples();
+        let samples_len = self.sample_buf.samples().len();
 
-        match (self.input_channels, self.output_channels) {
+        let input_channels = self.input_channels;
+        let output_channels = self.output_channels;
+        match (input_channels, output_channels) {
             (1, 2) => {
-                if samples.len() * 2 > self.buf.len() {
-                    self.buf.clear();
-                    self.buf.resize(samples.len() * 2, 0.0);
-                }
+                self.adjust_buffer_size(samples_len * 2);
 
                 let mut i = 0;
-                for sample in samples.iter() {
+                for sample in self.sample_buf.samples().iter() {
                     self.buf[i] = *sample;
                     self.buf[i + 1] = *sample;
                     i += 2;
                 }
-                self.buf_len = samples.len() * 2;
             }
             (2, 1) => {
-                if samples.len() / 2 > self.buf.len() {
-                    self.buf.clear();
-                    self.buf.resize(samples.len() / 2, 0.0);
-                }
+                self.adjust_buffer_size(samples_len / 2);
 
-                for (i, sample) in samples.chunks_exact(2).enumerate() {
+                for (i, sample) in self.sample_buf.samples().chunks_exact(2).enumerate() {
                     self.buf[i] = (sample[0] + sample[1]) / 2.0;
                 }
-                self.buf_len = samples.len() / 2;
             }
             _ => {
-                if samples.len() > self.buf.len() {
-                    self.buf.clear();
-                    self.buf.resize(samples.len(), 0.0);
-                }
+                self.adjust_buffer_size(samples_len);
 
-                for (i, sample) in samples.iter().enumerate() {
+                for (i, sample) in self.sample_buf.samples().iter().enumerate() {
                     self.buf[i] = *sample;
                 }
-                self.buf_len = samples.len();
             }
         }
     }
