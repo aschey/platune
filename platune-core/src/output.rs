@@ -9,7 +9,7 @@ pub trait AudioOutput {
     fn write_stream(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>);
     fn flush(&mut self);
     fn stop(&mut self);
-    fn play(&mut self);
+    fn start(&mut self);
     fn sample_rate(&self) -> u32;
     fn channels(&self) -> usize;
 }
@@ -187,7 +187,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.stream = None;
     }
 
-    fn play(&mut self) {
+    fn start(&mut self) {
         if self.stream.is_some() {
             return;
         }
@@ -198,12 +198,15 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
         let config = device.default_output_config().unwrap();
+        self.sample_rate = config.sample_rate().0;
+        self.channels = config.channels() as usize;
         let stream = Self::create_stream(
             &device,
             config,
             device.default_output_config().unwrap().sample_rate(),
             ring_buf_consumer,
         );
+
         self.ring_buf_producer = ring_buf_producer;
         self.stream = Some(stream.unwrap());
     }

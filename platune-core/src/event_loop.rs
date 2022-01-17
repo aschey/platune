@@ -38,7 +38,7 @@ pub(crate) fn decode_loop(
             }) => {
                 if force_restart_output {
                     output.stop();
-                    output.play();
+                    output.start();
                 }
                 decode_source(source, processor_state.clone(), &resample_mode, &mut output);
             }
@@ -51,7 +51,7 @@ pub(crate) fn decode_loop(
                         resample_mode,
                         ..
                     }) => {
-                        output.play();
+                        output.start();
                         decode_source(source, processor_state.clone(), &resample_mode, &mut output);
                     }
                     Err(_) => break,
