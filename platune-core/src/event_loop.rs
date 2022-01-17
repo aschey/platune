@@ -29,9 +29,6 @@ pub(crate) fn decode_loop(
 ) {
     let mut output = CpalAudioOutput::new_output().unwrap();
 
-    #[cfg(windows)]
-    output.play();
-
     loop {
         match queue_rx.try_recv() {
             Ok((source, resample_mode)) => {
@@ -39,14 +36,10 @@ pub(crate) fn decode_loop(
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
-                // This seems to cause glitches on Windows when first starting
-                #[cfg(not(windows))]
                 output.stop();
                 match queue_rx.recv() {
                     Ok((source, resample_mode)) => {
-                        #[cfg(not(windows))]
                         output.play();
-
                         decode_source(source, processor_state.clone(), &resample_mode, &mut output);
                     }
                     Err(_) => break,
