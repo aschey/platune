@@ -194,6 +194,7 @@ impl Player {
     async fn reset(&mut self) {
         // Get rid of any pending sources
         while self.queue_rx.try_recv().is_ok() {}
+        self.queued_count = 0;
         self.audio_status = AudioStatus::Stopped;
         self.cmd_sender.send(DecoderCommand::Stop).await.unwrap();
     }

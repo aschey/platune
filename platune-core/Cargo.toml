@@ -13,7 +13,7 @@ path = "src/lib.rs"
 
 [dependencies]
 anyhow = "1.0.51"
-cpal = "0.13.4"
+cpal = {git = "https://github.com/aschey/cpal", rev = "58d4ce76503d29ea65fff52bd11fdca42598e049"}
 crossbeam-channel = "0.5.2"
 dasp = {git = "https://github.com/RustAudio/dasp", rev = "66e8b83a5c926fde3ec7feab5dbe5982e6ce7b81", features = ["ring_buffer", "signal", "interpolate", "interpolate-sinc", "interpolate-linear"]}
 futures-util = "0.3.19"

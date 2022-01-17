@@ -8,7 +8,7 @@ use dasp::{
     Frame, Signal,
 };
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, thread, time::Duration};
 
 use crate::{
     audio_processor::{AudioProcessor, AudioProcessorState},
@@ -27,7 +27,10 @@ pub(crate) fn decode_loop(
     queue_rx: Receiver<(Box<dyn Source>, ResampleMode)>,
     processor_state: Rc<RefCell<AudioProcessorState>>,
 ) {
-    let mut output = CpalAudioOutput::try_open().unwrap();
+    let mut output = CpalAudioOutput::new_output().unwrap();
+
+    #[cfg(windows)]
+    output.play();
 
     loop {
         match queue_rx.try_recv() {
@@ -36,10 +39,14 @@ pub(crate) fn decode_loop(
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
+                // This seems to cause glitches on Windows when first starting
+                #[cfg(not(windows))]
                 output.stop();
                 match queue_rx.recv() {
                     Ok((source, resample_mode)) => {
-                        output.resume();
+                        #[cfg(not(windows))]
+                        output.play();
+
                         decode_source(source, processor_state.clone(), &resample_mode, &mut output);
                     }
                     Err(_) => break,
@@ -62,7 +69,13 @@ fn decode_source(
     let mut processor = AudioProcessor::new(source, output_channels, processor_state);
 
     // No need to resample if sample rates are equal
-    if processor.sample_rate() == output.sample_rate() || resample_mode.eq(&ResampleMode::None) {
+    let source_sample_rate = processor.sample_rate();
+    let output_sample_rate = output.sample_rate();
+    if source_sample_rate == output_sample_rate || resample_mode == &ResampleMode::None {
+        info!(
+            "Not resampling. Source sample rate={}, output sample rate={}.",
+            source_sample_rate, output_sample_rate
+        );
         output.write_stream(Box::new(processor));
         return;
     }

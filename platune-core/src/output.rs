@@ -1,6 +1,6 @@
 use cpal::{SampleRate, Stream, SupportedStreamConfig};
-use dasp::Sample;
-use std::ops::Mul;
+use dasp::{sample::FromSample, Sample};
+use std::fmt::Debug;
 use std::result;
 use symphonia::core::audio::RawSample;
 use symphonia::core::conv::ConvertibleSample;
@@ -9,7 +9,7 @@ pub trait AudioOutput {
     fn write_stream(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>);
     fn flush(&mut self);
     fn stop(&mut self);
-    fn resume(&mut self);
+    fn play(&mut self);
     fn sample_rate(&self) -> u32;
     fn channels(&self) -> usize;
 }
@@ -33,13 +33,7 @@ use tracing::error;
 pub struct CpalAudioOutput;
 
 trait AudioOutputSample:
-    cpal::Sample
-    + ConvertibleSample
-    + RawSample
-    + dasp::sample::FromSample<f64>
-    + Mul<Output = Self>
-    + Send
-    + 'static
+    cpal::Sample + ConvertibleSample + RawSample + FromSample<f64> + Send + Debug + 'static
 {
 }
 
@@ -48,7 +42,7 @@ impl AudioOutputSample for i16 {}
 impl AudioOutputSample for u16 {}
 
 impl CpalAudioOutput {
-    pub fn try_open() -> Result<Box<dyn AudioOutput>> {
+    pub fn new_output() -> Result<Box<dyn AudioOutput>> {
         // Get default host.
         let host = cpal::default_host();
 
@@ -70,11 +64,11 @@ impl CpalAudioOutput {
         };
         let sample_rate = config.sample_rate();
         // Select proper playback routine based on sample format.
-        match config.sample_format() {
-            cpal::SampleFormat::F32 => CpalAudioOutputImpl::<f32>::try_open(device, sample_rate),
-            cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::try_open(device, sample_rate),
-            cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::try_open(device, sample_rate),
-        }
+        Ok(match config.sample_format() {
+            cpal::SampleFormat::F32 => CpalAudioOutputImpl::<f32>::new_output(device, sample_rate),
+            cpal::SampleFormat::I16 => CpalAudioOutputImpl::<i16>::new_output(device, sample_rate),
+            cpal::SampleFormat::U16 => CpalAudioOutputImpl::<u16>::new_output(device, sample_rate),
+        })
     }
 }
 
@@ -89,24 +83,22 @@ where
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn try_open(device: cpal::Device, sample_rate: SampleRate) -> Result<Box<dyn AudioOutput>> {
+    pub fn new_output(device: cpal::Device, sample_rate: SampleRate) -> Box<dyn AudioOutput> {
         // Instantiate a ring buffer capable of buffering 8K (arbitrarily chosen) samples.
         let ring_buf = SpscRb::<T>::new(8 * 1024);
-        let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
+        let ring_buf_producer = ring_buf.producer();
         let sample_rate_val = sample_rate.0;
 
         let config = device.default_output_config().unwrap();
 
         let channels = config.channels() as usize;
-        match Self::create_stream(&device, config, sample_rate, ring_buf_consumer) {
-            Ok(stream) => Ok(Box::new(CpalAudioOutputImpl {
-                ring_buf_producer,
-                stream: Some(stream),
-                sample_rate: sample_rate_val,
-                channels,
-            })),
-            Err(e) => Err(e),
-        }
+
+        Box::new(Self {
+            ring_buf_producer,
+            stream: None,
+            sample_rate: sample_rate_val,
+            channels,
+        })
     }
 
     fn create_stream(
@@ -195,7 +187,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.stream = None;
     }
 
-    fn resume(&mut self) {
+    fn play(&mut self) {
         if self.stream.is_some() {
             return;
         }
