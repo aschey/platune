@@ -6,11 +6,11 @@ use crate::{
     dto::{
         audio_status::AudioStatus, decoder_command::DecoderCommand,
         decoder_response::DecoderResponse, player_event::PlayerEvent, player_state::PlayerState,
-        player_status::TrackStatus,
+        player_status::TrackStatus, queue_source::QueueSource,
     },
     http_stream_reader::HttpStreamReader,
     settings::resample_mode::ResampleMode,
-    source::{ReadSeekSource, Source},
+    source::ReadSeekSource,
     TwoWaySender,
 };
 
@@ -18,8 +18,8 @@ pub(crate) struct Player {
     state: PlayerState,
     event_tx: broadcast::Sender<PlayerEvent>,
     queued_count: usize,
-    queue_tx: crossbeam_channel::Sender<(Box<dyn Source>, ResampleMode)>,
-    queue_rx: crossbeam_channel::Receiver<(Box<dyn Source>, ResampleMode)>,
+    queue_tx: crossbeam_channel::Sender<QueueSource>,
+    queue_rx: crossbeam_channel::Receiver<QueueSource>,
     cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     audio_status: AudioStatus,
     resample_mode: ResampleMode,
@@ -28,8 +28,8 @@ pub(crate) struct Player {
 impl Player {
     pub(crate) fn new(
         event_tx: broadcast::Sender<PlayerEvent>,
-        queue_tx: crossbeam_channel::Sender<(Box<dyn Source>, ResampleMode)>,
-        queue_rx: crossbeam_channel::Receiver<(Box<dyn Source>, ResampleMode)>,
+        queue_tx: crossbeam_channel::Sender<QueueSource>,
+        queue_rx: crossbeam_channel::Receiver<QueueSource>,
         cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
         resample_mode: ResampleMode,
     ) -> Self {
@@ -69,10 +69,11 @@ impl Player {
 
             info!("Sending source {}", path);
             self.queue_tx
-                .send((
-                    Box::new(ReadSeekSource::new(reader, Some(file_len), extension)),
-                    self.resample_mode.clone(),
-                ))
+                .send(QueueSource {
+                    source: Box::new(ReadSeekSource::new(reader, Some(file_len), extension)),
+                    resample_mode: self.resample_mode.clone(),
+                    force_restart_output: false,
+                })
                 .unwrap();
         } else {
             let file = match File::open(&path) {
@@ -90,10 +91,11 @@ impl Player {
 
             info!("Sending source {}", path);
             self.queue_tx
-                .send((
-                    Box::new(ReadSeekSource::new(reader, Some(len), extension)),
-                    self.resample_mode.clone(),
-                ))
+                .send(QueueSource {
+                    source: Box::new(ReadSeekSource::new(reader, Some(len), extension)),
+                    resample_mode: self.resample_mode.clone(),
+                    force_restart_output: false,
+                })
                 .unwrap();
         }
 

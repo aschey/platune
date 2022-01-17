@@ -8,11 +8,11 @@ use dasp::{
     Frame, Signal,
 };
 
-use std::{cell::RefCell, rc::Rc, thread, time::Duration};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     audio_processor::{AudioProcessor, AudioProcessorState},
-    dto::{command::Command, player_response::PlayerResponse},
+    dto::{command::Command, player_response::PlayerResponse, queue_source::QueueSource},
     output::{AudioOutput, CpalAudioOutput},
     player::Player,
     settings::resample_mode::ResampleMode,
@@ -24,21 +24,33 @@ use crossbeam_channel::{Receiver, TryRecvError};
 use tracing::{error, info};
 
 pub(crate) fn decode_loop(
-    queue_rx: Receiver<(Box<dyn Source>, ResampleMode)>,
+    queue_rx: Receiver<QueueSource>,
     processor_state: Rc<RefCell<AudioProcessorState>>,
 ) {
     let mut output = CpalAudioOutput::new_output().unwrap();
 
     loop {
         match queue_rx.try_recv() {
-            Ok((source, resample_mode)) => {
+            Ok(QueueSource {
+                source,
+                resample_mode,
+                force_restart_output,
+            }) => {
+                if force_restart_output {
+                    output.stop();
+                    output.play();
+                }
                 decode_source(source, processor_state.clone(), &resample_mode, &mut output);
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
                 output.stop();
                 match queue_rx.recv() {
-                    Ok((source, resample_mode)) => {
+                    Ok(QueueSource {
+                        source,
+                        resample_mode,
+                        ..
+                    }) => {
                         output.play();
                         decode_source(source, processor_state.clone(), &resample_mode, &mut output);
                     }

@@ -7,3 +7,4 @@ pub(crate) mod player_event;
 pub(crate) mod player_response;
 pub(crate) mod player_state;
 pub(crate) mod player_status;
+pub(crate) mod queue_source;
