@@ -42,6 +42,7 @@ pub mod platune_player {
         cmd_sender: TwoWaySenderAsync<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
+        decoder_handle: Option<std::thread::JoinHandle<()>>,
     }
 
     impl Default for PlatunePlayer {
@@ -87,12 +88,13 @@ pub mod platune_player {
             };
 
             tokio::spawn(main_loop_fn);
-            thread::spawn(decoder_fn);
+            let decoder_handle = Some(thread::spawn(decoder_fn));
 
             PlatunePlayer {
                 cmd_sender: cmd_tx,
                 event_tx,
                 decoder_tx,
+                decoder_handle,
             }
         }
 
@@ -229,9 +231,14 @@ pub mod platune_player {
 
     impl Drop for PlatunePlayer {
         fn drop(&mut self) {
+            self.cmd_sender.try_send(Command::Stop).unwrap_or_default();
             if let Err(e) = self.cmd_sender.try_send(Command::Shutdown) {
                 // Receiver may already be terminated so this may not be an error
                 warn!("Unable to send shutdown command {:?}", e);
+            }
+
+            if let Err(e) = self.decoder_handle.take().unwrap().join() {
+                warn!("Error terminating decoder thread: {:?}", e);
             }
         }
     }
