@@ -8,104 +8,39 @@ use dasp::{
     Frame, Signal,
 };
 
-use std::{cell::RefCell, rc::Rc, time::Duration};
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{
     audio_processor::{AudioProcessor, AudioProcessorState},
-    dto::{command::Command, player_event::PlayerEvent, player_status::TrackStatus},
+    dto::{command::Command, player_response::PlayerResponse},
     output::{AudioOutput, CpalAudioOutput},
     player::Player,
+    settings::resample_mode::ResampleMode,
     source::Source,
-    TwoWayReceiverAsync, TwoWaySender,
+    stereo_stream::StereoStream,
+    TwoWayReceiverAsync,
 };
-use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use std::fmt::Debug;
-use symphonia::core::units::TimeStamp;
-use tokio::sync::broadcast;
+use crossbeam_channel::{Receiver, TryRecvError};
 use tracing::{error, info};
 
-#[derive(Clone, Debug)]
-pub(crate) enum DecoderResponse {
-    SeekResponse(Option<TimeStamp>),
-    CurrentTimeResponse(CurrentTime),
-}
-
-#[derive(Clone, Debug)]
-pub(crate) enum PlayerResponse {
-    StatusResponse(TrackStatus),
-}
-
-#[derive(Clone)]
-pub(crate) enum DecoderCommand {
-    Seek(Duration),
-    Pause,
-    Play,
-    Stop,
-    SetVolume(f64),
-    GetCurrentTime,
-}
-
-impl Debug for DecoderCommand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Seek(arg0) => f
-                .debug_tuple("Seek")
-                .field(arg0)
-                .field(&"sender".to_owned())
-                .finish(),
-            Self::Pause => write!(f, "Pause"),
-            Self::Play => write!(f, "Play"),
-            Self::Stop => write!(f, "Stop"),
-            Self::SetVolume(arg0) => f.debug_tuple("SetVolume").field(arg0).finish(),
-            Self::GetCurrentTime => f
-                .debug_tuple("GetCurrentTime")
-                .field(&"channel".to_owned())
-                .finish(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct CurrentTime {
-    pub current_time: Option<Duration>,
-    pub retrieval_time: Option<Duration>,
-}
-
-enum InterpolateMode {
-    Linear,
-    Sinc,
-    None,
-}
-
 pub(crate) fn decode_loop(
-    queue_rx: Receiver<Box<dyn Source>>,
+    queue_rx: Receiver<(Box<dyn Source>, ResampleMode)>,
     processor_state: Rc<RefCell<AudioProcessorState>>,
 ) {
     let mut output = CpalAudioOutput::try_open().unwrap();
-    let interpolate_mode = InterpolateMode::Linear;
 
     loop {
         match queue_rx.try_recv() {
-            Ok(source) => {
-                decode_source(
-                    source,
-                    processor_state.clone(),
-                    &interpolate_mode,
-                    &mut output,
-                );
+            Ok((source, resample_mode)) => {
+                decode_source(source, processor_state.clone(), &resample_mode, &mut output);
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
                 output.stop();
                 match queue_rx.recv() {
-                    Ok(source) => {
+                    Ok((source, resample_mode)) => {
                         output.resume();
-                        decode_source(
-                            source,
-                            processor_state.clone(),
-                            &interpolate_mode,
-                            &mut output,
-                        );
+                        decode_source(source, processor_state.clone(), &resample_mode, &mut output);
                     }
                     Err(_) => break,
                 };
@@ -120,21 +55,29 @@ pub(crate) fn decode_loop(
 fn decode_source(
     source: Box<dyn Source>,
     processor_state: Rc<RefCell<AudioProcessorState>>,
-    interpolate_mode: &InterpolateMode,
+    resample_mode: &ResampleMode,
     output: &mut Box<dyn AudioOutput>,
 ) {
-    let output_sample_rate = output.sample_rate();
     let output_channels = output.channels();
     let mut processor = AudioProcessor::new(source, output_channels, processor_state);
-    match (output_channels, &interpolate_mode) {
-        (1, InterpolateMode::Linear) => {
+
+    // No need to resample if sample rates are equal
+    if processor.sample_rate() == output.sample_rate() || resample_mode.eq(&ResampleMode::None) {
+        output.write_stream(Box::new(processor));
+        return;
+    }
+
+    let output_sample_rate = output.sample_rate() as f64;
+
+    match (output_channels, &resample_mode) {
+        (1, ResampleMode::Linear) => {
             let left = processor.next().unwrap();
             let right = processor.next().unwrap();
             let resampled = linear_resample(left, right, processor, output_sample_rate);
 
             output.write_stream(resampled);
         }
-        (2, InterpolateMode::Linear) => {
+        (2, ResampleMode::Linear) => {
             let left = [processor.next().unwrap(), processor.next().unwrap()];
             let right = [processor.next().unwrap(), processor.next().unwrap()];
             let resampled = linear_resample(left, right, processor, output_sample_rate);
@@ -142,56 +85,17 @@ fn decode_source(
 
             output.write_stream(stereo_resampled);
         }
-        (1, InterpolateMode::Sinc) => {
+        (1, ResampleMode::Sinc) => {
             let resampled = sinc_resample::<f64>(processor, output_sample_rate);
 
             output.write_stream(Box::new(resampled));
         }
-        (2, InterpolateMode::Sinc) => {
+        (2, ResampleMode::Sinc) => {
             let resampled = sinc_resample::<[f64; 2]>(processor, output_sample_rate);
 
             output.write_stream(Box::new(StereoStream::new(resampled)));
         }
-        (_, InterpolateMode::None) => {
-            output.write_stream(Box::new(processor));
-        }
         _ => {}
-    }
-}
-
-struct StereoStream {
-    inner: Box<dyn Iterator<Item = [f64; 2]>>,
-    current: Option<[f64; 2]>,
-    position: usize,
-}
-
-impl StereoStream {
-    fn new(mut inner: Box<dyn Iterator<Item = [f64; 2]>>) -> Self {
-        let current = inner.next();
-        Self {
-            inner,
-            current,
-            position: 0,
-        }
-    }
-}
-
-impl Iterator for StereoStream {
-    type Item = f64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.current {
-            Some(current) => {
-                let next = current[self.position];
-                self.position += 1;
-                if self.position == 2 {
-                    self.position = 0;
-                    self.current = self.inner.next();
-                }
-                Some(next)
-            }
-            None => None,
-        }
     }
 }
 
@@ -233,48 +137,43 @@ where
 
 pub(crate) async fn main_loop(
     mut receiver: TwoWayReceiverAsync<Command, PlayerResponse>,
-    event_tx: broadcast::Sender<PlayerEvent>,
-    queue_tx: Sender<Box<dyn Source>>,
-    queue_rx: Receiver<Box<dyn Source>>,
-    cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
+    mut player: Player,
 ) {
-    let mut queue = Player::new(event_tx, queue_tx, queue_rx, cmd_sender);
-
     while let Some(next_command) = receiver.recv().await {
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {
-                queue.set_queue(songs).await;
+                player.set_queue(songs).await;
             }
             Command::AddToQueue(song) => {
-                queue.add_to_queue(song).await;
+                player.add_to_queue(song).await;
             }
             Command::Seek(millis) => {
-                queue.seek(millis).await;
+                player.seek(millis).await;
             }
             Command::SetVolume(volume) => {
-                queue.set_volume(volume).await;
+                player.set_volume(volume).await;
             }
             Command::Pause => {
-                queue.pause().await;
+                player.pause().await;
             }
             Command::Resume => {
-                queue.play().await;
+                player.play().await;
             }
             Command::Stop => {
-                queue.stop().await;
+                player.stop().await;
             }
             Command::Ended => {
-                queue.on_ended();
+                player.on_ended();
             }
             Command::Next => {
-                queue.go_next().await;
+                player.go_next().await;
             }
             Command::Previous => {
-                queue.go_previous().await;
+                player.go_previous().await;
             }
             Command::GetCurrentStatus => {
-                let current_status = queue.get_current_status();
+                let current_status = player.get_current_status();
                 if let Err(e) = receiver.respond(PlayerResponse::StatusResponse(current_status)) {
                     error!("Error sending player status");
                 }

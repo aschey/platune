@@ -7,7 +7,9 @@ mod event_loop;
 mod http_stream_reader;
 mod output;
 mod player;
+mod settings;
 mod source;
+mod stereo_stream;
 
 pub mod platune_player {
     use std::thread;
@@ -17,12 +19,17 @@ pub mod platune_player {
 
     use crate::audio_processor::AudioProcessorState;
     pub use crate::dto::audio_status::AudioStatus;
+    use crate::dto::current_time::CurrentTime;
+    use crate::dto::decoder_command::DecoderCommand;
+    use crate::dto::decoder_response::DecoderResponse;
     pub use crate::dto::player_event::PlayerEvent;
+    use crate::dto::player_response::PlayerResponse;
     pub use crate::dto::player_state::PlayerState;
     pub use crate::dto::player_status::PlayerStatus;
-    use crate::event_loop::{
-        decode_loop, CurrentTime, DecoderCommand, DecoderResponse, PlayerResponse,
-    };
+    use crate::event_loop::decode_loop;
+    use crate::player::Player;
+    use crate::settings::resample_mode::ResampleMode;
+    use crate::settings::Settings;
     use crate::{dto::command::Command, event_loop::main_loop};
     use crate::{two_way_channel, two_way_channel_async, TwoWaySender, TwoWaySenderAsync};
     use std::fs::remove_file;
@@ -39,12 +46,19 @@ pub mod platune_player {
 
     impl Default for PlatunePlayer {
         fn default() -> Self {
-            Self::new()
+            // WASAPI does not resample so it must be done here
+            // Otherwise we can leave it to the OS to perform resampling
+            let resample_mode = if cfg!(windows) {
+                ResampleMode::Linear
+            } else {
+                ResampleMode::None
+            };
+            Self::new(Settings { resample_mode })
         }
     }
 
     impl PlatunePlayer {
-        pub fn new() -> Self {
+        pub fn new(settings: Settings) -> Self {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -56,8 +70,16 @@ pub mod platune_player {
             let (decoder_tx, decoder_rx) = two_way_channel();
             let decoder_tx_ = decoder_tx.clone();
 
-            let main_loop_fn =
-                async move { main_loop(cmd_rx, event_tx_, queue_tx, queue_rx, decoder_tx_).await };
+            let main_loop_fn = async move {
+                let player = Player::new(
+                    event_tx_,
+                    queue_tx,
+                    queue_rx,
+                    decoder_tx_,
+                    settings.resample_mode,
+                );
+                main_loop(cmd_rx, player).await
+            };
 
             let decoder_fn = || {
                 let processor_state = AudioProcessorState::new(1.0, decoder_rx, cmd_tx_);

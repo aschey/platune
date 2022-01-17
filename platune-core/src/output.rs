@@ -1,19 +1,16 @@
-use cpal::{SampleFormat, SampleRate, Stream, SupportedStreamConfig};
+use cpal::{SampleRate, Stream, SupportedStreamConfig};
 use dasp::Sample;
-use std::marker::PhantomData;
 use std::ops::Mul;
 use std::result;
-use symphonia::core::audio::{AudioBufferRef, RawSample, SampleBuffer, SignalSpec};
+use symphonia::core::audio::RawSample;
 use symphonia::core::conv::ConvertibleSample;
-use symphonia::core::units::Duration;
 
 pub trait AudioOutput {
     fn write_stream(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>);
-    fn write_empty(&mut self);
     fn flush(&mut self);
     fn stop(&mut self);
     fn resume(&mut self);
-    fn sample_rate(&self) -> f64;
+    fn sample_rate(&self) -> u32;
     fn channels(&self) -> usize;
 }
 
@@ -31,7 +28,7 @@ pub type Result<T> = result::Result<T, AudioOutputError>;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rb::*;
 
-use tracing::{error, info};
+use tracing::error;
 
 pub struct CpalAudioOutput;
 
@@ -87,7 +84,7 @@ where
 {
     ring_buf_producer: rb::Producer<T>,
     stream: Option<cpal::Stream>,
-    sample_rate: f64,
+    sample_rate: u32,
     channels: usize,
 }
 
@@ -96,7 +93,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         // Instantiate a ring buffer capable of buffering 8K (arbitrarily chosen) samples.
         let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
-        let sample_rate_val = sample_rate.0 as f64;
+        let sample_rate_val = sample_rate.0;
 
         let config = device.default_output_config().unwrap();
 
@@ -186,10 +183,6 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.channels
     }
 
-    fn write_empty(&mut self) {
-        //self.ring_buf_producer.write_blocking(&[T::MID]);
-    }
-
     fn flush(&mut self) {
         // Flush is best-effort, ignore the returned result.
         if let Some(stream) = &self.stream {
@@ -223,7 +216,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.stream = Some(stream.unwrap());
     }
 
-    fn sample_rate(&self) -> f64 {
+    fn sample_rate(&self) -> u32 {
         self.sample_rate
     }
 }

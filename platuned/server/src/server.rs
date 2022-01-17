@@ -35,7 +35,7 @@ enum Transport {
 }
 
 pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
-    let platune_player = Arc::new(PlatunePlayer::new());
+    let platune_player = Arc::new(PlatunePlayer::default());
     let manager = init_manager().await?;
 
     let mut servers = Vec::<_>::new();

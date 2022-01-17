@@ -1,5 +1,4 @@
-use super::audio_status::AudioStatus;
-use crate::event_loop::CurrentTime;
+use super::{audio_status::AudioStatus, current_time::CurrentTime};
 
 #[derive(Clone, Debug)]
 pub struct TrackStatus {

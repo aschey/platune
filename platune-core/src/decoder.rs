@@ -1,4 +1,4 @@
-use crate::{event_loop::CurrentTime, source::Source};
+use crate::{dto::current_time::CurrentTime, source::Source};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use symphonia::core::{
     audio::{SampleBuffer, SignalSpec},

@@ -1,7 +1,9 @@
 use crate::{
     decoder::Decoder,
-    dto::command::Command,
-    event_loop::{DecoderCommand, DecoderResponse, PlayerResponse},
+    dto::{
+        command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
+        player_response::PlayerResponse,
+    },
     source::Source,
     TwoWayReceiver, TwoWaySenderAsync,
 };
