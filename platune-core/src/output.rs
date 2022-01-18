@@ -7,6 +7,7 @@ use symphonia::core::conv::ConvertibleSample;
 
 pub trait AudioOutput {
     fn write_stream(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>);
+    fn write(&mut self, sample_iter: &[f64]);
     fn flush(&mut self);
     fn stop(&mut self);
     fn start(&mut self);
@@ -80,6 +81,7 @@ where
     stream: Option<cpal::Stream>,
     sample_rate: u32,
     channels: usize,
+    buf: Vec<T>,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
@@ -89,6 +91,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             stream: None,
             sample_rate: 0,
             channels: 0,
+            buf: vec![T::MID; 2048],
         }
     }
 
@@ -164,6 +167,31 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         }
     }
 
+    fn write(&mut self, sample_iter: &[f64]) {
+        if let Some(ring_buf_producer) = &mut self.ring_buf_producer {
+            let mut i = 0;
+
+            for frame in sample_iter {
+                if i == self.buf.len() {
+                    let mut samples = &self.buf[..];
+                    while let Some(written) = ring_buf_producer.write_blocking(samples) {
+                        samples = &samples[written..];
+                    }
+                    i = 0;
+                }
+
+                self.buf[i] = frame.to_sample();
+                i += 1;
+            }
+
+            let mut samples = &self.buf[..i];
+
+            while let Some(written) = ring_buf_producer.write_blocking(samples) {
+                samples = &samples[written..];
+            }
+        }
+    }
+
     fn channels(&self) -> usize {
         self.channels
     }
@@ -190,15 +218,11 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         let device = host.default_output_device().unwrap();
         let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
+
         let config = device.default_output_config().unwrap();
-        self.sample_rate = config.sample_rate().0;
+        self.sample_rate = 44_100;
         self.channels = config.channels() as usize;
-        let stream = Self::create_stream(
-            &device,
-            config,
-            device.default_output_config().unwrap().sample_rate(),
-            ring_buf_consumer,
-        );
+        let stream = Self::create_stream(&device, config, SampleRate(44_100), ring_buf_consumer);
 
         self.ring_buf_producer = Some(ring_buf_producer);
         self.stream = Some(stream.unwrap());

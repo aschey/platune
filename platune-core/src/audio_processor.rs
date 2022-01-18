@@ -113,26 +113,12 @@ impl AudioProcessor {
 
         true
     }
-}
 
-impl Iterator for AudioProcessor {
-    type Item = f64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        // Reduce checks for user input to save CPU
-        if self.iteration == 2048 {
-            if !self.process_input() {
-                return None;
-            }
-            self.iteration = 0;
-        } else {
-            self.iteration += 1;
-        }
-
+    pub(crate) fn next(&mut self) -> Option<&[f64]> {
+        self.process_input();
         match self.decoder.next() {
-            Some(val) => Some(val * self.volume),
+            Some(val) => Some(val),
             None => {
-                self.process_input();
                 let state = self.state.borrow_mut();
                 state.player_cmd_tx.try_send(Command::Ended).unwrap();
                 None
@@ -140,3 +126,29 @@ impl Iterator for AudioProcessor {
         }
     }
 }
+
+// impl Iterator for AudioProcessor {
+//     type Item = f64;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         // Reduce checks for user input to save CPU
+//         if self.iteration == 2048 {
+//             if !self.process_input() {
+//                 return None;
+//             }
+//             self.iteration = 0;
+//         } else {
+//             self.iteration += 1;
+//         }
+
+//         match self.decoder.next() {
+//             Some(val) => Some(val * self.volume),
+//             None => {
+//                 self.process_input();
+//                 let state = self.state.borrow_mut();
+//                 state.player_cmd_tx.try_send(Command::Ended).unwrap();
+//                 None
+//             }
+//         }
+//     }
+// }

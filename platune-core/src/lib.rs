@@ -237,9 +237,9 @@ pub mod platune_player {
                 warn!("Unable to send shutdown command {:?}", e);
             }
 
-            if let Err(e) = self.decoder_handle.take().unwrap().join() {
-                warn!("Error terminating decoder thread: {:?}", e);
-            }
+            // if let Err(e) = self.decoder_handle.take().unwrap().join() {
+            //     warn!("Error terminating decoder thread: {:?}", e);
+            // }
         }
     }
 }

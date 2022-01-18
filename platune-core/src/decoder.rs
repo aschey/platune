@@ -198,18 +198,8 @@ impl Decoder {
             }
         }
     }
-}
 
-impl Iterator for Decoder {
-    type Item = f64;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.position < self.buf_len {
-            let ret = Some(self.buf[self.position]);
-            self.position += 1;
-            return ret;
-        }
-
+    pub(crate) fn next(&mut self) -> Option<&[f64]> {
         if self.paused {
             self.buf.fill(0.0);
         } else {
@@ -230,9 +220,43 @@ impl Iterator for Decoder {
 
             self.process_output(&packet);
         }
-
-        self.position = 1;
-
-        Some(self.buf[0])
+        Some(&self.buf)
     }
 }
+
+// impl Iterator for Decoder {
+//     type Item = f64;
+
+//     fn next(&mut self) -> Option<Self::Item> {
+//         if self.position < self.buf_len {
+//             let ret = Some(self.buf[self.position]);
+//             self.position += 1;
+//             return ret;
+//         }
+
+//         if self.paused {
+//             self.buf.fill(0.0);
+//         } else {
+//             let packet = loop {
+//                 match self.reader.next_packet() {
+//                     Ok(packet) => {
+//                         if packet.track_id() == self.track_id {
+//                             break packet;
+//                         }
+//                     }
+//                     Err(_) => {
+//                         return None;
+//                     }
+//                 };
+//             };
+
+//             self.timestamp = packet.ts();
+
+//             self.process_output(&packet);
+//         }
+
+//         self.position = 1;
+
+//         Some(self.buf[0])
+//     }
+// }

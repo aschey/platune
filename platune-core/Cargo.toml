@@ -19,6 +19,7 @@ dasp = {git = "https://github.com/RustAudio/dasp", rev = "66e8b83a5c926fde3ec7fe
 futures-util = "0.3.19"
 rb = "0.3.2"
 reqwest = {version = "0.11.7", features = ["stream"]}
+rubato = "0.10.0"
 strum = "0.23.0"
 symphonia = {git = "https://github.com/pdeljanov/Symphonia", rev = "9011735f1cbbb7d838aa59432033edf025454820", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 tempfile = "3.2.0"
