@@ -137,6 +137,7 @@ impl Decoder {
                             if let Some(index) = samples.iter().position(|s| *s != 0.0) {
                                 skipped_samples += index;
                                 info!("Skipped {} silent samples", skipped_samples);
+
                                 position = index;
                             } else {
                                 skipped_samples += samples.len();
@@ -197,6 +198,10 @@ impl Decoder {
                 }
             }
         }
+    }
+
+    pub(crate) fn current(&self) -> &[f64] {
+        &self.buf
     }
 
     pub(crate) fn next(&mut self) -> Option<&[f64]> {

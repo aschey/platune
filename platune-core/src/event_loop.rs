@@ -29,7 +29,7 @@ pub(crate) fn decode_loop(
     processor_state: Rc<RefCell<AudioProcessorState>>,
 ) {
     let mut output = CpalAudioOutput::new_output().unwrap();
-    let mut resampler = FftFixedInOut::<f64>::new(44_100 as usize, 44_100 as usize, 1024, 2);
+    let mut resampler = FftFixedInOut::<f64>::new(44_100 as usize, 48_000, 1024, 2);
 
     loop {
         match queue_rx.try_recv() {
@@ -112,35 +112,45 @@ fn decode_source(
         }
         (2, _) => {
             let n_frames = resampler.nbr_frames_needed();
+
             let mut buf = [vec![0.0; n_frames], vec![0.0; n_frames]];
 
             let mut buf2 = vec![0.0; n_frames * 2];
-            let mut frame = processor.next().unwrap();
+            processor.next();
             let mut frame_pos = 0;
             loop {
                 let mut i = 0;
                 while i < n_frames {
-                    buf[0][i] = frame[frame_pos];
-                    buf[1][i] = frame[frame_pos + 1];
+                    buf[0][i] = processor.current()[frame_pos];
+                    buf[1][i] = processor.current()[frame_pos + 1];
                     i += 1;
                     frame_pos += 2;
-                    if frame_pos == frame.len() {
-                        frame = processor.next().unwrap();
+                    if frame_pos == processor.current().len() {
+                        if processor.next().is_none() {
+                            return;
+                        }
                         frame_pos = 0;
                     }
                 }
                 //println!("{:?}", buf);
 
                 let resampled = resampler.process(&buf).unwrap();
+                let out_len = resampled[0].len();
+                if out_len * 2 > buf2.len() {
+                    buf2.clear();
+                    buf2.resize(out_len * 2, 0.0);
+                }
+
                 //let mut i = 0;
                 let l = &resampled[0];
                 let r = &resampled[1];
                 let mut j = 0;
-                for i in 0..n_frames {
+                for i in 0..out_len {
                     buf2[j] = l[i];
                     buf2[j + 1] = r[i];
                     j += 2;
                 }
+
                 // for sample in resampled {
                 //     buf2[i] = sample[0];
                 //     buf2[i + 1] = sample[1];

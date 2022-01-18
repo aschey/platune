@@ -114,6 +114,10 @@ impl AudioProcessor {
         true
     }
 
+    pub(crate) fn current(&self) -> &[f64] {
+        self.decoder.current()
+    }
+
     pub(crate) fn next(&mut self) -> Option<&[f64]> {
         self.process_input();
         match self.decoder.next() {

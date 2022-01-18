@@ -220,9 +220,10 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let config = device.default_output_config().unwrap();
-        self.sample_rate = 44_100;
+        let sample_rate = config.sample_rate();
+        self.sample_rate = sample_rate.0;
         self.channels = config.channels() as usize;
-        let stream = Self::create_stream(&device, config, SampleRate(44_100), ring_buf_consumer);
+        let stream = Self::create_stream(&device, config, sample_rate, ring_buf_consumer);
 
         self.ring_buf_producer = Some(ring_buf_producer);
         self.stream = Some(stream.unwrap());
