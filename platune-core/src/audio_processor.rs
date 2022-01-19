@@ -119,7 +119,9 @@ impl AudioProcessor {
     }
 
     pub(crate) fn next(&mut self) -> Option<&[f64]> {
-        self.process_input();
+        if !self.process_input() {
+            return None;
+        }
         match self.decoder.next() {
             Some(val) => Some(val),
             None => {

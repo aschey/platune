@@ -30,7 +30,7 @@ pub(crate) fn decode_loop(
 ) {
     let mut output = CpalAudioOutput::new_output().unwrap();
     let mut resampler = FftFixedInOut::<f64>::new(44_100 as usize, 48_000, 1024, 2);
-
+    let mut audio_manager = AudioManager::new(resampler, output);
     loop {
         match queue_rx.try_recv() {
             Ok(QueueSource {
@@ -39,34 +39,25 @@ pub(crate) fn decode_loop(
                 force_restart_output,
             }) => {
                 if force_restart_output {
-                    output.stop();
-                    output.start();
+                    audio_manager.stop();
+                    audio_manager.start();
                 }
-                decode_source(
-                    source,
-                    processor_state.clone(),
-                    &resample_mode,
-                    &mut output,
-                    &mut resampler,
-                );
+                let processor = AudioProcessor::new(source, 2, processor_state.clone());
+                audio_manager.decode_source(processor);
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
-                output.stop();
+                audio_manager.play_remaining();
+                audio_manager.stop();
                 match queue_rx.recv() {
                     Ok(QueueSource {
                         source,
                         resample_mode,
                         ..
                     }) => {
-                        output.start();
-                        decode_source(
-                            source,
-                            processor_state.clone(),
-                            &resample_mode,
-                            &mut output,
-                            &mut resampler,
-                        );
+                        audio_manager.start();
+                        let processor = AudioProcessor::new(source, 2, processor_state.clone());
+                        audio_manager.decode_source(processor);
                     }
                     Err(_) => break,
                 };
@@ -78,107 +69,192 @@ pub(crate) fn decode_loop(
     }
 }
 
-fn decode_source(
-    source: Box<dyn Source>,
-    processor_state: Rc<RefCell<AudioProcessorState>>,
-    resample_mode: &ResampleMode,
-    output: &mut Box<dyn AudioOutput>,
-    resampler: &mut FftFixedInOut<f64>,
-) {
-    let output_channels = output.channels();
-    let mut processor = AudioProcessor::new(source, output_channels, processor_state);
+struct AudioManager {
+    buf: [Vec<f64>; 2],
+    buf2: Vec<f64>,
+    output: Box<dyn AudioOutput>,
+    buf_index: usize,
+    resampler: FftFixedInOut<f64>,
+}
 
-    // No need to resample if sample rates are equal
-    let source_sample_rate = processor.sample_rate();
-    let output_sample_rate = output.sample_rate();
-    // if source_sample_rate == output_sample_rate || resample_mode == &ResampleMode::None {
-    //     // info!(
-    //     //     "Not resampling. Source sample rate={}, output sample rate={}.",
-    //     //     source_sample_rate, output_sample_rate
-    //     // );
-    //     // output.write_stream(Box::new(processor));
-    //     return;
-    // }
-
-    let output_sample_rate = output.sample_rate() as f64;
-
-    match (output_channels, &resample_mode) {
-        (1, ResampleMode::Linear) => {
-            // let left = processor.next().unwrap();
-            // let right = processor.next().unwrap();
-            // let resampled = linear_resample(left, right, processor, output_sample_rate);
-
-            // output.write_stream(resampled);
+impl AudioManager {
+    fn new(resampler: FftFixedInOut<f64>, output: Box<dyn AudioOutput>) -> Self {
+        let n_frames = resampler.nbr_frames_needed();
+        Self {
+            buf: [vec![0.0; n_frames], vec![0.0; n_frames]],
+            buf2: vec![0.0; n_frames * 2],
+            buf_index: 0,
+            resampler,
+            output,
         }
-        (2, _) => {
-            let n_frames = resampler.nbr_frames_needed();
+    }
 
-            let mut buf = [vec![0.0; n_frames], vec![0.0; n_frames]];
+    fn start(&mut self) {
+        self.resampler = FftFixedInOut::<f64>::new(44_100, 48_000, 1024, 2);
+        self.output.start();
+    }
 
-            let mut buf2 = vec![0.0; n_frames * 2];
-            processor.next();
-            let mut frame_pos = 0;
-            loop {
-                let mut i = 0;
-                while i < n_frames {
-                    buf[0][i] = processor.current()[frame_pos];
-                    buf[1][i] = processor.current()[frame_pos + 1];
-                    i += 1;
-                    frame_pos += 2;
-                    if frame_pos == processor.current().len() {
-                        if processor.next().is_none() {
-                            return;
-                        }
-                        frame_pos = 0;
+    fn stop(&mut self) {
+        self.output.stop();
+    }
+
+    fn play_remaining(&mut self) {
+        if self.buf_index > 0 {
+            for i in self.buf_index..self.buf[0].len() {
+                self.buf[0][i] = 0.0;
+                self.buf[1][i] = 0.0;
+            }
+            self.write_output();
+        }
+    }
+
+    fn write_output(&mut self) {
+        self.buf_index = 0;
+        let resampled = self.resampler.process(&self.buf).unwrap();
+        let out_len = resampled[0].len();
+        if out_len * 2 > self.buf2.len() {
+            self.buf2.clear();
+            self.buf2.resize(out_len * 2, 0.0);
+        }
+
+        let l = &resampled[0];
+        let r = &resampled[1];
+        let mut j = 0;
+        for i in 0..out_len {
+            self.buf2[j] = l[i];
+            self.buf2[j + 1] = r[i];
+            j += 2;
+        }
+
+        self.output.write(&self.buf2);
+    }
+
+    fn decode_source(&mut self, mut processor: AudioProcessor) {
+        let n_frames = self.resampler.nbr_frames_needed();
+        processor.next();
+
+        let mut frame_pos = 0;
+        println!("{}", self.buf_index);
+        loop {
+            while self.buf_index < n_frames {
+                self.buf[0][self.buf_index] = processor.current()[frame_pos];
+                self.buf[1][self.buf_index] = processor.current()[frame_pos + 1];
+                self.buf_index += 1;
+                frame_pos += 2;
+                if frame_pos == processor.current().len() {
+                    if processor.next().is_none() {
+                        return;
                     }
+                    frame_pos = 0;
                 }
-                //println!("{:?}", buf);
-
-                let resampled = resampler.process(&buf).unwrap();
-                let out_len = resampled[0].len();
-                if out_len * 2 > buf2.len() {
-                    buf2.clear();
-                    buf2.resize(out_len * 2, 0.0);
-                }
-
-                //let mut i = 0;
-                let l = &resampled[0];
-                let r = &resampled[1];
-                let mut j = 0;
-                for i in 0..out_len {
-                    buf2[j] = l[i];
-                    buf2[j + 1] = r[i];
-                    j += 2;
-                }
-
-                // for sample in resampled {
-                //     buf2[i] = sample[0];
-                //     buf2[i + 1] = sample[1];
-                //     i += 2;
-                // }
-                output.write(&buf2);
             }
 
-            // let left = [processor.next().unwrap(), processor.next().unwrap()];
-            // let right = [processor.next().unwrap(), processor.next().unwrap()];
-            // let resampled = linear_resample(left, right, processor, output_sample_rate);
-            // let stereo_resampled = Box::new(StereoStream::new(resampled));
-
-            // output.write_stream(stereo_resampled);
+            self.write_output();
         }
-        (1, ResampleMode::Sinc) => {
-            // let resampled = sinc_resample::<f64>(processor, output_sample_rate);
-
-            // output.write_stream(Box::new(resampled));
-        }
-        (2, ResampleMode::Sinc) => {
-            // let resampled = sinc_resample::<[f64; 2]>(processor, output_sample_rate);
-
-            // output.write_stream(Box::new(StereoStream::new(resampled)));
-        }
-        _ => {}
     }
 }
+
+// fn decode_source(
+//     source: Box<dyn Source>,
+//     processor_state: Rc<RefCell<AudioProcessorState>>,
+//     resample_mode: &ResampleMode,
+//     output: &mut Box<dyn AudioOutput>,
+//     resampler: &mut FftFixedInOut<f64>,
+// ) {
+//     let output_channels = output.channels();
+//     let mut processor = AudioProcessor::new(source, output_channels, processor_state);
+
+//     // No need to resample if sample rates are equal
+//     let source_sample_rate = processor.sample_rate();
+//     let output_sample_rate = output.sample_rate();
+//     // if source_sample_rate == output_sample_rate || resample_mode == &ResampleMode::None {
+//     //     // info!(
+//     //     //     "Not resampling. Source sample rate={}, output sample rate={}.",
+//     //     //     source_sample_rate, output_sample_rate
+//     //     // );
+//     //     // output.write_stream(Box::new(processor));
+//     //     return;
+//     // }
+
+//     let output_sample_rate = output.sample_rate() as f64;
+
+//     match (output_channels, &resample_mode) {
+//         (1, ResampleMode::Linear) => {
+//             // let left = processor.next().unwrap();
+//             // let right = processor.next().unwrap();
+//             // let resampled = linear_resample(left, right, processor, output_sample_rate);
+
+//             // output.write_stream(resampled);
+//         }
+//         (2, _) => {
+//             let n_frames = resampler.nbr_frames_needed();
+
+//             let mut buf = [vec![0.0; n_frames], vec![0.0; n_frames]];
+
+//             let mut buf2 = vec![0.0; n_frames * 2];
+//             processor.next();
+//             let mut frame_pos = 0;
+//             loop {
+//                 let mut i = 0;
+//                 while i < n_frames {
+//                     buf[0][i] = processor.current()[frame_pos];
+//                     buf[1][i] = processor.current()[frame_pos + 1];
+//                     i += 1;
+//                     frame_pos += 2;
+//                     if frame_pos == processor.current().len() {
+//                         if processor.next().is_none() {
+//                             return;
+//                         }
+//                         frame_pos = 0;
+//                     }
+//                 }
+//                 //println!("{:?}", buf);
+
+//                 let resampled = resampler.process(&buf).unwrap();
+//                 let out_len = resampled[0].len();
+//                 if out_len * 2 > buf2.len() {
+//                     buf2.clear();
+//                     buf2.resize(out_len * 2, 0.0);
+//                 }
+
+//                 //let mut i = 0;
+//                 let l = &resampled[0];
+//                 let r = &resampled[1];
+//                 let mut j = 0;
+//                 for i in 0..out_len {
+//                     buf2[j] = l[i];
+//                     buf2[j + 1] = r[i];
+//                     j += 2;
+//                 }
+
+//                 // for sample in resampled {
+//                 //     buf2[i] = sample[0];
+//                 //     buf2[i + 1] = sample[1];
+//                 //     i += 2;
+//                 // }
+//                 output.write(&buf2);
+//             }
+
+//             // let left = [processor.next().unwrap(), processor.next().unwrap()];
+//             // let right = [processor.next().unwrap(), processor.next().unwrap()];
+//             // let resampled = linear_resample(left, right, processor, output_sample_rate);
+//             // let stereo_resampled = Box::new(StereoStream::new(resampled));
+
+//             // output.write_stream(stereo_resampled);
+//         }
+//         (1, ResampleMode::Sinc) => {
+//             // let resampled = sinc_resample::<f64>(processor, output_sample_rate);
+
+//             // output.write_stream(Box::new(resampled));
+//         }
+//         (2, ResampleMode::Sinc) => {
+//             // let resampled = sinc_resample::<[f64; 2]>(processor, output_sample_rate);
+
+//             // output.write_stream(Box::new(StereoStream::new(resampled)));
+//         }
+//         _ => {}
+//     }
+// }
 
 // fn sinc_resample<T>(
 //     processor: AudioProcessor,
