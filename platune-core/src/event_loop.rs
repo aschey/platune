@@ -69,8 +69,8 @@ pub(crate) fn decode_loop(
 }
 
 struct AudioManager {
-    buf: [Vec<f64>; 2],
-    buf2: Vec<f64>,
+    in_buf: Vec<Vec<f64>>,
+    out_buf: Vec<f64>,
     input_sample_rate: usize,
     output: Box<dyn AudioOutput>,
     buf_index: usize,
@@ -80,13 +80,18 @@ struct AudioManager {
 impl AudioManager {
     fn new(output: Box<dyn AudioOutput>) -> Self {
         let default_sample_rate = 44_100;
-        let resampler =
-            FftFixedInOut::<f64>::new(default_sample_rate, default_sample_rate, 1024, 2);
+        let default_channels = 2;
+        let resampler = FftFixedInOut::<f64>::new(
+            default_sample_rate,
+            default_sample_rate,
+            1024,
+            default_channels,
+        );
 
         let n_frames = resampler.nbr_frames_needed();
         Self {
-            buf: [vec![0.0; n_frames], vec![0.0; n_frames]],
-            buf2: vec![0.0; n_frames * 2],
+            in_buf: vec![vec![0.0; n_frames]; default_channels],
+            out_buf: vec![0.0; n_frames * default_channels],
             input_sample_rate: default_sample_rate,
             buf_index: 0,
             resampler,
@@ -102,8 +107,10 @@ impl AudioManager {
             self.output.channels(),
         );
         let n_frames = self.resampler.nbr_frames_needed();
-        self.buf = [vec![0.0; n_frames], vec![0.0; n_frames]];
-        self.buf2 = vec![0.0; n_frames * 2];
+        let channels = self.output.channels();
+
+        self.in_buf = vec![vec![0.0; n_frames]; channels];
+        self.out_buf = vec![0.0; n_frames * channels];
     }
 
     fn start(&mut self) {
@@ -117,9 +124,10 @@ impl AudioManager {
 
     fn play_remaining(&mut self) {
         if self.buf_index > 0 {
-            for i in self.buf_index..self.buf[0].len() {
-                self.buf[0][i] = 0.0;
-                self.buf[1][i] = 0.0;
+            for i in self.buf_index..self.in_buf[0].len() {
+                for chan in &mut self.in_buf {
+                    chan[i] = 0.0;
+                }
             }
             self.write_output();
         }
@@ -127,23 +135,22 @@ impl AudioManager {
 
     fn write_output(&mut self) {
         self.buf_index = 0;
-        let resampled = self.resampler.process(&self.buf).unwrap();
+        let resampled = self.resampler.process(&self.in_buf).unwrap();
         let out_len = resampled[0].len();
-        if out_len * 2 > self.buf2.len() {
-            self.buf2.clear();
-            self.buf2.resize(out_len * 2, 0.0);
+        if out_len * self.output.channels() > self.out_buf.len() {
+            self.out_buf.clear();
+            self.out_buf.resize(out_len * self.output.channels(), 0.0);
         }
 
-        let l = &resampled[0];
-        let r = &resampled[1];
         let mut j = 0;
         for i in 0..out_len {
-            self.buf2[j] = l[i];
-            self.buf2[j + 1] = r[i];
-            j += 2;
+            for chan in &resampled {
+                self.out_buf[j] = chan[i];
+                j += 1;
+            }
         }
 
-        self.output.write(&self.buf2);
+        self.output.write(&self.out_buf);
     }
 
     fn decode_source(&mut self, processor: AudioProcessor, enable_resampling: bool) {
@@ -175,10 +182,13 @@ impl AudioManager {
 
         loop {
             while self.buf_index < n_frames {
-                self.buf[0][self.buf_index] = processor.current()[frame_pos];
-                self.buf[1][self.buf_index] = processor.current()[frame_pos + 1];
+                for chan in &mut self.in_buf {
+                    chan[self.buf_index] = processor.current()[frame_pos];
+                    frame_pos += 1;
+                }
+
                 self.buf_index += 1;
-                frame_pos += 2;
+
                 if frame_pos == processor.current().len() {
                     if processor.next().is_none() {
                         return;
