@@ -1,5 +1,4 @@
 use cpal::{SampleRate, Stream, SupportedStreamConfig};
-use dasp::{sample::FromSample, Sample};
 use std::fmt::Debug;
 use std::result;
 use symphonia::core::audio::RawSample;
@@ -33,10 +32,7 @@ use tracing::error;
 
 pub struct CpalAudioOutput;
 
-trait AudioOutputSample:
-    cpal::Sample + ConvertibleSample + RawSample + FromSample<f64> + Send + Debug + 'static
-{
-}
+trait AudioOutputSample: cpal::Sample + ConvertibleSample + RawSample + Send + Debug + 'static {}
 
 impl AudioOutputSample for f32 {}
 impl AudioOutputSample for i16 {}
@@ -155,7 +151,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
                     i = 0;
                 }
 
-                buf[i] = frame.to_sample();
+                buf[i] = T::from_sample(frame);
                 i += 1;
             }
 
@@ -180,7 +176,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
                     i = 0;
                 }
 
-                self.buf[i] = frame.to_sample();
+                self.buf[i] = T::from_sample(*frame);
                 i += 1;
             }
 
