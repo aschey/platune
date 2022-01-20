@@ -9,7 +9,6 @@ use crate::{
         player_status::TrackStatus, queue_source::QueueSource,
     },
     http_stream_reader::HttpStreamReader,
-    settings::resample_mode::ResampleMode,
     source::ReadSeekSource,
     TwoWaySender,
 };
@@ -22,7 +21,7 @@ pub(crate) struct Player {
     queue_rx: crossbeam_channel::Receiver<QueueSource>,
     cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     audio_status: AudioStatus,
-    resample_mode: ResampleMode,
+    enable_resampling: bool,
 }
 
 impl Player {
@@ -31,7 +30,7 @@ impl Player {
         queue_tx: crossbeam_channel::Sender<QueueSource>,
         queue_rx: crossbeam_channel::Receiver<QueueSource>,
         cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
-        resample_mode: ResampleMode,
+        enable_resampling: bool,
     ) -> Self {
         Self {
             event_tx,
@@ -45,7 +44,7 @@ impl Player {
             queue_rx,
             cmd_sender,
             audio_status: AudioStatus::Stopped,
-            resample_mode,
+            enable_resampling,
         }
     }
 
@@ -71,7 +70,7 @@ impl Player {
             self.queue_tx
                 .send(QueueSource {
                     source: Box::new(ReadSeekSource::new(reader, Some(file_len), extension)),
-                    resample_mode: self.resample_mode.clone(),
+                    enable_resampling: self.enable_resampling,
                     force_restart_output: false,
                 })
                 .unwrap();
@@ -93,7 +92,7 @@ impl Player {
             self.queue_tx
                 .send(QueueSource {
                     source: Box::new(ReadSeekSource::new(reader, Some(len), extension)),
-                    resample_mode: self.resample_mode.clone(),
+                    enable_resampling: self.enable_resampling,
                     force_restart_output: false,
                 })
                 .unwrap();

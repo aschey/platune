@@ -16,7 +16,6 @@ use crate::{
     dto::{command::Command, player_response::PlayerResponse, queue_source::QueueSource},
     output::{AudioOutput, CpalAudioOutput},
     player::Player,
-    settings::resample_mode::ResampleMode,
     source::Source,
     stereo_stream::StereoStream,
     TwoWayReceiverAsync,
@@ -28,14 +27,14 @@ pub(crate) fn decode_loop(
     queue_rx: Receiver<QueueSource>,
     processor_state: Rc<RefCell<AudioProcessorState>>,
 ) {
-    let mut output = CpalAudioOutput::new_output().unwrap();
-    let mut resampler = FftFixedInOut::<f64>::new(44_100 as usize, 48_000, 1024, 2);
-    let mut audio_manager = AudioManager::new(resampler, output);
+    let output = CpalAudioOutput::new_output().unwrap();
+    let mut audio_manager = AudioManager::new(output);
+
     loop {
         match queue_rx.try_recv() {
             Ok(QueueSource {
                 source,
-                resample_mode,
+                enable_resampling,
                 force_restart_output,
             }) => {
                 if force_restart_output {
@@ -43,7 +42,7 @@ pub(crate) fn decode_loop(
                     audio_manager.start();
                 }
                 let processor = AudioProcessor::new(source, 2, processor_state.clone());
-                audio_manager.decode_source(processor);
+                audio_manager.decode_source(processor, enable_resampling);
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
@@ -52,12 +51,12 @@ pub(crate) fn decode_loop(
                 match queue_rx.recv() {
                     Ok(QueueSource {
                         source,
-                        resample_mode,
+                        enable_resampling,
                         ..
                     }) => {
                         audio_manager.start();
                         let processor = AudioProcessor::new(source, 2, processor_state.clone());
-                        audio_manager.decode_source(processor);
+                        audio_manager.decode_source(processor, enable_resampling);
                     }
                     Err(_) => break,
                 };
@@ -72,26 +71,44 @@ pub(crate) fn decode_loop(
 struct AudioManager {
     buf: [Vec<f64>; 2],
     buf2: Vec<f64>,
+    input_sample_rate: usize,
     output: Box<dyn AudioOutput>,
     buf_index: usize,
     resampler: FftFixedInOut<f64>,
 }
 
 impl AudioManager {
-    fn new(resampler: FftFixedInOut<f64>, output: Box<dyn AudioOutput>) -> Self {
+    fn new(output: Box<dyn AudioOutput>) -> Self {
+        let default_sample_rate = 44_100;
+        let resampler =
+            FftFixedInOut::<f64>::new(default_sample_rate, default_sample_rate, 1024, 2);
+
         let n_frames = resampler.nbr_frames_needed();
         Self {
             buf: [vec![0.0; n_frames], vec![0.0; n_frames]],
             buf2: vec![0.0; n_frames * 2],
+            input_sample_rate: default_sample_rate,
             buf_index: 0,
             resampler,
             output,
         }
     }
 
+    fn set_resampler(&mut self) {
+        self.resampler = FftFixedInOut::<f64>::new(
+            self.input_sample_rate,
+            self.output.sample_rate(),
+            1024,
+            self.output.channels(),
+        );
+        let n_frames = self.resampler.nbr_frames_needed();
+        self.buf = [vec![0.0; n_frames], vec![0.0; n_frames]];
+        self.buf2 = vec![0.0; n_frames * 2];
+    }
+
     fn start(&mut self) {
-        self.resampler = FftFixedInOut::<f64>::new(44_100, 48_000, 1024, 2);
         self.output.start();
+        self.set_resampler();
     }
 
     fn stop(&mut self) {
@@ -129,12 +146,33 @@ impl AudioManager {
         self.output.write(&self.buf2);
     }
 
-    fn decode_source(&mut self, mut processor: AudioProcessor) {
+    fn decode_source(&mut self, processor: AudioProcessor, enable_resampling: bool) {
+        let input_sample_rate = processor.sample_rate();
+        if input_sample_rate != self.input_sample_rate {
+            self.play_remaining();
+            self.input_sample_rate = input_sample_rate;
+            self.set_resampler();
+        }
+
+        if enable_resampling && processor.sample_rate() != self.output.sample_rate() {
+            self.decode_resample(processor);
+        } else {
+            self.decode_no_resample(processor);
+        }
+    }
+
+    fn decode_no_resample(&mut self, mut processor: AudioProcessor) {
+        while let Some(next) = processor.next() {
+            self.output.write(next);
+        }
+    }
+
+    fn decode_resample(&mut self, mut processor: AudioProcessor) {
         let n_frames = self.resampler.nbr_frames_needed();
         processor.next();
 
         let mut frame_pos = 0;
-        println!("{}", self.buf_index);
+
         loop {
             while self.buf_index < n_frames {
                 self.buf[0][self.buf_index] = processor.current()[frame_pos];
@@ -153,144 +191,6 @@ impl AudioManager {
         }
     }
 }
-
-// fn decode_source(
-//     source: Box<dyn Source>,
-//     processor_state: Rc<RefCell<AudioProcessorState>>,
-//     resample_mode: &ResampleMode,
-//     output: &mut Box<dyn AudioOutput>,
-//     resampler: &mut FftFixedInOut<f64>,
-// ) {
-//     let output_channels = output.channels();
-//     let mut processor = AudioProcessor::new(source, output_channels, processor_state);
-
-//     // No need to resample if sample rates are equal
-//     let source_sample_rate = processor.sample_rate();
-//     let output_sample_rate = output.sample_rate();
-//     // if source_sample_rate == output_sample_rate || resample_mode == &ResampleMode::None {
-//     //     // info!(
-//     //     //     "Not resampling. Source sample rate={}, output sample rate={}.",
-//     //     //     source_sample_rate, output_sample_rate
-//     //     // );
-//     //     // output.write_stream(Box::new(processor));
-//     //     return;
-//     // }
-
-//     let output_sample_rate = output.sample_rate() as f64;
-
-//     match (output_channels, &resample_mode) {
-//         (1, ResampleMode::Linear) => {
-//             // let left = processor.next().unwrap();
-//             // let right = processor.next().unwrap();
-//             // let resampled = linear_resample(left, right, processor, output_sample_rate);
-
-//             // output.write_stream(resampled);
-//         }
-//         (2, _) => {
-//             let n_frames = resampler.nbr_frames_needed();
-
-//             let mut buf = [vec![0.0; n_frames], vec![0.0; n_frames]];
-
-//             let mut buf2 = vec![0.0; n_frames * 2];
-//             processor.next();
-//             let mut frame_pos = 0;
-//             loop {
-//                 let mut i = 0;
-//                 while i < n_frames {
-//                     buf[0][i] = processor.current()[frame_pos];
-//                     buf[1][i] = processor.current()[frame_pos + 1];
-//                     i += 1;
-//                     frame_pos += 2;
-//                     if frame_pos == processor.current().len() {
-//                         if processor.next().is_none() {
-//                             return;
-//                         }
-//                         frame_pos = 0;
-//                     }
-//                 }
-//                 //println!("{:?}", buf);
-
-//                 let resampled = resampler.process(&buf).unwrap();
-//                 let out_len = resampled[0].len();
-//                 if out_len * 2 > buf2.len() {
-//                     buf2.clear();
-//                     buf2.resize(out_len * 2, 0.0);
-//                 }
-
-//                 //let mut i = 0;
-//                 let l = &resampled[0];
-//                 let r = &resampled[1];
-//                 let mut j = 0;
-//                 for i in 0..out_len {
-//                     buf2[j] = l[i];
-//                     buf2[j + 1] = r[i];
-//                     j += 2;
-//                 }
-
-//                 // for sample in resampled {
-//                 //     buf2[i] = sample[0];
-//                 //     buf2[i + 1] = sample[1];
-//                 //     i += 2;
-//                 // }
-//                 output.write(&buf2);
-//             }
-
-//             // let left = [processor.next().unwrap(), processor.next().unwrap()];
-//             // let right = [processor.next().unwrap(), processor.next().unwrap()];
-//             // let resampled = linear_resample(left, right, processor, output_sample_rate);
-//             // let stereo_resampled = Box::new(StereoStream::new(resampled));
-
-//             // output.write_stream(stereo_resampled);
-//         }
-//         (1, ResampleMode::Sinc) => {
-//             // let resampled = sinc_resample::<f64>(processor, output_sample_rate);
-
-//             // output.write_stream(Box::new(resampled));
-//         }
-//         (2, ResampleMode::Sinc) => {
-//             // let resampled = sinc_resample::<[f64; 2]>(processor, output_sample_rate);
-
-//             // output.write_stream(Box::new(StereoStream::new(resampled)));
-//         }
-//         _ => {}
-//     }
-// }
-
-// fn sinc_resample<T>(
-//     processor: AudioProcessor,
-//     output_sample_rate: f64,
-// ) -> Box<UntilExhausted<Converter<FromInterleavedSamplesIterator<AudioProcessor, T>, Sinc<[T; 128]>>>>
-// where
-//     T: Frame<Sample = f64>,
-// {
-//     let buf = [T::EQUILIBRIUM; 128];
-//     let source_sample_rate = processor.sample_rate();
-//     let signal = from_interleaved_samples_iter(processor);
-//     let ring_buffer = Fixed::from(buf);
-
-//     let converter = Sinc::new(ring_buffer);
-
-//     let new_signal = signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
-//     Box::new(new_signal.until_exhausted())
-// }
-
-// fn linear_resample<T>(
-//     left: T,
-//     right: T,
-//     processor: AudioProcessor,
-//     output_sample_rate: f64,
-// ) -> Box<UntilExhausted<Converter<FromInterleavedSamplesIterator<AudioProcessor, T>, Linear<T>>>>
-// where
-//     T: Frame<Sample = f64>,
-// {
-//     let source_sample_rate = processor.sample_rate();
-//     let signal = from_interleaved_samples_iter(processor);
-
-//     let converter = Linear::new(left, right);
-
-//     let new_signal = signal.from_hz_to_hz(converter, source_sample_rate as f64, output_sample_rate);
-//     Box::new(new_signal.until_exhausted())
-// }
 
 pub(crate) async fn main_loop(
     mut receiver: TwoWayReceiverAsync<Command, PlayerResponse>,

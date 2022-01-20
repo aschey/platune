@@ -54,7 +54,7 @@ impl AudioProcessor {
         }
     }
 
-    pub(crate) fn sample_rate(&self) -> u32 {
+    pub(crate) fn sample_rate(&self) -> usize {
         self.decoder.sample_rate()
     }
 
@@ -69,6 +69,7 @@ impl AudioProcessor {
                         self.decoder.resume();
                     }
                     DecoderCommand::Stop => {
+                        info!("Completed decoder command");
                         return false;
                     }
                     DecoderCommand::Seek(time) => match self.decoder.seek(time) {
@@ -106,6 +107,7 @@ impl AudioProcessor {
                             .unwrap();
                     }
                 }
+                info!("Completed decoder command");
             }
             Err(TryRecvError::Empty) => {}
             Err(TryRecvError::Disconnected) => {}

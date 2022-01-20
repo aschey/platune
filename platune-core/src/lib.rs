@@ -28,7 +28,6 @@ pub mod platune_player {
     pub use crate::dto::player_status::PlayerStatus;
     use crate::event_loop::decode_loop;
     use crate::player::Player;
-    use crate::settings::resample_mode::ResampleMode;
     use crate::settings::Settings;
     use crate::{dto::command::Command, event_loop::main_loop};
     use crate::{two_way_channel, two_way_channel_async, TwoWaySender, TwoWaySenderAsync};
@@ -49,12 +48,8 @@ pub mod platune_player {
         fn default() -> Self {
             // WASAPI does not resample so it must be done here
             // Otherwise we can leave it to the OS to perform resampling
-            let resample_mode = if cfg!(windows) {
-                ResampleMode::Linear
-            } else {
-                ResampleMode::None
-            };
-            Self::new(Settings { resample_mode })
+            let enable_resampling = cfg!(windows);
+            Self::new(Settings { enable_resampling })
         }
     }
 
@@ -77,7 +72,7 @@ pub mod platune_player {
                     queue_tx,
                     queue_rx,
                     decoder_tx_,
-                    settings.resample_mode,
+                    settings.enable_resampling,
                 );
                 main_loop(cmd_rx, player).await
             };
@@ -237,9 +232,9 @@ pub mod platune_player {
                 warn!("Unable to send shutdown command {:?}", e);
             }
 
-            // if let Err(e) = self.decoder_handle.take().unwrap().join() {
-            //     warn!("Error terminating decoder thread: {:?}", e);
-            // }
+            if let Err(e) = self.decoder_handle.take().unwrap().join() {
+                warn!("Error terminating decoder thread: {:?}", e);
+            }
         }
     }
 }

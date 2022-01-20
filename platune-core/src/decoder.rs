@@ -86,8 +86,8 @@ impl Decoder {
         self.paused = false;
     }
 
-    pub(crate) fn sample_rate(&self) -> u32 {
-        self.spec.rate
+    pub(crate) fn sample_rate(&self) -> usize {
+        self.spec.rate as usize
     }
 
     pub(crate) fn seek(

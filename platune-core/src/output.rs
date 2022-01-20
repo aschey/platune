@@ -11,7 +11,7 @@ pub trait AudioOutput {
     fn flush(&mut self);
     fn stop(&mut self);
     fn start(&mut self);
-    fn sample_rate(&self) -> u32;
+    fn sample_rate(&self) -> usize;
     fn channels(&self) -> usize;
 }
 
@@ -79,7 +79,7 @@ where
 {
     ring_buf_producer: Option<rb::Producer<T>>,
     stream: Option<cpal::Stream>,
-    sample_rate: u32,
+    sample_rate: usize,
     channels: usize,
     buf: Vec<T>,
 }
@@ -221,7 +221,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
 
         let config = device.default_output_config().unwrap();
         let sample_rate = config.sample_rate();
-        self.sample_rate = sample_rate.0;
+        self.sample_rate = sample_rate.0 as usize;
         self.channels = config.channels() as usize;
         let stream = Self::create_stream(&device, config, sample_rate, ring_buf_consumer);
 
@@ -229,7 +229,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.stream = Some(stream.unwrap());
     }
 
-    fn sample_rate(&self) -> u32 {
+    fn sample_rate(&self) -> usize {
         self.sample_rate
     }
 }
