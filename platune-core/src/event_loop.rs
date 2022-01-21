@@ -1,25 +1,26 @@
-use rubato::{FftFixedInOut, Resampler};
-
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
-    audio_processor::{AudioProcessor, AudioProcessorState},
-    dto::{command::Command, player_response::PlayerResponse, queue_source::QueueSource},
+    audio_processor::AudioProcessor,
+    dto::{
+        command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
+        player_response::PlayerResponse, queue_source::QueueSource,
+    },
     output::{AudioOutput, CpalAudioOutput},
     player::Player,
     source::Source,
-    stereo_stream::StereoStream,
-    TwoWayReceiverAsync,
+    TwoWayReceiver, TwoWayReceiverAsync, TwoWaySenderAsync,
 };
 use crossbeam_channel::{Receiver, TryRecvError};
+use rubato::{FftFixedInOut, Resampler};
 use tracing::{error, info};
 
 pub(crate) fn decode_loop(
     queue_rx: Receiver<QueueSource>,
-    processor_state: Rc<RefCell<AudioProcessorState>>,
+    volume: f64,
+    mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
 ) {
     let output = CpalAudioOutput::new_output().unwrap();
-    let mut audio_manager = AudioManager::new(output);
+    let mut audio_manager = AudioManager::new(output, volume);
 
     loop {
         match queue_rx.try_recv() {
@@ -30,10 +31,11 @@ pub(crate) fn decode_loop(
             }) => {
                 if force_restart_output {
                     audio_manager.stop();
+                    audio_manager.reset();
+                } else {
                     audio_manager.start();
                 }
-                let processor = AudioProcessor::new(source, 2, processor_state.clone());
-                audio_manager.decode_source(processor, enable_resampling);
+                audio_manager.decode_source(source, &mut cmd_rx, &player_cmd_tx, enable_resampling);
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
@@ -45,9 +47,13 @@ pub(crate) fn decode_loop(
                         enable_resampling,
                         ..
                     }) => {
-                        audio_manager.start();
-                        let processor = AudioProcessor::new(source, 2, processor_state.clone());
-                        audio_manager.decode_source(processor, enable_resampling);
+                        audio_manager.reset();
+                        audio_manager.decode_source(
+                            source,
+                            &mut cmd_rx,
+                            &player_cmd_tx,
+                            enable_resampling,
+                        );
                     }
                     Err(_) => break,
                 };
@@ -66,10 +72,11 @@ struct AudioManager {
     output: Box<dyn AudioOutput>,
     buf_index: usize,
     resampler: FftFixedInOut<f64>,
+    volume: f64,
 }
 
 impl AudioManager {
-    fn new(output: Box<dyn AudioOutput>) -> Self {
+    fn new(output: Box<dyn AudioOutput>, volume: f64) -> Self {
         let default_sample_rate = 44_100;
         let default_channels = 2;
         let resampler = FftFixedInOut::<f64>::new(
@@ -87,6 +94,7 @@ impl AudioManager {
             buf_index: 0,
             resampler,
             output,
+            volume,
         }
     }
 
@@ -104,9 +112,13 @@ impl AudioManager {
         self.out_buf = vec![0.0; n_frames * channels];
     }
 
-    fn start(&mut self) {
+    fn reset(&mut self) {
         self.output.start();
         self.set_resampler();
+    }
+
+    fn start(&mut self) {
+        self.output.start();
     }
 
     fn stop(&mut self) {
@@ -144,7 +156,21 @@ impl AudioManager {
         self.output.write(&self.out_buf);
     }
 
-    fn decode_source(&mut self, processor: AudioProcessor, enable_resampling: bool) {
+    fn decode_source(
+        &mut self,
+        source: Box<dyn Source>,
+        cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
+        player_cmd_tx: &TwoWaySenderAsync<Command, PlayerResponse>,
+        enable_resampling: bool,
+    ) {
+        let mut processor = AudioProcessor::new(
+            source,
+            self.output.channels(),
+            cmd_rx,
+            player_cmd_tx,
+            self.volume,
+        );
+        processor.next();
         let input_sample_rate = processor.sample_rate();
         if input_sample_rate != self.input_sample_rate {
             self.play_remaining();
@@ -153,21 +179,22 @@ impl AudioManager {
         }
 
         if enable_resampling && processor.sample_rate() != self.output.sample_rate() {
-            self.decode_resample(processor);
+            self.decode_resample(&mut processor);
         } else {
-            self.decode_no_resample(processor);
+            self.decode_no_resample(&mut processor);
         }
+        self.volume = processor.volume();
     }
 
-    fn decode_no_resample(&mut self, mut processor: AudioProcessor) {
+    fn decode_no_resample(&mut self, processor: &mut AudioProcessor) {
+        self.output.write(processor.current());
         while let Some(next) = processor.next() {
             self.output.write(next);
         }
     }
 
-    fn decode_resample(&mut self, mut processor: AudioProcessor) {
+    fn decode_resample(&mut self, processor: &mut AudioProcessor) {
         let n_frames = self.resampler.nbr_frames_needed();
-        processor.next();
 
         let mut frame_pos = 0;
 

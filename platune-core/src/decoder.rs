@@ -1,7 +1,7 @@
 use crate::{dto::current_time::CurrentTime, source::Source};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use symphonia::core::{
-    audio::{SampleBuffer, SignalSpec},
+    audio::{Channels, SampleBuffer, SignalSpec},
     codecs::{Decoder as SymphoniaDecoder, DecoderOptions},
     formats::{FormatOptions, FormatReader, Packet, SeekMode, SeekTo, SeekedTo},
     io::MediaSourceStream,
@@ -18,17 +18,19 @@ pub(crate) struct Decoder {
     reader: Box<dyn FormatReader>,
     time_base: TimeBase,
     buf_len: usize,
-    spec: SignalSpec,
-    position: usize,
+    volume: f64,
     track_id: u32,
     input_channels: usize,
     output_channels: usize,
     timestamp: u64,
     paused: bool,
+    start_position: usize,
+    sample_rate: usize,
+    silence_skipped: bool,
 }
 
 impl Decoder {
-    pub(crate) fn new(source: Box<dyn Source>, output_channels: usize) -> Self {
+    pub(crate) fn new(source: Box<dyn Source>, volume: f64, output_channels: usize) -> Self {
         let mut hint = Hint::new();
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);
@@ -45,37 +47,43 @@ impl Decoder {
             .format(&hint, mss, &format_opts, &metadata_opts)
             .unwrap();
 
-        let mut reader = probed.format;
+        let reader = probed.format;
 
         let track = reader.default_track().unwrap();
 
         let time_base = track.codec_params.time_base.unwrap();
         let decode_opts = DecoderOptions { verify: true };
-        let mut decoder = symphonia::default::get_codecs()
+        let decoder = symphonia::default::get_codecs()
             .make(&track.codec_params, &decode_opts)
             .unwrap();
         let track = reader.default_track().unwrap();
         let track_id = track.id;
 
-        let (spec, sample_buf, position, timestamp) =
-            Self::process_first_packet(&mut reader, &mut decoder, track_id);
-        let buf = sample_buf.samples().to_owned();
-
         Self {
             decoder,
             reader,
             time_base,
-            buf_len: buf.len(),
-            input_channels: spec.channels.count(),
+            buf_len: 0,
+            input_channels: 0,
             output_channels,
             track_id,
-            buf,
-            sample_buf,
-            spec,
-            position,
-            timestamp,
+            buf: vec![],
+            sample_buf: SampleBuffer::<f64>::new(0, SignalSpec::new(0, Channels::all())),
+            volume,
+            timestamp: 0,
+            start_position: 0,
             paused: false,
+            sample_rate: 0,
+            silence_skipped: false,
         }
+    }
+
+    pub(crate) fn set_volume(&mut self, volume: f64) {
+        self.volume = volume;
+    }
+
+    pub(crate) fn volume(&self) -> f64 {
+        self.volume
     }
 
     pub(crate) fn pause(&mut self) {
@@ -87,7 +95,7 @@ impl Decoder {
     }
 
     pub(crate) fn sample_rate(&self) -> usize {
-        self.spec.rate as usize
+        self.sample_rate
     }
 
     pub(crate) fn seek(
@@ -114,48 +122,6 @@ impl Decoder {
         }
     }
 
-    fn process_first_packet(
-        reader: &mut Box<dyn FormatReader>,
-        decoder: &mut Box<dyn SymphoniaDecoder>,
-        track_id: u32,
-    ) -> (SignalSpec, SampleBuffer<f64>, usize, u64) {
-        let mut skipped_samples = 0;
-        loop {
-            match reader.next_packet() {
-                Ok(packet) => {
-                    if packet.track_id() != track_id {
-                        continue;
-                    }
-                    match decoder.decode(&packet) {
-                        Ok(decoded) => {
-                            let duration = decoded.capacity();
-                            let spec = *decoded.spec();
-                            let mut sample_buf = SampleBuffer::<f64>::new(duration as u64, spec);
-                            sample_buf.copy_interleaved_ref(decoded);
-                            let position: usize;
-                            let samples = sample_buf.samples();
-                            if let Some(index) = samples.iter().position(|s| *s != 0.0) {
-                                skipped_samples += index;
-                                info!("Skipped {} silent samples", skipped_samples);
-
-                                position = index;
-                            } else {
-                                skipped_samples += samples.len();
-                                continue;
-                            }
-
-                            return (spec, sample_buf, position, packet.ts());
-                        }
-                        Err(e) => {
-                            continue;
-                        }
-                    }
-                }
-                Err(e) => {}
-            }
-        }
-    }
-
     fn adjust_buffer_size(&mut self, samples_length: usize) {
         if samples_length > self.buf.len() {
             self.buf.clear();
@@ -165,11 +131,16 @@ impl Decoder {
     }
 
     fn process_output(&mut self, packet: &Packet) {
-        // Audio samples must be interleaved for cpal. Interleave the samples in the audio
-        // buffer into the sample buffer.
         let decoded = self.decoder.decode(packet).unwrap();
+
+        if self.sample_rate == 0 {
+            let duration = decoded.capacity();
+            let spec = *decoded.spec();
+            self.sample_rate = spec.rate as usize;
+            self.input_channels = spec.channels.count();
+            self.sample_buf = SampleBuffer::<f64>::new(duration as u64, spec);
+        }
         self.sample_buf.copy_interleaved_ref(decoded);
-        // Write all the interleaved samples to the ring buffer.
         let samples_len = self.sample_buf.samples().len();
 
         match (self.input_channels, self.output_channels) {
@@ -198,34 +169,51 @@ impl Decoder {
                 }
             }
         }
+
+        if !self.silence_skipped {
+            if let Some(index) = self.buf.iter().position(|s| *s != 0.0) {
+                self.start_position = index;
+                self.silence_skipped = true;
+            } else {
+                self.start_position = self.buf_len;
+            }
+            if self.start_position > 0 {
+                info!("Skipped {} silent samples", self.start_position);
+            }
+        } else {
+            self.start_position = 0;
+        }
     }
 
     pub(crate) fn current(&self) -> &[f64] {
-        &self.buf
+        &self.buf[self.start_position..self.buf_len]
     }
 
     pub(crate) fn next(&mut self) -> Option<&[f64]> {
         if self.paused {
             self.buf.fill(0.0);
         } else {
-            let packet = loop {
-                match self.reader.next_packet() {
-                    Ok(packet) => {
-                        if packet.track_id() == self.track_id {
-                            break packet;
+            loop {
+                let packet = loop {
+                    match self.reader.next_packet() {
+                        Ok(packet) => {
+                            if packet.track_id() == self.track_id {
+                                break packet;
+                            }
                         }
-                    }
-                    Err(_) => {
-                        return None;
-                    }
+                        Err(_) => {
+                            return None;
+                        }
+                    };
                 };
-            };
-
-            self.timestamp = packet.ts();
-
-            self.process_output(&packet);
+                self.timestamp = packet.ts();
+                self.process_output(&packet);
+                if self.silence_skipped {
+                    break;
+                }
+            }
         }
-        Some(&self.buf)
+        Some(self.current())
     }
 }
 

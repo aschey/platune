@@ -11,46 +11,25 @@ use crossbeam_channel::TryRecvError;
 use std::{cell::RefCell, rc::Rc};
 use tracing::{error, info};
 
-pub(crate) struct AudioProcessorState {
-    pub(crate) cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    pub(crate) player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
-    pub(crate) volume: f64,
-}
-
-impl AudioProcessorState {
-    pub(crate) fn new(
-        volume: f64,
-        cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
-        player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
-    ) -> Rc<RefCell<Self>> {
-        Rc::new(RefCell::new(Self {
-            cmd_rx,
-            player_cmd_tx,
-            volume,
-        }))
-    }
-}
-
-pub(crate) struct AudioProcessor {
-    state: Rc<RefCell<AudioProcessorState>>,
+pub(crate) struct AudioProcessor<'a> {
+    cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_tx: &'a TwoWaySenderAsync<Command, PlayerResponse>,
     decoder: Decoder,
-    volume: f64,
-    iteration: u16,
 }
 
-impl AudioProcessor {
+impl<'a> AudioProcessor<'a> {
     pub(crate) fn new(
         source: Box<dyn Source>,
         output_channels: usize,
-        state: Rc<RefCell<AudioProcessorState>>,
+        cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
+        player_cmd_tx: &'a TwoWaySenderAsync<Command, PlayerResponse>,
+        volume: f64,
     ) -> Self {
-        let decoder = Decoder::new(source, output_channels);
-        let volume = state.borrow_mut().volume;
+        let decoder = Decoder::new(source, volume, output_channels);
         Self {
             decoder,
-            state,
-            volume,
-            iteration: 0,
+            cmd_rx,
+            player_cmd_tx,
         }
     }
 
@@ -58,9 +37,12 @@ impl AudioProcessor {
         self.decoder.sample_rate()
     }
 
+    pub(crate) fn volume(&self) -> f64 {
+        self.decoder.volume()
+    }
+
     fn process_input(&mut self) -> bool {
-        let mut state = self.state.borrow_mut();
-        match state.cmd_rx.try_recv() {
+        match self.cmd_rx.try_recv() {
             Ok(command) => {
                 info!("Got decoder command {:?}", command);
 
@@ -74,7 +56,7 @@ impl AudioProcessor {
                     }
                     DecoderCommand::Seek(time) => match self.decoder.seek(time) {
                         Ok(seeked_to) => {
-                            if state
+                            if self
                                 .cmd_rx
                                 .respond(DecoderResponse::SeekResponse(Some(seeked_to.actual_ts)))
                                 .is_err()
@@ -83,7 +65,7 @@ impl AudioProcessor {
                             }
                         }
                         Err(e) => {
-                            if state
+                            if self
                                 .cmd_rx
                                 .respond(DecoderResponse::SeekResponse(None))
                                 .is_err()
@@ -96,13 +78,11 @@ impl AudioProcessor {
                         self.decoder.pause();
                     }
                     DecoderCommand::SetVolume(volume) => {
-                        state.volume = volume;
-                        self.volume = volume;
+                        self.decoder.set_volume(volume);
                     }
                     DecoderCommand::GetCurrentTime => {
                         let time = self.decoder.current_position();
-                        state
-                            .cmd_rx
+                        self.cmd_rx
                             .respond(DecoderResponse::CurrentTimeResponse(time))
                             .unwrap();
                     }
@@ -127,8 +107,7 @@ impl AudioProcessor {
         match self.decoder.next() {
             Some(val) => Some(val),
             None => {
-                let state = self.state.borrow_mut();
-                state.player_cmd_tx.try_send(Command::Ended).unwrap();
+                self.player_cmd_tx.try_send(Command::Ended).unwrap();
                 None
             }
         }

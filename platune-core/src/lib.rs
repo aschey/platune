@@ -9,7 +9,6 @@ mod output;
 mod player;
 mod settings;
 mod source;
-mod stereo_stream;
 
 pub mod platune_player {
     use std::thread;
@@ -17,7 +16,6 @@ pub mod platune_player {
     use tokio::sync::broadcast;
     use tracing::{error, warn};
 
-    use crate::audio_processor::AudioProcessorState;
     pub use crate::dto::audio_status::AudioStatus;
     use crate::dto::current_time::CurrentTime;
     use crate::dto::decoder_command::DecoderCommand;
@@ -78,8 +76,7 @@ pub mod platune_player {
             };
 
             let decoder_fn = || {
-                let processor_state = AudioProcessorState::new(1.0, decoder_rx, cmd_tx_);
-                decode_loop(queue_rx_, processor_state);
+                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_);
             };
 
             tokio::spawn(main_loop_fn);
