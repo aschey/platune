@@ -170,7 +170,7 @@ impl AudioManager {
             player_cmd_tx,
             self.volume,
         );
-        processor.next();
+
         let input_sample_rate = processor.sample_rate();
         if input_sample_rate != self.input_sample_rate {
             self.play_remaining();
@@ -187,7 +187,6 @@ impl AudioManager {
     }
 
     fn decode_no_resample(&mut self, processor: &mut AudioProcessor) {
-        self.output.write(processor.current());
         while let Some(next) = processor.next() {
             self.output.write(next);
         }
@@ -195,22 +194,24 @@ impl AudioManager {
 
     fn decode_resample(&mut self, processor: &mut AudioProcessor) {
         let n_frames = self.resampler.nbr_frames_needed();
-
         let mut frame_pos = 0;
 
+        let mut cur_frame = processor.current();
         loop {
             while self.buf_index < n_frames {
                 for chan in &mut self.in_buf {
-                    chan[self.buf_index] = processor.current()[frame_pos];
+                    chan[self.buf_index] = cur_frame[frame_pos];
                     frame_pos += 1;
                 }
 
                 self.buf_index += 1;
 
-                if frame_pos == processor.current().len() {
-                    if processor.next().is_none() {
-                        return;
+                if frame_pos == cur_frame.len() {
+                    match processor.next() {
+                        Some(next) => cur_frame = next,
+                        None => return,
                     }
+
                     frame_pos = 0;
                 }
             }

@@ -53,14 +53,14 @@ impl Decoder {
 
         let time_base = track.codec_params.time_base.unwrap();
         let decode_opts = DecoderOptions { verify: true };
-        let decoder = symphonia::default::get_codecs()
+        let symphonia_decoder = symphonia::default::get_codecs()
             .make(&track.codec_params, &decode_opts)
             .unwrap();
         let track = reader.default_track().unwrap();
         let track_id = track.id;
 
-        Self {
-            decoder,
+        let mut decoder = Self {
+            decoder: symphonia_decoder,
             reader,
             time_base,
             buf_len: 0,
@@ -75,7 +75,10 @@ impl Decoder {
             paused: false,
             sample_rate: 0,
             silence_skipped: false,
-        }
+        };
+        decoder.next();
+
+        decoder
     }
 
     pub(crate) fn set_volume(&mut self, volume: f64) {
@@ -194,62 +197,24 @@ impl Decoder {
             self.buf.fill(0.0);
         } else {
             loop {
-                let packet = loop {
-                    match self.reader.next_packet() {
-                        Ok(packet) => {
-                            if packet.track_id() == self.track_id {
-                                break packet;
-                            }
+                match self.reader.next_packet() {
+                    Ok(packet) => {
+                        if packet.track_id() != self.track_id {
+                            continue;
                         }
-                        Err(_) => {
-                            return None;
+
+                        self.timestamp = packet.ts();
+                        self.process_output(&packet);
+                        if self.silence_skipped {
+                            break;
                         }
-                    };
+                    }
+                    Err(_) => {
+                        return None;
+                    }
                 };
-                self.timestamp = packet.ts();
-                self.process_output(&packet);
-                if self.silence_skipped {
-                    break;
-                }
             }
         }
         Some(self.current())
     }
 }
-
-// impl Iterator for Decoder {
-//     type Item = f64;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.position < self.buf_len {
-//             let ret = Some(self.buf[self.position]);
-//             self.position += 1;
-//             return ret;
-//         }
-
-//         if self.paused {
-//             self.buf.fill(0.0);
-//         } else {
-//             let packet = loop {
-//                 match self.reader.next_packet() {
-//                     Ok(packet) => {
-//                         if packet.track_id() == self.track_id {
-//                             break packet;
-//                         }
-//                     }
-//                     Err(_) => {
-//                         return None;
-//                     }
-//                 };
-//             };
-
-//             self.timestamp = packet.ts();
-
-//             self.process_output(&packet);
-//         }
-
-//         self.position = 1;
-
-//         Some(self.buf[0])
-//     }
-// }

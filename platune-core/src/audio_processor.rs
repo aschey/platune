@@ -8,7 +8,6 @@ use crate::{
     TwoWayReceiver, TwoWaySenderAsync,
 };
 use crossbeam_channel::TryRecvError;
-use std::{cell::RefCell, rc::Rc};
 use tracing::{error, info};
 
 pub(crate) struct AudioProcessor<'a> {
@@ -113,29 +112,3 @@ impl<'a> AudioProcessor<'a> {
         }
     }
 }
-
-// impl Iterator for AudioProcessor {
-//     type Item = f64;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         // Reduce checks for user input to save CPU
-//         if self.iteration == 2048 {
-//             if !self.process_input() {
-//                 return None;
-//             }
-//             self.iteration = 0;
-//         } else {
-//             self.iteration += 1;
-//         }
-
-//         match self.decoder.next() {
-//             Some(val) => Some(val * self.volume),
-//             None => {
-//                 self.process_input();
-//                 let state = self.state.borrow_mut();
-//                 state.player_cmd_tx.try_send(Command::Ended).unwrap();
-//                 None
-//             }
-//         }
-//     }
-// }
