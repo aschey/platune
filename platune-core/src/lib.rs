@@ -1,5 +1,6 @@
 use crossbeam_channel::{unbounded, Receiver, SendError, Sender, TryRecvError};
 
+mod audio_manager;
 mod audio_processor;
 mod decoder;
 mod dto;
@@ -47,7 +48,10 @@ pub mod platune_player {
             // WASAPI does not resample so it must be done here
             // Otherwise we can leave it to the OS to perform resampling
             let enable_resampling = cfg!(windows);
-            Self::new(Settings { enable_resampling })
+            Self::new(Settings {
+                enable_resampling,
+                resample_chunk_size: 1024,
+            })
         }
     }
 
@@ -65,13 +69,7 @@ pub mod platune_player {
             let decoder_tx_ = decoder_tx.clone();
 
             let main_loop_fn = async move {
-                let player = Player::new(
-                    event_tx_,
-                    queue_tx,
-                    queue_rx,
-                    decoder_tx_,
-                    settings.enable_resampling,
-                );
+                let player = Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings);
                 main_loop(cmd_rx, player).await
             };
 

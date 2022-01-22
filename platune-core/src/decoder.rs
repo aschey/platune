@@ -24,9 +24,7 @@ pub(crate) struct Decoder {
     output_channels: usize,
     timestamp: u64,
     paused: bool,
-    start_position: usize,
     sample_rate: usize,
-    silence_skipped: bool,
 }
 
 impl Decoder {
@@ -71,12 +69,10 @@ impl Decoder {
             sample_buf: SampleBuffer::<f64>::new(0, SignalSpec::new(0, Channels::all())),
             volume,
             timestamp: 0,
-            start_position: 0,
             paused: false,
             sample_rate: 0,
-            silence_skipped: false,
         };
-        decoder.next();
+        decoder.skip_silence();
 
         decoder
     }
@@ -122,6 +118,24 @@ impl Decoder {
         CurrentTime {
             current_time: Some(Duration::from_millis(millis)),
             retrieval_time: Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()),
+        }
+    }
+
+    fn skip_silence(&mut self) {
+        let mut samples_skipped = 0;
+        loop {
+            self.next();
+            if let Some(index) = self.buf.iter().position(|s| *s != 0.0) {
+                self.buf_len -= index;
+                samples_skipped += index;
+                let buf_no_silence = self.buf[index..].to_owned();
+                self.buf[..self.buf_len].copy_from_slice(&buf_no_silence);
+
+                info!("Skipped {samples_skipped} silent samples");
+                break;
+            } else {
+                samples_skipped += self.buf.len();
+            }
         }
     }
 
@@ -172,48 +186,30 @@ impl Decoder {
                 }
             }
         }
-
-        if !self.silence_skipped {
-            if let Some(index) = self.buf.iter().position(|s| *s != 0.0) {
-                self.start_position = index;
-                self.silence_skipped = true;
-            } else {
-                self.start_position = self.buf_len;
-            }
-            if self.start_position > 0 {
-                info!("Skipped {} silent samples", self.start_position);
-            }
-        } else {
-            self.start_position = 0;
-        }
     }
 
     pub(crate) fn current(&self) -> &[f64] {
-        &self.buf[self.start_position..self.buf_len]
+        &self.buf[..self.buf_len]
     }
 
     pub(crate) fn next(&mut self) -> Option<&[f64]> {
         if self.paused {
             self.buf.fill(0.0);
         } else {
-            loop {
+            let packet = loop {
                 match self.reader.next_packet() {
                     Ok(packet) => {
-                        if packet.track_id() != self.track_id {
-                            continue;
-                        }
-
-                        self.timestamp = packet.ts();
-                        self.process_output(&packet);
-                        if self.silence_skipped {
-                            break;
+                        if packet.track_id() == self.track_id {
+                            break packet;
                         }
                     }
                     Err(_) => {
                         return None;
                     }
                 };
-            }
+            };
+            self.timestamp = packet.ts();
+            self.process_output(&packet);
         }
         Some(self.current())
     }
