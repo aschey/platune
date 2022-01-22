@@ -9,7 +9,7 @@ use crate::{
     output::AudioOutput,
     settings::Settings,
     source::Source,
-    TwoWayReceiver, TwoWaySenderAsync,
+    two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
 
 pub(crate) struct AudioManager {
@@ -107,7 +107,7 @@ impl AudioManager {
         &mut self,
         source: Box<dyn Source>,
         cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-        player_cmd_tx: &TwoWaySenderAsync<Command, PlayerResponse>,
+        player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
         settings: Settings,
     ) {
         let mut processor = AudioProcessor::new(

@@ -5,14 +5,15 @@ use crate::{
         player_response::PlayerResponse,
     },
     source::Source,
-    TwoWayReceiver, TwoWaySenderAsync,
+    two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
-use crossbeam_channel::TryRecvError;
+
+use flume::TryRecvError;
 use tracing::{error, info};
 
 pub(crate) struct AudioProcessor<'a> {
     cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    player_cmd_tx: &'a TwoWaySenderAsync<Command, PlayerResponse>,
+    player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
     decoder: Decoder,
 }
 
@@ -21,7 +22,7 @@ impl<'a> AudioProcessor<'a> {
         source: Box<dyn Source>,
         output_channels: usize,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-        player_cmd_tx: &'a TwoWaySenderAsync<Command, PlayerResponse>,
+        player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         volume: f64,
     ) -> Self {
         let decoder = Decoder::new(source, volume, output_channels);

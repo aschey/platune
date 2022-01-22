@@ -6,16 +6,17 @@ use crate::{
     },
     output::CpalAudioOutput,
     player::Player,
-    TwoWayReceiver, TwoWayReceiverAsync, TwoWaySenderAsync,
+    two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
-use crossbeam_channel::{Receiver, TryRecvError};
+
+use flume::{Receiver, TryRecvError};
 use tracing::{error, info};
 
 pub(crate) fn decode_loop(
     queue_rx: Receiver<QueueSource>,
     volume: f64,
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    player_cmd_tx: TwoWaySenderAsync<Command, PlayerResponse>,
+    player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
 ) {
     let output = CpalAudioOutput::new_output().unwrap();
     let mut audio_manager = AudioManager::new(output, volume);
@@ -57,10 +58,10 @@ pub(crate) fn decode_loop(
 }
 
 pub(crate) async fn main_loop(
-    mut receiver: TwoWayReceiverAsync<Command, PlayerResponse>,
+    mut receiver: TwoWayReceiver<Command, PlayerResponse>,
     mut player: Player,
 ) {
-    while let Some(next_command) = receiver.recv().await {
+    while let Ok(next_command) = receiver.recv_async().await {
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {

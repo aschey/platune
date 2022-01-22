@@ -1,3 +1,4 @@
+use flume::{Receiver, Sender};
 use std::{fs::File, io::BufReader, path::Path, time::Duration};
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
@@ -11,15 +12,15 @@ use crate::{
     http_stream_reader::HttpStreamReader,
     settings::Settings,
     source::ReadSeekSource,
-    TwoWaySender,
+    two_way_channel::TwoWaySender,
 };
 
 pub(crate) struct Player {
     state: PlayerState,
     event_tx: broadcast::Sender<PlayerEvent>,
     queued_count: usize,
-    queue_tx: crossbeam_channel::Sender<QueueSource>,
-    queue_rx: crossbeam_channel::Receiver<QueueSource>,
+    queue_tx: Sender<QueueSource>,
+    queue_rx: Receiver<QueueSource>,
     cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     audio_status: AudioStatus,
     settings: Settings,
@@ -28,8 +29,8 @@ pub(crate) struct Player {
 impl Player {
     pub(crate) fn new(
         event_tx: broadcast::Sender<PlayerEvent>,
-        queue_tx: crossbeam_channel::Sender<QueueSource>,
-        queue_rx: crossbeam_channel::Receiver<QueueSource>,
+        queue_tx: Sender<QueueSource>,
+        queue_rx: Receiver<QueueSource>,
         cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
         settings: Settings,
     ) -> Self {
@@ -125,7 +126,10 @@ impl Player {
         if self.is_empty() {
             return;
         }
-        self.cmd_sender.send(DecoderCommand::Play).await.unwrap();
+        self.cmd_sender
+            .send_async(DecoderCommand::Play)
+            .await
+            .unwrap();
         self.audio_status = AudioStatus::Playing;
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
@@ -136,7 +140,10 @@ impl Player {
         if self.is_empty() {
             return;
         }
-        self.cmd_sender.send(DecoderCommand::Pause).await.unwrap();
+        self.cmd_sender
+            .send_async(DecoderCommand::Pause)
+            .await
+            .unwrap();
         self.audio_status = AudioStatus::Paused;
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
@@ -145,7 +152,7 @@ impl Player {
 
     pub(crate) async fn set_volume(&mut self, volume: f64) {
         self.cmd_sender
-            .send(DecoderCommand::SetVolume(volume))
+            .send_async(DecoderCommand::SetVolume(volume))
             .await
             .unwrap();
         self.state.volume = volume;
@@ -195,10 +202,13 @@ impl Player {
 
     async fn reset(&mut self) {
         // Get rid of any pending sources
-        while self.queue_rx.try_recv().is_ok() {}
+        self.queue_rx.drain();
         self.queued_count = 0;
         self.audio_status = AudioStatus::Stopped;
-        self.cmd_sender.send(DecoderCommand::Stop).await.unwrap();
+        self.cmd_sender
+            .send_async(DecoderCommand::Stop)
+            .await
+            .unwrap();
     }
 
     pub(crate) fn on_ended(&mut self) {
