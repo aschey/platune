@@ -2594,6 +2594,7 @@ dependencies = [
 [[package]]
 name = "rb"
 version = "0.3.2"
+source = "git+https://github.com/aschey/rb?rev=9b570a20422a5e659c631ff2616a4fa1d3d1ce76#9b570a20422a5e659c631ff2616a4fa1d3d1ce76"
 
 [[package]]
 name = "realfft"

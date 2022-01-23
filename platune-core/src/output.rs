@@ -161,13 +161,13 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             loop {
                 match ring_buf_producer.write_blocking_timeout(samples, Duration::from_millis(1000))
                 {
-                    (Some(written), false) => {
+                    Ok(Some(written)) => {
                         samples = &samples[written..];
                     }
-                    (None, false) => {
+                    Ok(None) => {
                         break;
                     }
-                    _ => {
+                    Err(_) => {
                         info!("Consumer stalled. Terminating.");
                         return true;
                     }
