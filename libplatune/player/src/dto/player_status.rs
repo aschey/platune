@@ -1,4 +1,4 @@
-use super::{audio_status::AudioStatus, current_time::CurrentTime};
+use super::{audio_status::AudioStatus, current_position::CurrentPosition};
 
 #[derive(Clone, Debug)]
 pub struct TrackStatus {
@@ -8,5 +8,5 @@ pub struct TrackStatus {
 
 pub struct PlayerStatus {
     pub track_status: TrackStatus,
-    pub current_time: CurrentTime,
+    pub current_position: Option<CurrentPosition>,
 }

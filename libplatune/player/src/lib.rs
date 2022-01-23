@@ -17,7 +17,6 @@ pub mod platune_player {
     use tracing::{error, warn};
 
     pub use crate::dto::audio_status::AudioStatus;
-    use crate::dto::current_time::CurrentTime;
     use crate::dto::decoder_command::DecoderCommand;
     use crate::dto::decoder_response::DecoderResponse;
     pub use crate::dto::player_event::PlayerEvent;
@@ -133,23 +132,26 @@ pub mod platune_player {
 
             match track_status.status {
                 AudioStatus::Stopped => Ok(PlayerStatus {
-                    current_time: CurrentTime {
-                        current_time: None,
-                        retrieval_time: None,
-                    },
+                    current_position: None,
                     track_status,
                 }),
                 _ => {
                     match self
                         .decoder_tx
-                        .get_response(DecoderCommand::GetCurrentTime)
+                        .get_response(DecoderCommand::GetCurrentPosition)
                         .await
-                        .unwrap()
                     {
-                        DecoderResponse::CurrentTimeResponse(current_time) => Ok(PlayerStatus {
-                            current_time,
-                            track_status,
-                        }),
+                        Ok(DecoderResponse::CurrentPositionResponse(current_position)) => {
+                            Ok(PlayerStatus {
+                                current_position: Some(current_position),
+                                track_status,
+                            })
+                        }
+                        Err(e) => {
+                            return Err(PlayerError(format!(
+                                "Error getting current position: {e:?}"
+                            )))
+                        }
                         _ => unreachable!(),
                     }
                 }

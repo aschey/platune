@@ -1,6 +1,6 @@
 pub(crate) mod audio_status;
 pub(crate) mod command;
-pub(crate) mod current_time;
+pub(crate) mod current_position;
 pub(crate) mod decoder_command;
 pub(crate) mod decoder_response;
 pub(crate) mod player_event;

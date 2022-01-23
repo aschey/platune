@@ -74,9 +74,7 @@ impl Database {
         sqlx::migrate!("./migrations")
             .run(&mut con)
             .await
-            .map_err(|e| {
-                DbError::DbError(format!("Error running migrations {}", format!("{:?}", e)))
-            })?;
+            .map_err(|e| DbError::DbError(format!("Error running migrations {e:?}")))?;
         info!("Finished migrating");
 
         Ok(())

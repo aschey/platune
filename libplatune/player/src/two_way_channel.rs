@@ -19,22 +19,21 @@ pub(crate) struct TwoWayReceiver<TIn, TOut> {
     oneshot: Option<OneShotSender<TOut>>,
 }
 
+type Responder<TIn, TOut> = (TIn, Option<OneShotSender<TOut>>);
+
 impl<TIn, TOut> TwoWaySender<TIn, TOut> {
-    pub(crate) fn new(main_tx: Sender<(TIn, Option<OneShotSender<TOut>>)>) -> Self {
+    pub(crate) fn new(main_tx: Sender<Responder<TIn, TOut>>) -> Self {
         Self { main_tx }
     }
 
     pub(crate) async fn send_async(
         &self,
         message: TIn,
-    ) -> Result<(), SendError<(TIn, Option<OneShotSender<TOut>>)>> {
+    ) -> Result<(), SendError<Responder<TIn, TOut>>> {
         self.main_tx.send_async((message, None)).await
     }
 
-    pub(crate) fn try_send(
-        &self,
-        message: TIn,
-    ) -> Result<(), TrySendError<(TIn, Option<OneShotSender<TOut>>)>> {
+    pub(crate) fn try_send(&self, message: TIn) -> Result<(), TrySendError<Responder<TIn, TOut>>> {
         self.main_tx.try_send((message, None))
     }
 
@@ -49,7 +48,7 @@ impl<TIn, TOut> TwoWaySender<TIn, TOut> {
 }
 
 impl<TIn, TOut> TwoWayReceiver<TIn, TOut> {
-    pub(crate) fn new(main_rx: flume::Receiver<(TIn, Option<OneShotSender<TOut>>)>) -> Self {
+    pub(crate) fn new(main_rx: flume::Receiver<Responder<TIn, TOut>>) -> Self {
         Self {
             main_rx,
             oneshot: None,

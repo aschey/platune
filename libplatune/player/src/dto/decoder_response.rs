@@ -1,9 +1,9 @@
 use symphonia::core::units::TimeStamp;
 
-use super::current_time::CurrentTime;
+use super::current_position::CurrentPosition;
 
 #[derive(Clone, Debug)]
 pub(crate) enum DecoderResponse {
-    SeekResponse(Option<TimeStamp>),
-    CurrentTimeResponse(CurrentTime),
+    SeekResponse(Result<TimeStamp, String>),
+    CurrentPositionResponse(CurrentPosition),
 }

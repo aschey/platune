@@ -118,15 +118,19 @@ impl Player for PlayerImpl {
     async fn get_current_status(&self, _: Request<()>) -> Result<Response<StatusResponse>, Status> {
         let status = self.player.get_current_status().await.unwrap();
 
+        let (position, retrieval_time) = status
+            .current_position
+            .map(|p| {
+                (
+                    Some(prost_types::Duration::from(p.position)),
+                    Some(prost_types::Duration::from(p.retrieval_time)),
+                )
+            })
+            .unwrap_or((None, None));
+
         Ok(Response::new(StatusResponse {
-            progress: status
-                .current_time
-                .current_time
-                .map(prost_types::Duration::from),
-            retrieval_time: status
-                .current_time
-                .retrieval_time
-                .map(prost_types::Duration::from),
+            progress: position,
+            retrieval_time,
             status: match status.track_status.status {
                 AudioStatus::Playing => crate::rpc::PlayerStatus::Playing.into(),
                 AudioStatus::Paused => crate::rpc::PlayerStatus::Paused.into(),

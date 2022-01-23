@@ -1,4 +1,4 @@
-use crate::{dto::current_time::CurrentTime, source::Source};
+use crate::{dto::current_position::CurrentPosition, source::Source};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use symphonia::core::{
     audio::{Channels, SampleBuffer, SignalSpec},
@@ -121,13 +121,13 @@ impl Decoder {
         )
     }
 
-    pub(crate) fn current_position(&self) -> CurrentTime {
+    pub(crate) fn current_position(&self) -> CurrentPosition {
         let time = self.time_base.calc_time(self.timestamp);
         let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
 
-        CurrentTime {
-            current_time: Some(Duration::from_millis(millis)),
-            retrieval_time: Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap()),
+        CurrentPosition {
+            position: Duration::from_millis(millis),
+            retrieval_time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
         }
     }
 

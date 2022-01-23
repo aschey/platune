@@ -119,7 +119,7 @@ pub(crate) async fn main_loop(
             Command::GetCurrentStatus => {
                 let current_status = player.get_current_status();
                 if let Err(e) = receiver.respond(PlayerResponse::StatusResponse(current_status)) {
-                    error!("Error sending player status");
+                    error!("Error sending player status: {e:?}");
                 }
             }
             Command::Reset => {

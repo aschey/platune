@@ -45,7 +45,8 @@ impl<'a> AudioProcessor<'a> {
     }
 
     pub(crate) fn current_position(&self) -> Duration {
-        self.decoder.current_position().current_time.unwrap()
+        // This should only return None if the player is stopped which shouldn't happen here
+        self.decoder.current_position().position
     }
 
     fn process_input(&mut self) -> bool {
@@ -65,7 +66,7 @@ impl<'a> AudioProcessor<'a> {
                         Ok(seeked_to) => {
                             if self
                                 .cmd_rx
-                                .respond(DecoderResponse::SeekResponse(Some(seeked_to.actual_ts)))
+                                .respond(DecoderResponse::SeekResponse(Ok(seeked_to.actual_ts)))
                                 .is_err()
                             {
                                 error!("Unable to send seek result");
@@ -74,7 +75,7 @@ impl<'a> AudioProcessor<'a> {
                         Err(e) => {
                             if self
                                 .cmd_rx
-                                .respond(DecoderResponse::SeekResponse(None))
+                                .respond(DecoderResponse::SeekResponse(Err(e.to_string())))
                                 .is_err()
                             {
                                 error!("Unable to send seek result");
@@ -87,10 +88,10 @@ impl<'a> AudioProcessor<'a> {
                     DecoderCommand::SetVolume(volume) => {
                         self.decoder.set_volume(volume);
                     }
-                    DecoderCommand::GetCurrentTime => {
+                    DecoderCommand::GetCurrentPosition => {
                         let time = self.decoder.current_position();
                         self.cmd_rx
-                            .respond(DecoderResponse::CurrentTimeResponse(time))
+                            .respond(DecoderResponse::CurrentPositionResponse(time))
                             .unwrap();
                     }
                 }

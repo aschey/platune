@@ -159,14 +159,13 @@ impl Player {
             .unwrap()
         {
             DecoderResponse::SeekResponse(seek_result) => match seek_result {
-                Some(seek_result) => {
+                Ok(seek_result) => {
                     info!("Seeked to {:?}", seek_result);
                     self.event_tx
                         .send(PlayerEvent::Seek(self.state.clone(), time))
                         .unwrap_or_default();
                 }
-                None => warn!("Error seeking"),
-                //Err(e) => error!("Error receiving seek result: {:?}", e),
+                Err(e) => warn!("Error seeking: {e:?}"),
             },
             _ => unreachable!(),
         }

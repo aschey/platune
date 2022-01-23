@@ -88,6 +88,7 @@ impl AudioManager {
 
     fn write_output(&mut self) {
         self.buf_index = 0;
+        // This shouldn't panic as long as we calculated the number of channels and frames correctly
         let resampled = self.resampler.process(&self.in_buf).unwrap();
         let out_len = resampled[0].len();
         if out_len * self.output.channels() > self.out_buf.len() {
