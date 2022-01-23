@@ -13,6 +13,7 @@ pub(crate) struct TwoWaySender<TIn, TOut> {
     main_tx: Sender<(TIn, Option<OneShotSender<TOut>>)>,
 }
 
+#[derive(Debug)]
 pub(crate) struct TwoWayReceiver<TIn, TOut> {
     main_rx: Receiver<(TIn, Option<OneShotSender<TOut>>)>,
     oneshot: Option<OneShotSender<TOut>>,

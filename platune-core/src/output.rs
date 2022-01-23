@@ -151,41 +151,13 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
 
         Ok(stream)
     }
-}
 
-impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
-    fn write(&mut self, sample_iter: &[f64]) {
+    fn write_buf(&mut self, end_index: Option<usize>) -> bool {
         if let Some(ring_buf_producer) = &mut self.ring_buf_producer {
-            let mut i = 0;
-
-            for frame in sample_iter {
-                if i == self.buf.len() {
-                    let mut samples = &self.buf[..];
-                    loop {
-                        match ring_buf_producer
-                            .write_blocking_timeout(samples, Duration::from_millis(1000))
-                        {
-                            (Some(written), false) => {
-                                samples = &samples[written..];
-                            }
-                            (None, false) => {
-                                break;
-                            }
-                            _ => {
-                                info!("Consumer stalled. Terminating.");
-                                return;
-                            }
-                        }
-                    }
-                    i = 0;
-                }
-
-                self.buf[i] = T::from_sample(*frame);
-                i += 1;
-            }
-
-            let mut samples = &self.buf[..i];
-
+            let mut samples = match end_index {
+                Some(end_index) => &self.buf[..end_index],
+                None => &self.buf[..],
+            };
             loop {
                 match ring_buf_producer.write_blocking_timeout(samples, Duration::from_millis(1000))
                 {
@@ -197,11 +169,33 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
                     }
                     _ => {
                         info!("Consumer stalled. Terminating.");
-                        return;
+                        return true;
                     }
                 }
             }
         }
+        false
+    }
+}
+
+impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
+    fn write(&mut self, sample_iter: &[f64]) {
+        let mut i = 0;
+
+        for frame in sample_iter {
+            if i == self.buf.len() {
+                if self.write_buf(None) {
+                    return;
+                }
+
+                i = 0;
+            }
+
+            self.buf[i] = T::from_sample(*frame);
+            i += 1;
+        }
+
+        self.write_buf(Some(i));
     }
 
     fn channels(&self) -> usize {
