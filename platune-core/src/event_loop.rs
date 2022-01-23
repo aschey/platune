@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     audio_manager::AudioManager,
     dto::{
@@ -18,9 +20,9 @@ pub(crate) fn decode_loop(
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
 ) {
-    let output = CpalAudioOutput::new_output().unwrap();
+    let output = CpalAudioOutput::new_output(player_cmd_tx.clone()).unwrap();
     let mut audio_manager = AudioManager::new(output, volume);
-
+    let mut prev_stop_position = Duration::default();
     loop {
         match queue_rx.try_recv() {
             Ok(QueueSource {
@@ -29,12 +31,26 @@ pub(crate) fn decode_loop(
                 force_restart_output,
             }) => {
                 if force_restart_output {
+                    info!("Restarting output stream");
                     audio_manager.stop();
                     audio_manager.reset(settings.resample_chunk_size);
+                    prev_stop_position = audio_manager.decode_source(
+                        source,
+                        &mut cmd_rx,
+                        &player_cmd_tx,
+                        settings,
+                        Some(prev_stop_position),
+                    );
                 } else {
                     audio_manager.start();
+                    prev_stop_position = audio_manager.decode_source(
+                        source,
+                        &mut cmd_rx,
+                        &player_cmd_tx,
+                        settings,
+                        None,
+                    );
                 }
-                audio_manager.decode_source(source, &mut cmd_rx, &player_cmd_tx, settings);
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
@@ -45,7 +61,13 @@ pub(crate) fn decode_loop(
                         source, settings, ..
                     }) => {
                         audio_manager.reset(settings.resample_chunk_size);
-                        audio_manager.decode_source(source, &mut cmd_rx, &player_cmd_tx, settings);
+                        prev_stop_position = audio_manager.decode_source(
+                            source,
+                            &mut cmd_rx,
+                            &player_cmd_tx,
+                            settings,
+                            None,
+                        );
                     }
                     Err(_) => break,
                 };
@@ -86,7 +108,7 @@ pub(crate) async fn main_loop(
                 player.stop().await;
             }
             Command::Ended => {
-                player.on_ended();
+                player.on_ended().await;
             }
             Command::Next => {
                 player.go_next().await;
@@ -99,6 +121,9 @@ pub(crate) async fn main_loop(
                 if let Err(e) = receiver.respond(PlayerResponse::StatusResponse(current_status)) {
                     error!("Error sending player status");
                 }
+            }
+            Command::Reset => {
+                player.reset().await;
             }
             Command::Shutdown => {
                 return;

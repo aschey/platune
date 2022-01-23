@@ -39,7 +39,10 @@ impl<TIn, TOut> TwoWaySender<TIn, TOut> {
 
     pub(crate) async fn get_response(&self, message: TIn) -> Result<TOut, OneShotRecvError> {
         let (oneshot_tx, oneshot_rx) = oneshot_channel();
-        self.main_tx.send((message, Some(oneshot_tx))).unwrap();
+        self.main_tx
+            .send_async((message, Some(oneshot_tx)))
+            .await
+            .unwrap();
         oneshot_rx.await
     }
 }

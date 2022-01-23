@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use flume::{Receiver, Sender};
 use futures_util::StreamExt;
 use std::{
     fs::File,
@@ -6,12 +7,13 @@ use std::{
     str::FromStr,
     sync::{
         atomic::{AtomicU32, Ordering},
-        mpsc::{self, Receiver, Sender},
         Arc,
     },
 };
 use tempfile::{Builder, NamedTempFile};
 use tracing::{error, info};
+
+use crate::source::{ReadSeekSource, Source};
 
 #[derive(Debug)]
 pub(crate) struct HttpStreamReader {
@@ -20,16 +22,17 @@ pub(crate) struct HttpStreamReader {
     bytes_read: u32,
     wait_written_tx: Sender<u32>,
     ready_rx: Receiver<u64>,
+    url: String,
     pub file_len: u64,
 }
 
 impl HttpStreamReader {
-    pub fn new(url: String) -> Result<Self> {
+    pub async fn new(url: String) -> Result<Self> {
         let bytes_written = Arc::new(AtomicU32::new(0));
         let bytes_written_ = bytes_written.clone();
 
-        let (ready_tx, ready_rx) = mpsc::channel();
-        let (wait_written_tx, wait_written_rx) = mpsc::channel();
+        let (ready_tx, ready_rx) = flume::unbounded();
+        let (wait_written_tx, wait_written_rx) = flume::unbounded();
 
         let tempfile_ = Builder::new()
             .prefix("platunecache")
@@ -39,17 +42,19 @@ impl HttpStreamReader {
         let tempfile = tempfile_
             .reopen()
             .with_context(|| "Error reading http stream reader temp file")?;
-
+        let url_ = url.clone();
         tokio::spawn(async move {
             if let Err(e) =
-                Self::download_file(&url, tempfile, bytes_written_, wait_written_rx, ready_tx).await
+                Self::download_file(&url_, tempfile, bytes_written_, wait_written_rx, ready_tx)
+                    .await
             {
                 error!("Error downloading file {:?}", e);
             }
         });
 
         let file_len = ready_rx
-            .recv()
+            .recv_async()
+            .await
             .with_context(|| "Error receiving ready signal from file http file download")?;
 
         let output_reader = BufReader::new(tempfile_);
@@ -60,7 +65,23 @@ impl HttpStreamReader {
             wait_written_tx,
             ready_rx,
             file_len,
+            url,
         })
+    }
+
+    pub fn into_source(self) -> Box<dyn Source> {
+        let parts: Vec<&str> = self.url.split('.').collect();
+        let extension = if parts.len() > 1 {
+            parts.last().map(|e| e.to_string())
+        } else {
+            None
+        };
+        info!("Using extension {extension:?}");
+
+        let file_len = self.file_len;
+        let reader = BufReader::new(self);
+
+        Box::new(ReadSeekSource::new(reader, Some(file_len), extension))
     }
 
     async fn download_file(
@@ -115,7 +136,8 @@ impl HttpStreamReader {
             if new_len >= target {
                 info!("Reached target");
                 ready_tx
-                    .send(file_len)
+                    .send_async(file_len)
+                    .await
                     .with_context(|| "Error sending http file download ready signal")?;
 
                 // reset target to prevent this branch from triggering again

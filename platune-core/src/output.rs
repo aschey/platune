@@ -1,11 +1,10 @@
-use cpal::{SampleRate, Stream, SupportedStreamConfig};
-use std::fmt::Debug;
+use cpal::{SampleRate, Stream, StreamError, SupportedStreamConfig};
 use std::result;
+use std::{fmt::Debug, time::Duration};
 use symphonia::core::audio::RawSample;
 use symphonia::core::conv::ConvertibleSample;
 
-pub trait AudioOutput {
-    fn write_stream(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>);
+pub(crate) trait AudioOutput {
     fn write(&mut self, sample_iter: &[f64]);
     fn flush(&mut self);
     fn stop(&mut self);
@@ -28,9 +27,14 @@ pub type Result<T> = result::Result<T, AudioOutputError>;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rb::*;
 
-use tracing::error;
+use tracing::{error, info};
 
-pub struct CpalAudioOutput;
+use crate::{
+    dto::{command::Command, player_response::PlayerResponse},
+    two_way_channel::TwoWaySender,
+};
+
+pub(crate) struct CpalAudioOutput;
 
 trait AudioOutputSample: cpal::Sample + ConvertibleSample + RawSample + Send + Debug + 'static {}
 
@@ -39,7 +43,9 @@ impl AudioOutputSample for i16 {}
 impl AudioOutputSample for u16 {}
 
 impl CpalAudioOutput {
-    pub fn new_output() -> Result<Box<dyn AudioOutput>> {
+    pub(crate) fn new_output(
+        cmd_sender: TwoWaySender<Command, PlayerResponse>,
+    ) -> Result<Box<dyn AudioOutput>> {
         // Get default host.
         let host = cpal::default_host();
 
@@ -62,9 +68,9 @@ impl CpalAudioOutput {
 
         // Select proper playback routine based on sample format.
         Ok(match config.sample_format() {
-            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new()),
-            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new()),
-            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new()),
+            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(cmd_sender)),
+            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(cmd_sender)),
+            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(cmd_sender)),
         })
     }
 }
@@ -78,16 +84,18 @@ where
     sample_rate: usize,
     channels: usize,
     buf: Vec<T>,
+    cmd_sender: TwoWaySender<Command, PlayerResponse>,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn new() -> Self {
+    pub fn new(cmd_sender: TwoWaySender<Command, PlayerResponse>) -> Self {
         Self {
             ring_buf_producer: None,
             stream: None,
             sample_rate: 0,
             channels: 0,
             buf: vec![T::MID; 2048],
+            cmd_sender,
         }
     }
 
@@ -96,6 +104,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         supported_config: SupportedStreamConfig,
         sample_rate: SampleRate,
         ring_buf_consumer: Consumer<T>,
+        cmd_sender: TwoWaySender<Command, PlayerResponse>,
     ) -> Result<Stream> {
         // Output audio stream config.
         let config = cpal::StreamConfig {
@@ -113,7 +122,16 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
                 // Mute any remaining samples.
                 data[written..].iter_mut().for_each(|s| *s = T::MID);
             },
-            move |err| error!("audio output error: {}", err),
+            move |err| match err {
+                StreamError::DeviceNotAvailable => {
+                    info!("Device unplugged. Resetting...");
+                    cmd_sender.try_send(Command::Reset).unwrap();
+                }
+                cpal::StreamError::BackendSpecific { err } => {
+                    error!("Playback error: {err}");
+                    cmd_sender.try_send(Command::Stop).unwrap();
+                }
+            },
         );
 
         if let Err(err) = stream_result {
@@ -136,33 +154,6 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
 }
 
 impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
-    fn write_stream(&mut self, sample_iter: Box<dyn Iterator<Item = f64>>) {
-        if let Some(ring_buf_producer) = &mut self.ring_buf_producer {
-            let mut buf = vec![T::MID; 2048];
-
-            let mut i = 0;
-
-            for frame in sample_iter {
-                if i == buf.len() {
-                    let mut samples = &buf[..];
-                    while let Some(written) = ring_buf_producer.write_blocking(samples) {
-                        samples = &samples[written..];
-                    }
-                    i = 0;
-                }
-
-                buf[i] = T::from_sample(frame);
-                i += 1;
-            }
-
-            let mut samples = &buf[..i];
-
-            while let Some(written) = ring_buf_producer.write_blocking(samples) {
-                samples = &samples[written..];
-            }
-        }
-    }
-
     fn write(&mut self, sample_iter: &[f64]) {
         if let Some(ring_buf_producer) = &mut self.ring_buf_producer {
             let mut i = 0;
@@ -170,8 +161,21 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
             for frame in sample_iter {
                 if i == self.buf.len() {
                     let mut samples = &self.buf[..];
-                    while let Some(written) = ring_buf_producer.write_blocking(samples) {
-                        samples = &samples[written..];
+                    loop {
+                        match ring_buf_producer
+                            .write_blocking_timeout(samples, Duration::from_millis(1000))
+                        {
+                            (Some(written), false) => {
+                                samples = &samples[written..];
+                            }
+                            (None, false) => {
+                                break;
+                            }
+                            _ => {
+                                info!("Consumer stalled. Terminating.");
+                                return;
+                            }
+                        }
                     }
                     i = 0;
                 }
@@ -182,8 +186,20 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
 
             let mut samples = &self.buf[..i];
 
-            while let Some(written) = ring_buf_producer.write_blocking(samples) {
-                samples = &samples[written..];
+            loop {
+                match ring_buf_producer.write_blocking_timeout(samples, Duration::from_millis(1000))
+                {
+                    (Some(written), false) => {
+                        samples = &samples[written..];
+                    }
+                    (None, false) => {
+                        break;
+                    }
+                    _ => {
+                        info!("Consumer stalled. Terminating.");
+                        return;
+                    }
+                }
             }
         }
     }
@@ -219,7 +235,13 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         let sample_rate = config.sample_rate();
         self.sample_rate = sample_rate.0 as usize;
         self.channels = config.channels() as usize;
-        let stream = Self::create_stream(&device, config, sample_rate, ring_buf_consumer);
+        let stream = Self::create_stream(
+            &device,
+            config,
+            sample_rate,
+            ring_buf_consumer,
+            self.cmd_sender.clone(),
+        );
 
         self.ring_buf_producer = Some(ring_buf_producer);
         self.stream = Some(stream.unwrap());

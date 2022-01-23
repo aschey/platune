@@ -2594,8 +2594,6 @@ dependencies = [
 [[package]]
 name = "rb"
 version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a27f4c5756bd2bfb5942758d8168805655c62388eef0544e581a2bfa5b532f15"
 
 [[package]]
 name = "realfft"

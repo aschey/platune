@@ -11,7 +11,7 @@ use crate::{
     },
     http_stream_reader::HttpStreamReader,
     settings::Settings,
-    source::ReadSeekSource,
+    source::{ReadSeekSource, Source},
     two_way_channel::TwoWaySender,
 };
 
@@ -50,63 +50,52 @@ impl Player {
         }
     }
 
-    fn append_file(&mut self, path: String) {
-        if path.starts_with("http") {
-            let parts: Vec<&str> = path.rsplitn(2, '.').collect();
-            let extension = if parts.len() > 1 {
-                Some(parts[1].to_owned())
+    async fn append_file(&mut self, path: String, force_restart_output: bool) {
+        let source = {
+            if path.starts_with("http") {
+                info!("Creating http stream");
+                let http_reader = match HttpStreamReader::new(path.to_owned()).await {
+                    Ok(http_reader) => http_reader,
+                    Err(e) => {
+                        error!("Error downloading http file {:?}", e);
+                        return;
+                    }
+                };
+                http_reader.into_source()
             } else {
-                None
-            };
-            let http_reader = match HttpStreamReader::new(path.to_owned()) {
-                Ok(http_reader) => http_reader,
-                Err(e) => {
-                    error!("Error downloading http file {:?}", e);
-                    return;
-                }
-            };
-            let file_len = http_reader.file_len;
-            let reader = BufReader::new(http_reader);
+                let file = match File::open(&path) {
+                    Ok(file) => file,
+                    Err(e) => {
+                        error!("Error opening file {:?}", e);
+                        return;
+                    }
+                };
+                let file_len = file.metadata().unwrap().len();
+                let extension = Path::new(&path)
+                    .extension()
+                    .map(|e| e.to_str().unwrap().to_owned());
+                let reader = BufReader::new(file);
 
-            info!("Sending source {}", path);
-            self.queue_tx
-                .send(QueueSource {
-                    source: Box::new(ReadSeekSource::new(reader, Some(file_len), extension)),
-                    settings: self.settings.clone(),
-                    force_restart_output: false,
-                })
-                .unwrap();
-        } else {
-            let file = match File::open(&path) {
-                Ok(file) => file,
-                Err(e) => {
-                    error!("Error opening file {:?}", e);
-                    return;
-                }
-            };
-            let len = file.metadata().unwrap().len();
-            let extension = Path::new(&path)
-                .extension()
-                .map(|e| e.to_str().unwrap().to_owned());
-            let reader = BufReader::new(file);
+                Box::new(ReadSeekSource::new(reader, Some(file_len), extension)) as Box<dyn Source>
+            }
+        };
 
-            info!("Sending source {}", path);
-            self.queue_tx
-                .send(QueueSource {
-                    source: Box::new(ReadSeekSource::new(reader, Some(len), extension)),
-                    settings: self.settings.clone(),
-                    force_restart_output: false,
-                })
-                .unwrap();
-        }
-
+        info!("Sending source {}", path);
+        self.queue_tx
+            .send_async(QueueSource {
+                source,
+                settings: self.settings.clone(),
+                force_restart_output,
+            })
+            .await
+            .unwrap();
         self.queued_count += 1;
         info!("Queued count {}", self.queued_count);
     }
 
-    fn start(&mut self) {
+    async fn start(&mut self, force_restart_output: bool) {
         if let Some(path) = self.get_current() {
-            self.append_file(path);
+            self.append_file(path, force_restart_output).await;
             self.audio_status = AudioStatus::Playing;
 
             self.event_tx
@@ -114,7 +103,7 @@ impl Player {
                 .unwrap_or_default();
         }
         if let Some(path) = self.get_next() {
-            self.append_file(path);
+            self.append_file(path, false).await;
         }
     }
 
@@ -184,7 +173,7 @@ impl Player {
     }
 
     pub(crate) async fn stop(&mut self) {
-        self.reset().await;
+        self.reset_queue().await;
         self.state.queue_position = 0;
         self.state.queue = vec![];
         self.queued_count = 0;
@@ -200,7 +189,7 @@ impl Player {
         }
     }
 
-    async fn reset(&mut self) {
+    async fn reset_queue(&mut self) {
         // Get rid of any pending sources
         self.queue_rx.drain();
         self.queued_count = 0;
@@ -211,7 +200,7 @@ impl Player {
             .unwrap();
     }
 
-    pub(crate) fn on_ended(&mut self) {
+    pub(crate) async fn on_ended(&mut self) {
         info!("Received ended event");
         self.queued_count -= 1;
         info!("Queued count {}", self.queued_count);
@@ -236,19 +225,34 @@ impl Player {
         }
 
         if let Some(file) = self.get_next() {
-            self.append_file(file);
+            self.append_file(file, false).await;
         }
     }
 
+    pub(crate) async fn reset(&mut self) {
+        let queue = self.state.queue.clone();
+        let queue_position = self.state.queue_position;
+        self.set_queue_internal(queue, queue_position, true).await;
+    }
+
     pub(crate) async fn set_queue(&mut self, queue: Vec<String>) {
+        self.set_queue_internal(queue, 0, false).await;
+    }
+
+    async fn set_queue_internal(
+        &mut self,
+        queue: Vec<String>,
+        start_position: usize,
+        force_restart_output: bool,
+    ) {
         // Don't need to send stop signal if no sources are playing
         if self.queued_count > 0 {
-            self.reset().await;
+            self.reset_queue().await;
         }
 
-        self.state.queue_position = 0;
+        self.state.queue_position = start_position;
         self.state.queue = queue;
-        self.start();
+        self.start(force_restart_output).await;
     }
 
     pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) {
@@ -266,7 +270,7 @@ impl Player {
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
             // so we need to add it here explicitly
             if self.queued_count == 1 {
-                self.append_file(song);
+                self.append_file(song, false).await;
             }
 
             self.event_tx
@@ -296,8 +300,8 @@ impl Player {
                 self.state.queue_position
             );
             self.state.queue_position += 1;
-            self.reset().await;
-            self.start();
+            self.reset_queue().await;
+            self.start(false).await;
             self.event_tx
                 .send(PlayerEvent::Next(self.state.clone()))
                 .unwrap_or_default();
@@ -316,8 +320,8 @@ impl Player {
                 self.state.queue_position
             );
             self.state.queue_position -= 1;
-            self.reset().await;
-            self.start();
+            self.reset_queue().await;
+            self.start(false).await;
             self.event_tx
                 .send(PlayerEvent::Previous(self.state.clone()))
                 .unwrap_or_default();

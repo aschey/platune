@@ -1,4 +1,7 @@
+use std::time::Duration;
+
 use rubato::{FftFixedInOut, Resampler};
+use tracing::info;
 
 use crate::{
     audio_processor::AudioProcessor,
@@ -109,13 +112,16 @@ impl AudioManager {
         cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
         settings: Settings,
-    ) {
+        start_position: Option<Duration>,
+    ) -> Duration {
+        let source_name = format!("{source:?}");
         let mut processor = AudioProcessor::new(
             source,
             self.output.channels(),
             cmd_rx,
             player_cmd_tx,
             self.volume,
+            start_position,
         );
 
         let input_sample_rate = processor.sample_rate();
@@ -131,6 +137,10 @@ impl AudioManager {
             self.decode_no_resample(&mut processor);
         }
         self.volume = processor.volume();
+        info!("Finished decoding {source_name}");
+        let stop_position = processor.current_position();
+        info!("Stopped decoding at {stop_position:?}");
+        stop_position
     }
 
     fn decode_no_resample(&mut self, processor: &mut AudioProcessor) {

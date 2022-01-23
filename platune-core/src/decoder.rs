@@ -28,7 +28,12 @@ pub(crate) struct Decoder {
 }
 
 impl Decoder {
-    pub(crate) fn new(source: Box<dyn Source>, volume: f64, output_channels: usize) -> Self {
+    pub(crate) fn new(
+        source: Box<dyn Source>,
+        volume: f64,
+        output_channels: usize,
+        start_position: Option<Duration>,
+    ) -> Self {
         let mut hint = Hint::new();
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);
@@ -72,7 +77,12 @@ impl Decoder {
             paused: false,
             sample_rate: 0,
         };
-        decoder.skip_silence();
+        if let Some(start_position) = start_position {
+            decoder.seek(start_position).unwrap();
+            decoder.next();
+        } else {
+            decoder.skip_silence();
+        }
 
         decoder
     }

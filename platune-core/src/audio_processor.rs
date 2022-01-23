@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{
     decoder::Decoder,
     dto::{
@@ -24,8 +26,9 @@ impl<'a> AudioProcessor<'a> {
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         volume: f64,
+        start_position: Option<Duration>,
     ) -> Self {
-        let decoder = Decoder::new(source, volume, output_channels);
+        let decoder = Decoder::new(source, volume, output_channels, start_position);
         Self {
             decoder,
             cmd_rx,
@@ -39,6 +42,10 @@ impl<'a> AudioProcessor<'a> {
 
     pub(crate) fn volume(&self) -> f64 {
         self.decoder.volume()
+    }
+
+    pub(crate) fn current_position(&self) -> Duration {
+        self.decoder.current_position().current_time.unwrap()
     }
 
     fn process_input(&mut self) -> bool {
