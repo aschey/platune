@@ -1,18 +1,18 @@
-use std::sync::mpsc::Sender;
+use std::{fmt::Debug, time::Duration};
 
-use super::player_status::PlayerStatus;
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub(crate) enum Command {
     SetQueue(Vec<String>),
     AddToQueue(Vec<String>),
-    Seek(u64),
-    SetVolume(f32),
+    Seek(Duration),
+    SetVolume(f64),
     Pause,
     Resume,
-    GetCurrentStatus(Sender<PlayerStatus>),
+    GetCurrentStatus,
     Stop,
     Ended,
     Next,
     Previous,
     Shutdown,
+    Reset,
 }

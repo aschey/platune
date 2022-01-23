@@ -2,7 +2,7 @@ use crate::player_server::Player;
 use crate::rpc::*;
 use std::{pin::Pin, sync::Arc, time::Duration};
 
-use platune_core::platune_player::*;
+use libplatune_player::platune_player::*;
 use tokio::sync::broadcast::{self, error::RecvError};
 use tonic::{Request, Response, Status};
 use tracing::{error, info};

@@ -1,10 +1,12 @@
-use std::time::Duration;
+use super::{audio_status::AudioStatus, current_time::CurrentTime};
 
-use super::audio_status::AudioStatus;
-
-pub struct PlayerStatus {
-    pub current_time: Option<Duration>,
-    pub retrieval_time: Option<Duration>,
+#[derive(Clone, Debug)]
+pub struct TrackStatus {
     pub status: AudioStatus,
     pub current_song: Option<String>,
+}
+
+pub struct PlayerStatus {
+    pub track_status: TrackStatus,
+    pub current_time: CurrentTime,
 }

@@ -1,209 +1,212 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read, Seek},
-    sync::mpsc::{Receiver, Sender},
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
-
-use rodio::{Decoder, OutputStreamHandle, PlayError, Sink as RodioSink};
+use flume::{Receiver, Sender};
+use std::{fs::File, io::BufReader, path::Path, time::Duration};
 use tokio::sync::broadcast;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
-#[cfg(feature = "runtime-tokio")]
-use crate::http_stream_reader::HttpStreamReader;
 use crate::{
     dto::{
-        audio_status::AudioStatus, player_event::PlayerEvent, player_state::PlayerState,
-        player_status::PlayerStatus,
+        audio_status::AudioStatus, decoder_command::DecoderCommand,
+        decoder_response::DecoderResponse, player_event::PlayerEvent, player_state::PlayerState,
+        player_status::TrackStatus, queue_source::QueueSource,
     },
-    timer::{Timer, TimerStatus},
+    http_stream_reader::HttpStreamReader,
+    settings::Settings,
+    source::{ReadSeekSource, Source},
+    two_way_channel::TwoWaySender,
 };
 
 pub(crate) struct Player {
-    sink: RodioSink,
     state: PlayerState,
     event_tx: broadcast::Sender<PlayerEvent>,
-    finish_tx: Sender<Receiver<()>>,
-    handle: OutputStreamHandle,
-    ignore_count: usize,
     queued_count: usize,
-    current_time: Timer,
+    queue_tx: Sender<QueueSource>,
+    queue_rx: Receiver<QueueSource>,
+    cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
+    audio_status: AudioStatus,
+    settings: Settings,
 }
 
 impl Player {
     pub(crate) fn new(
-        finish_tx: Sender<Receiver<()>>,
         event_tx: broadcast::Sender<PlayerEvent>,
-        handle: OutputStreamHandle,
-    ) -> Result<Self, PlayError> {
-        let sink = rodio::Sink::try_new(&handle)?;
-
-        Ok(Self {
-            sink,
-            finish_tx,
-            handle,
+        queue_tx: Sender<QueueSource>,
+        queue_rx: Receiver<QueueSource>,
+        cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
+        settings: Settings,
+    ) -> Self {
+        Self {
             event_tx,
             state: PlayerState {
                 queue: vec![],
                 volume: 0.5,
                 queue_position: 0,
             },
-            ignore_count: 0,
             queued_count: 0,
-            current_time: Timer::default(),
-        })
+            queue_tx,
+            queue_rx,
+            cmd_sender,
+            audio_status: AudioStatus::Stopped,
+            settings,
+        }
     }
 
-    fn append_decoder<R: Read + Seek + Send + 'static>(&mut self, reader: R) {
-        let decoder = match Decoder::new(reader) {
-            Ok(decoder) => decoder,
-            Err(e) => {
-                error!("Error creating decoder {:?}", e);
-                return;
-            }
-        };
-        self.sink.append(decoder);
-    }
-
-    fn append_file(&mut self, path: String) {
-        if path.starts_with("http") {
-            #[cfg(feature = "runtime-tokio")]
-            {
-                let http_reader = match HttpStreamReader::new(path) {
+    async fn append_file(&mut self, path: String, force_restart_output: bool) {
+        let source = {
+            if path.starts_with("http") {
+                info!("Creating http stream");
+                let http_reader = match HttpStreamReader::new(path.to_owned()).await {
                     Ok(http_reader) => http_reader,
                     Err(e) => {
                         error!("Error downloading http file {:?}", e);
                         return;
                     }
                 };
+                http_reader.into_source()
+            } else {
+                let file = match File::open(&path) {
+                    Ok(file) => file,
+                    Err(e) => {
+                        error!("Error opening file {:?}", e);
+                        return;
+                    }
+                };
+                let file_len = file.metadata().unwrap().len();
+                let extension = Path::new(&path)
+                    .extension()
+                    .map(|e| e.to_str().unwrap().to_owned());
+                let reader = BufReader::new(file);
 
-                let reader = BufReader::new(http_reader);
-                self.append_decoder(reader);
+                Box::new(ReadSeekSource::new(reader, Some(file_len), extension)) as Box<dyn Source>
             }
-        } else {
-            let file = match File::open(path) {
-                Ok(file) => file,
-                Err(e) => {
-                    error!("Error opening file {:?}", e);
-                    return;
-                }
-            };
-            let reader = BufReader::new(file);
-            self.append_decoder(reader);
-        }
+        };
 
+        info!("Sending source {}", path);
+        self.queue_tx
+            .send_async(QueueSource {
+                source,
+                settings: self.settings.clone(),
+                force_restart_output,
+            })
+            .await
+            .unwrap();
         self.queued_count += 1;
         info!("Queued count {}", self.queued_count);
     }
 
-    fn start(&mut self) {
+    async fn start(&mut self, force_restart_output: bool) {
         if let Some(path) = self.get_current() {
-            self.append_file(path);
-            self.signal_finish();
-            self.current_time.start();
+            self.append_file(path, force_restart_output).await;
+            self.audio_status = AudioStatus::Playing;
 
             self.event_tx
                 .send(PlayerEvent::StartQueue(self.state.clone()))
                 .unwrap_or_default();
         }
         if let Some(path) = self.get_next() {
-            self.append_file(path);
-            self.signal_finish();
+            self.append_file(path, false).await;
         }
     }
 
-    pub(crate) fn play(&mut self) {
-        self.sink.play();
-        self.current_time.resume();
+    fn is_empty(&self) -> bool {
+        self.state.queue.is_empty()
+    }
+
+    pub(crate) async fn play(&mut self) {
+        if self.is_empty() {
+            return;
+        }
+        self.cmd_sender
+            .send_async(DecoderCommand::Play)
+            .await
+            .unwrap();
+        self.audio_status = AudioStatus::Playing;
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
             .unwrap_or_default();
     }
 
-    pub(crate) fn pause(&mut self) {
-        if self.state.queue.is_empty() {
+    pub(crate) async fn pause(&mut self) {
+        if self.is_empty() {
             return;
         }
-        self.sink.pause();
-        self.current_time.pause();
+        self.cmd_sender
+            .send_async(DecoderCommand::Pause)
+            .await
+            .unwrap();
+        self.audio_status = AudioStatus::Paused;
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
             .unwrap_or_default();
     }
 
-    pub(crate) fn set_volume(&mut self, volume: f32) {
-        self.sink.set_volume(volume);
+    pub(crate) async fn set_volume(&mut self, volume: f64) {
+        self.cmd_sender
+            .send_async(DecoderCommand::SetVolume(volume))
+            .await
+            .unwrap();
         self.state.volume = volume;
     }
 
-    pub(crate) fn seek(&mut self, millis: u64) {
-        self.sink.seek(Duration::from_millis(millis));
-        self.current_time.set_time(Duration::from_millis(millis));
-        self.event_tx
-            .send(PlayerEvent::Seek(self.state.clone(), millis))
-            .unwrap_or_default();
+    pub(crate) async fn seek(&mut self, time: Duration) {
+        if self.is_empty() {
+            return;
+        }
+
+        match self
+            .cmd_sender
+            .get_response(DecoderCommand::Seek(time))
+            .await
+            .unwrap()
+        {
+            DecoderResponse::SeekResponse(seek_result) => match seek_result {
+                Some(seek_result) => {
+                    info!("Seeked to {:?}", seek_result);
+                    self.event_tx
+                        .send(PlayerEvent::Seek(self.state.clone(), time))
+                        .unwrap_or_default();
+                }
+                None => warn!("Error seeking"),
+                //Err(e) => error!("Error receiving seek result: {:?}", e),
+            },
+            _ => unreachable!(),
+        }
     }
 
-    pub(crate) fn stop(&mut self) {
-        self.reset();
+    pub(crate) async fn stop(&mut self) {
+        self.reset_queue().await;
         self.state.queue_position = 0;
-        self.current_time.stop();
+        self.state.queue = vec![];
+        self.queued_count = 0;
         self.event_tx
             .send(PlayerEvent::Stop(self.state.clone()))
             .unwrap_or_default();
     }
 
-    pub(crate) fn get_current_status(&self) -> PlayerStatus {
-        let current_time = self.current_time.elapsed();
-        PlayerStatus {
-            current_time,
-            retrieval_time: current_time
-                .map(|_| SystemTime::now().duration_since(UNIX_EPOCH).ok())
-                .flatten(),
-            status: match self.current_time.status() {
-                TimerStatus::Paused => AudioStatus::Paused,
-                TimerStatus::Started => AudioStatus::Playing,
-                TimerStatus::Stopped => AudioStatus::Stopped,
-            },
+    pub(crate) fn get_current_status(&self) -> TrackStatus {
+        TrackStatus {
+            status: self.audio_status.clone(),
             current_song: self.get_current(),
         }
     }
 
-    fn ignore_ended(&mut self) {
-        self.ignore_count = self.queued_count;
-
-        info!("Ignore count {}", self.ignore_count);
+    async fn reset_queue(&mut self) {
+        // Get rid of any pending sources
+        self.queue_rx.drain();
+        self.queued_count = 0;
+        self.audio_status = AudioStatus::Stopped;
+        self.cmd_sender
+            .send_async(DecoderCommand::Stop)
+            .await
+            .unwrap();
     }
 
-    fn reset(&mut self) {
-        self.ignore_ended();
-        self.sink.stop();
-        self.current_time.stop();
-        self.sink = match rodio::Sink::try_new(&self.handle) {
-            Ok(sink) => sink,
-            Err(e) => {
-                error!("Error creating audio sink {:?}", e);
-                return;
-            }
-        };
-        self.sink.set_volume(self.state.volume);
-    }
-
-    pub(crate) fn on_ended(&mut self) {
+    pub(crate) async fn on_ended(&mut self) {
         info!("Received ended event");
         self.queued_count -= 1;
         info!("Queued count {}", self.queued_count);
-        if self.ignore_count > 0 {
-            info!("Ignoring ended event");
-            self.ignore_count -= 1;
-            info!("Ignore count {}", self.ignore_count);
-            return;
-        } else {
-            info!("Not ignoring ended event");
-        }
+
         if self.state.queue_position < self.state.queue.len() - 1 {
             self.state.queue_position += 1;
-            self.current_time.start();
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
                 .unwrap_or_default();
@@ -212,7 +215,7 @@ impl Player {
                 self.state.queue_position
             );
         } else {
-            self.current_time.stop();
+            self.audio_status = AudioStatus::Stopped;
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
                 .unwrap_or_default();
@@ -222,49 +225,52 @@ impl Player {
         }
 
         if let Some(file) = self.get_next() {
-            self.append_file(file);
-            self.signal_finish();
+            self.append_file(file, false).await;
         }
     }
 
-    fn signal_finish(&mut self) {
-        info!("Sending finish receiver");
-        let receiver = match self.sink.get_current_receiver() {
-            Some(receiver) => receiver,
-            None => {
-                error!("Unable to trigger song ended event because no receiver was found");
-                return;
-            }
-        };
-        if let Err(e) = self.finish_tx.send(receiver) {
-            error!("Error sending song ended event {:?}", e);
-        }
+    pub(crate) async fn reset(&mut self) {
+        let queue = self.state.queue.clone();
+        let queue_position = self.state.queue_position;
+        self.set_queue_internal(queue, queue_position, true).await;
     }
 
-    pub(crate) fn set_queue(&mut self, queue: Vec<String>) {
-        self.reset();
-        self.state.queue_position = 0;
+    pub(crate) async fn set_queue(&mut self, queue: Vec<String>) {
+        self.set_queue_internal(queue, 0, false).await;
+    }
+
+    async fn set_queue_internal(
+        &mut self,
+        queue: Vec<String>,
+        start_position: usize,
+        force_restart_output: bool,
+    ) {
+        // Don't need to send stop signal if no sources are playing
+        if self.queued_count > 0 {
+            self.reset_queue().await;
+        }
+
+        self.state.queue_position = start_position;
         self.state.queue = queue;
-        self.start();
+        self.start(force_restart_output).await;
     }
 
-    pub(crate) fn add_to_queue(&mut self, songs: Vec<String>) {
+    pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) {
         for song in songs {
-            self.add_one_to_queue(song);
+            self.add_one_to_queue(song).await;
         }
     }
 
-    fn add_one_to_queue(&mut self, song: String) {
+    async fn add_one_to_queue(&mut self, song: String) {
         // Queue is not currently running, need to start it
         if self.queued_count == 0 {
-            self.set_queue(vec![song]);
+            self.set_queue(vec![song]).await;
         } else {
             self.state.queue.push(song.clone());
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
             // so we need to add it here explicitly
             if self.queued_count == 1 {
-                self.append_file(song);
-                self.signal_finish();
+                self.append_file(song, false).await;
             }
 
             self.event_tx
@@ -285,38 +291,43 @@ impl Player {
         self.state.queue.get(position).map(String::to_owned)
     }
 
-    pub(crate) fn go_next(&mut self) {
-        if self.state.queue_position < self.state.queue.len() - 1 {
-            info!(
-                "Current position: {}, Going to previous track.",
-                self.state.queue_position
-            );
-            self.state.queue_position += 1;
-            self.reset();
-            self.start();
-            self.event_tx
-                .send(PlayerEvent::Next(self.state.clone()))
-                .unwrap_or_default();
-        } else {
-            info!("Already at beginning. Not going to previous track.");
-        }
-    }
-
-    pub(crate) fn go_previous(&mut self) {
-        if self.state.queue_position > 0 {
+    pub(crate) async fn go_next(&mut self) {
+        let queue_len = self.state.queue.len();
+        // need to check for length > 0 first because an unsigned value of 0 - 1 panics
+        if queue_len > 0 && self.state.queue_position < queue_len - 1 {
             info!(
                 "Current position: {}, Going to next track.",
                 self.state.queue_position
             );
+            self.state.queue_position += 1;
+            self.reset_queue().await;
+            self.start(false).await;
+            self.event_tx
+                .send(PlayerEvent::Next(self.state.clone()))
+                .unwrap_or_default();
+        } else {
+            info!(
+                "Current position: {}. Already at end. Not going to next track.",
+                self.state.queue_position
+            );
+        }
+    }
+
+    pub(crate) async fn go_previous(&mut self) {
+        if self.state.queue_position > 0 {
+            info!(
+                "Current position: {}, Going to previous track.",
+                self.state.queue_position
+            );
             self.state.queue_position -= 1;
-            self.reset();
-            self.start();
+            self.reset_queue().await;
+            self.start(false).await;
             self.event_tx
                 .send(PlayerEvent::Previous(self.state.clone()))
                 .unwrap_or_default();
         } else {
             info!(
-                "Current position: {}. Already at end. Not going to next track.",
+                "Current position: {}. Already at beginning. Not going to previous track.",
                 self.state.queue_position
             );
         }

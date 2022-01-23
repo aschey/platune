@@ -176,8 +176,8 @@ impl Decoder {
 
                 let mut i = 0;
                 for sample in self.sample_buf.samples().iter() {
-                    self.buf[i] = *sample;
-                    self.buf[i + 1] = *sample;
+                    self.buf[i] = *sample * self.volume;
+                    self.buf[i + 1] = *sample * self.volume;
                     i += 2;
                 }
             }
@@ -185,14 +185,14 @@ impl Decoder {
                 self.adjust_buffer_size(samples_len / 2);
 
                 for (i, sample) in self.sample_buf.samples().chunks_exact(2).enumerate() {
-                    self.buf[i] = (sample[0] + sample[1]) / 2.0;
+                    self.buf[i] = (sample[0] + sample[1]) / 2.0 * self.volume;
                 }
             }
             _ => {
                 self.adjust_buffer_size(samples_len);
 
                 for (i, sample) in self.sample_buf.samples().iter().enumerate() {
-                    self.buf[i] = *sample;
+                    self.buf[i] = *sample * self.volume;
                 }
             }
         }

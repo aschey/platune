@@ -11,7 +11,7 @@ use futures::future::try_join_all;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use libplatune_management::manager::Manager;
-use platune_core::platune_player::PlatunePlayer;
+use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(unix)]
 use std::env;
 use std::env::var;
@@ -35,7 +35,7 @@ enum Transport {
 }
 
 pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
-    let platune_player = Arc::new(PlatunePlayer::default());
+    let platune_player = Arc::new(PlatunePlayer::new(Default::default()));
     let manager = init_manager().await?;
 
     let mut servers = Vec::<_>::new();

@@ -1,26 +1,34 @@
-#[cfg(all(feature = "runtime-tokio", feature = "runtime-async-std"))]
-compile_error!("features 'runtime-tokio' and 'runtime-async-std' are mutually exclusive");
-
+mod audio_manager;
+mod audio_processor;
+mod decoder;
 mod dto;
 mod event_loop;
-#[cfg(feature = "runtime-tokio")]
 mod http_stream_reader;
+mod output;
 mod player;
-mod timer;
+mod settings;
+mod source;
+mod two_way_channel;
+
 pub mod platune_player {
-    use std::sync::mpsc;
-    use std::sync::mpsc::SyncSender;
+    use std::thread;
+    use std::time::Duration;
     use tokio::sync::broadcast;
     use tracing::{error, warn};
 
     pub use crate::dto::audio_status::AudioStatus;
+    use crate::dto::current_time::CurrentTime;
+    use crate::dto::decoder_command::DecoderCommand;
+    use crate::dto::decoder_response::DecoderResponse;
     pub use crate::dto::player_event::PlayerEvent;
+    use crate::dto::player_response::PlayerResponse;
     pub use crate::dto::player_state::PlayerState;
     pub use crate::dto::player_status::PlayerStatus;
-    use crate::{
-        dto::command::Command,
-        event_loop::{ended_loop, main_loop},
-    };
+    use crate::event_loop::decode_loop;
+    use crate::player::Player;
+    use crate::settings::Settings;
+    use crate::two_way_channel::{two_way_channel, TwoWaySender};
+    use crate::{dto::command::Command, event_loop::main_loop};
     use std::fs::remove_file;
 
     #[derive(Debug, Clone)]
@@ -28,38 +36,42 @@ pub mod platune_player {
 
     #[derive(Debug)]
     pub struct PlatunePlayer {
-        cmd_sender: SyncSender<Command>,
+        cmd_sender: TwoWaySender<Command, PlayerResponse>,
+        decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
-    }
-
-    impl Default for PlatunePlayer {
-        fn default() -> Self {
-            Self::new()
-        }
+        decoder_handle: Option<std::thread::JoinHandle<()>>,
     }
 
     impl PlatunePlayer {
-        pub fn new() -> Self {
+        pub fn new(settings: Settings) -> Self {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
-            let (tx, rx) = std::sync::mpsc::channel();
-            let tx_ = tx;
-            let (finish_tx, finish_rx) = std::sync::mpsc::sync_channel(32);
-            let finish_tx_ = finish_tx.clone();
-
             let event_tx_ = event_tx.clone();
-            let main_loop_fn = || main_loop(finish_rx, tx_, event_tx_);
-            let ended_loop_fn = || ended_loop(rx, finish_tx_);
-            #[cfg(feature = "runtime-tokio")]
-            {
-                tokio::task::spawn_blocking(main_loop_fn);
-                tokio::task::spawn_blocking(ended_loop_fn);
-            }
+            let (cmd_tx, cmd_rx) = two_way_channel();
+            let cmd_tx_ = cmd_tx.clone();
+            let (queue_tx, queue_rx) = flume::bounded(2);
+            let queue_rx_ = queue_rx.clone();
+            let (decoder_tx, decoder_rx) = two_way_channel();
+            let decoder_tx_ = decoder_tx.clone();
+
+            let main_loop_fn = async move {
+                let player = Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings);
+                main_loop(cmd_rx, player).await
+            };
+
+            let decoder_fn = || {
+                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_);
+            };
+
+            tokio::spawn(main_loop_fn);
+            let decoder_handle = Some(thread::spawn(decoder_fn));
 
             PlatunePlayer {
-                cmd_sender: finish_tx,
+                cmd_sender: cmd_tx,
                 event_tx,
+                decoder_tx,
+                decoder_handle,
             }
         }
 
@@ -88,86 +100,122 @@ pub mod platune_player {
             self.event_tx.subscribe()
         }
 
-        pub fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
+        pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::SetQueue(queue))
+                .send_async(Command::SetQueue(queue))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
+        pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::AddToQueue(songs))
+                .send_async(Command::AddToQueue(songs))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn seek(&self, millis: u64) -> Result<(), PlayerError> {
+        pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Seek(millis))
+                .send_async(Command::Seek(time))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
-            let (current_status_tx, current_status_rx) = mpsc::channel();
-            match self
+        pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
+            let track_status = match self
                 .cmd_sender
-                .send(Command::GetCurrentStatus(current_status_tx))
+                .get_response(Command::GetCurrentStatus)
+                .await
             {
-                Ok(()) => match current_status_rx.recv() {
-                    Ok(current_status) => Ok(current_status),
-                    Err(e) => Err(PlayerError(format!("{:?}", e))),
-                },
-                Err(e) => Err(PlayerError(format!("{:?}", e))),
+                Ok(PlayerResponse::StatusResponse(track_status)) => track_status,
+                Err(e) => return Err(PlayerError(format!("{:?}", e))),
+            };
+
+            match track_status.status {
+                AudioStatus::Stopped => Ok(PlayerStatus {
+                    current_time: CurrentTime {
+                        current_time: None,
+                        retrieval_time: None,
+                    },
+                    track_status,
+                }),
+                _ => {
+                    match self
+                        .decoder_tx
+                        .get_response(DecoderCommand::GetCurrentTime)
+                        .await
+                        .unwrap()
+                    {
+                        DecoderResponse::CurrentTimeResponse(current_time) => Ok(PlayerStatus {
+                            current_time,
+                            track_status,
+                        }),
+                        _ => unreachable!(),
+                    }
+                }
             }
         }
 
-        pub fn stop(&self) -> Result<(), PlayerError> {
+        pub async fn stop(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Stop)
+                .send_async(Command::Stop)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn set_volume(&self, volume: f32) -> Result<(), PlayerError> {
+        pub async fn set_volume(&self, volume: f64) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::SetVolume(volume))
+                .send_async(Command::SetVolume(volume))
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn pause(&self) -> Result<(), PlayerError> {
+        pub async fn pause(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Pause)
+                .send_async(Command::Pause)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn resume(&self) -> Result<(), PlayerError> {
+        pub async fn resume(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Resume)
+                .send_async(Command::Resume)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn next(&self) -> Result<(), PlayerError> {
+        pub async fn next(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Next)
+                .send_async(Command::Next)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn previous(&self) -> Result<(), PlayerError> {
+        pub async fn previous(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Previous)
+                .send_async(Command::Previous)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub fn join(&self) -> Result<(), PlayerError> {
+        pub async fn join(&self) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send(Command::Shutdown)
+                .send_async(Command::Shutdown)
+                .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
     }
 
     impl Drop for PlatunePlayer {
         fn drop(&mut self) {
-            if let Err(e) = self.cmd_sender.send(Command::Shutdown) {
+            self.cmd_sender.try_send(Command::Stop).unwrap_or_default();
+            if let Err(e) = self.cmd_sender.try_send(Command::Shutdown) {
                 // Receiver may already be terminated so this may not be an error
                 warn!("Unable to send shutdown command {:?}", e);
+            }
+
+            if let Err(e) = self.decoder_handle.take().unwrap().join() {
+                warn!("Error terminating decoder thread: {:?}", e);
             }
         }
     }

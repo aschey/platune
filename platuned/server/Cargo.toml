@@ -14,7 +14,7 @@ directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.19"
 libplatune-management = {path = "../../libplatune/management"}
-platune-core = {path = "../../platune-core"}
+libplatune-player = {path = "../../libplatune/player"}
 prost = "0.9.0"
 prost-types = "0.9.0"
 tokio = {version = "1.15.0", features = ["rt-multi-thread", "macros"]}

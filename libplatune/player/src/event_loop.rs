@@ -1,84 +1,129 @@
-use std::sync::mpsc::{Receiver, Sender, SyncSender};
-
-use tokio::sync::broadcast;
-use tracing::{error, info};
+use std::time::Duration;
 
 use crate::{
-    dto::{command::Command, player_event::PlayerEvent},
+    audio_manager::AudioManager,
+    dto::{
+        command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
+        player_response::PlayerResponse, queue_source::QueueSource,
+    },
+    output::CpalAudioOutput,
     player::Player,
+    two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
 
-pub(crate) fn ended_loop(receiver: Receiver<Receiver<()>>, request_tx: SyncSender<Command>) {
-    while let Ok(ended_receiver) = receiver.recv() {
-        // Strange platform-specific behavior here
-        // On Windows, receiver.recv() always returns Ok, but on Linux it returns Err
-        // after the first event if the queue is stopped
-        ended_receiver.recv().unwrap_or_default();
-        if let Err(e) = request_tx.send(Command::Ended) {
-            error!("Error sending song ended message {:?}", e);
+use flume::{Receiver, TryRecvError};
+use tracing::{error, info};
+
+pub(crate) fn decode_loop(
+    queue_rx: Receiver<QueueSource>,
+    volume: f64,
+    mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
+) {
+    let output = CpalAudioOutput::new_output(player_cmd_tx.clone()).unwrap();
+    let mut audio_manager = AudioManager::new(output, volume);
+    let mut prev_stop_position = Duration::default();
+    loop {
+        match queue_rx.try_recv() {
+            Ok(QueueSource {
+                source,
+                settings,
+                force_restart_output,
+            }) => {
+                if force_restart_output {
+                    info!("Restarting output stream");
+                    audio_manager.stop();
+                    audio_manager.reset(settings.resample_chunk_size);
+                    prev_stop_position = audio_manager.decode_source(
+                        source,
+                        &mut cmd_rx,
+                        &player_cmd_tx,
+                        settings,
+                        Some(prev_stop_position),
+                    );
+                } else {
+                    audio_manager.start();
+                    prev_stop_position = audio_manager.decode_source(
+                        source,
+                        &mut cmd_rx,
+                        &player_cmd_tx,
+                        settings,
+                        None,
+                    );
+                }
+            }
+            Err(TryRecvError::Empty) => {
+                // If no pending source, stop the output to preserve cpu
+                audio_manager.play_remaining();
+                audio_manager.stop();
+                match queue_rx.recv() {
+                    Ok(QueueSource {
+                        source, settings, ..
+                    }) => {
+                        audio_manager.reset(settings.resample_chunk_size);
+                        prev_stop_position = audio_manager.decode_source(
+                            source,
+                            &mut cmd_rx,
+                            &player_cmd_tx,
+                            settings,
+                            None,
+                        );
+                    }
+                    Err(_) => break,
+                };
+            }
+            Err(TryRecvError::Disconnected) => {
+                break;
+            }
         }
     }
 }
 
-pub(crate) fn main_loop(
-    receiver: Receiver<Command>,
-    finish_rx: Sender<Receiver<()>>,
-    event_tx: broadcast::Sender<PlayerEvent>,
+pub(crate) async fn main_loop(
+    mut receiver: TwoWayReceiver<Command, PlayerResponse>,
+    mut player: Player,
 ) {
-    let (_stream, handle) = match rodio::OutputStream::try_default() {
-        Ok((stream, handle)) => (stream, handle),
-        Err(e) => {
-            error!("Error creating audio output stream {:?}", e);
-            return;
-        }
-    };
-
-    let mut queue = match Player::new(finish_rx, event_tx, handle) {
-        Ok(player) => player,
-        Err(e) => {
-            error!("Error creating audio sink {:?}", e);
-            return;
-        }
-    };
-
-    while let Ok(next_command) = receiver.recv() {
+    while let Ok(next_command) = receiver.recv_async().await {
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {
-                queue.set_queue(songs);
+                player.set_queue(songs).await;
             }
             Command::AddToQueue(song) => {
-                queue.add_to_queue(song);
+                player.add_to_queue(song).await;
             }
             Command::Seek(millis) => {
-                queue.seek(millis);
+                player.seek(millis).await;
             }
             Command::SetVolume(volume) => {
-                queue.set_volume(volume);
+                player.set_volume(volume).await;
             }
             Command::Pause => {
-                queue.pause();
+                player.pause().await;
             }
             Command::Resume => {
-                queue.play();
+                player.play().await;
             }
             Command::Stop => {
-                queue.stop();
+                player.stop().await;
             }
             Command::Ended => {
-                queue.on_ended();
+                player.on_ended().await;
             }
             Command::Next => {
-                queue.go_next();
+                player.go_next().await;
             }
             Command::Previous => {
-                queue.go_previous();
+                player.go_previous().await;
             }
-            Command::GetCurrentStatus(current_status_tx) => {
-                let current_status = queue.get_current_status();
-                if let Err(e) = current_status_tx.send(current_status) {
-                    error!("Error sending player status {:?}", e);
+            Command::GetCurrentStatus => {
+                let current_status = player.get_current_status();
+                if let Err(e) = receiver.respond(PlayerResponse::StatusResponse(current_status)) {
+                    error!("Error sending player status");
                 }
+            }
+            Command::Reset => {
+                player.reset().await;
             }
             Command::Shutdown => {
                 return;

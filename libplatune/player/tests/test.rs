@@ -2,14 +2,13 @@ use async_trait::async_trait;
 
 use futures::Future;
 
+use libplatune_player::platune_player::{PlatunePlayer, PlayerEvent};
 use rstest::*;
 use std::{env::current_dir, time::Duration};
 use tokio::sync::broadcast;
 use tokio::time::{error::Elapsed, timeout};
 
 use assert_matches::*;
-use libplatune_player::platune_player::PlatunePlayer;
-use libplatune_player::platune_player::PlayerEvent;
 
 #[cfg(not(target_os = "windows"))]
 static SEPARATOR: &str = "/";
@@ -89,12 +88,12 @@ async fn init_play(
     broadcast::Receiver<PlayerEvent>,
     Vec<SongInfo>,
 ) {
-    let player = PlatunePlayer::new();
+    let player = PlatunePlayer::new(Default::default());
     let mut receiver = player.subscribe();
 
     let songs = get_test_files(num_songs);
     let song_queue = songs.get_paths();
-    player.set_queue(song_queue.clone()).unwrap();
+    player.set_queue(song_queue.clone()).await.unwrap();
 
     assert_matches!(
         receiver.timed_recv().await,
@@ -115,7 +114,7 @@ async fn test_basic(num_songs: usize) {
         timed_await(receiver.recv()).await.unwrap(),
         Ok(PlayerEvent::QueueEnded(_))
     );
-    player.join().unwrap();
+    player.join().await.unwrap();
 }
 
 #[rstest(
@@ -134,9 +133,9 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
 
     for (i, _) in songs.iter().enumerate() {
         if i == pause_index {
-            player.pause().unwrap();
+            player.pause().await.unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Pause(_)));
-            player.resume().unwrap();
+            player.resume().await.unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Resume(_)));
         }
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
@@ -145,7 +144,7 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
         receiver.timed_recv().await,
         Some(PlayerEvent::QueueEnded(_))
     );
-    player.join().unwrap();
+    player.join().await.unwrap();
 }
 
 #[rstest(
@@ -161,10 +160,10 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_seek(num_songs: usize, seek_index: usize) {
     let (player, mut receiver, songs) = init_play(num_songs).await;
-    let seek_time = 100;
+    let seek_time = Duration::from_millis(100);
     for (i, _) in songs.iter().enumerate() {
         if i == seek_index {
-            player.seek(seek_time).unwrap();
+            player.seek(seek_time).await.unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(_,millis)) if millis == seek_time);
         }
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
@@ -174,5 +173,5 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
         receiver.timed_recv().await,
         Some(PlayerEvent::QueueEnded(_))
     );
-    player.join().unwrap();
+    player.join().await.unwrap();
 }
