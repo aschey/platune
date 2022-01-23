@@ -9,9 +9,6 @@ edition = "2021"
 name = "libplatune_player"
 path = "src/lib.rs"
 
-[features]
-dummy = ["cpal/dummy"]
-
 [dependencies]
 anyhow = "1.0.51"
 cpal = {git = "https://github.com/aschey/cpal", rev = "58d4ce76503d29ea65fff52bd11fdca42598e049"}
@@ -29,6 +26,7 @@ tracing = "0.1.29"
 [dev-dependencies]
 assert_matches = "1.5.0"
 async-trait = "0.1.52"
+cpal = {git = "https://github.com/aschey/cpal", rev = "58d4ce76503d29ea65fff52bd11fdca42598e049", features = ["dummy"]}
 ctor = "0.1.21"
 futures = "0.3.19"
 rstest = "0.12.0"

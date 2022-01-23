@@ -15,7 +15,7 @@ setup:
 
 test *ARGS:
     #!/usr/bin/env sh
-    cargo test --locked --features=dummy -- {{ARGS}}
+    cargo test --locked -- {{ARGS}}
     (cd ./platune-cli && go test ./...)    
 
 lint:
