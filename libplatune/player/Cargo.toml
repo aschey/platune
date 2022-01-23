@@ -14,7 +14,7 @@ anyhow = "1.0.51"
 cpal = {git = "https://github.com/aschey/cpal", rev = "58d4ce76503d29ea65fff52bd11fdca42598e049"}
 flume = "0.10.10"
 futures-util = "0.3.19"
-rb = {git = "https://github.com/aschey/rb", rev = "9b570a20422a5e659c631ff2616a4fa1d3d1ce76"}
+rb = {git = "https://github.com/aschey/rb", rev = "451f90295452d38740f639d015942cfb32779dc0"}
 reqwest = {version = "0.11.7", features = ["stream"]}
 rubato = "0.10.0"
 strum = {version = "0.23.0", features = ["derive"]}
