@@ -13,8 +13,9 @@ mod two_way_channel;
 pub mod platune_player {
     use std::thread;
     use std::time::Duration;
+    use thiserror::Error;
     use tokio::sync::broadcast;
-    use tracing::{error, warn};
+    use tracing::{error, info, warn};
 
     pub use crate::dto::audio_status::AudioStatus;
     use crate::dto::decoder_command::DecoderCommand;
@@ -30,7 +31,8 @@ pub mod platune_player {
     use crate::{dto::command::Command, event_loop::main_loop};
     use std::fs::remove_file;
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Error)]
+    #[error("{0}")]
     pub struct PlayerError(String);
 
     #[derive(Debug)]
@@ -39,6 +41,7 @@ pub mod platune_player {
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
+        joined: bool,
     }
 
     impl PlatunePlayer {
@@ -71,6 +74,7 @@ pub mod platune_player {
                 event_tx,
                 decoder_tx,
                 decoder_handle,
+                joined: false,
             }
         }
 
@@ -200,24 +204,32 @@ pub mod platune_player {
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
 
-        pub async fn join(&self) -> Result<(), PlayerError> {
+        pub async fn join(mut self) -> Result<(), PlayerError> {
+            info!("Joining player instance");
+            self.cmd_sender
+                .send_async(Command::Stop)
+                .await
+                .map_err(|e| PlayerError(format!("{:?}", e)))?;
+
             self.cmd_sender
                 .send_async(Command::Shutdown)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{:?}", e)))?;
+            self.joined = true;
+            Ok(())
         }
     }
 
     impl Drop for PlatunePlayer {
         fn drop(&mut self) {
-            self.cmd_sender.try_send(Command::Stop).unwrap_or_default();
-            if let Err(e) = self.cmd_sender.try_send(Command::Shutdown) {
-                // Receiver may already be terminated so this may not be an error
-                warn!("Unable to send shutdown command {:?}", e);
-            }
-
-            if let Err(e) = self.decoder_handle.take().unwrap().join() {
-                warn!("Error terminating decoder thread: {:?}", e);
+            if self.joined {
+                info!("Waiting for decoder thread to terminate");
+                if let Err(e) = self.decoder_handle.take().unwrap().join() {
+                    warn!("Error terminating decoder thread: {:?}", e);
+                }
+                info!("Decoder thread terminated");
+            } else {
+                info!("join() not called, won't wait for decoder thread to terminate");
             }
         }
     }

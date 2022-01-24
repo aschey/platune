@@ -87,6 +87,7 @@ pub(crate) fn decode_loop(
                 };
             }
             Err(TryRecvError::Disconnected) => {
+                info!("Decoder thread receiver disconnected. Terminating.");
                 break;
             }
         }

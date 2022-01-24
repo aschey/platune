@@ -62,7 +62,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
         let socket_path = Path::new(&socket_base).join("platuned/platuned.sock");
         let unix_server = run_server(
             shutdown_tx.clone(),
-            platune_player,
+            platune_player.clone(),
             manager,
             Transport::Uds(socket_path),
         );
@@ -70,6 +70,10 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     }
 
     try_join_all(servers).await?;
+
+    let player_inner = Arc::try_unwrap(platune_player).expect("All servers should've been dropped");
+    player_inner.join().await?;
+
     Ok(())
 }
 
