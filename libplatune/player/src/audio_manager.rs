@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use rubato::{FftFixedInOut, Resampler};
-use tracing::info;
+use tracing::{error, info};
 
 use crate::{
     audio_processor::AudioProcessor,
@@ -9,7 +9,7 @@ use crate::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
         player_response::PlayerResponse,
     },
-    output::AudioOutput,
+    output::{AudioOutput, AudioOutputError},
     settings::Settings,
     source::Source,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
@@ -62,13 +62,14 @@ impl AudioManager {
         self.out_buf = vec![0.0; n_frames * channels];
     }
 
-    pub(crate) fn reset(&mut self, resample_chunk_size: usize) {
-        self.output.start();
+    pub(crate) fn reset(&mut self, resample_chunk_size: usize) -> Result<(), AudioOutputError> {
+        self.output.start()?;
         self.set_resampler(resample_chunk_size);
+        Ok(())
     }
 
-    pub(crate) fn start(&mut self) {
-        self.output.start();
+    pub(crate) fn start(&mut self) -> Result<(), AudioOutputError> {
+        self.output.start()
     }
 
     pub(crate) fn stop(&mut self) {
@@ -116,14 +117,20 @@ impl AudioManager {
         start_position: Option<Duration>,
     ) -> Duration {
         let source_name = format!("{source:?}");
-        let mut processor = AudioProcessor::new(
+        let mut processor = match AudioProcessor::new(
             source,
             self.output.channels(),
             cmd_rx,
             player_cmd_tx,
             self.volume,
             start_position,
-        );
+        ) {
+            Ok(processor) => processor,
+            Err(e) => {
+                error!("Error creating decoder: {e:?}");
+                return Duration::default();
+            }
+        };
 
         let input_sample_rate = processor.sample_rate();
         if input_sample_rate != self.input_sample_rate {
@@ -141,13 +148,23 @@ impl AudioManager {
         info!("Finished decoding {source_name}");
         let stop_position = processor.current_position();
         info!("Stopped decoding at {stop_position:?}");
+
         stop_position
     }
 
     fn decode_no_resample(&mut self, processor: &mut AudioProcessor) {
         self.output.write(processor.current());
-        while let Some(next) = processor.next() {
-            self.output.write(next);
+        loop {
+            match processor.next() {
+                Ok(Some(data)) => {
+                    self.output.write(data);
+                }
+                Ok(None) => return,
+                Err(e) => {
+                    error!("Error while decoding: {e:?}");
+                    return;
+                }
+            }
         }
     }
 
@@ -167,8 +184,12 @@ impl AudioManager {
 
                 if frame_pos == cur_frame.len() {
                     match processor.next() {
-                        Some(next) => cur_frame = next,
-                        None => return,
+                        Ok(Some(next)) => cur_frame = next,
+                        Ok(None) => return,
+                        Err(e) => {
+                            error!("Error while decoding: {e:?}");
+                            return;
+                        }
                     }
 
                     frame_pos = 0;

@@ -70,25 +70,41 @@ impl Player {
                         return;
                     }
                 };
-                let file_len = file.metadata().unwrap().len();
+                let file_len = match file.metadata() {
+                    Ok(metadata) => Some(metadata.len()),
+                    Err(e) => {
+                        warn!("Error reading file metadata: {e:?}");
+                        None
+                    }
+                };
                 let extension = Path::new(&path)
                     .extension()
-                    .map(|e| e.to_str().unwrap().to_owned());
+                    .map(|e| match e.to_str() {
+                        None => {
+                            warn!("File extension for {path} contains invalid unicode. Not using extension hint");
+                            None
+                        },
+                        extension => extension.map(|e| e.to_owned())
+                    }).flatten();
+
                 let reader = BufReader::new(file);
 
-                Box::new(ReadSeekSource::new(reader, Some(file_len), extension)) as Box<dyn Source>
+                Box::new(ReadSeekSource::new(reader, file_len, extension)) as Box<dyn Source>
             }
         };
 
-        info!("Sending source {}", path);
-        self.queue_tx
+        info!("Sending source {path}");
+        if let Err(e) = self
+            .queue_tx
             .send_async(QueueSource {
                 source,
                 settings: self.settings.clone(),
                 force_restart_output,
             })
             .await
-            .unwrap();
+        {
+            error!("Error sending source {e:?}");
+        }
         self.queued_count += 1;
         info!("Queued count {}", self.queued_count);
     }
@@ -115,10 +131,9 @@ impl Player {
         if self.is_empty() {
             return;
         }
-        self.cmd_sender
-            .send_async(DecoderCommand::Play)
-            .await
-            .unwrap();
+        if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Play).await {
+            error!("Error sending play command {e:?}");
+        }
         self.audio_status = AudioStatus::Playing;
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
@@ -129,10 +144,9 @@ impl Player {
         if self.is_empty() {
             return;
         }
-        self.cmd_sender
-            .send_async(DecoderCommand::Pause)
-            .await
-            .unwrap();
+        if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Pause).await {
+            error!("Error sending pause command {e:?}");
+        }
         self.audio_status = AudioStatus::Paused;
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
@@ -140,10 +154,13 @@ impl Player {
     }
 
     pub(crate) async fn set_volume(&mut self, volume: f64) {
-        self.cmd_sender
+        if let Err(e) = self
+            .cmd_sender
             .send_async(DecoderCommand::SetVolume(volume))
             .await
-            .unwrap();
+        {
+            error!("Error sending set volume command {e:?}");
+        }
         self.state.volume = volume;
     }
 
@@ -156,9 +173,8 @@ impl Player {
             .cmd_sender
             .get_response(DecoderCommand::Seek(time))
             .await
-            .unwrap()
         {
-            DecoderResponse::SeekResponse(seek_result) => match seek_result {
+            Ok(DecoderResponse::SeekResponse(seek_result)) => match seek_result {
                 Ok(seek_result) => {
                     info!("Seeked to {:?}", seek_result);
                     self.event_tx
@@ -167,6 +183,7 @@ impl Player {
                 }
                 Err(e) => warn!("Error seeking: {e:?}"),
             },
+            Err(e) => error!("Error receiving seek result {e:?}"),
             _ => unreachable!(),
         }
     }
@@ -193,10 +210,9 @@ impl Player {
         self.queue_rx.drain();
         self.queued_count = 0;
         self.audio_status = AudioStatus::Stopped;
-        self.cmd_sender
-            .send_async(DecoderCommand::Stop)
-            .await
-            .unwrap();
+        if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Stop).await {
+            error!("Error sending stop command {e:?}");
+        }
     }
 
     pub(crate) async fn on_ended(&mut self) {

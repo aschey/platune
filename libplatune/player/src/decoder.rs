@@ -3,13 +3,29 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use symphonia::core::{
     audio::{Channels, SampleBuffer, SignalSpec},
     codecs::{Decoder as SymphoniaDecoder, DecoderOptions},
+    errors::Error,
     formats::{FormatOptions, FormatReader, Packet, SeekMode, SeekTo, SeekedTo},
     io::MediaSourceStream,
     meta::MetadataOptions,
     probe::Hint,
     units::{Time, TimeBase},
 };
-use tracing::info;
+use thiserror::Error;
+use tracing::{info, warn};
+
+#[derive(Error, Debug)]
+pub(crate) enum DecoderError {
+    #[error("No tracks were found")]
+    NoTracks,
+    #[error("No readable format was discovered: {0}")]
+    FormatNotFound(Error),
+    #[error("The codec is unsupported: {0}")]
+    UnsupportedCodec(Error),
+    #[error("The format is unsupported: {0}")]
+    UnsupportedFormat(String),
+    #[error("Error occurred during decoding: {0}")]
+    DecodeError(Error),
+}
 
 pub(crate) struct Decoder {
     buf: Vec<f64>,
@@ -33,7 +49,7 @@ impl Decoder {
         volume: f64,
         output_channels: usize,
         start_position: Option<Duration>,
-    ) -> Self {
+    ) -> Result<Self, DecoderError> {
         let mut hint = Hint::new();
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);
@@ -46,21 +62,36 @@ impl Decoder {
         };
         let metadata_opts = MetadataOptions::default();
 
-        let probed = symphonia::default::get_probe()
-            .format(&hint, mss, &format_opts, &metadata_opts)
-            .unwrap();
+        let probed = match symphonia::default::get_probe().format(
+            &hint,
+            mss,
+            &format_opts,
+            &metadata_opts,
+        ) {
+            Ok(probed) => probed,
+            Err(e) => return Err(DecoderError::FormatNotFound(e)),
+        };
 
         let reader = probed.format;
 
-        let track = reader.default_track().unwrap();
+        let track = match reader.default_track() {
+            Some(track) => track.to_owned(),
+            None => return Err(DecoderError::NoTracks),
+        };
 
-        let time_base = track.codec_params.time_base.unwrap();
+        // If no time base found, default to a dummy one
+        // and attempt to calculate it from the sample rate later
+        let time_base = track
+            .codec_params
+            .time_base
+            .unwrap_or_else(|| TimeBase::new(1, 1));
+
         let decode_opts = DecoderOptions { verify: true };
-        let symphonia_decoder = symphonia::default::get_codecs()
-            .make(&track.codec_params, &decode_opts)
-            .unwrap();
-        let track = reader.default_track().unwrap();
-        let track_id = track.id;
+        let symphonia_decoder =
+            match symphonia::default::get_codecs().make(&track.codec_params, &decode_opts) {
+                Ok(decoder) => decoder,
+                Err(e) => return Err(DecoderError::UnsupportedCodec(e)),
+            };
 
         let mut decoder = Self {
             decoder: symphonia_decoder,
@@ -69,7 +100,7 @@ impl Decoder {
             buf_len: 0,
             input_channels: 0,
             output_channels,
-            track_id,
+            track_id: track.id,
             buf: vec![],
             sample_buf: SampleBuffer::<f64>::new(0, SignalSpec::new(0, Channels::all())),
             volume,
@@ -78,13 +109,16 @@ impl Decoder {
             sample_rate: 0,
         };
         if let Some(start_position) = start_position {
-            decoder.seek(start_position).unwrap();
-            decoder.next();
+            // Stream may not be seekable
+            if let Err(e) = decoder.seek(start_position) {
+                warn!("Unable to seek to {start_position:?}: {e:?}");
+            }
+            decoder.initialize(false)?;
         } else {
-            decoder.skip_silence();
+            decoder.initialize(true)?;
         }
 
-        decoder
+        Ok(decoder)
     }
 
     pub(crate) fn set_volume(&mut self, volume: f64) {
@@ -127,14 +161,26 @@ impl Decoder {
 
         CurrentPosition {
             position: Duration::from_millis(millis),
-            retrieval_time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap(),
+            retrieval_time: match SystemTime::now().duration_since(UNIX_EPOCH) {
+                Ok(time) => Some(time),
+                Err(e) => {
+                    warn!("Unable to get duration from system time. The system clock is probably in a bad state: {e:?}");
+                    None
+                }
+            },
         }
     }
 
-    fn skip_silence(&mut self) {
+    fn initialize(&mut self, skip_silence: bool) -> Result<(), DecoderError> {
         let mut samples_skipped = 0;
         loop {
-            self.next();
+            self.next()?;
+            if self.time_base.denom == 1 {
+                self.time_base = TimeBase::new(1, self.sample_rate as u32);
+            }
+            if !skip_silence {
+                break;
+            }
             if let Some(index) = self.buf.iter().position(|s| *s != 0.0) {
                 self.buf_len -= index;
                 samples_skipped += index;
@@ -147,6 +193,7 @@ impl Decoder {
                 samples_skipped += self.buf.len();
             }
         }
+        Ok(())
     }
 
     fn adjust_buffer_size(&mut self, samples_length: usize) {
@@ -157,14 +204,33 @@ impl Decoder {
         self.buf_len = samples_length;
     }
 
-    fn process_output(&mut self, packet: &Packet) {
-        let decoded = self.decoder.decode(packet).unwrap();
+    fn process_output(&mut self, packet: &Packet) -> Result<(), DecoderError> {
+        let decoded = loop {
+            match self.decoder.decode(packet) {
+                Ok(decoded) => break decoded,
+                Err(Error::IoError(e)) => {
+                    warn!("IO error during decoding {e:?}");
+                }
+                Err(Error::DecodeError(e)) => {
+                    warn!("Invalid data found during decoding {e:?}");
+                }
+                Err(e) => {
+                    return Err(DecoderError::DecodeError(e));
+                }
+            }
+        };
 
         if self.sample_rate == 0 {
             let duration = decoded.capacity();
             let spec = *decoded.spec();
             self.sample_rate = spec.rate as usize;
-            self.input_channels = spec.channels.count();
+            let channels = spec.channels.count();
+            self.input_channels = channels;
+            if !(1..=2).contains(&channels) {
+                return Err(DecoderError::UnsupportedFormat(format!(
+                    "Audio sources with {channels} channels are not supported"
+                )));
+            }
             self.sample_buf = SampleBuffer::<f64>::new(duration as u64, spec);
         }
         self.sample_buf.copy_interleaved_ref(decoded);
@@ -196,13 +262,15 @@ impl Decoder {
                 }
             }
         }
+
+        Ok(())
     }
 
     pub(crate) fn current(&self) -> &[f64] {
         &self.buf[..self.buf_len]
     }
 
-    pub(crate) fn next(&mut self) -> Option<&[f64]> {
+    pub(crate) fn next(&mut self) -> Result<Option<&[f64]>, DecoderError> {
         if self.paused {
             self.buf.fill(0.0);
         } else {
@@ -214,13 +282,15 @@ impl Decoder {
                         }
                     }
                     Err(_) => {
-                        return None;
+                        return Ok(None);
                     }
                 };
             };
             self.timestamp = packet.ts();
-            self.process_output(&packet);
+            if let Err(e) = self.process_output(&packet) {
+                return Err(e);
+            }
         }
-        Some(self.current())
+        Ok(Some(self.current()))
     }
 }

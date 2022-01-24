@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::{
-    decoder::Decoder,
+    decoder::{Decoder, DecoderError},
     dto::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
         player_response::PlayerResponse,
@@ -27,13 +27,13 @@ impl<'a> AudioProcessor<'a> {
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         volume: f64,
         start_position: Option<Duration>,
-    ) -> Self {
-        let decoder = Decoder::new(source, volume, output_channels, start_position);
-        Self {
+    ) -> Result<Self, DecoderError> {
+        let decoder = Decoder::new(source, volume, output_channels, start_position)?;
+        Ok(Self {
             decoder,
             cmd_rx,
             player_cmd_tx,
-        }
+        })
     }
 
     pub(crate) fn sample_rate(&self) -> usize {
@@ -62,26 +62,18 @@ impl<'a> AudioProcessor<'a> {
                         info!("Completed decoder command");
                         return false;
                     }
-                    DecoderCommand::Seek(time) => match self.decoder.seek(time) {
-                        Ok(seeked_to) => {
-                            if self
-                                .cmd_rx
-                                .respond(DecoderResponse::SeekResponse(Ok(seeked_to.actual_ts)))
-                                .is_err()
-                            {
-                                error!("Unable to send seek result");
-                            }
+                    DecoderCommand::Seek(time) => {
+                        let seek_response = match self.decoder.seek(time) {
+                            Ok(seeked_to) => Ok(seeked_to.actual_ts),
+                            Err(e) => Err(e.to_string()),
+                        };
+                        if let Err(e) = self
+                            .cmd_rx
+                            .respond(DecoderResponse::SeekResponse(seek_response))
+                        {
+                            error!("Unable to send seek result: {e:?}");
                         }
-                        Err(e) => {
-                            if self
-                                .cmd_rx
-                                .respond(DecoderResponse::SeekResponse(Err(e.to_string())))
-                                .is_err()
-                            {
-                                error!("Unable to send seek result");
-                            }
-                        }
-                    },
+                    }
                     DecoderCommand::Pause => {
                         self.decoder.pause();
                     }
@@ -90,15 +82,20 @@ impl<'a> AudioProcessor<'a> {
                     }
                     DecoderCommand::GetCurrentPosition => {
                         let time = self.decoder.current_position();
-                        self.cmd_rx
+                        if let Err(e) = self
+                            .cmd_rx
                             .respond(DecoderResponse::CurrentPositionResponse(time))
-                            .unwrap();
+                        {
+                            error!("Unable to send current position response {e:?}");
+                        }
                     }
                 }
                 info!("Completed decoder command");
             }
             Err(TryRecvError::Empty) => {}
-            Err(TryRecvError::Disconnected) => {}
+            Err(TryRecvError::Disconnected) => {
+                error!("Decoder command sender has disconnected");
+            }
         }
 
         true
@@ -108,15 +105,17 @@ impl<'a> AudioProcessor<'a> {
         self.decoder.current()
     }
 
-    pub(crate) fn next(&mut self) -> Option<&[f64]> {
+    pub(crate) fn next(&mut self) -> Result<Option<&[f64]>, DecoderError> {
         if !self.process_input() {
-            return None;
+            return Ok(None);
         }
         match self.decoder.next() {
-            Some(val) => Some(val),
-            None => {
-                self.player_cmd_tx.try_send(Command::Ended).unwrap();
-                None
+            val @ Ok(Some(_)) => val,
+            val => {
+                if let Err(e) = self.player_cmd_tx.try_send(Command::Ended) {
+                    error!("Unable to send ended command: {e:?}");
+                }
+                val
             }
         }
     }

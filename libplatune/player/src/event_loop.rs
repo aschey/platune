@@ -20,7 +20,13 @@ pub(crate) fn decode_loop(
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
 ) {
-    let output = CpalAudioOutput::new_output(player_cmd_tx.clone()).unwrap();
+    let output = match CpalAudioOutput::new_output(player_cmd_tx.clone()) {
+        Ok(output) => output,
+        Err(e) => {
+            error!("Error opening audio output: {e:?}");
+            return;
+        }
+    };
     let mut audio_manager = AudioManager::new(output, volume);
     let mut prev_stop_position = Duration::default();
     loop {
@@ -33,7 +39,10 @@ pub(crate) fn decode_loop(
                 if force_restart_output {
                     info!("Restarting output stream");
                     audio_manager.stop();
-                    audio_manager.reset(settings.resample_chunk_size);
+                    if let Err(e) = audio_manager.reset(settings.resample_chunk_size) {
+                        error!("Error resetting output stream: {e:?}");
+                        return;
+                    }
                     prev_stop_position = audio_manager.decode_source(
                         source,
                         &mut cmd_rx,
@@ -42,7 +51,9 @@ pub(crate) fn decode_loop(
                         Some(prev_stop_position),
                     );
                 } else {
-                    audio_manager.start();
+                    if let Err(e) = audio_manager.start() {
+                        error!("Error starting output stream: {e:?}");
+                    }
                     prev_stop_position = audio_manager.decode_source(
                         source,
                         &mut cmd_rx,
@@ -60,7 +71,10 @@ pub(crate) fn decode_loop(
                     Ok(QueueSource {
                         source, settings, ..
                     }) => {
-                        audio_manager.reset(settings.resample_chunk_size);
+                        if let Err(e) = audio_manager.reset(settings.resample_chunk_size) {
+                            error!("Error resetting output stream: {e:?}");
+                            return;
+                        }
                         prev_stop_position = audio_manager.decode_source(
                             source,
                             &mut cmd_rx,

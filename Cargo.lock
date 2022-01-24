@@ -1584,6 +1584,7 @@ dependencies = [
  "strum",
  "symphonia",
  "tempfile",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-appender",

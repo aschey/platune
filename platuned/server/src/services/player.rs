@@ -123,7 +123,7 @@ impl Player for PlayerImpl {
             .map(|p| {
                 (
                     Some(prost_types::Duration::from(p.position)),
-                    Some(prost_types::Duration::from(p.retrieval_time)),
+                    p.retrieval_time.map(prost_types::Duration::from),
                 )
             })
             .unwrap_or((None, None));

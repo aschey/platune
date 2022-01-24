@@ -1,25 +1,33 @@
-use cpal::{SampleRate, Stream, StreamError, SupportedStreamConfig};
+use cpal::{
+    BuildStreamError, DefaultStreamConfigError, PlayStreamError, SampleRate, Stream, StreamError,
+    SupportedStreamConfig,
+};
 use std::result;
 use std::{fmt::Debug, time::Duration};
 use symphonia::core::audio::RawSample;
 use symphonia::core::conv::ConvertibleSample;
+use thiserror::Error;
 
 pub(crate) trait AudioOutput {
     fn write(&mut self, sample_iter: &[f64]);
-    fn flush(&mut self);
     fn stop(&mut self);
-    fn start(&mut self);
+    fn start(&mut self) -> Result<()>;
     fn sample_rate(&self) -> usize;
     fn channels(&self) -> usize;
 }
 
-#[allow(dead_code)]
-#[allow(clippy::enum_variant_names)]
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum AudioOutputError {
-    OpenStreamError,
-    PlayStreamError,
-    StreamClosedError,
+    #[error("No default device found")]
+    NoDefaultDevice,
+    #[error("Error getting default device config: {0}")]
+    OutputDeviceConfigError(DefaultStreamConfigError),
+    #[error("Error opening output stream: {0}")]
+    OpenStreamError(BuildStreamError),
+    #[error("Error starting stream: {0}")]
+    StartStreamError(PlayStreamError),
+    #[error("Unsupported device configuration: {0}")]
+    UnsupportedConfiguration(String),
 }
 
 pub type Result<T> = result::Result<T, AudioOutputError>;
@@ -52,17 +60,15 @@ impl CpalAudioOutput {
         // Get the default audio output device.
         let device = match host.default_output_device() {
             Some(device) => device,
-            _ => {
-                error!("failed to get default audio output device");
-                return Err(AudioOutputError::OpenStreamError);
+            None => {
+                return Err(AudioOutputError::NoDefaultDevice);
             }
         };
 
         let config = match device.default_output_config() {
             Ok(config) => config,
-            Err(err) => {
-                error!("failed to get default audio output device config: {}", err);
-                return Err(AudioOutputError::OpenStreamError);
+            Err(e) => {
+                return Err(AudioOutputError::OutputDeviceConfigError(e));
             }
         };
 
@@ -125,28 +131,29 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             move |err| match err {
                 StreamError::DeviceNotAvailable => {
                     info!("Device unplugged. Resetting...");
-                    cmd_sender.try_send(Command::Reset).unwrap();
+                    if let Err(e) = cmd_sender.try_send(Command::Reset) {
+                        error!("Error sending reset command: {e:?}");
+                    }
                 }
                 cpal::StreamError::BackendSpecific { err } => {
                     error!("Playback error: {err}");
-                    cmd_sender.try_send(Command::Stop).unwrap();
+                    if let Err(e) = cmd_sender.try_send(Command::Stop) {
+                        error!("Error sending stop command: {e:?}");
+                    }
                 }
             },
         );
 
-        if let Err(err) = stream_result {
-            error!("audio output stream open error: {}", err);
-
-            return Err(AudioOutputError::OpenStreamError);
-        }
-
-        let stream = stream_result.unwrap();
+        let stream = match stream_result {
+            Ok(stream) => stream,
+            Err(e) => {
+                return Err(AudioOutputError::OpenStreamError(e));
+            }
+        };
 
         // Start the output stream.
-        if let Err(err) = stream.play() {
-            error!("audio output stream play error: {}", err);
-
-            return Err(AudioOutputError::PlayStreamError);
+        if let Err(e) = stream.play() {
+            return Err(AudioOutputError::StartStreamError(e));
         }
 
         Ok(stream)
@@ -202,43 +209,59 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.channels
     }
 
-    fn flush(&mut self) {
-        // Flush is best-effort, ignore the returned result.
-        if let Some(stream) = &self.stream {
-            let _ = stream.pause();
-            stream.play().unwrap();
-        }
-    }
-
     fn stop(&mut self) {
         self.stream = None;
     }
 
-    fn start(&mut self) {
+    fn start(&mut self) -> Result<()> {
         if self.stream.is_some() {
-            return;
+            return Ok(());
         }
 
         let host = cpal::default_host();
+
         // Get the default audio output device.
-        let device = host.default_output_device().unwrap();
+        let device = match host.default_output_device() {
+            Some(device) => device,
+            None => {
+                return Err(AudioOutputError::NoDefaultDevice);
+            }
+        };
+
+        let config = match device.default_output_config() {
+            Ok(config) => config,
+            Err(e) => {
+                return Err(AudioOutputError::OutputDeviceConfigError(e));
+            }
+        };
         let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
-        let config = device.default_output_config().unwrap();
         let sample_rate = config.sample_rate();
         self.sample_rate = sample_rate.0 as usize;
-        self.channels = config.channels() as usize;
-        let stream = Self::create_stream(
+        let channels = config.channels() as usize;
+        if !(1..=2).contains(&channels) {
+            return Err(AudioOutputError::UnsupportedConfiguration(format!(
+                "Outputs with {channels} channels are not supported"
+            )));
+        }
+        self.channels = channels;
+
+        let stream = match Self::create_stream(
             &device,
             config,
             sample_rate,
             ring_buf_consumer,
             self.cmd_sender.clone(),
-        );
+        ) {
+            Ok(stream) => stream,
+            Err(e) => return Err(e),
+        };
 
         self.ring_buf_producer = Some(ring_buf_producer);
-        self.stream = Some(stream.unwrap());
+        self.stream = Some(stream);
+
+        Ok(())
     }
 
     fn sample_rate(&self) -> usize {
