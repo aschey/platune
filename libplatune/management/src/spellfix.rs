@@ -11,11 +11,11 @@ pub(crate) async fn acquire_with_spellfix(
         .acquire()
         .await
         .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
-    load_spellfix(&mut con)?;
+    load_spellfix(&mut con).await?;
     Ok(con)
 }
 
-pub(crate) fn load_spellfix(con: &mut SqliteConnection) -> Result<(), DbError> {
+pub(crate) async fn load_spellfix(con: &mut SqliteConnection) -> Result<(), DbError> {
     let spellfix_lib = match var("SPELLFIX_LIB") {
         Ok(res) => res,
         #[cfg(target_os = "linux")]
@@ -23,20 +23,31 @@ pub(crate) fn load_spellfix(con: &mut SqliteConnection) -> Result<(), DbError> {
         #[cfg(target_os = "windows")]
         Err(_) => "./assets/windows/spellfix.dll".to_owned(),
     };
-    load_extension(con, &spellfix_lib).map_err(DbError::SpellfixLoadError)
+    load_extension(con, &spellfix_lib)
+        .await
+        .map_err(DbError::SpellfixLoadError)
 }
 
-fn load_extension<P: AsRef<Path>>(
+async fn load_extension<P: AsRef<Path>>(
     con: &mut SqliteConnection,
     dylib_path: &P,
 ) -> Result<(), String> {
-    let handle = con.as_raw_handle();
-    let rusqlite_con =
-        unsafe { rusqlite::Connection::from_handle(handle).map_err(|e| format!("{:?}", e))? };
+    let handle = con
+        .lock_handle()
+        .await
+        .map_err(|e| format!("{:?}", e))?
+        .as_raw_handle();
 
-    let _guard = LoadExtensionGuard::new(&rusqlite_con).unwrap();
-    rusqlite_con
-        .load_extension(dylib_path, None)
-        .map_err(|e| format!("{:?}", e))?;
+    // Safety: we shouldn't run any untrusted queries while the extension guard is active
+    unsafe {
+        let rusqlite_con =
+            rusqlite::Connection::from_handle(handle.as_ptr()).map_err(|e| format!("{:?}", e))?;
+        let _guard = LoadExtensionGuard::new(&rusqlite_con).map_err(|e| format!("{:?}", e))?;
+
+        rusqlite_con
+            .load_extension(dylib_path, None)
+            .map_err(|e| format!("{:?}", e))?;
+    }
+
     Ok(())
 }

@@ -13,11 +13,13 @@ use rpc::*;
 use std::io::stdout;
 use std::panic;
 use std::process::exit;
+use time::format_description::well_known;
+use time::UtcOffset;
 use tracing::error;
 use tracing::info;
-
-#[cfg(windows)]
-use tracing_subscriber::fmt::time::LocalTime;
+use tracing::log::warn;
+use tracing_appender::non_blocking::WorkerGuard;
+use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::{
     filter::LevelFilter, fmt::Layer, layer::SubscriberExt, EnvFilter, Layer as SubscriberLayer,
 };
@@ -37,8 +39,13 @@ fn set_panic_hook() {
     }));
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
+    // Important: this must be done as early as possible to prevent it from panicking
+    let (offset, is_local) = match OffsetTime::local_rfc_3339() {
+        Ok(offset) => (offset, true),
+        Err(_) => (OffsetTime::new(UtcOffset::UTC, well_known::Rfc3339), false),
+    };
+
     let proj_dirs =
         ProjectDirs::from("", "", "platune").expect("Unable to find a valid home directory");
     let log_dir = proj_dirs.cache_dir();
@@ -68,13 +75,11 @@ async fn main() {
         .with({
             #[allow(clippy::let_and_return)]
             let layer = Layer::new()
+                .with_timer(offset.clone())
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .with_ansi(false)
                 .with_writer(non_blocking_file);
-
-            #[cfg(windows)]
-            let layer = layer.with_timer(LocalTime::rfc_3339());
 
             layer.with_filter(LevelFilter::INFO)
         })
@@ -82,12 +87,10 @@ async fn main() {
             #[allow(clippy::let_and_return)]
             let layer = Layer::new()
                 .pretty()
+                .with_timer(offset)
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .with_writer(non_blocking_stdout);
-
-            #[cfg(windows)]
-            let layer = layer.with_timer(LocalTime::rfc_3339());
 
             layer.with_filter(LevelFilter::INFO)
         });
@@ -101,8 +104,18 @@ async fn main() {
 
     // Don't set panic hook until after logging is set up
     set_panic_hook();
+
+    if !is_local {
+        warn!("Using UTC time for logging because the local offset wasn't determined");
+    }
     info!("Log dir: {:?}", log_dir);
     info!("Starting...");
+
+    run(file_guard, stdout_guard);
+}
+
+#[tokio::main]
+async fn run(file_guard: WorkerGuard, stdout_guard: WorkerGuard) {
     if let Err(e) = startup::start().await {
         error!("{:?}", e);
 

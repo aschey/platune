@@ -17,7 +17,7 @@ impl<'a> SyncDAL<'a> {
             .begin()
             .await
             .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
-        load_spellfix(&mut tran)?;
+        load_spellfix(&mut tran).await?;
 
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
