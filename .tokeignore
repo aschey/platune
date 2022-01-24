@@ -1,0 +1,4 @@
+*_mock.go
+*.pb.go
+ui-old
+api-old

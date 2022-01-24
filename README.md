@@ -3,6 +3,7 @@
 [![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/master/LICENSE)
 [![CI](https://github.com/aschey/Platune/actions/workflows/test.yml/badge.svg)](https://github.com/aschey/Platune/actions/workflows/test.yml)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)
+![Lines of Code](https://img.shields.io/tokei/lines/github/aschey/platune?color=purple)
 
 **NOTE: This project is still in its early stages and most of these features do not work yet**
 
