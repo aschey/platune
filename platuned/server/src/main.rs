@@ -67,6 +67,8 @@ fn main() {
             .buffered_lines_limit(buffer_limit)
             .finish(file_appender);
 
+    // Tokio console requires trace level logs to be sent to the console
+    // but we don't need to enable trace level logs for other layers
     let level = if cfg!(feature = "console") {
         tracing::Level::TRACE
     } else {
@@ -76,26 +78,22 @@ fn main() {
     let collector = tracing_subscriber::registry()
         .with(EnvFilter::from_default_env().add_directive(level.into()))
         .with({
-            #[allow(clippy::let_and_return)]
-            let layer = Layer::new()
+            Layer::new()
                 .with_timer(offset.clone())
                 .with_thread_ids(true)
                 .with_thread_names(true)
                 .with_ansi(false)
-                .with_writer(non_blocking_file);
-
-            layer.with_filter(LevelFilter::INFO)
+                .with_writer(non_blocking_file)
+                .with_filter(LevelFilter::INFO)
         })
         .with({
-            #[allow(clippy::let_and_return)]
-            let layer = Layer::new()
+            Layer::new()
                 .pretty()
                 .with_timer(offset)
                 .with_thread_ids(true)
                 .with_thread_names(true)
-                .with_writer(non_blocking_stdout);
-
-            layer.with_filter(LevelFilter::INFO)
+                .with_writer(non_blocking_stdout)
+                .with_filter(LevelFilter::INFO)
         });
 
     #[cfg(feature = "console")]
