@@ -40,7 +40,9 @@ fn set_panic_hook() {
 }
 
 fn main() {
-    // Important: this must be done as early as possible to prevent it from panicking
+    // IMPORTANT: retrieving the timezone must be done before the program spawns any threads,
+    // which means it must be done before the Tokio runtime is initialized
+    // To be safe, it should be the first line in the program
     let (offset, is_local) = match OffsetTime::local_rfc_3339() {
         Ok(offset) => (offset, true),
         Err(_) => (OffsetTime::new(UtcOffset::UTC, well_known::Rfc3339), false),
@@ -111,11 +113,11 @@ fn main() {
     info!("Log dir: {:?}", log_dir);
     info!("Starting...");
 
-    run(file_guard, stdout_guard);
+    run_async(file_guard, stdout_guard);
 }
 
 #[tokio::main]
-async fn run(file_guard: WorkerGuard, stdout_guard: WorkerGuard) {
+async fn run_async(file_guard: WorkerGuard, stdout_guard: WorkerGuard) {
     if let Err(e) = startup::start().await {
         error!("{:?}", e);
 
