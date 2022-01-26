@@ -185,4 +185,28 @@ impl Player for PlayerImpl {
             tokio_stream::wrappers::ReceiverStream::new(rx),
         )))
     }
+
+    type SubscribeAudioVizDataStream = Pin<
+        Box<dyn futures::Stream<Item = Result<AudioVizResponse, Status>> + Send + Sync + 'static>,
+    >;
+
+    async fn subscribe_audio_viz_data(
+        &self,
+        _: Request<()>,
+    ) -> Result<Response<Self::SubscribeAudioVizDataStream>, Status> {
+        let audio_viz_rx = self.player.subscribe_viz();
+        let (tx, rx) = tokio::sync::mpsc::channel(32);
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
+        tokio::spawn(async move {
+            while let Ok(msg) = tokio::select! { val = audio_viz_rx.recv_async() => val, _ = shutdown_rx.recv() => Err(flume::RecvError::Disconnected) }
+            {
+                tx.send(Ok(AudioVizResponse { audio_data: msg }))
+                    .await
+                    .unwrap_or_default();
+            }
+        });
+        Ok(Response::new(Box::pin(
+            tokio_stream::wrappers::ReceiverStream::new(rx),
+        )))
+    }
 }

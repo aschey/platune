@@ -11,6 +11,7 @@ mod source;
 mod two_way_channel;
 
 pub mod platune_player {
+    use flume::Receiver;
     use std::thread;
     use std::time::Duration;
     use thiserror::Error;
@@ -40,6 +41,7 @@ pub mod platune_player {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
+        viz_rx: Receiver<Vec<f32>>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
         joined: bool,
     }
@@ -56,6 +58,7 @@ pub mod platune_player {
             let queue_rx_ = queue_rx.clone();
             let (decoder_tx, decoder_rx) = two_way_channel();
             let decoder_tx_ = decoder_tx.clone();
+            let (viz_tx, viz_rx) = flume::bounded(1028);
 
             let main_loop_fn = async move {
                 let player = Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings);
@@ -63,7 +66,7 @@ pub mod platune_player {
             };
 
             let decoder_fn = || {
-                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_);
+                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_, viz_tx);
             };
 
             tokio::spawn(main_loop_fn);
@@ -73,6 +76,7 @@ pub mod platune_player {
                 cmd_sender: cmd_tx,
                 event_tx,
                 decoder_tx,
+                viz_rx,
                 decoder_handle,
                 joined: false,
             }
@@ -101,6 +105,10 @@ pub mod platune_player {
 
         pub fn subscribe(&self) -> broadcast::Receiver<PlayerEvent> {
             self.event_tx.subscribe()
+        }
+
+        pub fn subscribe_viz(&self) -> Receiver<Vec<f32>> {
+            self.viz_rx.clone()
         }
 
         pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {

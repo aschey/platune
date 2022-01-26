@@ -1,9 +1,13 @@
+use audioviz::audio_capture::{capture::Capture, config::Config as CaptureConfig};
+use audioviz::spectrum::config::StreamConfig;
+use audioviz::spectrum::stream::{Stream as VizStream, StreamController};
 use cpal::{
     BuildStreamError, DefaultStreamConfigError, PlayStreamError, SampleRate, Stream, StreamError,
     SupportedStreamConfig,
 };
-use std::result;
+use flume::Sender;
 use std::{fmt::Debug, time::Duration};
+use std::{result, thread};
 use symphonia::core::audio::RawSample;
 use symphonia::core::conv::ConvertibleSample;
 use thiserror::Error;
@@ -53,6 +57,7 @@ impl AudioOutputSample for u16 {}
 impl CpalAudioOutput {
     pub(crate) fn new_output(
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
+        viz_tx: Sender<Vec<f32>>,
     ) -> Result<Box<dyn AudioOutput>> {
         // Get default host.
         let host = cpal::default_host();
@@ -74,9 +79,15 @@ impl CpalAudioOutput {
 
         // Select proper playback routine based on sample format.
         Ok(match config.sample_format() {
-            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(cmd_sender)),
-            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(cmd_sender)),
-            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(cmd_sender)),
+            cpal::SampleFormat::F32 => {
+                Box::new(CpalAudioOutputImpl::<f32>::new(cmd_sender, viz_tx))
+            }
+            cpal::SampleFormat::I16 => {
+                Box::new(CpalAudioOutputImpl::<i16>::new(cmd_sender, viz_tx))
+            }
+            cpal::SampleFormat::U16 => {
+                Box::new(CpalAudioOutputImpl::<u16>::new(cmd_sender, viz_tx))
+            }
         })
     }
 }
@@ -91,10 +102,14 @@ where
     channels: usize,
     buf: Vec<T>,
     cmd_sender: TwoWaySender<Command, PlayerResponse>,
+    viz_tx: Sender<Vec<f32>>,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn new(cmd_sender: TwoWaySender<Command, PlayerResponse>) -> Self {
+    pub fn new(
+        cmd_sender: TwoWaySender<Command, PlayerResponse>,
+        viz_tx: Sender<Vec<f32>>,
+    ) -> Self {
         Self {
             ring_buf_producer: None,
             stream: None,
@@ -102,6 +117,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             channels: 0,
             buf: vec![T::MID; 2048],
             cmd_sender,
+            viz_tx,
         }
     }
 
@@ -111,6 +127,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         sample_rate: SampleRate,
         ring_buf_consumer: Consumer<T>,
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
+        viz_tx: Sender<Vec<f32>>,
     ) -> Result<Stream> {
         // Output audio stream config.
         let config = cpal::StreamConfig {
@@ -155,6 +172,26 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         if let Err(e) = stream.play() {
             return Err(AudioOutputError::StartStreamError(e));
         }
+
+        thread::spawn(move || {
+            let capture = Capture::init(CaptureConfig {
+                sample_rate: Some(config.sample_rate.0),
+                ..Default::default()
+            })
+            .unwrap();
+            let audio = VizStream::init_with_capture(&capture, StreamConfig::default());
+            let audio_controller: StreamController = audio.get_controller();
+            loop {
+                let freqs = audio_controller
+                    .get_frequencies()
+                    .unwrap()
+                    .into_iter()
+                    .map(|f| f.volume)
+                    .collect();
+                viz_tx.try_send(freqs).unwrap_or_default();
+                thread::sleep(Duration::from_millis(10));
+            }
+        });
 
         Ok(stream)
     }
@@ -253,6 +290,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
             sample_rate,
             ring_buf_consumer,
             self.cmd_sender.clone(),
+            self.viz_tx.clone(),
         ) {
             Ok(stream) => stream,
             Err(e) => return Err(e),

@@ -21,6 +21,7 @@ service Player {
   rpc Previous(google.protobuf.Empty) returns (google.protobuf.Empty) {}
   rpc GetCurrentStatus(google.protobuf.Empty) returns (StatusResponse) {}
   rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse) {}
+  rpc SubscribeAudioVizData(google.protobuf.Empty) returns (stream AudioVizResponse) {}
 }
 
 enum Event {
@@ -59,4 +60,7 @@ message StatusResponse {
   optional google.protobuf.Duration progress = 2;
   optional google.protobuf.Duration retrieval_time = 3;
   optional string current_song = 4;
+}
+message AudioVizResponse {
+  repeated float audio_data = 1;
 }

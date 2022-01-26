@@ -238,6 +238,26 @@ func (mr *MockPlayerClientMockRecorder) Stop(ctx, in interface{}, opts ...interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockPlayerClient)(nil).Stop), varargs...)
 }
 
+// SubscribeAudioVizData mocks base method.
+func (m *MockPlayerClient) SubscribeAudioVizData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (v2.Player_SubscribeAudioVizDataClient, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubscribeAudioVizData", varargs...)
+	ret0, _ := ret[0].(v2.Player_SubscribeAudioVizDataClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubscribeAudioVizData indicates an expected call of SubscribeAudioVizData.
+func (mr *MockPlayerClientMockRecorder) SubscribeAudioVizData(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeAudioVizData", reflect.TypeOf((*MockPlayerClient)(nil).SubscribeAudioVizData), varargs...)
+}
+
 // SubscribeEvents mocks base method.
 func (m *MockPlayerClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (v2.Player_SubscribeEventsClient, error) {
 	m.ctrl.T.Helper()
@@ -379,6 +399,129 @@ func (m *MockPlayer_SubscribeEventsClient) Trailer() metadata.MD {
 func (mr *MockPlayer_SubscribeEventsClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockPlayer_SubscribeEventsClient)(nil).Trailer))
+}
+
+// MockPlayer_SubscribeAudioVizDataClient is a mock of Player_SubscribeAudioVizDataClient interface.
+type MockPlayer_SubscribeAudioVizDataClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockPlayer_SubscribeAudioVizDataClientMockRecorder
+}
+
+// MockPlayer_SubscribeAudioVizDataClientMockRecorder is the mock recorder for MockPlayer_SubscribeAudioVizDataClient.
+type MockPlayer_SubscribeAudioVizDataClientMockRecorder struct {
+	mock *MockPlayer_SubscribeAudioVizDataClient
+}
+
+// NewMockPlayer_SubscribeAudioVizDataClient creates a new mock instance.
+func NewMockPlayer_SubscribeAudioVizDataClient(ctrl *gomock.Controller) *MockPlayer_SubscribeAudioVizDataClient {
+	mock := &MockPlayer_SubscribeAudioVizDataClient{ctrl: ctrl}
+	mock.recorder = &MockPlayer_SubscribeAudioVizDataClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPlayer_SubscribeAudioVizDataClient) EXPECT() *MockPlayer_SubscribeAudioVizDataClientMockRecorder {
+	return m.recorder
+}
+
+// CloseSend mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataClient) CloseSend() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseSend")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CloseSend indicates an expected call of CloseSend.
+func (mr *MockPlayer_SubscribeAudioVizDataClientMockRecorder) CloseSend() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataClient)(nil).CloseSend))
+}
+
+// Context mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataClient) Context() context.Context {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Context")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
+}
+
+// Context indicates an expected call of Context.
+func (mr *MockPlayer_SubscribeAudioVizDataClientMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataClient)(nil).Context))
+}
+
+// Header mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataClient) Header() (metadata.MD, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Header")
+	ret0, _ := ret[0].(metadata.MD)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Header indicates an expected call of Header.
+func (mr *MockPlayer_SubscribeAudioVizDataClientMockRecorder) Header() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataClient)(nil).Header))
+}
+
+// Recv mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataClient) Recv() (*v2.AudioVizResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Recv")
+	ret0, _ := ret[0].(*v2.AudioVizResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Recv indicates an expected call of Recv.
+func (mr *MockPlayer_SubscribeAudioVizDataClientMockRecorder) Recv() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataClient)(nil).Recv))
+}
+
+// RecvMsg mocks base method.
+func (m_2 *MockPlayer_SubscribeAudioVizDataClient) RecvMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecvMsg indicates an expected call of RecvMsg.
+func (mr *MockPlayer_SubscribeAudioVizDataClientMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataClient)(nil).RecvMsg), m)
+}
+
+// SendMsg mocks base method.
+func (m_2 *MockPlayer_SubscribeAudioVizDataClient) SendMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendMsg indicates an expected call of SendMsg.
+func (mr *MockPlayer_SubscribeAudioVizDataClientMockRecorder) SendMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataClient)(nil).SendMsg), m)
+}
+
+// Trailer mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataClient) Trailer() metadata.MD {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Trailer")
+	ret0, _ := ret[0].(metadata.MD)
+	return ret0
+}
+
+// Trailer indicates an expected call of Trailer.
+func (mr *MockPlayer_SubscribeAudioVizDataClientMockRecorder) Trailer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataClient)(nil).Trailer))
 }
 
 // MockPlayerServer is a mock of PlayerServer interface.
@@ -552,6 +695,20 @@ func (m *MockPlayerServer) Stop(arg0 context.Context, arg1 *emptypb.Empty) (*emp
 func (mr *MockPlayerServerMockRecorder) Stop(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stop", reflect.TypeOf((*MockPlayerServer)(nil).Stop), arg0, arg1)
+}
+
+// SubscribeAudioVizData mocks base method.
+func (m *MockPlayerServer) SubscribeAudioVizData(arg0 *emptypb.Empty, arg1 v2.Player_SubscribeAudioVizDataServer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubscribeAudioVizData", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SubscribeAudioVizData indicates an expected call of SubscribeAudioVizData.
+func (mr *MockPlayerServerMockRecorder) SubscribeAudioVizData(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeAudioVizData", reflect.TypeOf((*MockPlayerServer)(nil).SubscribeAudioVizData), arg0, arg1)
 }
 
 // SubscribeEvents mocks base method.
@@ -732,4 +889,123 @@ func (m *MockPlayer_SubscribeEventsServer) SetTrailer(arg0 metadata.MD) {
 func (mr *MockPlayer_SubscribeEventsServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockPlayer_SubscribeEventsServer)(nil).SetTrailer), arg0)
+}
+
+// MockPlayer_SubscribeAudioVizDataServer is a mock of Player_SubscribeAudioVizDataServer interface.
+type MockPlayer_SubscribeAudioVizDataServer struct {
+	ctrl     *gomock.Controller
+	recorder *MockPlayer_SubscribeAudioVizDataServerMockRecorder
+}
+
+// MockPlayer_SubscribeAudioVizDataServerMockRecorder is the mock recorder for MockPlayer_SubscribeAudioVizDataServer.
+type MockPlayer_SubscribeAudioVizDataServerMockRecorder struct {
+	mock *MockPlayer_SubscribeAudioVizDataServer
+}
+
+// NewMockPlayer_SubscribeAudioVizDataServer creates a new mock instance.
+func NewMockPlayer_SubscribeAudioVizDataServer(ctrl *gomock.Controller) *MockPlayer_SubscribeAudioVizDataServer {
+	mock := &MockPlayer_SubscribeAudioVizDataServer{ctrl: ctrl}
+	mock.recorder = &MockPlayer_SubscribeAudioVizDataServerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPlayer_SubscribeAudioVizDataServer) EXPECT() *MockPlayer_SubscribeAudioVizDataServerMockRecorder {
+	return m.recorder
+}
+
+// Context mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataServer) Context() context.Context {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Context")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
+}
+
+// Context indicates an expected call of Context.
+func (mr *MockPlayer_SubscribeAudioVizDataServerMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataServer)(nil).Context))
+}
+
+// RecvMsg mocks base method.
+func (m_2 *MockPlayer_SubscribeAudioVizDataServer) RecvMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecvMsg indicates an expected call of RecvMsg.
+func (mr *MockPlayer_SubscribeAudioVizDataServerMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataServer)(nil).RecvMsg), m)
+}
+
+// Send mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataServer) Send(arg0 *v2.AudioVizResponse) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Send", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Send indicates an expected call of Send.
+func (mr *MockPlayer_SubscribeAudioVizDataServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataServer)(nil).Send), arg0)
+}
+
+// SendHeader mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataServer) SendHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendHeader indicates an expected call of SendHeader.
+func (mr *MockPlayer_SubscribeAudioVizDataServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataServer)(nil).SendHeader), arg0)
+}
+
+// SendMsg mocks base method.
+func (m_2 *MockPlayer_SubscribeAudioVizDataServer) SendMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendMsg indicates an expected call of SendMsg.
+func (mr *MockPlayer_SubscribeAudioVizDataServerMockRecorder) SendMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataServer)(nil).SendMsg), m)
+}
+
+// SetHeader mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataServer) SetHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetHeader indicates an expected call of SetHeader.
+func (mr *MockPlayer_SubscribeAudioVizDataServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataServer)(nil).SetHeader), arg0)
+}
+
+// SetTrailer mocks base method.
+func (m *MockPlayer_SubscribeAudioVizDataServer) SetTrailer(arg0 metadata.MD) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTrailer", arg0)
+}
+
+// SetTrailer indicates an expected call of SetTrailer.
+func (mr *MockPlayer_SubscribeAudioVizDataServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockPlayer_SubscribeAudioVizDataServer)(nil).SetTrailer), arg0)
 }

@@ -30,6 +30,7 @@ type PlayerClient interface {
 	Previous(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetCurrentStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*StatusResponse, error)
 	SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Player_SubscribeEventsClient, error)
+	SubscribeAudioVizData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Player_SubscribeAudioVizDataClient, error)
 }
 
 type playerClient struct {
@@ -162,6 +163,38 @@ func (x *playerSubscribeEventsClient) Recv() (*EventResponse, error) {
 	return m, nil
 }
 
+func (c *playerClient) SubscribeAudioVizData(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Player_SubscribeAudioVizDataClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Player_ServiceDesc.Streams[1], "/player_rpc.Player/SubscribeAudioVizData", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &playerSubscribeAudioVizDataClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Player_SubscribeAudioVizDataClient interface {
+	Recv() (*AudioVizResponse, error)
+	grpc.ClientStream
+}
+
+type playerSubscribeAudioVizDataClient struct {
+	grpc.ClientStream
+}
+
+func (x *playerSubscribeAudioVizDataClient) Recv() (*AudioVizResponse, error) {
+	m := new(AudioVizResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // PlayerServer is the server API for Player service.
 // All implementations must embed UnimplementedPlayerServer
 // for forward compatibility
@@ -177,6 +210,7 @@ type PlayerServer interface {
 	Previous(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	GetCurrentStatus(context.Context, *emptypb.Empty) (*StatusResponse, error)
 	SubscribeEvents(*emptypb.Empty, Player_SubscribeEventsServer) error
+	SubscribeAudioVizData(*emptypb.Empty, Player_SubscribeAudioVizDataServer) error
 	mustEmbedUnimplementedPlayerServer()
 }
 
@@ -216,6 +250,9 @@ func (UnimplementedPlayerServer) GetCurrentStatus(context.Context, *emptypb.Empt
 }
 func (UnimplementedPlayerServer) SubscribeEvents(*emptypb.Empty, Player_SubscribeEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeEvents not implemented")
+}
+func (UnimplementedPlayerServer) SubscribeAudioVizData(*emptypb.Empty, Player_SubscribeAudioVizDataServer) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeAudioVizData not implemented")
 }
 func (UnimplementedPlayerServer) mustEmbedUnimplementedPlayerServer() {}
 
@@ -431,6 +468,27 @@ func (x *playerSubscribeEventsServer) Send(m *EventResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Player_SubscribeAudioVizData_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(PlayerServer).SubscribeAudioVizData(m, &playerSubscribeAudioVizDataServer{stream})
+}
+
+type Player_SubscribeAudioVizDataServer interface {
+	Send(*AudioVizResponse) error
+	grpc.ServerStream
+}
+
+type playerSubscribeAudioVizDataServer struct {
+	grpc.ServerStream
+}
+
+func (x *playerSubscribeAudioVizDataServer) Send(m *AudioVizResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // Player_ServiceDesc is the grpc.ServiceDesc for Player service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -483,6 +541,11 @@ var Player_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SubscribeEvents",
 			Handler:       _Player_SubscribeEvents_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "SubscribeAudioVizData",
+			Handler:       _Player_SubscribeAudioVizData_Handler,
 			ServerStreams: true,
 		},
 	},
