@@ -52,6 +52,13 @@ func (s *StatusBar) handlePlayerEvent(timer *timer, msg *platune.EventResponse, 
 			color:   "14",
 			newSong: currentSong,
 		}
+	case platune.Event_POSITION:
+		timer.setTime(msg.Progress.Position.AsDuration().Milliseconds())
+		return playerEvent{
+			icon:    "",
+			color:   "14",
+			newSong: currentSong,
+		}
 	default:
 		return playerEvent{}
 	}

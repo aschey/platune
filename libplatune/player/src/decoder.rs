@@ -173,6 +173,13 @@ impl Decoder {
 
     fn initialize(&mut self, skip_silence: bool) -> Result<(), DecoderError> {
         let mut samples_skipped = 0;
+        let volume = self.volume;
+        if skip_silence {
+            // Edge case: if the volume is 0 then this will cause an issue because every sample will come back as silent
+            // Need to set the volume to 1 until we find the silence, then we can set it back
+            self.volume = 1.0;
+        }
+
         loop {
             self.next()?;
             if self.time_base.denom == 1 {
@@ -184,9 +191,14 @@ impl Decoder {
             if let Some(index) = self.buf.iter().position(|s| *s != 0.0) {
                 self.buf_len -= index;
                 samples_skipped += index;
-                let buf_no_silence = self.buf[index..].to_owned();
+                // Trim all the silent samples
+                let buf_no_silence: Vec<f64> =
+                    self.buf[index..].iter().map(|b| b * volume).collect();
+                // Put the segment without silence at the beginning
                 self.buf[..self.buf_len].copy_from_slice(&buf_no_silence);
 
+                // Set the volume back to the original value
+                self.volume = volume;
                 info!("Skipped {samples_skipped} silent samples");
                 break;
             } else {
