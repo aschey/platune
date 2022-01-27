@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use strum::Display;
 
-use super::player_state::PlayerState;
+use super::{current_position::CurrentPosition, player_state::PlayerState};
 
 #[derive(Clone, Debug, Display)]
 pub enum PlayerEvent {
@@ -17,4 +17,5 @@ pub enum PlayerEvent {
     SetVolume(PlayerState),
     Seek(PlayerState, Duration),
     QueueEnded(PlayerState),
+    Position(CurrentPosition),
 }

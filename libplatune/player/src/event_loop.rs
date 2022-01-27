@@ -7,6 +7,7 @@ use crate::{
         player_response::PlayerResponse, queue_source::QueueSource,
     },
     output::CpalAudioOutput,
+    platune_player::PlayerEvent,
     player::Player,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
@@ -19,6 +20,7 @@ pub(crate) fn decode_loop(
     volume: f64,
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
+    event_tx: tokio::sync::broadcast::Sender<PlayerEvent>,
 ) {
     let output = match CpalAudioOutput::new_output(player_cmd_tx.clone()) {
         Ok(output) => output,
@@ -47,6 +49,7 @@ pub(crate) fn decode_loop(
                         source,
                         &mut cmd_rx,
                         &player_cmd_tx,
+                        &event_tx,
                         settings,
                         Some(prev_stop_position),
                     );
@@ -58,6 +61,7 @@ pub(crate) fn decode_loop(
                         source,
                         &mut cmd_rx,
                         &player_cmd_tx,
+                        &event_tx,
                         settings,
                         None,
                     );
@@ -79,6 +83,7 @@ pub(crate) fn decode_loop(
                             source,
                             &mut cmd_rx,
                             &player_cmd_tx,
+                            &event_tx,
                             settings,
                             None,
                         );

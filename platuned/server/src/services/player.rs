@@ -29,9 +29,12 @@ fn format_error(msg: String) -> Status {
 fn get_event_response(event: Event, state: PlayerState, seek_millis: Option<u64>) -> EventResponse {
     EventResponse {
         event: event.into(),
-        queue: state.queue,
-        queue_position: state.queue_position as u32,
-        volume: state.volume,
+        state: Some(State {
+            queue: state.queue,
+            queue_position: state.queue_position as u32,
+            volume: state.volume,
+        }),
+        progress: None,
         seek_millis,
     }
 }
@@ -118,19 +121,13 @@ impl Player for PlayerImpl {
     async fn get_current_status(&self, _: Request<()>) -> Result<Response<StatusResponse>, Status> {
         let status = self.player.get_current_status().await.unwrap();
 
-        let (position, retrieval_time) = status
-            .current_position
-            .map(|p| {
-                (
-                    Some(prost_types::Duration::from(p.position)),
-                    p.retrieval_time.map(prost_types::Duration::from),
-                )
-            })
-            .unwrap_or((None, None));
+        let progress = status.current_position.map(|p| ProgressResponse {
+            position: Some(prost_types::Duration::from(p.position)),
+            retrieval_time: p.retrieval_time.map(prost_types::Duration::from),
+        });
 
         Ok(Response::new(StatusResponse {
-            progress: position,
-            retrieval_time,
+            progress,
             status: match status.track_status.status {
                 AudioStatus::Playing => crate::rpc::PlayerStatus::Playing.into(),
                 AudioStatus::Paused => crate::rpc::PlayerStatus::Paused.into(),
@@ -175,6 +172,17 @@ impl Player for PlayerImpl {
                     PlayerEvent::QueueEnded(state) => {
                         get_event_response(Event::QueueEnded, state, None)
                     }
+                    PlayerEvent::Position(position) => EventResponse {
+                        event: Event::Position.into(),
+                        state: None,
+                        seek_millis: None,
+                        progress: Some(ProgressResponse {
+                            position: Some(prost_types::Duration::from(position.position)),
+                            retrieval_time: position
+                                .retrieval_time
+                                .map(prost_types::Duration::from),
+                        }),
+                    },
                     _ => unreachable!("Encountered unhandled event {:?}", msg.to_string()),
                 }))
                 .await

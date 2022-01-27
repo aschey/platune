@@ -6,6 +6,7 @@ use crate::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
         player_response::PlayerResponse,
     },
+    platune_player::PlayerEvent,
     source::Source,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
@@ -17,6 +18,8 @@ pub(crate) struct AudioProcessor<'a> {
     cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
     decoder: Decoder,
+    last_send_time: Duration,
+    event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
 }
 
 impl<'a> AudioProcessor<'a> {
@@ -27,12 +30,15 @@ impl<'a> AudioProcessor<'a> {
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         volume: f64,
         start_position: Option<Duration>,
+        event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
     ) -> Result<Self, DecoderError> {
         let decoder = Decoder::new(source, volume, output_channels, start_position)?;
         Ok(Self {
             decoder,
             cmd_rx,
             player_cmd_tx,
+            event_tx,
+            last_send_time: Duration::default(),
         })
     }
 
@@ -45,7 +51,6 @@ impl<'a> AudioProcessor<'a> {
     }
 
     pub(crate) fn current_position(&self) -> Duration {
-        // This should only return None if the player is stopped which shouldn't happen here
         self.decoder.current_position().position
     }
 
@@ -92,7 +97,15 @@ impl<'a> AudioProcessor<'a> {
                 }
                 info!("Completed decoder command");
             }
-            Err(TryRecvError::Empty) => {}
+            Err(TryRecvError::Empty) => {
+                let position = self.decoder.current_position();
+                if position.position - self.last_send_time >= Duration::from_secs(10) {
+                    self.event_tx
+                        .send(PlayerEvent::Position(position.clone()))
+                        .unwrap_or_default();
+                    self.last_send_time = position.position;
+                }
+            }
             Err(TryRecvError::Disconnected) => {
                 error!("Decoder command sender has disconnected");
             }

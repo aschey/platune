@@ -10,6 +10,7 @@ use crate::{
         player_response::PlayerResponse,
     },
     output::{AudioOutput, AudioOutputError},
+    platune_player::PlayerEvent,
     settings::Settings,
     source::Source,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
@@ -113,6 +114,7 @@ impl AudioManager {
         source: Box<dyn Source>,
         cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
+        event_tx: &tokio::sync::broadcast::Sender<PlayerEvent>,
         settings: Settings,
         start_position: Option<Duration>,
     ) -> Duration {
@@ -124,6 +126,7 @@ impl AudioManager {
             player_cmd_tx,
             self.volume,
             start_position,
+            event_tx,
         ) {
             Ok(processor) => processor,
             Err(e) => {

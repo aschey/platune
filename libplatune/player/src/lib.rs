@@ -50,6 +50,7 @@ pub mod platune_player {
 
             let (event_tx, _) = broadcast::channel(32);
             let event_tx_ = event_tx.clone();
+            let event_tx__ = event_tx.clone();
             let (cmd_tx, cmd_rx) = two_way_channel();
             let cmd_tx_ = cmd_tx.clone();
             let (queue_tx, queue_rx) = flume::bounded(2);
@@ -63,7 +64,7 @@ pub mod platune_player {
             };
 
             let decoder_fn = || {
-                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_);
+                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_, event_tx__);
             };
 
             tokio::spawn(main_loop_fn);
