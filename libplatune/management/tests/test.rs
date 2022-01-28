@@ -70,21 +70,9 @@ pub async fn test_sync_basic() {
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
 
-    fs::copy(
-        "../player/tests/assets/test.mp3",
-        inner_dir.join("test.mp3"),
-    )
-    .unwrap();
-    fs::copy(
-        "../player/tests/assets/test2.mp3",
-        inner_dir.join("test2.mp3"),
-    )
-    .unwrap();
-    fs::copy(
-        "../player/tests/assets/test3.mp3",
-        inner_dir.join("test3.mp3"),
-    )
-    .unwrap();
+    fs::copy("../test_assets/test.mp3", inner_dir.join("test.mp3")).unwrap();
+    fs::copy("../test_assets/test2.mp3", inner_dir.join("test2.mp3")).unwrap();
+    fs::copy("../test_assets/test3.mp3", inner_dir.join("test3.mp3")).unwrap();
 
     manager
         .add_folder(music_dir.to_str().unwrap())
@@ -115,17 +103,17 @@ pub async fn test_sync_multiple() {
         create_dir_all(inner_dir.clone().join(format!("test{}", i))).unwrap();
 
         fs::copy(
-            "../player/tests/assets/test.mp3",
+            "../test_assets/test.mp3",
             inner_dir.join(format!("test{}/test.mp3", i)),
         )
         .unwrap();
         fs::copy(
-            "../player/tests/assets/test2.mp3",
+            "../test_assets/test2.mp3",
             inner_dir.join(format!("test{}/test2.mp3", i)),
         )
         .unwrap();
         fs::copy(
-            "../player/tests/assets/test3.mp3",
+            "../test_assets/test3.mp3",
             inner_dir.join(format!("test{}/test3.mp3", i)),
         )
         .unwrap();
@@ -160,18 +148,10 @@ pub async fn test_sync_multiple() {
 }
 
 async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager) {
-    fs::copy(
-        "../player/tests/assets/test.mp3",
-        inner_dir.join("test.mp3"),
-    )
-    .unwrap();
-    fs::copy(
-        "../player/tests/assets/test2.mp3",
-        inner_dir.join("test2.mp3"),
-    )
-    .unwrap();
+    fs::copy("../test_assets/test.mp3", inner_dir.join("test.mp3")).unwrap();
+    fs::copy("../test_assets/test2.mp3", inner_dir.join("test2.mp3")).unwrap();
     let last_song = inner_dir.join("test3.mp3");
-    fs::copy("../player/tests/assets/test3.mp3", last_song.clone()).unwrap();
+    fs::copy("../test_assets/test3.mp3", last_song.clone()).unwrap();
 
     manager
         .add_folder(music_dir.to_str().unwrap())
@@ -241,7 +221,7 @@ pub async fn test_sync_delete_and_readd() {
 
     let last_song = inner_dir.join("test3.mp3");
 
-    fs::copy("../player/tests/assets/test3.mp3", last_song.clone()).unwrap();
+    fs::copy("../test_assets/test3.mp3", last_song.clone()).unwrap();
 
     let mut receiver = manager.sync().await.unwrap();
     while receiver.next().await.is_some() {}
@@ -760,7 +740,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
 
     for (i, song) in songs.iter().enumerate() {
         let song_path = inner_dir.join(format!("test{}.mp3", i));
-        fs::copy("../player/tests/assets/test.mp3", song_path.clone()).unwrap();
+        fs::copy("../test_assets/test.mp3", song_path.clone()).unwrap();
         let t = katatsuki::Track::from_path(&song_path, None).unwrap();
 
         if let Some(title) = song.title {
