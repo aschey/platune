@@ -1,9 +1,12 @@
 mod audio_manager;
+mod audio_output;
 mod audio_processor;
 mod decoder;
 mod dto;
 mod event_loop;
 mod http_stream_reader;
+#[cfg(test)]
+mod mock_output;
 mod output;
 mod player;
 mod settings;
@@ -17,6 +20,7 @@ pub mod platune_player {
     use tokio::sync::broadcast;
     use tracing::{error, info, warn};
 
+    use crate::audio_output::*;
     pub use crate::dto::audio_status::AudioStatus;
     use crate::dto::decoder_command::DecoderCommand;
     use crate::dto::decoder_response::DecoderResponse;
@@ -46,6 +50,10 @@ pub mod platune_player {
 
     impl PlatunePlayer {
         pub fn new(settings: Settings) -> Self {
+            Self::new_with_host(settings, default_host())
+        }
+
+        pub fn new_with_host(settings: Settings, host: Host) -> Self {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -64,7 +72,7 @@ pub mod platune_player {
             };
 
             let decoder_fn = || {
-                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_, event_tx__);
+                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_, event_tx__, host);
             };
 
             tokio::spawn(main_loop_fn);
@@ -235,3 +243,7 @@ pub mod platune_player {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "./lib_test.rs"]
+mod lib_test;

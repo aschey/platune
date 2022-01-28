@@ -1,7 +1,4 @@
-use cpal::{
-    BuildStreamError, DefaultStreamConfigError, PlayStreamError, SampleRate, Stream, StreamError,
-    SupportedStreamConfig,
-};
+use crate::audio_output::*;
 use std::result;
 use std::{fmt::Debug, time::Duration};
 use symphonia::core::audio::RawSample;
@@ -32,7 +29,6 @@ pub enum AudioOutputError {
 
 pub type Result<T> = result::Result<T, AudioOutputError>;
 
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use rb::*;
 
 use tracing::{error, info};
@@ -52,11 +48,9 @@ impl AudioOutputSample for u16 {}
 
 impl CpalAudioOutput {
     pub(crate) fn new_output(
+        host: Host,
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
     ) -> Result<Box<dyn AudioOutput>> {
-        // Get default host.
-        let host = cpal::default_host();
-
         // Get the default audio output device.
         let device = match host.default_output_device() {
             Some(device) => device,
@@ -74,9 +68,9 @@ impl CpalAudioOutput {
 
         // Select proper playback routine based on sample format.
         Ok(match config.sample_format() {
-            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(cmd_sender)),
-            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(cmd_sender)),
-            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(cmd_sender)),
+            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(cmd_sender, host)),
+            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(cmd_sender, host)),
+            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(cmd_sender, host)),
         })
     }
 }
@@ -86,15 +80,16 @@ where
     T: AudioOutputSample,
 {
     ring_buf_producer: Option<rb::Producer<T>>,
-    stream: Option<cpal::Stream>,
+    stream: Option<Stream>,
     sample_rate: usize,
     channels: usize,
     buf: Vec<T>,
     cmd_sender: TwoWaySender<Command, PlayerResponse>,
+    host: Host,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn new(cmd_sender: TwoWaySender<Command, PlayerResponse>) -> Self {
+    pub fn new(cmd_sender: TwoWaySender<Command, PlayerResponse>, host: Host) -> Self {
         Self {
             ring_buf_producer: None,
             stream: None,
@@ -102,18 +97,19 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             channels: 0,
             buf: vec![T::MID; 2048],
             cmd_sender,
+            host,
         }
     }
 
     fn create_stream(
-        device: &cpal::Device,
+        device: &Device,
         supported_config: SupportedStreamConfig,
         sample_rate: SampleRate,
         ring_buf_consumer: Consumer<T>,
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
     ) -> Result<Stream> {
         // Output audio stream config.
-        let config = cpal::StreamConfig {
+        let config = StreamConfig {
             channels: supported_config.channels(),
             sample_rate,
             buffer_size: cpal::BufferSize::Default,
@@ -121,7 +117,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
 
         let stream_result = device.build_output_stream(
             &config,
-            move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
+            move |data: &mut [T], _: &OutputCallbackInfo| {
                 // Write out as many samples as possible from the ring buffer to the audio
                 // output.
                 let written = ring_buf_consumer.read(data).unwrap_or(0);
@@ -135,7 +131,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
                         error!("Error sending reset command: {e:?}");
                     }
                 }
-                cpal::StreamError::BackendSpecific { err } => {
+                StreamError::BackendSpecific { err } => {
                     error!("Playback error: {err}");
                     if let Err(e) = cmd_sender.try_send(Command::Stop) {
                         error!("Error sending stop command: {e:?}");
@@ -218,10 +214,8 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
             return Ok(());
         }
 
-        let host = cpal::default_host();
-
         // Get the default audio output device.
-        let device = match host.default_output_device() {
+        let device = match self.host.default_output_device() {
             Some(device) => device,
             None => {
                 return Err(AudioOutputError::NoDefaultDevice);

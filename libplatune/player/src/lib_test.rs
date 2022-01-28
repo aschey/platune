@@ -2,13 +2,14 @@ use async_trait::async_trait;
 
 use futures::Future;
 
-use libplatune_player::platune_player::{PlatunePlayer, PlayerEvent};
 use rstest::*;
 use std::{env::current_dir, time::Duration};
 use tokio::sync::broadcast;
 use tokio::time::{error::Elapsed, timeout};
 
 use assert_matches::*;
+
+use crate::platune_player::{PlatunePlayer, PlayerEvent};
 
 #[cfg(not(target_os = "windows"))]
 static SEPARATOR: &str = "/";
@@ -52,7 +53,7 @@ fn init() {
 
 fn get_path(song: &str) -> String {
     let dir = current_dir().unwrap().to_str().unwrap().to_owned();
-    format!("{1}{0}tests{0}assets{0}{2}", SEPARATOR, dir, song)
+    format!("{dir}{SEPARATOR}src{SEPARATOR}test_assets{SEPARATOR}{song}")
 }
 
 fn get_test_files(num_songs: usize) -> Vec<SongInfo> {

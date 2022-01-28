@@ -11,7 +11,7 @@ path = "src/lib.rs"
 
 [dependencies]
 anyhow = "1.0.53"
-cpal = {git = "https://github.com/aschey/cpal", rev = "58d4ce76503d29ea65fff52bd11fdca42598e049"}
+cpal = "0.13.5"
 flume = "0.10.10"
 futures-util = "0.3.19"
 rb = {git = "https://github.com/aschey/rb", rev = "451f90295452d38740f639d015942cfb32779dc0"}
@@ -27,7 +27,6 @@ tracing = "0.1.29"
 [dev-dependencies]
 assert_matches = "1.5.0"
 async-trait = "0.1.52"
-cpal = {git = "https://github.com/aschey/cpal", rev = "58d4ce76503d29ea65fff52bd11fdca42598e049", features = ["dummy"]}
 ctor = "0.1.21"
 futures = "0.3.19"
 rstest = "0.12.0"

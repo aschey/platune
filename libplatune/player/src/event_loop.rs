@@ -12,6 +12,7 @@ use crate::{
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
 
+use crate::audio_output::*;
 use flume::{Receiver, TryRecvError};
 use tracing::{error, info};
 
@@ -21,8 +22,9 @@ pub(crate) fn decode_loop(
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
     event_tx: tokio::sync::broadcast::Sender<PlayerEvent>,
+    host: Host,
 ) {
-    let output = match CpalAudioOutput::new_output(player_cmd_tx.clone()) {
+    let output = match CpalAudioOutput::new_output(host, player_cmd_tx.clone()) {
         Ok(output) => output,
         Err(e) => {
             error!("Error opening audio output: {e:?}");
