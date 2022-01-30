@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 
 use futures::Future;
+use rubato::{FftFixedInOut, Resampler};
 use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::DecoderOptions;
 use symphonia::core::errors::Error;
@@ -111,7 +112,7 @@ async fn init_player(
     (player, receiver, songs)
 }
 
-fn decode_source(path: String) -> Vec<f32> {
+fn decode_source(path: String, resample: bool) -> Vec<f32> {
     let src = std::fs::File::open(&path).expect("failed to open media");
 
     let mss = MediaSourceStream::new(Box::new(src), Default::default());
@@ -147,7 +148,6 @@ fn decode_source(path: String) -> Vec<f32> {
 
                 sample_buf.copy_interleaved_ref(decoded);
 
-                // The interleaved f32 samples can be accessed as follows.
                 let samples = sample_buf.samples();
                 all_samples.extend_from_slice(samples);
             }
@@ -163,7 +163,44 @@ fn decode_source(path: String) -> Vec<f32> {
         }
     }
 
-    all_samples.into_iter().skip_while(|s| *s == 0.0).collect()
+    let mut trimmed = all_samples.into_iter().skip_while(|s| *s == 0.0);
+
+    if !resample {
+        return trimmed.collect();
+    }
+
+    let mut resampled = vec![];
+    let mut resampler = FftFixedInOut::<f64>::new(44_100, 44_100, 1024, 2);
+    let n_frames = resampler.nbr_frames_needed();
+    let mut resampler_buf = vec![vec![0.0; n_frames]; 2];
+
+    loop {
+        for i in 0..n_frames {
+            match trimmed.next() {
+                Some(next) => {
+                    resampler_buf[0][i] = next as f64;
+                }
+                None => {
+                    resampler_buf[0][i..].iter_mut().for_each(|d| *d = 0.0);
+                    resampler_buf[1][i..].iter_mut().for_each(|d| *d = 0.0);
+
+                    let next_resample = resampler.process(&resampler_buf).unwrap();
+                    for i in 0..n_frames {
+                        resampled.push(next_resample[0][i] as f32);
+                        resampled.push(next_resample[1][i] as f32);
+                    }
+
+                    return resampled;
+                }
+            };
+            resampler_buf[1][i] = trimmed.next().unwrap() as f64;
+        }
+        let next_resample = resampler.process(&resampler_buf).unwrap();
+        for i in 0..n_frames {
+            resampled.push(next_resample[0][i] as f32);
+            resampled.push(next_resample[1][i] as f32);
+        }
+    }
 }
 
 #[rstest(num_songs, case(1), case(2), case(3))]
@@ -248,7 +285,7 @@ async fn test_decodes_all_data() {
     let player = PlatunePlayer::new_with_host(Default::default(), host);
 
     let path = get_path("test_stereo.mp3");
-    let expected_data = decode_source(path.clone());
+    let expected_data = decode_source(path.clone(), false);
     player.set_queue(vec![path]).await.unwrap();
     let mut all_data: Vec<f32> = vec![];
     let mut started = false;

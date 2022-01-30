@@ -25,21 +25,6 @@ use tracing_subscriber::{
     filter::LevelFilter, fmt::Layer, layer::SubscriberExt, EnvFilter, Layer as SubscriberLayer,
 };
 
-fn set_panic_hook() {
-    panic::set_hook(Box::new(|panic_info| {
-        if let Some(location) = panic_info.location() {
-            error!(
-                message = %panic_info,
-                panic.file = location.file(),
-                panic.line = location.line(),
-                panic.column = location.column(),
-            );
-        } else {
-            error!(message = %panic_info);
-        }
-    }));
-}
-
 fn main() {
     // IMPORTANT: retrieving the timezone must be done before the program spawns any threads,
     // which means it must be done before the Tokio runtime is initialized
@@ -125,4 +110,19 @@ async fn run_async(file_guard: WorkerGuard, stdout_guard: WorkerGuard) {
         drop(file_guard);
         exit(1);
     }
+}
+
+fn set_panic_hook() {
+    panic::set_hook(Box::new(|panic_info| {
+        if let Some(location) = panic_info.location() {
+            error!(
+                message = %panic_info,
+                panic.file = location.file(),
+                panic.line = location.line(),
+                panic.column = location.column(),
+            );
+        } else {
+            error!(message = %panic_info);
+        }
+    }));
 }

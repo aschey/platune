@@ -188,12 +188,18 @@ impl Decoder {
             if !skip_silence {
                 break;
             }
-            if let Some(index) = self.buf.iter().position(|s| *s != 0.0) {
+            if let Some(mut index) = self.buf.iter().position(|s| *s != 0.0) {
+                // Edge case: if the first non-silent sample is on an odd-numbered index, we'll start on the wrong channel
+                // This only matters for stereo streams
+                if self.input_channels == 2 && index % 2 == 1 {
+                    index -= 1;
+                }
                 self.buf_len -= index;
                 samples_skipped += index;
                 // Trim all the silent samples
                 let buf_no_silence: Vec<f64> =
                     self.buf[index..].iter().map(|b| b * volume).collect();
+
                 // Put the segment without silence at the beginning
                 self.buf[..self.buf_len].copy_from_slice(&buf_no_silence);
 
@@ -238,16 +244,19 @@ impl Decoder {
             let sample_rate = spec.rate as usize;
             self.sample_rate = sample_rate;
             let channels = spec.channels.count();
+            self.input_channels = channels;
+
             info!("Input channels = {channels}");
             info!("Input sample rate = {sample_rate}");
-            self.input_channels = channels;
-            if !(1..=2).contains(&channels) {
-                return Err(DecoderError::UnsupportedFormat(format!(
-                    "Audio sources with {channels} channels are not supported"
-                )));
+
+            if channels > 2 {
+                return Err(DecoderError::UnsupportedFormat(
+                    "Audio sources with more than 2 channels are not supported".to_owned(),
+                ));
             }
             self.sample_buf = SampleBuffer::<f64>::new(duration as u64, spec);
         }
+
         self.sample_buf.copy_interleaved_ref(decoded);
         let samples_len = self.sample_buf.samples().len();
 
