@@ -20,6 +20,7 @@ use tracing::info;
 use tracing::log::warn;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::fmt::time::OffsetTime;
+use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{
     filter::LevelFilter, fmt::Layer, layer::SubscriberExt, EnvFilter, Layer as SubscriberLayer,
 };
@@ -100,8 +101,7 @@ fn main() {
     let collector = collector.with(console_subscriber::spawn());
 
     // This has to be ran directly in the main function
-    tracing::subscriber::set_global_default(collector)
-        .expect("Unable to set global tracing subscriber");
+    collector.init();
 
     // Don't set panic hook until after logging is set up
     set_panic_hook();
