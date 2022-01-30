@@ -109,12 +109,14 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
     ) -> Result<Stream> {
         // Output audio stream config.
+        let channels = supported_config.channels();
         let config = StreamConfig {
             channels: supported_config.channels(),
             sample_rate,
             buffer_size: cpal::BufferSize::Default,
         };
-
+        info!("Output channels = {channels}");
+        info!("Output sample rate = {}", sample_rate.0);
         let stream_result = device.build_output_stream(
             &config,
             move |data: &mut [T], _: &OutputCallbackInfo| {

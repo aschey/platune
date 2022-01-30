@@ -235,8 +235,11 @@ impl Decoder {
         if self.sample_rate == 0 {
             let duration = decoded.capacity();
             let spec = *decoded.spec();
-            self.sample_rate = spec.rate as usize;
+            let sample_rate = spec.rate as usize;
+            self.sample_rate = sample_rate;
             let channels = spec.channels.count();
+            info!("Input channels = {channels}");
+            info!("Input sample rate = {sample_rate}");
             self.input_channels = channels;
             if !(1..=2).contains(&channels) {
                 return Err(DecoderError::UnsupportedFormat(format!(

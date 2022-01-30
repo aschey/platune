@@ -1,7 +1,5 @@
-use std::{
-    sync::mpsc::{self, Sender},
-    thread::{self, JoinHandle},
-};
+use std::thread;
+use std::time::Duration;
 
 use cpal::{traits::StreamTrait, BufferSize, ChannelCount, InputDevices, OutputDevices, Sample};
 use cpal::{
@@ -9,6 +7,7 @@ use cpal::{
     PauseStreamError, PlayStreamError, SampleFormat, SampleRate, StreamConfig, StreamError,
     SupportedBufferSize, SupportedStreamConfigRange, SupportedStreamConfigsError,
 };
+use flume::Sender;
 
 pub fn default_host() -> Host {
     Host::new().unwrap()
@@ -163,20 +162,6 @@ pub trait DeviceTrait {
         T: Sample,
         D: FnMut(&[T], &InputCallbackInfo) + Send + 'static,
         E: FnMut(StreamError) + Send + 'static;
-    // {
-    //     self.build_input_stream_raw(
-    //         config,
-    //         T::FORMAT,
-    //         move |data, info| {
-    //             data_callback(
-    //                 data.as_slice()
-    //                     .expect("host supplied incorrect sample type"),
-    //                 info,
-    //             )
-    //         },
-    //         error_callback,
-    //     )
-    // }
 
     /// Create an output stream.
     fn build_output_stream<T, D, E>(
@@ -189,85 +174,60 @@ pub trait DeviceTrait {
         T: Sample,
         D: FnMut(&mut [T], &OutputCallbackInfo) + Send + 'static,
         E: FnMut(StreamError) + Send + 'static;
-    // {
-    //     self.build_output_stream_raw(
-    //         config,
-    //         T::FORMAT,
-    //         move |data, info| {
-    //             data_callback(
-    //                 data.as_slice_mut()
-    //                     .expect("host supplied incorrect sample type"),
-    //                 info,
-    //             )
-    //         },
-    //         error_callback,
-    //     )
-    // }
-
-    // /// Create a dynamically typed input stream.
-    // fn build_input_stream_raw<D, E>(
-    //     &self,
-    //     config: &StreamConfig,
-    //     sample_format: SampleFormat,
-    //     data_callback: D,
-    //     error_callback: E,
-    // ) -> Result<Self::Stream, BuildStreamError>
-    // where
-    //     D: FnMut(&Data, &InputCallbackInfo) + Send + 'static,
-    //     E: FnMut(StreamError) + Send + 'static;
-
-    // /// Create a dynamically typed output stream.
-    // fn build_output_stream_raw<D, E>(
-    //     &self,
-    //     config: &StreamConfig,
-    //     sample_format: SampleFormat,
-    //     data_callback: D,
-    //     error_callback: E,
-    // ) -> Result<Self::Stream, BuildStreamError>
-    // where
-    //     D: FnMut(&mut Data, &OutputCallbackInfo) + Send + 'static,
-    //     E: FnMut(StreamError) + Send + 'static;
 }
 
 #[derive(Default)]
 pub struct Devices;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Device;
-
-pub struct Host;
+pub struct Host {
+    output_device: Device,
+}
 
 #[derive(Debug)]
 pub struct Stream {
-    audio_thread: Option<JoinHandle<()>>,
-    sender: Option<Sender<()>>,
-}
-
-impl Drop for Stream {
-    #[inline]
-    fn drop(&mut self) {
-        if let Some(sender) = self.sender.take() {
-            sender.send(()).unwrap();
-        }
-        if let Some(thread) = self.audio_thread.take() {
-            thread.join().unwrap();
-        }
-    }
+    shutdown_tx: Option<Sender<()>>,
 }
 
 pub struct SupportedInputConfigs;
 pub struct SupportedOutputConfigs;
 
 impl Host {
-    #[allow(dead_code)]
+    pub fn new_with_sleep(audio_sleep_time: Duration) -> Result<Self, cpal::HostUnavailable> {
+        Ok(Host {
+            output_device: Device::new(Some(audio_sleep_time)),
+        })
+    }
+
     pub fn new() -> Result<Self, cpal::HostUnavailable> {
-        Ok(Host)
+        Ok(Host {
+            output_device: Device::new(None),
+        })
     }
 }
 
 impl Devices {
     pub fn new() -> Result<Self, DevicesError> {
         Ok(Devices)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Device {
+    data_tx: tokio::sync::broadcast::Sender<Vec<f32>>,
+    audio_sleep_time: Option<Duration>,
+}
+
+impl Device {
+    pub fn new(audio_sleep_time: Option<Duration>) -> Self {
+        let (data_tx, _) = tokio::sync::broadcast::channel(2048);
+        Self {
+            data_tx,
+            audio_sleep_time,
+        }
+    }
+
+    pub fn subscribe_data(&self) -> tokio::sync::broadcast::Receiver<Vec<f32>> {
+        self.data_tx.subscribe()
     }
 }
 
@@ -298,8 +258,8 @@ impl DeviceTrait for Device {
     #[inline]
     fn default_input_config(&self) -> Result<SupportedStreamConfig, DefaultStreamConfigError> {
         Ok(SupportedStreamConfig {
-            channels: 1,
-            sample_rate: SampleRate(48000),
+            channels: 2,
+            sample_rate: SampleRate(44100),
             buffer_size: SupportedBufferSize::Range {
                 min: 0,
                 max: u32::MAX,
@@ -311,8 +271,8 @@ impl DeviceTrait for Device {
     #[inline]
     fn default_output_config(&self) -> Result<SupportedStreamConfig, DefaultStreamConfigError> {
         Ok(SupportedStreamConfig {
-            channels: 1,
-            sample_rate: SampleRate(48000),
+            channels: 2,
+            sample_rate: SampleRate(44100),
             buffer_size: SupportedBufferSize::Range {
                 min: 0,
                 max: u32::MAX,
@@ -323,9 +283,9 @@ impl DeviceTrait for Device {
 
     fn build_input_stream<T, D, E>(
         &self,
-        config: &StreamConfig,
-        mut data_callback: D,
-        error_callback: E,
+        _config: &StreamConfig,
+        mut _data_callback: D,
+        _error_callback: E,
     ) -> Result<Self::Stream, BuildStreamError>
     where
         T: Sample,
@@ -337,17 +297,19 @@ impl DeviceTrait for Device {
 
     fn build_output_stream<T, D, E>(
         &self,
-        config: &StreamConfig,
+        _config: &StreamConfig,
         mut data_callback: D,
-        error_callback: E,
+        _error_callback: E,
     ) -> Result<Self::Stream, BuildStreamError>
     where
         T: Sample,
         D: FnMut(&mut [T], &OutputCallbackInfo) + Send + 'static,
         E: FnMut(StreamError) + Send + 'static,
     {
-        let (sender, receiver) = mpsc::channel();
-        let handle = thread::spawn(move || {
+        let (shutdown_tx, shutdown_rx) = flume::bounded(1);
+        let data_tx = self.data_tx.clone();
+        let sleep_time = self.audio_sleep_time;
+        thread::spawn(move || {
             let mut buf = [0f32; 128];
 
             let mut data =
@@ -358,18 +320,36 @@ impl DeviceTrait for Device {
                     playback: StreamInstant { secs: 0, nanos: 0 },
                 },
             };
+            let mut shutdown_requested = false;
             loop {
-                if let Ok(()) = receiver.try_recv() {
+                data_callback(&mut data, &info);
+                let data_f32: Vec<f32> = data.iter().map(|d| d.to_f32()).collect();
+                // Shutdown once no more data is received
+                if shutdown_requested && data_f32.iter().all(|d| *d == 0.0) {
                     break;
                 }
-                data_callback(&mut data, &info);
+                data_tx.send(data_f32).unwrap_or_default();
+                if let Some(sleep_time) = sleep_time {
+                    thread::sleep(sleep_time);
+                }
+                if let Ok(()) = shutdown_rx.try_recv() {
+                    shutdown_requested = true;
+                }
             }
         });
 
         Ok(Self::Stream {
-            audio_thread: Some(handle),
-            sender: Some(sender),
+            shutdown_tx: Some(shutdown_tx),
         })
+    }
+}
+
+impl Drop for Stream {
+    #[inline]
+    fn drop(&mut self) {
+        if let Some(sender) = self.shutdown_tx.take() {
+            sender.send(()).unwrap_or_default();
+        }
     }
 }
 
@@ -386,11 +366,11 @@ impl HostTrait for Host {
     }
 
     fn default_input_device(&self) -> Option<Device> {
-        Some(Device)
+        Some(Device::new(None))
     }
 
     fn default_output_device(&self) -> Option<Device> {
-        Some(Device {})
+        Some(self.output_device.clone())
     }
 }
 

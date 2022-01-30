@@ -30,7 +30,7 @@ impl<T: Read + Seek + Send> ReadSeekSource<T> {
     }
 }
 
-impl<T: Read + Seek + Send> MediaSource for ReadSeekSource<T> {
+impl<T: Read + Seek + Send + Sync> MediaSource for ReadSeekSource<T> {
     fn is_seekable(&self) -> bool {
         true
     }
@@ -58,7 +58,7 @@ impl<T: Read + Seek + Send> FileExt for ReadSeekSource<T> {
     }
 }
 
-impl<T: Read + Seek + Send + Debug + 'static> Source for ReadSeekSource<T> {
+impl<T: Read + Seek + Send + Sync + Debug + 'static> Source for ReadSeekSource<T> {
     fn as_media_source(self: Box<Self>) -> Box<dyn MediaSource> {
         self
     }
