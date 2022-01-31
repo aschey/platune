@@ -114,9 +114,7 @@ async fn init_player(
 fn decode_source(
     path: String,
     enable_resampling: bool,
-    sample_rate_in: usize,
-    sample_rate_out: usize,
-    resample_chunk_size: usize,
+    resampler: &mut FftFixedInOut<f64>,
 ) -> Vec<f32> {
     let src = std::fs::File::open(&path).expect("failed to open media");
 
@@ -175,8 +173,7 @@ fn decode_source(
     }
 
     let mut resampled = vec![];
-    let mut resampler =
-        FftFixedInOut::<f64>::new(sample_rate_in, sample_rate_out, resample_chunk_size, 2);
+
     let n_frames = resampler.nbr_frames_needed();
     let mut resampler_buf = vec![vec![0.0; n_frames]; 2];
 
@@ -207,6 +204,23 @@ fn decode_source(
             resampled.push(next_resample[1][i] as f32);
         }
     }
+}
+
+fn decode_sources(
+    paths: Vec<String>,
+    enable_resampling: bool,
+    sample_rate_in: usize,
+    sample_rate_out: usize,
+    resample_chunk_size: usize,
+) -> Vec<f32> {
+    let mut all_samples = vec![];
+    let mut resampler =
+        FftFixedInOut::<f64>::new(sample_rate_in, sample_rate_out, resample_chunk_size, 2);
+    for path in paths {
+        all_samples.extend_from_slice(&decode_source(path, enable_resampling, &mut resampler));
+    }
+
+    all_samples
 }
 
 #[rstest(num_songs, case(1), case(2), case(3))]
@@ -284,17 +298,23 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
 }
 
 #[rstest(
+    sources,
     enable_resampling,
     sample_rate_in,
     sample_rate_out,
     resample_chunk_size,
-    case(false, 44_100, 44_100, 1024),
-    case(true, 44_100, 44_100, 1024),
-    case(true, 44_100, 48_000, 1024),
-    case(true, 44_100, 48_000, 666)
+    case(vec!["test_stereo.mp3"], false, 44_100, 44_100, 1024),
+    case(vec!["test_stereo.mp3"], true, 44_100, 44_100, 1024),
+    case(vec!["test_stereo.mp3"], true, 44_100, 48_000, 1024),
+    case(vec!["test_stereo.mp3"], true, 44_100, 48_000, 666),
+    case(vec!["test_stereo.mp3", "test_stereo.mp3"], false, 44_100, 44_100, 1024),
+    case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 44_100, 1024),
+    // case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 1024),
+    // case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 666),
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_decode_all_data(
+    sources: Vec<&str>,
     enable_resampling: bool,
     sample_rate_in: u32,
     sample_rate_out: u32,
@@ -311,16 +331,17 @@ async fn test_decode_all_data(
         host,
     );
 
-    let path = get_path("test_stereo.mp3");
-    let expected_data = decode_source(
-        path.clone(),
+    let paths: Vec<String> = sources.into_iter().map(get_path).collect();
+
+    let expected_data = decode_sources(
+        paths.clone(),
         sample_rate_in != sample_rate_out,
         sample_rate_in as usize,
         sample_rate_out as usize,
         resample_chunk_size,
     );
 
-    player.set_queue(vec![path]).await.unwrap();
+    player.set_queue(paths).await.unwrap();
     let mut all_data: Vec<f32> = vec![];
     let mut started = false;
 
@@ -335,7 +356,11 @@ async fn test_decode_all_data(
         all_data.extend_from_slice(&data);
     }
 
-    for (i, d) in expected_data.iter().enumerate() {
-        assert_eq!(*d, all_data[i], "failed at index {i}");
+    for (i, d) in all_data.iter().enumerate() {
+        if i >= expected_data.len() {
+            assert_eq!(0.0, *d, "failed at index {i}");
+        } else {
+            assert_eq!(expected_data[i], *d, "failed at index {i}");
+        }
     }
 }
