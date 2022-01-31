@@ -111,101 +111,6 @@ async fn init_player(
     (player, receiver, songs)
 }
 
-fn decode_source(
-    path: String,
-    enable_resampling: bool,
-    resampler: &mut FftFixedInOut<f64>,
-) -> Vec<f32> {
-    let src = std::fs::File::open(&path).expect("failed to open media");
-
-    let mss = MediaSourceStream::new(Box::new(src), Default::default());
-    let mut hint = Hint::new();
-    hint.with_extension("mp3");
-    let meta_opts = MetadataOptions::default();
-    let fmt_opts = FormatOptions {
-        enable_gapless: true,
-        ..FormatOptions::default()
-    };
-    let probed = symphonia::default::get_probe()
-        .format(&hint, mss, &fmt_opts, &meta_opts)
-        .expect("unsupported format");
-    let mut format = probed.format;
-    let track = format.default_track().unwrap();
-    let track_id = track.id;
-
-    let dec_opts = DecoderOptions::default();
-    let mut decoder = symphonia::default::get_codecs()
-        .make(&track.codec_params, &dec_opts)
-        .expect("unsupported codec");
-
-    let mut all_samples = vec![];
-    while let Ok(packet) = format.next_packet() {
-        if packet.track_id() != track_id {
-            continue;
-        }
-
-        match decoder.decode(&packet) {
-            Ok(decoded) => {
-                let mut sample_buf =
-                    SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
-
-                sample_buf.copy_interleaved_ref(decoded);
-
-                let samples = sample_buf.samples();
-                all_samples.extend_from_slice(samples);
-            }
-            Err(Error::IoError(_)) => {
-                continue;
-            }
-            Err(Error::DecodeError(_)) => {
-                continue;
-            }
-            Err(err) => {
-                panic!("{}", err);
-            }
-        }
-    }
-
-    let mut trimmed = all_samples.into_iter().skip_while(|s| *s == 0.0);
-
-    if !enable_resampling {
-        return trimmed.collect();
-    }
-
-    let mut resampled = vec![];
-
-    let n_frames = resampler.nbr_frames_needed();
-    let mut resampler_buf = vec![vec![0.0; n_frames]; 2];
-
-    loop {
-        for i in 0..n_frames {
-            match trimmed.next() {
-                Some(next) => {
-                    resampler_buf[0][i] = next as f64;
-                }
-                None => {
-                    resampler_buf[0][i..].iter_mut().for_each(|d| *d = 0.0);
-                    resampler_buf[1][i..].iter_mut().for_each(|d| *d = 0.0);
-
-                    let next_resample = resampler.process(&resampler_buf).unwrap(); // resampler_buf.clone();
-                    for i in 0..next_resample[0].len() {
-                        resampled.push(next_resample[0][i] as f32);
-                        resampled.push(next_resample[1][i] as f32);
-                    }
-
-                    return resampled;
-                }
-            };
-            resampler_buf[1][i] = trimmed.next().unwrap() as f64;
-        }
-        let next_resample = resampler.process(&resampler_buf).unwrap(); //resampler_buf.clone();
-        for i in 0..next_resample[0].len() {
-            resampled.push(next_resample[0][i] as f32);
-            resampled.push(next_resample[1][i] as f32);
-        }
-    }
-}
-
 fn decode_sources(
     paths: Vec<String>,
     enable_resampling: bool,
@@ -216,8 +121,109 @@ fn decode_sources(
     let mut all_samples = vec![];
     let mut resampler =
         FftFixedInOut::<f64>::new(sample_rate_in, sample_rate_out, resample_chunk_size, 2);
-    for path in paths {
-        all_samples.extend_from_slice(&decode_source(path, enable_resampling, &mut resampler));
+    let len = paths.len();
+
+    let n_frames = resampler.nbr_frames_needed();
+    let mut resampler_index = 0;
+    let mut resampler_buf = vec![vec![0.0; n_frames]; 2];
+
+    for (i, path) in paths.into_iter().enumerate() {
+        let mut file_samples = vec![];
+        let is_last = i == len - 1;
+        let src = std::fs::File::open(&path).expect("failed to open media");
+
+        let mss = MediaSourceStream::new(Box::new(src), Default::default());
+        let mut hint = Hint::new();
+        hint.with_extension("mp3");
+        let meta_opts = MetadataOptions::default();
+        let fmt_opts = FormatOptions {
+            enable_gapless: true,
+            ..FormatOptions::default()
+        };
+        let probed = symphonia::default::get_probe()
+            .format(&hint, mss, &fmt_opts, &meta_opts)
+            .expect("unsupported format");
+        let mut format = probed.format;
+        let track = format.default_track().unwrap();
+        let track_id = track.id;
+
+        let dec_opts = DecoderOptions::default();
+        let mut decoder = symphonia::default::get_codecs()
+            .make(&track.codec_params, &dec_opts)
+            .expect("unsupported codec");
+
+        while let Ok(packet) = format.next_packet() {
+            if packet.track_id() != track_id {
+                continue;
+            }
+
+            match decoder.decode(&packet) {
+                Ok(decoded) => {
+                    let mut sample_buf =
+                        SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
+
+                    sample_buf.copy_interleaved_ref(decoded);
+
+                    let samples = sample_buf.samples();
+                    file_samples.extend_from_slice(samples);
+                }
+                Err(Error::IoError(_)) => {
+                    continue;
+                }
+                Err(Error::DecodeError(_)) => {
+                    continue;
+                }
+                Err(err) => {
+                    panic!("{}", err);
+                }
+            }
+        }
+
+        let mut trimmed = file_samples.into_iter().skip_while(|s| *s == 0.0);
+
+        if !enable_resampling {
+            let trimmed: Vec<f32> = trimmed.collect();
+            all_samples.extend_from_slice(&trimmed);
+            continue;
+        }
+
+        let mut resampled = vec![];
+
+        'outer: loop {
+            while resampler_index < n_frames {
+                match trimmed.next() {
+                    Some(next) => {
+                        resampler_buf[0][resampler_index] = next as f64;
+                    }
+                    None => {
+                        if is_last {
+                            resampler_buf[0][resampler_index..]
+                                .iter_mut()
+                                .for_each(|d| *d = 0.0);
+                            resampler_buf[1][resampler_index..]
+                                .iter_mut()
+                                .for_each(|d| *d = 0.0);
+
+                            let next_resample = resampler.process(&resampler_buf).unwrap(); // resampler_buf.clone();
+                            for i in 0..next_resample[0].len() {
+                                resampled.push(next_resample[0][i] as f32);
+                                resampled.push(next_resample[1][i] as f32);
+                            }
+                        }
+                        break 'outer;
+                    }
+                };
+                resampler_buf[1][resampler_index] = trimmed.next().unwrap() as f64;
+                resampler_index += 1;
+            }
+            let next_resample = resampler.process(&resampler_buf).unwrap(); //resampler_buf.clone();
+            for i in 0..next_resample[0].len() {
+                resampled.push(next_resample[0][i] as f32);
+                resampled.push(next_resample[1][i] as f32);
+            }
+            resampler_index = 0;
+        }
+        all_samples.extend_from_slice(&resampled);
     }
 
     all_samples
@@ -309,8 +315,8 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     case(vec!["test_stereo.mp3"], true, 44_100, 48_000, 666),
     case(vec!["test_stereo.mp3", "test_stereo.mp3"], false, 44_100, 44_100, 1024),
     case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 44_100, 1024),
-    // case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 1024),
-    // case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 666),
+    case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 1024),
+    case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 666),
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_decode_all_data(
