@@ -143,8 +143,10 @@ impl AudioManager {
         }
 
         if settings.enable_resampling && processor.sample_rate() != self.output.sample_rate() {
+            info!("Resampling source");
             self.decode_resample(&mut processor);
         } else {
+            info!("Not resampling source");
             self.decode_no_resample(&mut processor);
         }
         self.volume = processor.volume();

@@ -1,7 +1,12 @@
 use async_trait::async_trait;
 
+use crate::mock_output::*;
+use crate::settings::Settings;
+use assert_matches::*;
 use futures::Future;
+use rstest::*;
 use rubato::{FftFixedInOut, Resampler};
+use std::{env::current_dir, time::Duration};
 use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::DecoderOptions;
 use symphonia::core::errors::Error;
@@ -9,12 +14,6 @@ use symphonia::core::formats::FormatOptions;
 use symphonia::core::io::MediaSourceStream;
 use symphonia::core::meta::MetadataOptions;
 use symphonia::core::probe::Hint;
-use tokio::sync::broadcast::error::RecvError;
-
-use crate::mock_output::*;
-use assert_matches::*;
-use rstest::*;
-use std::{env::current_dir, time::Duration};
 use tokio::sync::broadcast;
 use tokio::time::{error::Elapsed, timeout};
 
@@ -39,8 +38,8 @@ trait TimedFut<T> {
 }
 
 #[async_trait]
-impl TimedFut<Option<PlayerEvent>> for broadcast::Receiver<PlayerEvent> {
-    async fn timed_recv(&mut self) -> Option<PlayerEvent> {
+impl<T: Clone + Send> TimedFut<Option<T>> for broadcast::Receiver<T> {
+    async fn timed_recv(&mut self) -> Option<T> {
         timed_await(self.recv()).await.unwrap().ok()
     }
 }
@@ -112,7 +111,13 @@ async fn init_player(
     (player, receiver, songs)
 }
 
-fn decode_source(path: String, resample: bool) -> Vec<f32> {
+fn decode_source(
+    path: String,
+    enable_resampling: bool,
+    sample_rate_in: usize,
+    sample_rate_out: usize,
+    resample_chunk_size: usize,
+) -> Vec<f32> {
     let src = std::fs::File::open(&path).expect("failed to open media");
 
     let mss = MediaSourceStream::new(Box::new(src), Default::default());
@@ -165,12 +170,13 @@ fn decode_source(path: String, resample: bool) -> Vec<f32> {
 
     let mut trimmed = all_samples.into_iter().skip_while(|s| *s == 0.0);
 
-    if !resample {
+    if !enable_resampling {
         return trimmed.collect();
     }
 
     let mut resampled = vec![];
-    let mut resampler = FftFixedInOut::<f64>::new(44_100, 44_100, 1024, 2);
+    let mut resampler =
+        FftFixedInOut::<f64>::new(sample_rate_in, sample_rate_out, resample_chunk_size, 2);
     let n_frames = resampler.nbr_frames_needed();
     let mut resampler_buf = vec![vec![0.0; n_frames]; 2];
 
@@ -184,8 +190,8 @@ fn decode_source(path: String, resample: bool) -> Vec<f32> {
                     resampler_buf[0][i..].iter_mut().for_each(|d| *d = 0.0);
                     resampler_buf[1][i..].iter_mut().for_each(|d| *d = 0.0);
 
-                    let next_resample = resampler.process(&resampler_buf).unwrap();
-                    for i in 0..n_frames {
+                    let next_resample = resampler.process(&resampler_buf).unwrap(); // resampler_buf.clone();
+                    for i in 0..next_resample[0].len() {
                         resampled.push(next_resample[0][i] as f32);
                         resampled.push(next_resample[1][i] as f32);
                     }
@@ -195,8 +201,8 @@ fn decode_source(path: String, resample: bool) -> Vec<f32> {
             };
             resampler_buf[1][i] = trimmed.next().unwrap() as f64;
         }
-        let next_resample = resampler.process(&resampler_buf).unwrap();
-        for i in 0..n_frames {
+        let next_resample = resampler.process(&resampler_buf).unwrap(); //resampler_buf.clone();
+        for i in 0..next_resample[0].len() {
             resampled.push(next_resample[0][i] as f32);
             resampled.push(next_resample[1][i] as f32);
         }
@@ -277,38 +283,59 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     player.join().await.unwrap();
 }
 
+#[rstest(
+    enable_resampling,
+    sample_rate_in,
+    sample_rate_out,
+    resample_chunk_size,
+    case(false, 44_100, 44_100, 1024),
+    case(true, 44_100, 44_100, 1024),
+    case(true, 44_100, 48_000, 1024),
+    case(true, 44_100, 48_000, 666)
+)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_decodes_all_data() {
-    let host = Host::new_with_sleep(Duration::from_millis(1)).unwrap();
+async fn test_decode_all_data(
+    enable_resampling: bool,
+    sample_rate_in: u32,
+    sample_rate_out: u32,
+    resample_chunk_size: usize,
+) {
+    let host = Host::new_with_options(Duration::from_millis(1), sample_rate_out).unwrap();
     let mut data_rx = host.default_output_device().unwrap().subscribe_data();
 
-    let player = PlatunePlayer::new_with_host(Default::default(), host);
+    let player = PlatunePlayer::new_with_host(
+        Settings {
+            enable_resampling,
+            resample_chunk_size,
+        },
+        host,
+    );
 
     let path = get_path("test_stereo.mp3");
-    let expected_data = decode_source(path.clone(), false);
+    let expected_data = decode_source(
+        path.clone(),
+        sample_rate_in != sample_rate_out,
+        sample_rate_in as usize,
+        sample_rate_out as usize,
+        resample_chunk_size,
+    );
+
     player.set_queue(vec![path]).await.unwrap();
     let mut all_data: Vec<f32> = vec![];
     let mut started = false;
 
     while all_data.len() < expected_data.len() {
-        match data_rx.recv().await {
-            Ok(mut data) => {
-                if !started {
-                    data = data.into_iter().skip_while(|d| *d == 0.0).collect();
-                    if !data.is_empty() {
-                        started = true;
-                    }
-                }
-                all_data.extend_from_slice(&data);
-            }
-            Err(RecvError::Lagged(_)) => panic!("lagged"),
-            Err(RecvError::Closed) => {
-                println!("closed")
+        let mut data = data_rx.timed_recv().await.unwrap();
+        if !started {
+            data = data.into_iter().skip_while(|d| *d == 0.0).collect();
+            if !data.is_empty() {
+                started = true;
             }
         }
+        all_data.extend_from_slice(&data);
     }
 
     for (i, d) in expected_data.iter().enumerate() {
-        assert_eq!(*d, all_data[i]);
+        assert_eq!(*d, all_data[i], "failed at index {i}");
     }
 }
