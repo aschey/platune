@@ -8,6 +8,7 @@ use cpal::{
     SupportedBufferSize, SupportedStreamConfigRange, SupportedStreamConfigsError,
 };
 use flume::Sender;
+use spin_sleep::SpinSleeper;
 
 pub fn default_host() -> Host {
     Host::new().unwrap()
@@ -315,16 +316,20 @@ impl DeviceTrait for Device {
         let data_tx = self.data_tx.clone();
         let sleep_time = self.audio_sleep_time;
         thread::spawn(move || {
-            let mut buf = [0f32; 128];
+            const BUF_SIZE: usize = 128;
+            let mut buf = [0f32; BUF_SIZE];
 
             let mut data =
-                unsafe { std::slice::from_raw_parts(buf.as_mut_ptr() as *const T, 128) }.to_owned();
+                unsafe { std::slice::from_raw_parts(buf.as_mut_ptr() as *const T, BUF_SIZE) }
+                    .to_owned();
             let info = OutputCallbackInfo {
                 timestamp: OutputStreamTimestamp {
                     callback: StreamInstant { secs: 0, nanos: 0 },
                     playback: StreamInstant { secs: 0, nanos: 0 },
                 },
             };
+            // Using thread::sleep on Windows seems to be widely inaccurate at scale
+            let spin_sleeper = SpinSleeper::new(100_000);
             let mut shutdown_requested = false;
             loop {
                 data_callback(&mut data, &info);
@@ -335,7 +340,7 @@ impl DeviceTrait for Device {
                 }
                 data_tx.send(data_f32).unwrap_or_default();
                 if let Some(sleep_time) = sleep_time {
-                    thread::sleep(sleep_time);
+                    spin_sleeper.sleep(sleep_time);
                 }
                 if let Ok(()) = shutdown_rx.try_recv() {
                     shutdown_requested = true;
