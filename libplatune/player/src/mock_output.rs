@@ -316,7 +316,7 @@ impl DeviceTrait for Device {
         let data_tx = self.data_tx.clone();
         let sleep_time = self.audio_sleep_time;
         thread::spawn(move || {
-            const BUF_SIZE: usize = 128;
+            const BUF_SIZE: usize = 1024;
             let mut buf = [0f32; BUF_SIZE];
 
             let mut data =
@@ -333,7 +333,13 @@ impl DeviceTrait for Device {
             let mut shutdown_requested = false;
             loop {
                 data_callback(&mut data, &info);
-                let data_f32: Vec<f32> = data.iter().map(|d| d.to_f32()).collect();
+                let data_f32: Vec<f32> = data
+                    .iter()
+                    .map(|d| d.to_f32())
+                    // f32::MAX means the sample wasn't written in time, filter these for testing purposes
+                    // Since many tests run in parallel this is likely to happen sometimes
+                    .filter(|d| *d != f32::MAX)
+                    .collect();
                 // Shutdown once no more data is received
                 if shutdown_requested && data_f32.iter().all(|d| *d == 0.0) {
                     break;

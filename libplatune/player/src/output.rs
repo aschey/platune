@@ -117,14 +117,20 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         };
         info!("Output channels = {channels}");
         info!("Output sample rate = {}", sample_rate.0);
+
+        // Use max value for tests to these can be filtered out later
+        #[cfg(test)]
+        let filler = T::from_sample(f32::MAX);
+        #[cfg(not(test))]
+        let filler = T::MID;
+
         let stream_result = device.build_output_stream(
             &config,
             move |data: &mut [T], _: &OutputCallbackInfo| {
-                // Write out as many samples as possible from the ring buffer to the audio
-                // output.
+                // Write out as many samples as possible from the ring buffer to the audio output.
                 let written = ring_buf_consumer.read(data).unwrap_or(0);
                 // Mute any remaining samples.
-                data[written..].iter_mut().for_each(|s| *s = T::MID);
+                data[written..].iter_mut().for_each(|s| *s = filler);
             },
             move |err| match err {
                 StreamError::DeviceNotAvailable => {
