@@ -113,7 +113,6 @@ async fn init_player(
 
 fn decode_sources(
     paths: Vec<String>,
-    in_channels: usize,
     out_channels: usize,
     enable_resampling: bool,
     sample_rate_in: usize,
@@ -151,6 +150,7 @@ fn decode_sources(
             .expect("unsupported format");
         let mut format = probed.format;
         let track = format.default_track().unwrap();
+        let in_channels = track.codec_params.channels.unwrap().count();
         let track_id = track.id;
 
         let dec_opts = DecoderOptions::default();
@@ -328,10 +328,9 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
 #[rstest]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_decode_all_data(
-    #[values(vec!["test_stereo.mp3"],vec!["test_stereo.mp3", "test_stereo.mp3"] )] sources: Vec<
+    #[values(vec!["test_stereo.mp3"], vec!["test_stereo.mp3", "test_stereo.mp3"] )] sources: Vec<
         &str,
     >,
-    #[values(2)] in_channels: usize,
     #[values(1, 2)] out_channels: usize,
     #[values(44_100)] sample_rate_in: u32,
     #[values(44_100, 48_000)] sample_rate_out: u32,
@@ -357,7 +356,6 @@ async fn test_decode_all_data(
 
     let expected_data = decode_sources(
         paths.clone(),
-        in_channels,
         out_channels,
         sample_rate_in != sample_rate_out,
         sample_rate_in as usize,
