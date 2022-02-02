@@ -196,15 +196,16 @@ impl Host {
     pub fn new_with_options(
         audio_sleep_time: Duration,
         sample_rate: u32,
+        channels: u16,
     ) -> Result<Self, cpal::HostUnavailable> {
         Ok(Host {
-            output_device: Device::new(Some(audio_sleep_time), sample_rate),
+            output_device: Device::new(Some(audio_sleep_time), sample_rate, channels),
         })
     }
 
     pub fn new() -> Result<Self, cpal::HostUnavailable> {
         Ok(Host {
-            output_device: Device::new(None, 44_100),
+            output_device: Device::new(None, 44_100, 2),
         })
     }
 }
@@ -220,15 +221,17 @@ pub struct Device {
     data_tx: tokio::sync::broadcast::Sender<Vec<f32>>,
     audio_sleep_time: Option<Duration>,
     sample_rate: u32,
+    channels: u16,
 }
 
 impl Device {
-    pub fn new(audio_sleep_time: Option<Duration>, sample_rate: u32) -> Self {
+    pub fn new(audio_sleep_time: Option<Duration>, sample_rate: u32, channels: u16) -> Self {
         let (data_tx, _) = tokio::sync::broadcast::channel(2048);
         Self {
             data_tx,
             audio_sleep_time,
             sample_rate,
+            channels,
         }
     }
 
@@ -277,7 +280,7 @@ impl DeviceTrait for Device {
     #[inline]
     fn default_output_config(&self) -> Result<SupportedStreamConfig, DefaultStreamConfigError> {
         Ok(SupportedStreamConfig {
-            channels: 2,
+            channels: self.channels,
             sample_rate: SampleRate(self.sample_rate),
             buffer_size: SupportedBufferSize::Range {
                 min: 0,
@@ -382,7 +385,7 @@ impl HostTrait for Host {
     }
 
     fn default_input_device(&self) -> Option<Device> {
-        Some(Device::new(None, 44_100))
+        Some(Device::new(None, 44_100, 2))
     }
 
     fn default_output_device(&self) -> Option<Device> {

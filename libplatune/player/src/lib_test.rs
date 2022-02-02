@@ -113,19 +113,25 @@ async fn init_player(
 
 fn decode_sources(
     paths: Vec<String>,
+    in_channels: usize,
+    out_channels: usize,
     enable_resampling: bool,
     sample_rate_in: usize,
     sample_rate_out: usize,
     resample_chunk_size: usize,
 ) -> Vec<f32> {
     let mut all_samples = vec![];
-    let mut resampler =
-        FftFixedInOut::<f64>::new(sample_rate_in, sample_rate_out, resample_chunk_size, 2);
+    let mut resampler = FftFixedInOut::<f64>::new(
+        sample_rate_in,
+        sample_rate_out,
+        resample_chunk_size,
+        out_channels,
+    );
     let len = paths.len();
 
     let n_frames = resampler.nbr_frames_needed();
     let mut resampler_index = 0;
-    let mut resampler_buf = vec![vec![0.0; n_frames]; 2];
+    let mut resampler_buf = vec![vec![0.0; n_frames]; out_channels];
 
     for (i, path) in paths.into_iter().enumerate() {
         let mut file_samples = vec![];
@@ -160,12 +166,27 @@ fn decode_sources(
             match decoder.decode(&packet) {
                 Ok(decoded) => {
                     let mut sample_buf =
-                        SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
+                        SampleBuffer::<f64>::new(decoded.capacity() as u64, *decoded.spec());
 
                     sample_buf.copy_interleaved_ref(decoded);
 
                     let samples = sample_buf.samples();
-                    file_samples.extend_from_slice(samples);
+                    match (in_channels, out_channels) {
+                        (1, 2) => {
+                            for sample in samples {
+                                file_samples.push(*sample);
+                                file_samples.push(*sample);
+                            }
+                        }
+                        (2, 1) => {
+                            for chunk in samples.chunks_exact(2) {
+                                file_samples.push((chunk[0] + chunk[1]) / 2.0);
+                            }
+                        }
+                        _ => {
+                            file_samples.extend_from_slice(samples);
+                        }
+                    };
                 }
                 Err(Error::IoError(_)) => {
                     continue;
@@ -182,51 +203,52 @@ fn decode_sources(
         let mut trimmed = file_samples.into_iter().skip_while(|s| *s == 0.0);
 
         if !enable_resampling {
-            let trimmed: Vec<f32> = trimmed.collect();
+            let trimmed: Vec<f64> = trimmed.collect();
             all_samples.extend_from_slice(&trimmed);
             continue;
         }
 
         let mut resampled = vec![];
-
+        let mut chan_index = 0;
         'outer: loop {
             while resampler_index < n_frames {
                 match trimmed.next() {
                     Some(next) => {
-                        resampler_buf[0][resampler_index] = next as f64;
+                        resampler_buf[chan_index][resampler_index] = next;
+                        chan_index = (chan_index + 1) % out_channels;
+                        if chan_index == 0 {
+                            resampler_index += 1;
+                        }
                     }
                     None => {
                         if is_last {
-                            resampler_buf[0][resampler_index..]
-                                .iter_mut()
-                                .for_each(|d| *d = 0.0);
-                            resampler_buf[1][resampler_index..]
-                                .iter_mut()
-                                .for_each(|d| *d = 0.0);
-
-                            let next_resample = resampler.process(&resampler_buf).unwrap(); // resampler_buf.clone();
+                            for chan in &mut resampler_buf {
+                                chan[resampler_index..].iter_mut().for_each(|d| *d = 0.0);
+                            }
+                            let next_resample = resampler.process(&resampler_buf).unwrap();
                             for i in 0..next_resample[0].len() {
-                                resampled.push(next_resample[0][i] as f32);
-                                resampled.push(next_resample[1][i] as f32);
+                                for channel in next_resample.iter() {
+                                    resampled.push(channel[i]);
+                                }
                             }
                         }
                         break 'outer;
                     }
-                };
-                resampler_buf[1][resampler_index] = trimmed.next().unwrap() as f64;
-                resampler_index += 1;
+                }
             }
+
             let next_resample = resampler.process(&resampler_buf).unwrap(); //resampler_buf.clone();
             for i in 0..next_resample[0].len() {
-                resampled.push(next_resample[0][i] as f32);
-                resampled.push(next_resample[1][i] as f32);
+                for channel in next_resample.iter() {
+                    resampled.push(channel[i]);
+                }
             }
             resampler_index = 0;
         }
         all_samples.extend_from_slice(&resampled);
     }
 
-    all_samples
+    all_samples.into_iter().map(|s| s as f32).collect()
 }
 
 #[rstest(num_songs, case(1), case(2), case(3))]
@@ -303,35 +325,29 @@ async fn test_seek(num_songs: usize, seek_index: usize) {
     player.join().await.unwrap();
 }
 
-#[rstest(
-    sources,
-    enable_resampling,
-    sample_rate_in,
-    sample_rate_out,
-    resample_chunk_size,
-    case(vec!["test_stereo.mp3"], false, 44_100, 44_100, 1024),
-    case(vec!["test_stereo.mp3"], true, 44_100, 44_100, 1024),
-    case(vec!["test_stereo.mp3"], true, 44_100, 48_000, 1024),
-    case(vec!["test_stereo.mp3"], true, 44_100, 48_000, 666),
-    case(vec!["test_stereo.mp3", "test_stereo.mp3"], false, 44_100, 44_100, 1024),
-    case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 44_100, 1024),
-    case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 1024),
-    case(vec!["test_stereo.mp3", "test_stereo.mp3"], true, 44_100, 48_000, 666),
-)]
+#[rstest]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_decode_all_data(
-    sources: Vec<&str>,
-    enable_resampling: bool,
-    sample_rate_in: u32,
-    sample_rate_out: u32,
-    resample_chunk_size: usize,
+    #[values(vec!["test_stereo.mp3"],vec!["test_stereo.mp3", "test_stereo.mp3"] )] sources: Vec<
+        &str,
+    >,
+    #[values(2)] in_channels: usize,
+    #[values(1, 2)] out_channels: usize,
+    #[values(44_100)] sample_rate_in: u32,
+    #[values(44_100, 48_000)] sample_rate_out: u32,
+    #[values(1024, 666)] resample_chunk_size: usize,
 ) {
-    let host = Host::new_with_options(Duration::from_millis(1), sample_rate_out).unwrap();
+    let host = Host::new_with_options(
+        Duration::from_millis(1),
+        sample_rate_out,
+        out_channels as u16,
+    )
+    .unwrap();
     let mut data_rx = host.default_output_device().unwrap().subscribe_data();
 
     let player = PlatunePlayer::new_with_host(
         Settings {
-            enable_resampling,
+            enable_resampling: sample_rate_in != sample_rate_out,
             resample_chunk_size,
         },
         host,
@@ -341,6 +357,8 @@ async fn test_decode_all_data(
 
     let expected_data = decode_sources(
         paths.clone(),
+        in_channels,
+        out_channels,
         sample_rate_in != sample_rate_out,
         sample_rate_in as usize,
         sample_rate_out as usize,

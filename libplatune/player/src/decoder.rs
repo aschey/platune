@@ -190,8 +190,8 @@ impl Decoder {
             }
             if let Some(mut index) = self.buf.iter().position(|s| *s != 0.0) {
                 // Edge case: if the first non-silent sample is on an odd-numbered index, we'll start on the wrong channel
-                // This only matters for stereo streams
-                if self.input_channels == 2 && index % 2 == 1 {
+                // This only matters for stereo outputs
+                if self.output_channels == 2 && index % 2 == 1 {
                     index -= 1;
                 }
                 self.buf_len -= index;
