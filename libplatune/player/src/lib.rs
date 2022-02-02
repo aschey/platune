@@ -1,6 +1,7 @@
 mod audio_manager;
 mod audio_output;
 mod audio_processor;
+mod channel_buffer;
 mod decoder;
 mod dto;
 mod event_loop;
@@ -12,6 +13,7 @@ mod player;
 mod settings;
 mod source;
 mod two_way_channel;
+mod vec_ext;
 
 pub mod platune_player {
     use std::thread;

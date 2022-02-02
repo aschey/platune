@@ -1,10 +1,6 @@
-use std::time::Duration;
-
-use rubato::{FftFixedInOut, Resampler};
-use tracing::{error, info};
-
 use crate::{
     audio_processor::AudioProcessor,
+    channel_buffer::ChannelBuffer,
     dto::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
         player_response::PlayerResponse,
@@ -14,14 +10,17 @@ use crate::{
     settings::Settings,
     source::Source,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
+    vec_ext::VecExt,
 };
+use rubato::{FftFixedInOut, Resampler};
+use std::time::Duration;
+use tracing::{error, info};
 
 pub(crate) struct AudioManager {
-    in_buf: Vec<Vec<f64>>,
+    in_buf: ChannelBuffer,
     out_buf: Vec<f64>,
     input_sample_rate: usize,
     output: Box<dyn AudioOutput>,
-    buf_index: usize,
     resampler: FftFixedInOut<f64>,
     volume: f64,
 }
@@ -39,10 +38,9 @@ impl AudioManager {
 
         let n_frames = resampler.nbr_frames_needed();
         Self {
-            in_buf: vec![vec![0.0; n_frames]; default_channels],
-            out_buf: vec![0.0; n_frames * default_channels],
+            in_buf: ChannelBuffer::new(n_frames, default_channels), //vec![vec![0.0; n_frames]; default_channels],
+            out_buf: Vec::with_capacity(n_frames * default_channels), //vec![0.0; n_frames * default_channels],
             input_sample_rate: default_sample_rate,
-            buf_index: 0,
             resampler,
             output,
             volume,
@@ -59,8 +57,8 @@ impl AudioManager {
         let n_frames = self.resampler.nbr_frames_needed();
         let channels = self.output.channels();
 
-        self.in_buf = vec![vec![0.0; n_frames]; channels];
-        self.out_buf = vec![0.0; n_frames * channels];
+        self.in_buf = ChannelBuffer::new(n_frames, channels); //vec![vec![0.0; n_frames]; channels];
+        self.out_buf = Vec::with_capacity(n_frames * channels); //vec![0.0; n_frames * channels];
     }
 
     pub(crate) fn reset(&mut self, resample_chunk_size: usize) -> Result<(), AudioOutputError> {
@@ -78,34 +76,21 @@ impl AudioManager {
     }
 
     pub(crate) fn play_remaining(&mut self) {
-        if self.buf_index > 0 {
-            for i in self.buf_index..self.in_buf[0].len() {
-                for chan in &mut self.in_buf {
-                    chan[i] = 0.0;
-                }
-            }
+        if self.in_buf.position() > 0 {
+            self.in_buf.silence_remainder();
             self.write_output();
         }
     }
 
     fn write_output(&mut self) {
-        self.buf_index = 0;
         // This shouldn't panic as long as we calculated the number of channels and frames correctly
-        let resampled = self.resampler.process(&self.in_buf).unwrap();
-        let out_len = resampled[0].len();
-        if out_len * self.output.channels() > self.out_buf.len() {
-            self.out_buf.clear();
-            self.out_buf.resize(out_len * self.output.channels(), 0.0);
-        }
+        let resampled = self
+            .resampler
+            .process(self.in_buf.inner())
+            .expect("number of frames was not correctly calculated");
+        self.in_buf.reset();
 
-        let mut j = 0;
-        for i in 0..out_len {
-            for chan in &resampled {
-                self.out_buf[j] = chan[i];
-                j += 1;
-            }
-        }
-
+        self.out_buf.fill_from_deinterleaved(resampled);
         self.output.write(&self.out_buf);
     }
 
@@ -174,30 +159,25 @@ impl AudioManager {
     }
 
     fn decode_resample(&mut self, processor: &mut AudioProcessor) {
-        let n_frames = self.resampler.nbr_frames_needed();
-        let mut frame_pos = 0;
-
         let mut cur_frame = processor.current();
+        let mut written = 0;
+
         loop {
-            while self.buf_index < n_frames {
-                for chan in &mut self.in_buf {
-                    chan[self.buf_index] = cur_frame[frame_pos];
-                    frame_pos += 1;
-                }
+            while !self.in_buf.is_full() {
+                written += self.in_buf.fill_from_slice(&cur_frame[written..]);
 
-                self.buf_index += 1;
-
-                if frame_pos == cur_frame.len() {
+                if written == cur_frame.len() {
                     match processor.next() {
-                        Ok(Some(next)) => cur_frame = next,
+                        Ok(Some(next)) => {
+                            cur_frame = next;
+                            written = 0;
+                        }
                         Ok(None) => return,
                         Err(e) => {
                             error!("Error while decoding: {e:?}");
                             return;
                         }
                     }
-
-                    frame_pos = 0;
                 }
             }
 
