@@ -107,7 +107,8 @@ impl<'a> AudioProcessor<'a> {
                 }
             }
             Err(TryRecvError::Disconnected) => {
-                error!("Decoder command sender has disconnected");
+                info!("Decoder command sender has disconnected");
+                return false;
             }
         }
 

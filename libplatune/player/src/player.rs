@@ -209,10 +209,13 @@ impl Player {
         // Get rid of any pending sources
         self.queue_rx.drain();
         self.queued_count = 0;
-        self.audio_status = AudioStatus::Stopped;
-        if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Stop).await {
-            error!("Error sending stop command {e:?}");
+        // If decoder is already stopped then sending additional stop events will cause the next song to skip
+        if self.audio_status != AudioStatus::Stopped {
+            if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Stop).await {
+                error!("Error sending stop command {e:?}");
+            }
         }
+        self.audio_status = AudioStatus::Stopped;
     }
 
     pub(crate) async fn on_ended(&mut self) {
