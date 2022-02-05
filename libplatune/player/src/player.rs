@@ -52,34 +52,33 @@ impl Player {
         }
     }
 
-    async fn append_file(&mut self, path: String, force_restart_output: bool) {
-        let source = {
-            if path.starts_with("http") {
-                info!("Creating http stream");
-                let http_reader = match HttpStreamReader::new(path.to_owned()).await {
-                    Ok(http_reader) => http_reader,
-                    Err(e) => {
-                        error!("Error downloading http file {e:?}");
-                        return;
-                    }
-                };
-                http_reader.into_source()
-            } else {
-                let file = match File::open(&path) {
-                    Ok(file) => file,
-                    Err(e) => {
-                        error!("Error opening file {e:?}");
-                        return;
-                    }
-                };
-                let file_len = match file.metadata() {
-                    Ok(metadata) => Some(metadata.len()),
-                    Err(e) => {
-                        warn!("Error reading file metadata: {e:?}");
-                        None
-                    }
-                };
-                let extension = Path::new(&path)
+    async fn get_source(&self, path: String) -> Option<Box<dyn Source>> {
+        if path.starts_with("http") {
+            info!("Creating http stream");
+            let http_reader = match HttpStreamReader::new(path.to_owned()).await {
+                Ok(http_reader) => http_reader,
+                Err(e) => {
+                    error!("Error downloading http file {e:?}");
+                    return None;
+                }
+            };
+            Some(http_reader.into_source())
+        } else {
+            let file = match File::open(&path) {
+                Ok(file) => file,
+                Err(e) => {
+                    error!("Error opening file {e:?}");
+                    return None;
+                }
+            };
+            let file_len = match file.metadata() {
+                Ok(metadata) => Some(metadata.len()),
+                Err(e) => {
+                    warn!("Error reading file metadata: {e:?}");
+                    None
+                }
+            };
+            let extension = Path::new(&path)
                     .extension()
                     .map(|e| match e.to_str() {
                         None => {
@@ -89,39 +88,68 @@ impl Player {
                         extension => extension.map(|e| e.to_owned())
                     }).flatten();
 
-                let reader = BufReader::new(file);
+            let reader = BufReader::new(file);
 
-                Box::new(ReadSeekSource::new(reader, file_len, extension)) as Box<dyn Source>
-            }
-        };
-
-        info!("Sending source {path}");
-        if let Err(e) = self
-            .queue_tx
-            .send_async(QueueSource {
-                source,
-                settings: self.settings.clone(),
-                force_restart_output,
-                volume: self.pending_volume.take(),
-            })
-            .await
-        {
-            error!("Error sending source {e:?}");
+            Some(Box::new(ReadSeekSource::new(reader, file_len, extension)) as Box<dyn Source>)
         }
-        self.queued_count += 1;
-        info!("Queued count {}", self.queued_count);
     }
 
-    async fn start(&mut self, force_restart_output: bool) {
-        if let Some(path) = self.get_current() {
-            self.append_file(path, force_restart_output).await;
-
-            if let Some(path) = self.get_next() {
-                self.append_file(path, false).await;
+    async fn append_file(&mut self, path: String, force_restart_output: bool) -> bool {
+        match self.get_source(path.clone()).await {
+            Some(source) => {
+                info!("Sending source {path}");
+                match self
+                    .queue_tx
+                    .send_async(QueueSource {
+                        source,
+                        settings: self.settings.clone(),
+                        force_restart_output,
+                        volume: self.pending_volume.take(),
+                    })
+                    .await
+                {
+                    Ok(()) => {
+                        self.queued_count += 1;
+                        info!("Queued count {}", self.queued_count);
+                    }
+                    Err(e) => {
+                        error!("Error sending source {e:?}");
+                    }
+                }
+                true
             }
+            None => {
+                let queue = self.state.queue.clone();
+                self.state.queue = queue.into_iter().filter(|q| *q != path).collect();
+                false
+            }
+        }
+    }
+
+    async fn start(&mut self, force_restart_output: bool) -> bool {
+        let mut success = false;
+        // Keep trying until a valid source is found or we reach the end of the queue
+        while !success {
+            match self.get_current() {
+                Some(path) => {
+                    success |= self.append_file(path.clone(), force_restart_output).await;
+
+                    if let Some(path) = self.get_next() {
+                        success |= self
+                            .append_file(path, force_restart_output && !success)
+                            .await;
+                    }
+                }
+                None => return false,
+            }
+        }
+
+        if success {
             self.wait_for_decoder().await;
             self.audio_status = AudioStatus::Playing;
         }
+
+        success
     }
 
     async fn wait_for_decoder(&self) {
@@ -341,10 +369,11 @@ impl Player {
             );
             self.state.queue_position += 1;
             self.reset_queue().await;
-            self.start(false).await;
-            self.event_tx
-                .send(PlayerEvent::Next(self.state.clone()))
-                .unwrap_or_default();
+            if self.start(false).await {
+                self.event_tx
+                    .send(PlayerEvent::Next(self.state.clone()))
+                    .unwrap_or_default();
+            }
         } else {
             info!(
                 "Current position: {}. Already at end. Not going to next track.",
@@ -361,10 +390,11 @@ impl Player {
             );
             self.state.queue_position -= 1;
             self.reset_queue().await;
-            self.start(false).await;
-            self.event_tx
-                .send(PlayerEvent::Previous(self.state.clone()))
-                .unwrap_or_default();
+            if self.start(false).await {
+                self.event_tx
+                    .send(PlayerEvent::Previous(self.state.clone()))
+                    .unwrap_or_default();
+            }
         } else {
             info!(
                 "Current position: {}. Already at beginning. Not going to previous track.",

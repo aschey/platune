@@ -6,9 +6,17 @@ use std::{env::current_dir, time::Duration};
 use tokio::runtime::Runtime;
 
 #[derive(Arbitrary, Debug)]
+enum NumSongs {
+    Zero,
+    One,
+    Two,
+    Three,
+}
+
+#[derive(Arbitrary, Debug)]
 enum Input {
-    SetQueue,
-    AddQueue,
+    SetQueue(NumSongs),
+    AddQueue(NumSongs),
     SetVolume(u8),
     Mute,
     Pause,
@@ -33,6 +41,19 @@ fn get_path(song: &str) -> String {
     format!("{dir}/../../test_assets/{song}")
 }
 
+fn get_test_files(num_songs: NumSongs) -> Vec<String> {
+    let song1 = get_path("test.mp3");
+    let song2 = get_path("test2.mp3");
+    let song3 = get_path("test3.mp3");
+
+    match num_songs {
+        NumSongs::Zero => vec![],
+        NumSongs::One => vec![song1],
+        NumSongs::Two => vec![song1, song2],
+        NumSongs::Three => vec![song1, song2, song3],
+    }
+}
+
 #[ctor::ctor]
 fn init() {
     tracing_subscriber::fmt()
@@ -46,12 +67,12 @@ fn init() {
 fuzz_target!(|input: Input| {
     RUNTIME.block_on(async {
         match input {
-            Input::SetQueue => {
-                PLAYER.set_queue(vec![get_path("test.mp3")]).await.unwrap();
+            Input::SetQueue(num_songs) => {
+                PLAYER.set_queue(get_test_files(num_songs)).await.unwrap();
             }
-            Input::AddQueue => {
+            Input::AddQueue(num_songs) => {
                 PLAYER
-                    .add_to_queue(vec![get_path("test.mp3")])
+                    .add_to_queue(get_test_files(num_songs))
                     .await
                     .unwrap();
             }
