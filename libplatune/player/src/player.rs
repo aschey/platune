@@ -116,16 +116,18 @@ impl Player {
             if let Some(path) = self.get_next() {
                 self.append_file(path, false).await;
             }
-
-            if let Err(e) = self
-                .cmd_sender
-                .get_response(DecoderCommand::WaitForInitialization)
-                .await
-            {
-                error!("Error receiving initialization response {e:?}");
-            }
-
+            self.wait_for_decoder().await;
             self.audio_status = AudioStatus::Playing;
+        }
+    }
+
+    async fn wait_for_decoder(&self) {
+        if let Err(e) = self
+            .cmd_sender
+            .get_response(DecoderCommand::WaitForInitialization)
+            .await
+        {
+            error!("Error receiving initialization response {e:?}");
         }
     }
 
@@ -233,13 +235,7 @@ impl Player {
         info!("Queued count {}", self.queued_count);
 
         if self.state.queue_position < self.state.queue.len() - 1 {
-            if let Err(e) = self
-                .cmd_sender
-                .get_response(DecoderCommand::WaitForInitialization)
-                .await
-            {
-                error!("Error receiving initialization response {e:?}");
-            }
+            self.wait_for_decoder().await;
             self.state.queue_position += 1;
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
@@ -308,13 +304,7 @@ impl Player {
             // so we need to add it here explicitly
             if self.queued_count == 1 {
                 self.append_file(song, false).await;
-                if let Err(e) = self
-                    .cmd_sender
-                    .get_response(DecoderCommand::WaitForInitialization)
-                    .await
-                {
-                    error!("Error receiving initialization response {e:?}");
-                }
+                self.wait_for_decoder().await;
             }
 
             self.event_tx
