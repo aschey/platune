@@ -24,6 +24,7 @@ pub(crate) struct Player {
     cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     audio_status: AudioStatus,
     settings: Settings,
+    pending_volume: Option<f64>,
 }
 
 impl Player {
@@ -47,6 +48,7 @@ impl Player {
             cmd_sender,
             audio_status: AudioStatus::Stopped,
             settings,
+            pending_volume: None,
         }
     }
 
@@ -100,6 +102,7 @@ impl Player {
                 source,
                 settings: self.settings.clone(),
                 force_restart_output,
+                volume: self.pending_volume.take(),
             })
             .await
         {
@@ -139,7 +142,7 @@ impl Player {
         if self.is_empty() {
             return;
         }
-        if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Play).await {
+        if let Err(e) = self.cmd_sender.get_response(DecoderCommand::Play).await {
             error!("Error sending play command {e:?}");
         }
         self.audio_status = AudioStatus::Playing;
@@ -152,7 +155,7 @@ impl Player {
         if self.is_empty() {
             return;
         }
-        if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Pause).await {
+        if let Err(e) = self.cmd_sender.get_response(DecoderCommand::Pause).await {
             error!("Error sending pause command {e:?}");
         }
         self.audio_status = AudioStatus::Paused;
@@ -162,9 +165,13 @@ impl Player {
     }
 
     pub(crate) async fn set_volume(&mut self, volume: f64) {
-        if let Err(e) = self
+        if self.audio_status == AudioStatus::Stopped {
+            // Decoder isn't running so we can't set the volume yet
+            // This will get sent with the next source
+            self.pending_volume = Some(volume);
+        } else if let Err(e) = self
             .cmd_sender
-            .send_async(DecoderCommand::SetVolume(volume))
+            .get_response(DecoderCommand::SetVolume(volume))
             .await
         {
             error!("Error sending set volume command {e:?}");
@@ -192,7 +199,7 @@ impl Player {
                 Err(e) => warn!("Error seeking: {e:?}"),
             },
             Err(e) => error!("Error receiving seek result {e:?}"),
-            _ => unreachable!(),
+            _ => unreachable!("Should only receive SeekResponse"),
         }
     }
 
@@ -304,7 +311,6 @@ impl Player {
             // so we need to add it here explicitly
             if self.queued_count == 1 {
                 self.append_file(song, false).await;
-                self.wait_for_decoder().await;
             }
 
             self.event_tx

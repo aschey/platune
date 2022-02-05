@@ -103,6 +103,10 @@ impl AudioManager {
     ) -> Duration {
         let source_name = format!("{queue_source:?}");
         let settings = queue_source.settings.clone();
+        // Set volume if volume was changed while the queue was stopped
+        if let Some(volume) = queue_source.volume {
+            self.volume = volume;
+        }
         let mut processor = match AudioProcessor::new(
             DecoderParams {
                 source: queue_source.source,

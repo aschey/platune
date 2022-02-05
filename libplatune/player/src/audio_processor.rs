@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::{
     decoder::{Decoder, DecoderError, DecoderParams},
     dto::{
@@ -9,8 +7,8 @@ use crate::{
     platune_player::PlayerEvent,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
-
 use flume::TryRecvError;
+use std::time::Duration;
 use tracing::{error, info};
 
 pub(crate) struct AudioProcessor<'a> {
@@ -74,11 +72,14 @@ impl<'a> AudioProcessor<'a> {
                 match command {
                     DecoderCommand::Play => {
                         self.decoder.resume();
+                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
+                            error!("Error sending stopped response: {e:?}");
+                        }
                     }
                     DecoderCommand::Stop => {
                         info!("Completed decoder command");
                         if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
-                            error!("Error sending decoded stopped response: {e:?}");
+                            error!("Error sending stopped response: {e:?}");
                         }
                         return false;
                     }
@@ -96,9 +97,15 @@ impl<'a> AudioProcessor<'a> {
                     }
                     DecoderCommand::Pause => {
                         self.decoder.pause();
+                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
+                            error!("Error sending stopped response: {e:?}");
+                        }
                     }
                     DecoderCommand::SetVolume(volume) => {
                         self.decoder.set_volume(volume);
+                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
+                            error!("Error sending set volume response: {e:?}");
+                        }
                     }
                     DecoderCommand::GetCurrentPosition => {
                         let time = self.decoder.current_position();

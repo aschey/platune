@@ -16,12 +16,6 @@ mod two_way_channel;
 mod vec_ext;
 
 pub mod platune_player {
-    use std::thread;
-    use std::time::Duration;
-    use thiserror::Error;
-    use tokio::sync::broadcast;
-    use tracing::{error, info, warn};
-
     use crate::audio_output::*;
     pub use crate::dto::audio_status::AudioStatus;
     use crate::dto::decoder_command::DecoderCommand;
@@ -32,10 +26,15 @@ pub mod platune_player {
     pub use crate::dto::player_status::PlayerStatus;
     use crate::event_loop::decode_loop;
     use crate::player::Player;
-    use crate::settings::Settings;
+    pub use crate::settings::Settings;
     use crate::two_way_channel::{two_way_channel, TwoWaySender};
     use crate::{dto::command::Command, event_loop::main_loop};
     use std::fs::remove_file;
+    use std::thread;
+    use std::time::Duration;
+    use thiserror::Error;
+    use tokio::sync::broadcast;
+    use tracing::{error, info, warn};
 
     #[derive(Debug, Clone, Error)]
     #[error("{0}")]
@@ -167,7 +166,7 @@ pub mod platune_player {
                                 "Error getting current position: {e:?}"
                             )))
                         }
-                        _ => unreachable!(),
+                        _ => unreachable!("Should only receive CurrentPositionResponse"),
                     }
                 }
             }

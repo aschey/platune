@@ -11,7 +11,7 @@ use symphonia::core::{
     units::{Time, TimeBase},
 };
 use thiserror::Error;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 #[derive(Error, Debug)]
 pub(crate) enum DecoderError {
@@ -33,6 +33,8 @@ pub(crate) struct DecoderParams {
     pub(crate) output_channels: usize,
     pub(crate) start_position: Option<Duration>,
 }
+
+const NANOS_PER_SEC: f64 = 1_000_000_000.0;
 
 pub(crate) struct Decoder {
     buf: Vec<f64>,
@@ -155,14 +157,29 @@ impl Decoder {
         &mut self,
         time: Duration,
     ) -> Result<SeekedTo, symphonia::core::errors::Error> {
-        let nanos_per_sec = 1_000_000_000.0;
-        self.reader.seek(
-            SeekMode::Coarse,
-            SeekTo::Time {
-                time: Time::new(time.as_secs(), time.subsec_nanos() as f64 / nanos_per_sec),
-                track_id: Some(self.track_id),
-            },
-        )
+        let position = self.current_position();
+        let seek_result = match self.reader_seek(time) {
+            result @ Ok(_) => result,
+            Err(e) => {
+                // Seek was probably out of bounds
+                warn!("Error seeking: {e:?}. Resetting to previous position");
+                match self.reader_seek(position.position) {
+                    Ok(seeked_to) => {
+                        info!("Reset position to {seeked_to:?}");
+                        // Reset succeeded, but send the original error back to the caller since the intended seek failed
+                        Err(e)
+                    }
+                    err_result @ Err(_) => {
+                        error!("Error resetting to previous position: {err_result:?}");
+                        err_result
+                    }
+                }
+            }
+        };
+
+        // Per the docs, decoders need to be reset after seeking
+        self.decoder.reset();
+        seek_result
     }
 
     pub(crate) fn current_position(&self) -> CurrentPosition {
@@ -179,6 +196,16 @@ impl Decoder {
                 }
             },
         }
+    }
+
+    fn reader_seek(&mut self, time: Duration) -> Result<SeekedTo, symphonia::core::errors::Error> {
+        self.reader.seek(
+            SeekMode::Coarse,
+            SeekTo::Time {
+                time: Time::new(time.as_secs(), time.subsec_nanos() as f64 / NANOS_PER_SEC),
+                track_id: Some(self.track_id),
+            },
+        )
     }
 
     fn initialize(&mut self, skip_silence: bool) -> Result<(), DecoderError> {

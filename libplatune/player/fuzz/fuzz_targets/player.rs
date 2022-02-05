@@ -1,8 +1,9 @@
 #![no_main]
 use libfuzzer_sys::{arbitrary::Arbitrary, fuzz_target};
-use libplatune_player::platune_player::PlatunePlayer;
+use libplatune_player::platune_player::{PlatunePlayer, Settings};
 use once_cell::sync::Lazy;
 use std::{env::current_dir, time::Duration};
+use tokio::runtime::Runtime;
 
 #[derive(Arbitrary, Debug)]
 enum Input {
@@ -14,9 +15,16 @@ enum Input {
     Stop,
     Next,
     Previous,
+    Seek(u16),
+    Resume,
 }
 
-static PLAYER: Lazy<PlatunePlayer> = Lazy::new(|| PlatunePlayer::new(Default::default()));
+static PLAYER: Lazy<PlatunePlayer> = Lazy::new(|| {
+    PlatunePlayer::new(Settings {
+        enable_resampling: true,
+        ..Default::default()
+    })
+});
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().unwrap());
 
@@ -68,8 +76,15 @@ fuzz_target!(|input: Input| {
             Input::Previous => {
                 PLAYER.previous().await.unwrap();
             }
+            Input::Seek(seek_time) => {
+                PLAYER
+                    .seek(Duration::from_millis(seek_time as u64))
+                    .await
+                    .unwrap();
+            }
+            Input::Resume => {
+                PLAYER.resume().await.unwrap();
+            }
         }
-
-        tokio::time::sleep(Duration::from_millis(500)).await;
     });
 });

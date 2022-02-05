@@ -58,7 +58,8 @@ echo "regenerated mocks"
 
 [tasks.cli]
 script = '''
-(cd ./platune-cli && go run . ${@}) 
+cd ./platune-cli  
+go run . ${@}
 '''
 script_runner = "@shell"
 
@@ -88,3 +89,10 @@ systemctl restart platuned
 args = ["hack", "--feature-powerset", "--exclude-no-default-features", "clippy", "--locked", "--", "-D", "warnings"]
 command = "cargo"
 install_crate = "hack"
+
+[tasks.fuzz]
+condition = {platforms = ["linux"]}
+script = '''
+cd libplatune/player/fuzz
+makers fuzz
+'''
