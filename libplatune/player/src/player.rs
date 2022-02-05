@@ -50,12 +50,7 @@ impl Player {
         }
     }
 
-    async fn append_file(
-        &mut self,
-        path: String,
-        force_restart_output: bool,
-        wait_for_response: bool,
-    ) {
+    async fn append_file(&mut self, path: String, force_restart_output: bool) {
         let source = {
             if path.starts_with("http") {
                 info!("Creating http stream");
@@ -105,7 +100,6 @@ impl Player {
                 source,
                 settings: self.settings.clone(),
                 force_restart_output,
-                wait_for_response,
             })
             .await
         {
@@ -117,10 +111,10 @@ impl Player {
 
     async fn start(&mut self, force_restart_output: bool) {
         if let Some(path) = self.get_current() {
-            self.append_file(path, force_restart_output, true).await;
+            self.append_file(path, force_restart_output).await;
 
             if let Some(path) = self.get_next() {
-                self.append_file(path, false, false).await;
+                self.append_file(path, false).await;
             }
 
             if let Err(e) = self
@@ -223,8 +217,11 @@ impl Player {
         self.queued_count = 0;
         // If decoder is already stopped then sending additional stop events will cause the next song to skip
         if self.audio_status != AudioStatus::Stopped {
-            if let Err(e) = self.cmd_sender.send_async(DecoderCommand::Stop).await {
+            info!("Sending decoder stop command");
+            if let Err(e) = self.cmd_sender.get_response(DecoderCommand::Stop).await {
                 error!("Error sending stop command {e:?}");
+            } else {
+                info!("Received stop response");
             }
         }
         self.audio_status = AudioStatus::Stopped;
@@ -236,6 +233,13 @@ impl Player {
         info!("Queued count {}", self.queued_count);
 
         if self.state.queue_position < self.state.queue.len() - 1 {
+            if let Err(e) = self
+                .cmd_sender
+                .get_response(DecoderCommand::WaitForInitialization)
+                .await
+            {
+                error!("Error receiving initialization response {e:?}");
+            }
             self.state.queue_position += 1;
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
@@ -255,7 +259,7 @@ impl Player {
         }
 
         if let Some(file) = self.get_next() {
-            self.append_file(file, false, false).await;
+            self.append_file(file, false).await;
         }
     }
 
@@ -303,7 +307,14 @@ impl Player {
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
             // so we need to add it here explicitly
             if self.queued_count == 1 {
-                self.append_file(song, false, false).await;
+                self.append_file(song, false).await;
+                if let Err(e) = self
+                    .cmd_sender
+                    .get_response(DecoderCommand::WaitForInitialization)
+                    .await
+                {
+                    error!("Error receiving initialization response {e:?}");
+                }
             }
 
             self.event_tx

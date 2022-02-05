@@ -27,23 +27,21 @@ impl<'a> AudioProcessor<'a> {
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
-        send_response: bool,
     ) -> Result<Self, DecoderError> {
         let decoder = Decoder::new(decoder_params)?;
-        if send_response {
-            match cmd_rx.recv() {
-                Ok(DecoderCommand::WaitForInitialization) => {
-                    info!("Notifying decoder started");
-                    if let Err(e) = cmd_rx.respond(DecoderResponse::Started) {
-                        error!("Error sending started response {e:?}");
-                    }
+
+        match cmd_rx.recv() {
+            Ok(DecoderCommand::WaitForInitialization) => {
+                info!("Notifying decoder started");
+                if let Err(e) = cmd_rx.respond(DecoderResponse::Received) {
+                    error!("Error sending decoder started response {e:?}");
                 }
-                Ok(cmd) => {
-                    error!("Got unexpected command {cmd:?}");
-                }
-                Err(e) => {
-                    error!("Error receiving initialization message {e:?}");
-                }
+            }
+            Ok(cmd) => {
+                error!("Got unexpected command {cmd:?}");
+            }
+            Err(e) => {
+                error!("Error receiving initialization message {e:?}");
             }
         }
 
@@ -79,6 +77,9 @@ impl<'a> AudioProcessor<'a> {
                     }
                     DecoderCommand::Stop => {
                         info!("Completed decoder command");
+                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
+                            error!("Error sending decoded stopped response: {e:?}");
+                        }
                         return false;
                     }
                     DecoderCommand::Seek(time) => {

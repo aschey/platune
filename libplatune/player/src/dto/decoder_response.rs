@@ -4,7 +4,7 @@ use super::current_position::CurrentPosition;
 
 #[derive(Clone, Debug)]
 pub(crate) enum DecoderResponse {
-    Started,
+    Received,
     SeekResponse(Result<TimeStamp, String>),
     CurrentPositionResponse(CurrentPosition),
 }

@@ -113,7 +113,6 @@ impl AudioManager {
             cmd_rx,
             player_cmd_tx,
             event_tx,
-            queue_source.wait_for_response,
         ) {
             Ok(processor) => processor,
             Err(e) => {

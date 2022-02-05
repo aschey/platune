@@ -40,7 +40,11 @@ trait TimedFut<T> {
 #[async_trait]
 impl<T: Clone + Send> TimedFut<Option<T>> for broadcast::Receiver<T> {
     async fn timed_recv(&mut self) -> Option<T> {
-        timed_await(self.recv()).await.unwrap().ok()
+        timed_await(self.recv())
+            .await
+            .ok()
+            .map(|r| r.ok())
+            .flatten()
     }
 }
 impl SongVec for Vec<SongInfo> {
