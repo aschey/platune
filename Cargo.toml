@@ -1,3 +1,4 @@
 [workspace]
-members = ["platuned/server", "platuned/client/rust", "libplatune/player", "libplatune/player/fuzz", "libplatune/management", "platune-tui"]
+exclude = ["libplatune/player/fuzz"]
+members = ["platuned/server", "platuned/client/rust", "libplatune/player", "libplatune/management", "platune-tui"]
 resolver = "2"

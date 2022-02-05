@@ -1,10 +1,8 @@
 #![no_main]
-use std::{env::current_dir, time::Duration};
-
 use libfuzzer_sys::{arbitrary::Arbitrary, fuzz_target};
 use libplatune_player::platune_player::PlatunePlayer;
 use once_cell::sync::Lazy;
-use tokio::runtime::Runtime;
+use std::{env::current_dir, time::Duration};
 
 #[derive(Arbitrary, Debug)]
 enum Input {
