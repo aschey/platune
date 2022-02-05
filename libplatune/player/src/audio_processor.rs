@@ -1,13 +1,12 @@
 use std::time::Duration;
 
 use crate::{
-    decoder::{Decoder, DecoderError},
+    decoder::{Decoder, DecoderError, DecoderParams},
     dto::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
         player_response::PlayerResponse,
     },
     platune_player::PlayerEvent,
-    source::Source,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
 
@@ -24,15 +23,30 @@ pub(crate) struct AudioProcessor<'a> {
 
 impl<'a> AudioProcessor<'a> {
     pub(crate) fn new(
-        source: Box<dyn Source>,
-        output_channels: usize,
+        decoder_params: DecoderParams,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
-        volume: f64,
-        start_position: Option<Duration>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
+        send_response: bool,
     ) -> Result<Self, DecoderError> {
-        let decoder = Decoder::new(source, volume, output_channels, start_position)?;
+        let decoder = Decoder::new(decoder_params)?;
+        if send_response {
+            match cmd_rx.recv() {
+                Ok(DecoderCommand::WaitForInitialization) => {
+                    info!("Notifying decoder started");
+                    if let Err(e) = cmd_rx.respond(DecoderResponse::Started) {
+                        error!("Error sending started response {e:?}");
+                    }
+                }
+                Ok(cmd) => {
+                    error!("Got unexpected command {cmd:?}");
+                }
+                Err(e) => {
+                    error!("Error receiving initialization message {e:?}");
+                }
+            }
+        }
+
         Ok(Self {
             decoder,
             cmd_rx,
@@ -93,6 +107,9 @@ impl<'a> AudioProcessor<'a> {
                         {
                             error!("Unable to send current position response {e:?}");
                         }
+                    }
+                    DecoderCommand::WaitForInitialization => {
+                        unreachable!("Should only send this during initialization");
                     }
                 }
                 info!("Completed decoder command");

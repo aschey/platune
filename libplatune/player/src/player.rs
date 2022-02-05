@@ -50,14 +50,19 @@ impl Player {
         }
     }
 
-    async fn append_file(&mut self, path: String, force_restart_output: bool) {
+    async fn append_file(
+        &mut self,
+        path: String,
+        force_restart_output: bool,
+        wait_for_response: bool,
+    ) {
         let source = {
             if path.starts_with("http") {
                 info!("Creating http stream");
                 let http_reader = match HttpStreamReader::new(path.to_owned()).await {
                     Ok(http_reader) => http_reader,
                     Err(e) => {
-                        error!("Error downloading http file {:?}", e);
+                        error!("Error downloading http file {e:?}");
                         return;
                     }
                 };
@@ -66,7 +71,7 @@ impl Player {
                 let file = match File::open(&path) {
                     Ok(file) => file,
                     Err(e) => {
-                        error!("Error opening file {:?}", e);
+                        error!("Error opening file {e:?}");
                         return;
                     }
                 };
@@ -100,6 +105,7 @@ impl Player {
                 source,
                 settings: self.settings.clone(),
                 force_restart_output,
+                wait_for_response,
             })
             .await
         {
@@ -111,15 +117,21 @@ impl Player {
 
     async fn start(&mut self, force_restart_output: bool) {
         if let Some(path) = self.get_current() {
-            self.append_file(path, force_restart_output).await;
-            self.audio_status = AudioStatus::Playing;
+            self.append_file(path, force_restart_output, true).await;
 
-            self.event_tx
-                .send(PlayerEvent::StartQueue(self.state.clone()))
-                .unwrap_or_default();
-        }
-        if let Some(path) = self.get_next() {
-            self.append_file(path, false).await;
+            if let Some(path) = self.get_next() {
+                self.append_file(path, false, false).await;
+            }
+
+            if let Err(e) = self
+                .cmd_sender
+                .get_response(DecoderCommand::WaitForInitialization)
+                .await
+            {
+                error!("Error receiving initialization response {e:?}");
+            }
+
+            self.audio_status = AudioStatus::Playing;
         }
     }
 
@@ -176,7 +188,7 @@ impl Player {
         {
             Ok(DecoderResponse::SeekResponse(seek_result)) => match seek_result {
                 Ok(seek_result) => {
-                    info!("Seeked to {:?}", seek_result);
+                    info!("Seeked to {seek_result:?}");
                     self.event_tx
                         .send(PlayerEvent::Seek(self.state.clone(), time))
                         .unwrap_or_default();
@@ -243,7 +255,7 @@ impl Player {
         }
 
         if let Some(file) = self.get_next() {
-            self.append_file(file, false).await;
+            self.append_file(file, false, false).await;
         }
     }
 
@@ -255,6 +267,9 @@ impl Player {
 
     pub(crate) async fn set_queue(&mut self, queue: Vec<String>) {
         self.set_queue_internal(queue, 0, false).await;
+        self.event_tx
+            .send(PlayerEvent::StartQueue(self.state.clone()))
+            .unwrap_or_default();
     }
 
     async fn set_queue_internal(
@@ -288,7 +303,7 @@ impl Player {
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
             // so we need to add it here explicitly
             if self.queued_count == 1 {
-                self.append_file(song, false).await;
+                self.append_file(song, false, false).await;
             }
 
             self.event_tx

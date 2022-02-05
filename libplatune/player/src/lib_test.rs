@@ -17,7 +17,7 @@ use symphonia::core::probe::Hint;
 use tokio::sync::broadcast;
 use tokio::time::{error::Elapsed, timeout};
 
-use crate::platune_player::{PlatunePlayer, PlayerEvent};
+use crate::platune_player::{PlatunePlayer, PlayerEvent, PlayerState};
 
 #[cfg(not(target_os = "windows"))]
 static SEPARATOR: &str = "/";
@@ -278,8 +278,8 @@ fn decode_sources(
 #[rstest(num_songs, case(1), case(2), case(3))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_basic(num_songs: usize) {
-    let (player, mut receiver, songs) = init_player(num_songs).await;
-    for _ in songs {
+    let (player, mut receiver, _) = init_player(num_songs).await;
+    for _ in 0..num_songs {
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
     }
 
@@ -302,9 +302,9 @@ async fn test_basic(num_songs: usize) {
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_pause(num_songs: usize, pause_index: usize) {
-    let (player, mut receiver, songs) = init_player(num_songs).await;
+    let (player, mut receiver, _) = init_player(num_songs).await;
 
-    for (i, _) in songs.iter().enumerate() {
+    for i in 0..num_songs {
         if i == pause_index {
             player.pause().await.unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Pause(_)));
@@ -332,13 +332,80 @@ async fn test_pause(num_songs: usize, pause_index: usize) {
 )]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 async fn test_seek(num_songs: usize, seek_index: usize) {
-    let (player, mut receiver, songs) = init_player(num_songs).await;
+    let (player, mut receiver, _) = init_player(num_songs).await;
     let seek_time = Duration::from_millis(100);
-    for (i, _) in songs.iter().enumerate() {
+    for i in 0..num_songs {
         if i == seek_index {
             player.seek(seek_time).await.unwrap();
             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(_,millis)) if millis == seek_time);
         }
+        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
+    }
+
+    assert_matches!(
+        receiver.timed_recv().await,
+        Some(PlayerEvent::QueueEnded(_))
+    );
+    player.join().await.unwrap();
+}
+
+#[rstest(
+    num_songs,
+    next_index,
+    case(1, 0),
+    case(2, 0),
+    case(2, 1),
+    case(3, 0),
+    case(3, 1),
+    case(3, 2)
+)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_next(num_songs: usize, next_index: usize) {
+    let (player, mut receiver, _) = init_player(num_songs).await;
+
+    for i in 0..num_songs {
+        if i == next_index {
+            player.next().await.unwrap();
+            if next_index < num_songs - 1 {
+                assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Next(PlayerState {queue_position, ..})) if queue_position == i + 1);
+            }
+        }
+        if next_index == num_songs - 1 || i < num_songs - 1 {
+            assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
+        }
+    }
+
+    assert_matches!(
+        receiver.timed_recv().await,
+        Some(PlayerEvent::QueueEnded(_))
+    );
+    player.join().await.unwrap();
+}
+
+#[rstest(
+    num_songs,
+    prev_index,
+    case(1, 0),
+    case(2, 0),
+    case(2, 1),
+    case(3, 0),
+    case(3, 1),
+    case(3, 2)
+)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+async fn test_prev(num_songs: usize, prev_index: usize) {
+    let (player, mut receiver, _) = init_player(num_songs).await;
+
+    for i in 0..num_songs {
+        if i == prev_index {
+            player.previous().await.unwrap();
+            if prev_index > 0 {
+                assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Previous(PlayerState {queue_position, ..})) if queue_position == i - 1);
+            }
+        }
+        assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
+    }
+    if prev_index > 0 {
         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
     }
 

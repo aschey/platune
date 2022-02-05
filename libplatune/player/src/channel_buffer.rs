@@ -17,12 +17,16 @@ impl ChannelBuffer {
         self.inner[self.channels - 1].len()
     }
 
+    fn last(&self) -> &Vec<f64> {
+        self.inner.last().expect("Vec should not be empty")
+    }
+
     pub(crate) fn position(&self) -> usize {
-        self.inner.last().unwrap().len()
+        self.last().len()
     }
 
     pub(crate) fn is_full(&self) -> bool {
-        self.inner.last().unwrap().len() == self.inner.last().unwrap().capacity()
+        self.last().len() == self.last().capacity()
     }
 
     pub(crate) fn reset(&mut self) {

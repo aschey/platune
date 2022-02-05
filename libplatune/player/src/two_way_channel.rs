@@ -1,7 +1,5 @@
 use flume::{Receiver, RecvError, SendError, Sender, TryRecvError, TrySendError};
-use tokio::sync::oneshot::{
-    channel as oneshot_channel, error::RecvError as OneShotRecvError, Sender as OneShotSender,
-};
+use tokio::sync::oneshot::{channel as oneshot_channel, Sender as OneShotSender};
 
 pub(crate) fn two_way_channel<TIn, TOut>() -> (TwoWaySender<TIn, TOut>, TwoWayReceiver<TIn, TOut>) {
     let (main_tx, main_rx) = flume::unbounded();
@@ -37,13 +35,15 @@ impl<TIn, TOut> TwoWaySender<TIn, TOut> {
         self.main_tx.try_send((message, None))
     }
 
-    pub(crate) async fn get_response(&self, message: TIn) -> Result<TOut, OneShotRecvError> {
+    pub(crate) async fn get_response(&self, message: TIn) -> Result<TOut, String> {
         let (oneshot_tx, oneshot_rx) = oneshot_channel();
         self.main_tx
             .send_async((message, Some(oneshot_tx)))
             .await
-            .unwrap();
-        oneshot_rx.await
+            .map_err(|e| format!("Error sending oneshot response{e:?}"))?;
+        oneshot_rx
+            .await
+            .map_err(|e| format!("Error receiving oneshot response {e:?}"))
     }
 }
 
@@ -67,6 +67,16 @@ impl<TIn, TOut> TwoWayReceiver<TIn, TOut> {
 
     pub(crate) fn try_recv(&mut self) -> Result<TIn, TryRecvError> {
         match self.main_rx.try_recv() {
+            Ok((res, oneshot)) => {
+                self.oneshot = oneshot;
+                Ok(res)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub(crate) fn recv(&mut self) -> Result<TIn, RecvError> {
+        match self.main_rx.recv() {
             Ok((res, oneshot)) => {
                 self.oneshot = oneshot;
                 Ok(res)

@@ -235,7 +235,12 @@ pub mod platune_player {
         fn drop(&mut self) {
             if self.joined {
                 info!("Waiting for decoder thread to terminate");
-                if let Err(e) = self.decoder_handle.take().unwrap().join() {
+                if let Err(e) = self
+                    .decoder_handle
+                    .take()
+                    .expect("decoder_handle should not be None")
+                    .join()
+                {
                     warn!("Error terminating decoder thread: {:?}", e);
                 }
                 info!("Decoder thread terminated");

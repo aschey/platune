@@ -1,14 +1,13 @@
 use crate::{
     audio_processor::AudioProcessor,
     channel_buffer::ChannelBuffer,
+    decoder::DecoderParams,
     dto::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
-        player_response::PlayerResponse,
+        player_response::PlayerResponse, queue_source::QueueSource,
     },
     output::{AudioOutput, AudioOutputError},
     platune_player::PlayerEvent,
-    settings::Settings,
-    source::Source,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
     vec_ext::VecExt,
 };
@@ -38,8 +37,8 @@ impl AudioManager {
 
         let n_frames = resampler.nbr_frames_needed();
         Self {
-            in_buf: ChannelBuffer::new(n_frames, default_channels), //vec![vec![0.0; n_frames]; default_channels],
-            out_buf: Vec::with_capacity(n_frames * default_channels), //vec![0.0; n_frames * default_channels],
+            in_buf: ChannelBuffer::new(n_frames, default_channels),
+            out_buf: Vec::with_capacity(n_frames * default_channels),
             input_sample_rate: default_sample_rate,
             resampler,
             output,
@@ -57,8 +56,8 @@ impl AudioManager {
         let n_frames = self.resampler.nbr_frames_needed();
         let channels = self.output.channels();
 
-        self.in_buf = ChannelBuffer::new(n_frames, channels); //vec![vec![0.0; n_frames]; channels];
-        self.out_buf = Vec::with_capacity(n_frames * channels); //vec![0.0; n_frames * channels];
+        self.in_buf = ChannelBuffer::new(n_frames, channels);
+        self.out_buf = Vec::with_capacity(n_frames * channels);
     }
 
     pub(crate) fn reset(&mut self, resample_chunk_size: usize) -> Result<(), AudioOutputError> {
@@ -96,22 +95,25 @@ impl AudioManager {
 
     pub(crate) fn decode_source(
         &mut self,
-        source: Box<dyn Source>,
+        queue_source: QueueSource,
         cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
         event_tx: &tokio::sync::broadcast::Sender<PlayerEvent>,
-        settings: Settings,
         start_position: Option<Duration>,
     ) -> Duration {
-        let source_name = format!("{source:?}");
+        let source_name = format!("{queue_source:?}");
+        let settings = queue_source.settings.clone();
         let mut processor = match AudioProcessor::new(
-            source,
-            self.output.channels(),
+            DecoderParams {
+                source: queue_source.source,
+                volume: self.volume,
+                output_channels: self.output.channels(),
+                start_position,
+            },
             cmd_rx,
             player_cmd_tx,
-            self.volume,
-            start_position,
             event_tx,
+            queue_source.wait_for_response,
         ) {
             Ok(processor) => processor,
             Err(e) => {

@@ -27,6 +27,13 @@ pub(crate) enum DecoderError {
     DecodeError(Error),
 }
 
+pub(crate) struct DecoderParams {
+    pub(crate) source: Box<dyn Source>,
+    pub(crate) volume: f64,
+    pub(crate) output_channels: usize,
+    pub(crate) start_position: Option<Duration>,
+}
+
 pub(crate) struct Decoder {
     buf: Vec<f64>,
     sample_buf: SampleBuffer<f64>,
@@ -45,11 +52,14 @@ pub(crate) struct Decoder {
 
 impl Decoder {
     pub(crate) fn new(
-        source: Box<dyn Source>,
-        volume: f64,
-        output_channels: usize,
-        start_position: Option<Duration>,
+        DecoderParams {
+            source,
+            volume,
+            output_channels,
+            start_position,
+        }: DecoderParams,
     ) -> Result<Self, DecoderError> {
+        info!("Start decoding {source:?}");
         let mut hint = Hint::new();
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);

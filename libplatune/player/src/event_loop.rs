@@ -35,24 +35,20 @@ pub(crate) fn decode_loop(
     let mut prev_stop_position = Duration::default();
     loop {
         match queue_rx.try_recv() {
-            Ok(QueueSource {
-                source,
-                settings,
-                force_restart_output,
-            }) => {
-                if force_restart_output {
+            Ok(queue_source) => {
+                info!("try_recv got source {queue_source:?}");
+                if queue_source.force_restart_output {
                     info!("Restarting output stream");
                     audio_manager.stop();
-                    if let Err(e) = audio_manager.reset(settings.resample_chunk_size) {
+                    if let Err(e) = audio_manager.reset(queue_source.settings.resample_chunk_size) {
                         error!("Error resetting output stream: {e:?}");
                         return;
                     }
                     prev_stop_position = audio_manager.decode_source(
-                        source,
+                        queue_source,
                         &mut cmd_rx,
                         &player_cmd_tx,
                         &event_tx,
-                        settings,
                         Some(prev_stop_position),
                     );
                 } else {
@@ -60,11 +56,10 @@ pub(crate) fn decode_loop(
                         error!("Error starting output stream: {e:?}");
                     }
                     prev_stop_position = audio_manager.decode_source(
-                        source,
+                        queue_source,
                         &mut cmd_rx,
                         &player_cmd_tx,
                         &event_tx,
-                        settings,
                         None,
                     );
                 }
@@ -74,19 +69,19 @@ pub(crate) fn decode_loop(
                 audio_manager.play_remaining();
                 audio_manager.stop();
                 match queue_rx.recv() {
-                    Ok(QueueSource {
-                        source, settings, ..
-                    }) => {
-                        if let Err(e) = audio_manager.reset(settings.resample_chunk_size) {
+                    Ok(queue_source) => {
+                        info!("recv got source {queue_source:?}");
+                        if let Err(e) =
+                            audio_manager.reset(queue_source.settings.resample_chunk_size)
+                        {
                             error!("Error resetting output stream: {e:?}");
                             return;
                         }
                         prev_stop_position = audio_manager.decode_source(
-                            source,
+                            queue_source,
                             &mut cmd_rx,
                             &player_cmd_tx,
                             &event_tx,
-                            settings,
                             None,
                         );
                     }
