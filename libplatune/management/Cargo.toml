@@ -12,6 +12,10 @@ path = "src/lib.rs"
 harness = false
 name = "bench"
 
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -21,18 +25,25 @@ concread = "0.2.21"
 directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.19"
+id3 = "1.0.2"
+ignore = "0.4.18"
 itertools = "0.10.3"
 katatsuki = {git = "https://github.com/aschey/seiri", rev = "a643a0ec242622a83c4f5d08aa79a3dca2302ca1"}
 lazy_static = "1.4.0"
+lewton = "0.10.2"
 log = "0.4.14"
+mp4ameta = "0.11.0"
+rayon = "1.5.1"
 regex = "1.5.4"
 rusqlite = {version = "0.26.3", default-features = false, features = ["load_extension"]}
 sqlx = {version = "0.5.10", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}
 strum = {version = "0.23.0", features = ["derive"]}
+symphonia = {version = "0.5.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 thiserror = "1.0.30"
 tokio = {version = "1.15.0", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.8", features = ["net", "sync"]}
 tracing = "0.1.29"
+walkdir = "2.3.2"
 
 [dev-dependencies]
 criterion = {version = "0.3.5", features = ["async_tokio"]}
