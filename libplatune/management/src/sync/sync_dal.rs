@@ -1,7 +1,7 @@
 use std::time::SystemTime;
 
 use itertools::Itertools;
-use katatsuki::Track;
+use katatsuki::ReadOnlyTrack;
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite, Transaction};
 
 use crate::{consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix};
@@ -73,7 +73,7 @@ impl<'a> SyncDAL<'a> {
     pub(crate) async fn sync_song(
         &mut self,
         path: &str,
-        metadata: &Track,
+        metadata: &ReadOnlyTrack,
         file_size: i64,
         fingerprint: &str,
     ) -> Result<SqliteQueryResult, DbError> {
@@ -224,7 +224,7 @@ impl<'a> SyncDAL<'a> {
     async fn add_song(
         &mut self,
         path: &str,
-        metadata: &Track,
+        metadata: &ReadOnlyTrack,
         file_size: i64,
         fingerprint: &str,
     ) -> Result<SqliteQueryResult, DbError> {
@@ -294,7 +294,7 @@ impl<'a> SyncDAL<'a> {
     async fn update_song(
         &mut self,
         path: &str,
-        metadata: &Track,
+        metadata: &ReadOnlyTrack,
         file_size: i64,
         fingerprint: &str,
     ) -> Result<SqliteQueryResult, DbError> {

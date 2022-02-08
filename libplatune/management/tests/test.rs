@@ -741,7 +741,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
     for (i, song) in songs.iter().enumerate() {
         let song_path = inner_dir.join(format!("test{}.mp3", i));
         fs::copy("../test_assets/test.mp3", song_path.clone()).unwrap();
-        let t = katatsuki::Track::from_path(&song_path, None).unwrap();
+        let t = katatsuki::ReadWriteTrack::from_path(&song_path, None).unwrap();
 
         if let Some(title) = song.title {
             t.set_title(title);

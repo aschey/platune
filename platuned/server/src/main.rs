@@ -8,6 +8,7 @@ mod unix;
 #[cfg(windows)]
 mod windows;
 
+use color_eyre::config::PanicHook;
 use directories::ProjectDirs;
 use rpc::*;
 use std::io::stdout;
@@ -89,7 +90,11 @@ fn main() {
     collector.init();
 
     // Don't set panic hook until after logging is set up
-    set_panic_hook();
+    let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default().into_hooks();
+    eyre_hook.install().unwrap();
+    std::panic::set_hook(Box::new(move |pi| {
+        error!("{}", panic_hook.panic_report(pi));
+    }));
 
     if !is_local {
         warn!("Using UTC time for logging because the local offset wasn't determined");
@@ -112,17 +117,18 @@ async fn run_async(file_guard: WorkerGuard, stdout_guard: WorkerGuard) {
     }
 }
 
-fn set_panic_hook() {
-    panic::set_hook(Box::new(|panic_info| {
-        if let Some(location) = panic_info.location() {
-            error!(
-                message = %panic_info,
-                panic.file = location.file(),
-                panic.line = location.line(),
-                panic.column = location.column(),
-            );
-        } else {
-            error!(message = %panic_info);
-        }
-    }));
-}
+// fn set_panic_hook(panic_hook: PanicHook) {
+//     panic::set_hook(Box::new(|panic_info| {
+//         if let Some(location) = panic_info.location() {
+//             error!(
+//                 report = panic_hook.panic_report(panic_info),
+//                 message = %panic_info,
+//                 panic.file = location.file(),
+//                 panic.line = location.line(),
+//                 panic.column = location.column(),
+//             );
+//         } else {
+//             error!(message = %panic_info);
+//         }
+//     }));
+// }

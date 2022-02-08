@@ -1,13 +1,20 @@
 use crate::management_server::Management;
 use crate::rpc::*;
-use anyhow::Result;
+
 use futures::StreamExt;
 use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
+use notify::{
+    DebouncedEvent, INotifyWatcher, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use prost_types::Timestamp;
+use std::ops::Deref;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
+use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tonic::Request;
 use tonic::Streaming;
@@ -15,15 +22,103 @@ use tonic::{Response, Status};
 use tracing::{error, warn};
 
 pub struct ManagementImpl {
-    manager: Arc<RwLock<Manager>>,
+    manager: ManagerWrapper,
     shutdown_tx: broadcast::Sender<()>,
+    sync_tx: flume::Sender<SyncMessage>,
+    progress_tx: broadcast::Sender<Progress>,
+}
+
+#[derive(Clone)]
+pub(crate) struct ManagerWrapper {
+    manager: Arc<RwLock<Manager>>,
+    watcher: Arc<INotifyWatcher>,
+}
+
+impl Deref for ManagerWrapper {
+    type Target = RwLock<Manager>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.manager
+    }
+}
+
+impl ManagerWrapper {
+    pub(crate) async fn new(
+        manager: Manager,
+        progress_tx: broadcast::Sender<Progress>,
+        sync_tx: flume::Sender<SyncMessage>,
+        sync_rx: flume::Receiver<SyncMessage>,
+    ) -> Self {
+        let (event_tx, event_rx) = std::sync::mpsc::channel();
+
+        let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(5000)).unwrap();
+        let paths = manager.get_all_folders().await.unwrap();
+        for path in paths {
+            watcher.watch(path, RecursiveMode::Recursive).unwrap();
+        }
+
+        thread::spawn(move || {
+            while let Ok(event) = event_rx.recv() {
+                println!("{event:?}");
+                match event {
+                    DebouncedEvent::Create(path) | DebouncedEvent::Write(path) => {
+                        sync_tx.send(SyncMessage::Path(path)).unwrap();
+                    }
+                    _ => {}
+                }
+            }
+        });
+        let manager = Arc::new(RwLock::new(manager));
+        let manager_ = manager.clone();
+
+        tokio::spawn(async move {
+            while let Ok(val) = sync_rx.recv_async().await {
+                match val {
+                    SyncMessage::All => {
+                        let mut rx = manager_.write().await.sync().await.unwrap();
+                        while let Some(m) = rx.next().await {
+                            progress_tx
+                                .send(Progress {
+                                    job: "sync".to_string(),
+                                    percentage: m.unwrap(),
+                                })
+                                .unwrap();
+                        }
+                    }
+                    SyncMessage::Path(path) => {
+                        let mut rx = manager_.write().await.sync().await.unwrap();
+                        while let Some(m) = rx.next().await {
+                            progress_tx
+                                .send(Progress {
+                                    job: "sync".to_string(),
+                                    percentage: m.unwrap(),
+                                })
+                                .unwrap();
+                        }
+                    }
+                }
+            }
+        });
+
+        Self {
+            manager,
+            watcher: Arc::new(watcher),
+        }
+    }
 }
 
 impl ManagementImpl {
-    pub fn new(manager: Arc<RwLock<Manager>>, shutdown_tx: broadcast::Sender<()>) -> Self {
+    pub(crate) fn new(
+        manager: ManagerWrapper,
+        shutdown_tx: broadcast::Sender<()>,
+        sync_tx: flume::Sender<SyncMessage>,
+        progress_tx: broadcast::Sender<Progress>,
+    ) -> Self {
         Self {
             manager,
             shutdown_tx,
+            sync_tx,
+            progress_tx,
         }
     }
 }
@@ -33,23 +128,106 @@ fn format_error(msg: String) -> Status {
     Status::internal(msg)
 }
 
+pub(crate) enum SyncMessage {
+    Path(PathBuf),
+    All,
+}
+
 #[tonic::async_trait]
 impl Management for ManagementImpl {
-    type SyncStream =
-        Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
-
-    async fn sync(&self, _: Request<()>) -> Result<Response<Self::SyncStream>, Status> {
-        let rx = match self.manager.write().await.sync().await {
-            Ok(rx) => rx,
-            Err(e) => return Err(format_error(format!("Error syncing files {:?}", e))),
-        };
-        Ok(Response::new(Box::pin(rx.map(
-            |progress_result| match progress_result {
-                Ok(percentage) => Ok(Progress { percentage }),
-                Err(e) => Err(format_error(format!("Error syncing files {:?}", e))),
-            },
-        ))))
+    async fn start_sync(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        self.sync_tx.send_async(SyncMessage::All).await.unwrap();
+        Ok(Response::new(()))
     }
+
+    type SubscribeEventsStream =
+        Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
+    async fn subscribe_events(
+        &self,
+        _: Request<()>,
+    ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
+        let mut progress_rx = self.progress_tx.subscribe();
+        let (tx, rx) = mpsc::channel(32);
+        tokio::spawn(async move {
+            loop {
+                match progress_rx.recv().await {
+                    Ok(val) => {
+                        tx.send(Ok(val)).await.unwrap();
+                    }
+                    Err(RecvError::Lagged(_)) => {}
+                    _ => {
+                        break;
+                    }
+                }
+            }
+        });
+
+        Ok(Response::new(Box::pin(
+            tokio_stream::wrappers::ReceiverStream::new(rx),
+        )))
+    }
+
+    // async fn sync(
+    //     &self,
+    //     request: Request<Streaming<()>>,
+    // ) -> Result<Response<Self::SyncStream>, Status> {
+    //     let mut messages = request.into_inner();
+    //     let manager = self.manager.clone();
+    //     // Close stream when shutdown is requested
+    //     let mut shutdown_rx = self.shutdown_tx.subscribe();
+    //     let mut file_changed_rx = self.file_changed_tx.subscribe();
+    //     let (response_tx, response_rx) = tokio::sync::mpsc::channel(32);
+    //     tokio::spawn(async move {
+    //         while let Some(msg) = tokio::select! {
+    //             val = messages.next() => match val { Some(Ok(_)) => Some(SyncMessage::All), _ => None },
+    //             val = file_changed_rx.recv() => match val { Ok(val) => Some(SyncMessage::Path(val)), _ => None },
+    //             _ = shutdown_rx.recv() => None
+    //         } {
+    //             let mut manager = manager.write().await;
+    //             match msg {
+    //                 SyncMessage::Path(path) => {
+    //                     let mut rx = match manager.sync().await {
+    //                         Ok(rx) => rx,
+    //                         Err(e) => {
+    //                             return Err(format_error(format!("Error syncing files {:?}", e)))
+    //                         }
+    //                     };
+    //                     while let Some(r) = rx.next().await {
+    //                         response_tx.send(r).await.unwrap();
+    //                     }
+    //                 }
+    //                 SyncMessage::All => {
+    //                     let mut rx = match manager.sync().await {
+    //                         Ok(rx) => rx,
+    //                         Err(e) => {
+    //                             return Err(format_error(format!("Error syncing files {:?}", e)))
+    //                         }
+    //                     };
+    //                     while let Some(r) = rx.next().await {
+    //                         response_tx.send(r).await.unwrap();
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //         Ok(())
+    //     });
+
+    // Ok(Response::new(Box::pin(rx.map(
+    //     |progress_result| match progress_result {
+    //         Ok(percentage) => Ok(Progress { percentage }),
+    //         Err(e) => Err(format_error(format!("Error syncing files {:?}", e))),
+    //     },
+    // ))))
+
+    //     Ok(Response::new(Box::pin({
+    //         tokio_stream::wrappers::ReceiverStream::new(response_rx).map(|progress_result| {
+    //             match progress_result {
+    //                 Ok(percentage) => Ok(Progress { percentage }),
+    //                 Err(e) => Err(format_error(format!("Error syncing files {:?}", e))),
+    //             }
+    //         })
+    //     })))
+    // }
 
     async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
         if let Err(e) = self

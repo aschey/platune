@@ -12,10 +12,6 @@ path = "src/lib.rs"
 harness = false
 name = "bench"
 
-[[bin]]
-name = "main"
-path = "src/main.rs"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -24,16 +20,14 @@ async-channel = "1.6.1"
 concread = "0.2.21"
 directories = "4.0.1"
 dotenv = "0.15.0"
+flume = "0.10.10"
 futures = "0.3.19"
-id3 = "1.0.2"
 ignore = "0.4.18"
 itertools = "0.10.3"
-katatsuki = {git = "https://github.com/aschey/seiri", rev = "a643a0ec242622a83c4f5d08aa79a3dca2302ca1"}
+katatsuki = {git = "https://github.com/aschey/seiri", rev = "40dd21274ee17827598918bde9a5d890bc2e1a4a"}
 lazy_static = "1.4.0"
-lewton = "0.10.2"
 log = "0.4.14"
-mp4ameta = "0.11.0"
-rayon = "1.5.1"
+notify = "4.0.17"
 regex = "1.5.4"
 rusqlite = {version = "0.26.3", default-features = false, features = ["load_extension"]}
 sqlx = {version = "0.5.10", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}

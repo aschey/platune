@@ -10,20 +10,24 @@ import "google/protobuf/timestamp.proto";
 package management_rpc;
 
 service Management {
-  rpc Sync(google.protobuf.Empty) returns (stream Progress) {}
-  rpc AddFolders(FoldersMessage) returns (google.protobuf.Empty) {}
-  rpc GetAllFolders(google.protobuf.Empty) returns (FoldersMessage) {}
-  rpc RegisterMount(RegisteredMountMessage) returns (google.protobuf.Empty) {}
+  rpc StartSync(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc AddFolders(FoldersMessage) returns (google.protobuf.Empty);
+  rpc GetAllFolders(google.protobuf.Empty) returns (FoldersMessage);
+  rpc RegisterMount(RegisteredMountMessage) returns (google.protobuf.Empty);
   rpc GetRegisteredMount(google.protobuf.Empty)
-      returns (RegisteredMountMessage) {}
-  rpc Search(stream SearchRequest) returns (stream SearchResponse) {}
-  rpc Lookup(LookupRequest) returns (LookupResponse) {}
-  rpc GetSongByPath(PathMessage) returns (SongResponse) {}
-  rpc GetDeleted(google.protobuf.Empty) returns (GetDeletedResponse) {}
-  rpc DeleteTracks(IdMessage) returns (google.protobuf.Empty) {}
+      returns (RegisteredMountMessage);
+  rpc Search(stream SearchRequest) returns (stream SearchResponse);
+  rpc Lookup(LookupRequest) returns (LookupResponse);
+  rpc GetSongByPath(PathMessage) returns (SongResponse);
+  rpc GetDeleted(google.protobuf.Empty) returns (GetDeletedResponse);
+  rpc DeleteTracks(IdMessage) returns (google.protobuf.Empty);
+  rpc SubscribeEvents(google.protobuf.Empty) returns (stream Progress);
 }
 
-message Progress { float percentage = 1; }
+message Progress {
+  string job = 1;
+  float percentage = 2;
+}
 
 message FoldersMessage { repeated string folders = 1; }
 
@@ -44,9 +48,7 @@ message LookupRequest {
   repeated int32 correlation_ids = 2;
 }
 
-message SongResponse {
-  optional LookupEntry song = 1;
-}
+message SongResponse { optional LookupEntry song = 1; }
 
 message LookupEntry {
   string artist = 1;

@@ -10,32 +10,32 @@ import "google/protobuf/duration.proto";
 package player_rpc;
 
 service Player {
-  rpc SetQueue(QueueRequest) returns (google.protobuf.Empty) {}
-  rpc AddToQueue(AddToQueueRequest) returns (google.protobuf.Empty) {}
-  rpc Pause(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-  rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-  rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-  rpc Seek(SeekRequest) returns (google.protobuf.Empty) {}
-  rpc SetVolume(SetVolumeRequest) returns (google.protobuf.Empty) {}
-  rpc Next(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-  rpc Previous(google.protobuf.Empty) returns (google.protobuf.Empty) {}
-  rpc GetCurrentStatus(google.protobuf.Empty) returns (StatusResponse) {}
-  rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse) {}
+  rpc SetQueue(QueueRequest) returns (google.protobuf.Empty);
+  rpc AddToQueue(AddToQueueRequest) returns (google.protobuf.Empty);
+  rpc Pause(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Seek(SeekRequest) returns (google.protobuf.Empty);
+  rpc SetVolume(SetVolumeRequest) returns (google.protobuf.Empty);
+  rpc Next(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Previous(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc GetCurrentStatus(google.protobuf.Empty) returns (StatusResponse);
+  rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse);
 }
 
 enum Event {
-  START_QUEUE=0;
-  QUEUE_UPDATED=1;
-  STOP=2;
-  PAUSE=3;
-  RESUME=4;
-  ENDED=5;
-  NEXT=6;
-  PREVIOUS=7;
-  SET_VOLUME=8;
-  SEEK=9;
-  QUEUE_ENDED=10;
-  POSITION=11;
+  START_QUEUE = 0;
+  QUEUE_UPDATED = 1;
+  STOP = 2;
+  PAUSE = 3;
+  RESUME = 4;
+  ENDED = 5;
+  NEXT = 6;
+  PREVIOUS = 7;
+  SET_VOLUME = 8;
+  SEEK = 9;
+  QUEUE_ENDED = 10;
+  POSITION = 11;
 }
 
 enum PlayerStatus {
@@ -45,26 +45,40 @@ enum PlayerStatus {
 }
 
 message QueueRequest { repeated string queue = 1; }
+
 message AddToQueueRequest { repeated string songs = 1; }
+
 message SeekRequest { google.protobuf.Duration time = 1; }
+
 message SetVolumeRequest { double volume = 1; }
+
 message EventResponse {
   Event event = 1;
-  optional State state = 2;
-  optional uint64 seek_millis = 3;
-  optional ProgressResponse progress = 4;
+  oneof event_payload {
+    State state = 2;
+    SeekResponse seek_data = 3;
+    PositionResponse progress = 4;
+  }
 }
+
 message State {
-  repeated string queue = 2;
-  uint32 queue_position = 3;
-  double volume = 4;
+  repeated string queue = 1;
+  uint32 queue_position = 2;
+  double volume = 3;
 }
-message ProgressResponse {
+
+message PositionResponse {
   google.protobuf.Duration position = 1;
   google.protobuf.Duration retrieval_time = 2;
 }
+
+message SeekResponse {
+  State state = 1;
+  uint64 seek_millis = 2;
+}
+
 message StatusResponse {
   PlayerStatus status = 1;
-  optional ProgressResponse progress = 2;
+  optional PositionResponse progress = 2;
   optional string current_song = 3;
 }

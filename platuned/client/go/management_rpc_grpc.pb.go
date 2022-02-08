@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ManagementClient interface {
-	Sync(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Management_SyncClient, error)
+	StartSync(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AddFolders(ctx context.Context, in *FoldersMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*FoldersMessage, error)
 	RegisterMount(ctx context.Context, in *RegisteredMountMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -29,6 +29,7 @@ type ManagementClient interface {
 	GetSongByPath(ctx context.Context, in *PathMessage, opts ...grpc.CallOption) (*SongResponse, error)
 	GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error)
 	DeleteTracks(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Management_SubscribeEventsClient, error)
 }
 
 type managementClient struct {
@@ -39,36 +40,13 @@ func NewManagementClient(cc grpc.ClientConnInterface) ManagementClient {
 	return &managementClient{cc}
 }
 
-func (c *managementClient) Sync(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Management_SyncClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Management_ServiceDesc.Streams[0], "/management_rpc.Management/Sync", opts...)
+func (c *managementClient) StartSync(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/management_rpc.Management/StartSync", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &managementSyncClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Management_SyncClient interface {
-	Recv() (*Progress, error)
-	grpc.ClientStream
-}
-
-type managementSyncClient struct {
-	grpc.ClientStream
-}
-
-func (x *managementSyncClient) Recv() (*Progress, error) {
-	m := new(Progress)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 func (c *managementClient) AddFolders(ctx context.Context, in *FoldersMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
@@ -108,7 +86,7 @@ func (c *managementClient) GetRegisteredMount(ctx context.Context, in *emptypb.E
 }
 
 func (c *managementClient) Search(ctx context.Context, opts ...grpc.CallOption) (Management_SearchClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Management_ServiceDesc.Streams[1], "/management_rpc.Management/Search", opts...)
+	stream, err := c.cc.NewStream(ctx, &Management_ServiceDesc.Streams[0], "/management_rpc.Management/Search", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -174,11 +152,43 @@ func (c *managementClient) DeleteTracks(ctx context.Context, in *IdMessage, opts
 	return out, nil
 }
 
+func (c *managementClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Management_SubscribeEventsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Management_ServiceDesc.Streams[1], "/management_rpc.Management/SubscribeEvents", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &managementSubscribeEventsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Management_SubscribeEventsClient interface {
+	Recv() (*Progress, error)
+	grpc.ClientStream
+}
+
+type managementSubscribeEventsClient struct {
+	grpc.ClientStream
+}
+
+func (x *managementSubscribeEventsClient) Recv() (*Progress, error) {
+	m := new(Progress)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ManagementServer is the server API for Management service.
 // All implementations must embed UnimplementedManagementServer
 // for forward compatibility
 type ManagementServer interface {
-	Sync(*emptypb.Empty, Management_SyncServer) error
+	StartSync(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	AddFolders(context.Context, *FoldersMessage) (*emptypb.Empty, error)
 	GetAllFolders(context.Context, *emptypb.Empty) (*FoldersMessage, error)
 	RegisterMount(context.Context, *RegisteredMountMessage) (*emptypb.Empty, error)
@@ -188,6 +198,7 @@ type ManagementServer interface {
 	GetSongByPath(context.Context, *PathMessage) (*SongResponse, error)
 	GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error)
 	DeleteTracks(context.Context, *IdMessage) (*emptypb.Empty, error)
+	SubscribeEvents(*emptypb.Empty, Management_SubscribeEventsServer) error
 	mustEmbedUnimplementedManagementServer()
 }
 
@@ -195,8 +206,8 @@ type ManagementServer interface {
 type UnimplementedManagementServer struct {
 }
 
-func (UnimplementedManagementServer) Sync(*emptypb.Empty, Management_SyncServer) error {
-	return status.Errorf(codes.Unimplemented, "method Sync not implemented")
+func (UnimplementedManagementServer) StartSync(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartSync not implemented")
 }
 func (UnimplementedManagementServer) AddFolders(context.Context, *FoldersMessage) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddFolders not implemented")
@@ -225,6 +236,9 @@ func (UnimplementedManagementServer) GetDeleted(context.Context, *emptypb.Empty)
 func (UnimplementedManagementServer) DeleteTracks(context.Context, *IdMessage) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteTracks not implemented")
 }
+func (UnimplementedManagementServer) SubscribeEvents(*emptypb.Empty, Management_SubscribeEventsServer) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeEvents not implemented")
+}
 func (UnimplementedManagementServer) mustEmbedUnimplementedManagementServer() {}
 
 // UnsafeManagementServer may be embedded to opt out of forward compatibility for this service.
@@ -238,25 +252,22 @@ func RegisterManagementServer(s grpc.ServiceRegistrar, srv ManagementServer) {
 	s.RegisterService(&Management_ServiceDesc, srv)
 }
 
-func _Management_Sync_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(emptypb.Empty)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+func _Management_StartSync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
 	}
-	return srv.(ManagementServer).Sync(m, &managementSyncServer{stream})
-}
-
-type Management_SyncServer interface {
-	Send(*Progress) error
-	grpc.ServerStream
-}
-
-type managementSyncServer struct {
-	grpc.ServerStream
-}
-
-func (x *managementSyncServer) Send(m *Progress) error {
-	return x.ServerStream.SendMsg(m)
+	if interceptor == nil {
+		return srv.(ManagementServer).StartSync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/management_rpc.Management/StartSync",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).StartSync(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Management_AddFolders_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -429,6 +440,27 @@ func _Management_DeleteTracks_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Management_SubscribeEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(emptypb.Empty)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ManagementServer).SubscribeEvents(m, &managementSubscribeEventsServer{stream})
+}
+
+type Management_SubscribeEventsServer interface {
+	Send(*Progress) error
+	grpc.ServerStream
+}
+
+type managementSubscribeEventsServer struct {
+	grpc.ServerStream
+}
+
+func (x *managementSubscribeEventsServer) Send(m *Progress) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // Management_ServiceDesc is the grpc.ServiceDesc for Management service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -436,6 +468,10 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "management_rpc.Management",
 	HandlerType: (*ManagementServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "StartSync",
+			Handler:    _Management_StartSync_Handler,
+		},
 		{
 			MethodName: "AddFolders",
 			Handler:    _Management_AddFolders_Handler,
@@ -471,15 +507,15 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Sync",
-			Handler:       _Management_Sync_Handler,
-			ServerStreams: true,
-		},
-		{
 			StreamName:    "Search",
 			Handler:       _Management_Search_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "SubscribeEvents",
+			Handler:       _Management_SubscribeEvents_Handler,
+			ServerStreams: true,
 		},
 	},
 	Metadata: "management_rpc.proto",

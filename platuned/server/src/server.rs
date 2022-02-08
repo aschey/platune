@@ -2,9 +2,12 @@ use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
 use crate::rpc;
 use crate::services::management::ManagementImpl;
+use crate::services::management::ManagerWrapper;
+use crate::services::management::SyncMessage;
 use crate::services::player::PlayerImpl;
 #[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
+use crate::Progress;
 use anyhow::Context;
 use anyhow::Result;
 use futures::future::try_join_all;
@@ -12,6 +15,10 @@ use libplatune_management::config::Config;
 use libplatune_management::database::Database;
 use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
+use notify::DebouncedEvent;
+use notify::RecommendedWatcher;
+use notify::RecursiveMode;
+use notify::Watcher;
 #[cfg(unix)]
 use std::env;
 use std::env::var;
@@ -21,6 +28,8 @@ use std::path::Path;
 #[cfg(unix)]
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 use tokio::sync::broadcast;
 use tokio::sync::RwLock;
 use tonic::transport::Server;
@@ -37,11 +46,36 @@ enum Transport {
 pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     let platune_player = Arc::new(PlatunePlayer::new(Default::default()));
     let manager = init_manager().await?;
+    let (progress_tx, _) = broadcast::channel(32);
+    let (sync_tx, sync_rx) = flume::unbounded();
+    let manager = ManagerWrapper::new(manager, progress_tx.clone(), sync_tx.clone(), sync_rx).await;
+
+    //let (event_tx, event_rx) = std::sync::mpsc::channel();
+
+    // let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(5000)).unwrap();
+    // let paths = manager.read().await.get_all_folders().await.unwrap();
+    // for path in paths {
+    //     watcher.watch(path, RecursiveMode::Recursive).unwrap();
+    // }
+
+    // let event_tx_async_ = event_tx_async.clone();
+    // thread::spawn(move || {
+    //     while let Ok(event) = event_rx.recv() {
+    //         match event {
+    //             DebouncedEvent::Create(path) | DebouncedEvent::Write(path) => {
+    //                 event_tx_async_.send(path).unwrap();
+    //             }
+    //             _ => {}
+    //         }
+    //     }
+    // });
 
     let mut servers = Vec::<_>::new();
     let http_server = run_server(
         shutdown_tx.clone(),
+        sync_tx.clone(),
         platune_player.clone(),
+        progress_tx.clone(),
         manager.clone(),
         Transport::Http("0.0.0.0:50051".parse().unwrap()),
     );
@@ -62,7 +96,9 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
         let socket_path = Path::new(&socket_base).join("platuned/platuned.sock");
         let unix_server = run_server(
             shutdown_tx.clone(),
+            sync_tx,
             platune_player.clone(),
+            progress_tx,
             manager,
             Transport::Uds(socket_path),
         );
@@ -77,7 +113,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     Ok(())
 }
 
-async fn init_manager() -> Result<Arc<RwLock<Manager>>> {
+async fn init_manager() -> Result<Manager> {
     let path = var("DATABASE_URL").with_context(|| "DATABASE_URL environment variable not set")?;
     let db = Database::connect(path, true).await?;
     db.migrate()
@@ -86,13 +122,15 @@ async fn init_manager() -> Result<Arc<RwLock<Manager>>> {
     let config = Config::try_new()?;
     let manager = Manager::new(&db, &config);
 
-    Ok(Arc::new(RwLock::new(manager)))
+    Ok(manager)
 }
 
 async fn run_server(
     shutdown_tx: broadcast::Sender<()>,
+    sync_tx: flume::Sender<SyncMessage>,
     platune_player: Arc<PlatunePlayer>,
-    manager: Arc<RwLock<Manager>>,
+    progress_tx: broadcast::Sender<Progress>,
+    manager: ManagerWrapper,
     transport: Transport,
 ) -> Result<()> {
     let reflection_service = Builder::configure()
@@ -102,7 +140,7 @@ async fn run_server(
 
     let player = PlayerImpl::new(platune_player, shutdown_tx.clone());
 
-    let management = ManagementImpl::new(manager, shutdown_tx.clone());
+    let management = ManagementImpl::new(manager, shutdown_tx.clone(), sync_tx, progress_tx);
     let builder = Server::builder()
         .add_service(reflection_service)
         .add_service(PlayerServer::new(player))

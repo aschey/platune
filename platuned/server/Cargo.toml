@@ -9,12 +9,15 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0.53"
 async-stream = "0.3.2"
+color-eyre = "0.6.0"
 console-subscriber = {version = "0.1.1", features = ["parking_lot"], optional = true}
 directories = "4.0.1"
 dotenv = "0.15.0"
+flume = "0.10.10"
 futures = "0.3.19"
 libplatune-management = {path = "../../libplatune/management"}
 libplatune-player = {path = "../../libplatune/player"}
+notify = "4.0.16"
 prost = "0.9.0"
 prost-types = "0.9.0"
 time = "0.3.6"

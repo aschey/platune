@@ -218,147 +218,44 @@ func (mr *MockManagementClientMockRecorder) Search(ctx interface{}, opts ...inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockManagementClient)(nil).Search), varargs...)
 }
 
-// Sync mocks base method.
-func (m *MockManagementClient) Sync(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (v2.Management_SyncClient, error) {
+// StartSync mocks base method.
+func (m *MockManagementClient) StartSync(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Sync", varargs...)
-	ret0, _ := ret[0].(v2.Management_SyncClient)
+	ret := m.ctrl.Call(m, "StartSync", varargs...)
+	ret0, _ := ret[0].(*emptypb.Empty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Sync indicates an expected call of Sync.
-func (mr *MockManagementClientMockRecorder) Sync(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+// StartSync indicates an expected call of StartSync.
+func (mr *MockManagementClientMockRecorder) StartSync(ctx, in interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, in}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockManagementClient)(nil).Sync), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSync", reflect.TypeOf((*MockManagementClient)(nil).StartSync), varargs...)
 }
 
-// MockManagement_SyncClient is a mock of Management_SyncClient interface.
-type MockManagement_SyncClient struct {
-	ctrl     *gomock.Controller
-	recorder *MockManagement_SyncClientMockRecorder
-}
-
-// MockManagement_SyncClientMockRecorder is the mock recorder for MockManagement_SyncClient.
-type MockManagement_SyncClientMockRecorder struct {
-	mock *MockManagement_SyncClient
-}
-
-// NewMockManagement_SyncClient creates a new mock instance.
-func NewMockManagement_SyncClient(ctrl *gomock.Controller) *MockManagement_SyncClient {
-	mock := &MockManagement_SyncClient{ctrl: ctrl}
-	mock.recorder = &MockManagement_SyncClientMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockManagement_SyncClient) EXPECT() *MockManagement_SyncClientMockRecorder {
-	return m.recorder
-}
-
-// CloseSend mocks base method.
-func (m *MockManagement_SyncClient) CloseSend() error {
+// SubscribeEvents mocks base method.
+func (m *MockManagementClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (v2.Management_SubscribeEventsClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CloseSend")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CloseSend indicates an expected call of CloseSend.
-func (mr *MockManagement_SyncClientMockRecorder) CloseSend() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockManagement_SyncClient)(nil).CloseSend))
-}
-
-// Context mocks base method.
-func (m *MockManagement_SyncClient) Context() context.Context {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Context")
-	ret0, _ := ret[0].(context.Context)
-	return ret0
-}
-
-// Context indicates an expected call of Context.
-func (mr *MockManagement_SyncClientMockRecorder) Context() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockManagement_SyncClient)(nil).Context))
-}
-
-// Header mocks base method.
-func (m *MockManagement_SyncClient) Header() (metadata.MD, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Header")
-	ret0, _ := ret[0].(metadata.MD)
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubscribeEvents", varargs...)
+	ret0, _ := ret[0].(v2.Management_SubscribeEventsClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Header indicates an expected call of Header.
-func (mr *MockManagement_SyncClientMockRecorder) Header() *gomock.Call {
+// SubscribeEvents indicates an expected call of SubscribeEvents.
+func (mr *MockManagementClientMockRecorder) SubscribeEvents(ctx, in interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockManagement_SyncClient)(nil).Header))
-}
-
-// Recv mocks base method.
-func (m *MockManagement_SyncClient) Recv() (*v2.Progress, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v2.Progress)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Recv indicates an expected call of Recv.
-func (mr *MockManagement_SyncClientMockRecorder) Recv() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockManagement_SyncClient)(nil).Recv))
-}
-
-// RecvMsg mocks base method.
-func (m_2 *MockManagement_SyncClient) RecvMsg(m interface{}) error {
-	m_2.ctrl.T.Helper()
-	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockManagement_SyncClientMockRecorder) RecvMsg(m interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockManagement_SyncClient)(nil).RecvMsg), m)
-}
-
-// SendMsg mocks base method.
-func (m_2 *MockManagement_SyncClient) SendMsg(m interface{}) error {
-	m_2.ctrl.T.Helper()
-	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SendMsg indicates an expected call of SendMsg.
-func (mr *MockManagement_SyncClientMockRecorder) SendMsg(m interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockManagement_SyncClient)(nil).SendMsg), m)
-}
-
-// Trailer mocks base method.
-func (m *MockManagement_SyncClient) Trailer() metadata.MD {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Trailer")
-	ret0, _ := ret[0].(metadata.MD)
-	return ret0
-}
-
-// Trailer indicates an expected call of Trailer.
-func (mr *MockManagement_SyncClientMockRecorder) Trailer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockManagement_SyncClient)(nil).Trailer))
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeEvents", reflect.TypeOf((*MockManagementClient)(nil).SubscribeEvents), varargs...)
 }
 
 // MockManagement_SearchClient is a mock of Management_SearchClient interface.
@@ -496,6 +393,129 @@ func (m *MockManagement_SearchClient) Trailer() metadata.MD {
 func (mr *MockManagement_SearchClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockManagement_SearchClient)(nil).Trailer))
+}
+
+// MockManagement_SubscribeEventsClient is a mock of Management_SubscribeEventsClient interface.
+type MockManagement_SubscribeEventsClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockManagement_SubscribeEventsClientMockRecorder
+}
+
+// MockManagement_SubscribeEventsClientMockRecorder is the mock recorder for MockManagement_SubscribeEventsClient.
+type MockManagement_SubscribeEventsClientMockRecorder struct {
+	mock *MockManagement_SubscribeEventsClient
+}
+
+// NewMockManagement_SubscribeEventsClient creates a new mock instance.
+func NewMockManagement_SubscribeEventsClient(ctrl *gomock.Controller) *MockManagement_SubscribeEventsClient {
+	mock := &MockManagement_SubscribeEventsClient{ctrl: ctrl}
+	mock.recorder = &MockManagement_SubscribeEventsClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockManagement_SubscribeEventsClient) EXPECT() *MockManagement_SubscribeEventsClientMockRecorder {
+	return m.recorder
+}
+
+// CloseSend mocks base method.
+func (m *MockManagement_SubscribeEventsClient) CloseSend() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseSend")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CloseSend indicates an expected call of CloseSend.
+func (mr *MockManagement_SubscribeEventsClientMockRecorder) CloseSend() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockManagement_SubscribeEventsClient)(nil).CloseSend))
+}
+
+// Context mocks base method.
+func (m *MockManagement_SubscribeEventsClient) Context() context.Context {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Context")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
+}
+
+// Context indicates an expected call of Context.
+func (mr *MockManagement_SubscribeEventsClientMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockManagement_SubscribeEventsClient)(nil).Context))
+}
+
+// Header mocks base method.
+func (m *MockManagement_SubscribeEventsClient) Header() (metadata.MD, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Header")
+	ret0, _ := ret[0].(metadata.MD)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Header indicates an expected call of Header.
+func (mr *MockManagement_SubscribeEventsClientMockRecorder) Header() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockManagement_SubscribeEventsClient)(nil).Header))
+}
+
+// Recv mocks base method.
+func (m *MockManagement_SubscribeEventsClient) Recv() (*v2.Progress, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Recv")
+	ret0, _ := ret[0].(*v2.Progress)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Recv indicates an expected call of Recv.
+func (mr *MockManagement_SubscribeEventsClientMockRecorder) Recv() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockManagement_SubscribeEventsClient)(nil).Recv))
+}
+
+// RecvMsg mocks base method.
+func (m_2 *MockManagement_SubscribeEventsClient) RecvMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecvMsg indicates an expected call of RecvMsg.
+func (mr *MockManagement_SubscribeEventsClientMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockManagement_SubscribeEventsClient)(nil).RecvMsg), m)
+}
+
+// SendMsg mocks base method.
+func (m_2 *MockManagement_SubscribeEventsClient) SendMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendMsg indicates an expected call of SendMsg.
+func (mr *MockManagement_SubscribeEventsClientMockRecorder) SendMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockManagement_SubscribeEventsClient)(nil).SendMsg), m)
+}
+
+// Trailer mocks base method.
+func (m *MockManagement_SubscribeEventsClient) Trailer() metadata.MD {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Trailer")
+	ret0, _ := ret[0].(metadata.MD)
+	return ret0
+}
+
+// Trailer indicates an expected call of Trailer.
+func (mr *MockManagement_SubscribeEventsClientMockRecorder) Trailer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockManagement_SubscribeEventsClient)(nil).Trailer))
 }
 
 // MockManagementServer is a mock of ManagementServer interface.
@@ -655,18 +675,33 @@ func (mr *MockManagementServerMockRecorder) Search(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockManagementServer)(nil).Search), arg0)
 }
 
-// Sync mocks base method.
-func (m *MockManagementServer) Sync(arg0 *emptypb.Empty, arg1 v2.Management_SyncServer) error {
+// StartSync mocks base method.
+func (m *MockManagementServer) StartSync(arg0 context.Context, arg1 *emptypb.Empty) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sync", arg0, arg1)
+	ret := m.ctrl.Call(m, "StartSync", arg0, arg1)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// StartSync indicates an expected call of StartSync.
+func (mr *MockManagementServerMockRecorder) StartSync(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartSync", reflect.TypeOf((*MockManagementServer)(nil).StartSync), arg0, arg1)
+}
+
+// SubscribeEvents mocks base method.
+func (m *MockManagementServer) SubscribeEvents(arg0 *emptypb.Empty, arg1 v2.Management_SubscribeEventsServer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SubscribeEvents", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Sync indicates an expected call of Sync.
-func (mr *MockManagementServerMockRecorder) Sync(arg0, arg1 interface{}) *gomock.Call {
+// SubscribeEvents indicates an expected call of SubscribeEvents.
+func (mr *MockManagementServerMockRecorder) SubscribeEvents(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockManagementServer)(nil).Sync), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubscribeEvents", reflect.TypeOf((*MockManagementServer)(nil).SubscribeEvents), arg0, arg1)
 }
 
 // mustEmbedUnimplementedManagementServer mocks base method.
@@ -714,125 +749,6 @@ func (m *MockUnsafeManagementServer) mustEmbedUnimplementedManagementServer() {
 func (mr *MockUnsafeManagementServerMockRecorder) mustEmbedUnimplementedManagementServer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "mustEmbedUnimplementedManagementServer", reflect.TypeOf((*MockUnsafeManagementServer)(nil).mustEmbedUnimplementedManagementServer))
-}
-
-// MockManagement_SyncServer is a mock of Management_SyncServer interface.
-type MockManagement_SyncServer struct {
-	ctrl     *gomock.Controller
-	recorder *MockManagement_SyncServerMockRecorder
-}
-
-// MockManagement_SyncServerMockRecorder is the mock recorder for MockManagement_SyncServer.
-type MockManagement_SyncServerMockRecorder struct {
-	mock *MockManagement_SyncServer
-}
-
-// NewMockManagement_SyncServer creates a new mock instance.
-func NewMockManagement_SyncServer(ctrl *gomock.Controller) *MockManagement_SyncServer {
-	mock := &MockManagement_SyncServer{ctrl: ctrl}
-	mock.recorder = &MockManagement_SyncServerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockManagement_SyncServer) EXPECT() *MockManagement_SyncServerMockRecorder {
-	return m.recorder
-}
-
-// Context mocks base method.
-func (m *MockManagement_SyncServer) Context() context.Context {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Context")
-	ret0, _ := ret[0].(context.Context)
-	return ret0
-}
-
-// Context indicates an expected call of Context.
-func (mr *MockManagement_SyncServerMockRecorder) Context() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockManagement_SyncServer)(nil).Context))
-}
-
-// RecvMsg mocks base method.
-func (m_2 *MockManagement_SyncServer) RecvMsg(m interface{}) error {
-	m_2.ctrl.T.Helper()
-	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockManagement_SyncServerMockRecorder) RecvMsg(m interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockManagement_SyncServer)(nil).RecvMsg), m)
-}
-
-// Send mocks base method.
-func (m *MockManagement_SyncServer) Send(arg0 *v2.Progress) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Send", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Send indicates an expected call of Send.
-func (mr *MockManagement_SyncServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockManagement_SyncServer)(nil).Send), arg0)
-}
-
-// SendHeader mocks base method.
-func (m *MockManagement_SyncServer) SendHeader(arg0 metadata.MD) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendHeader", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SendHeader indicates an expected call of SendHeader.
-func (mr *MockManagement_SyncServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockManagement_SyncServer)(nil).SendHeader), arg0)
-}
-
-// SendMsg mocks base method.
-func (m_2 *MockManagement_SyncServer) SendMsg(m interface{}) error {
-	m_2.ctrl.T.Helper()
-	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SendMsg indicates an expected call of SendMsg.
-func (mr *MockManagement_SyncServerMockRecorder) SendMsg(m interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockManagement_SyncServer)(nil).SendMsg), m)
-}
-
-// SetHeader mocks base method.
-func (m *MockManagement_SyncServer) SetHeader(arg0 metadata.MD) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetHeader", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetHeader indicates an expected call of SetHeader.
-func (mr *MockManagement_SyncServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockManagement_SyncServer)(nil).SetHeader), arg0)
-}
-
-// SetTrailer mocks base method.
-func (m *MockManagement_SyncServer) SetTrailer(arg0 metadata.MD) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetTrailer", arg0)
-}
-
-// SetTrailer indicates an expected call of SetTrailer.
-func (mr *MockManagement_SyncServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockManagement_SyncServer)(nil).SetTrailer), arg0)
 }
 
 // MockManagement_SearchServer is a mock of Management_SearchServer interface.
@@ -967,4 +883,123 @@ func (m *MockManagement_SearchServer) SetTrailer(arg0 metadata.MD) {
 func (mr *MockManagement_SearchServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockManagement_SearchServer)(nil).SetTrailer), arg0)
+}
+
+// MockManagement_SubscribeEventsServer is a mock of Management_SubscribeEventsServer interface.
+type MockManagement_SubscribeEventsServer struct {
+	ctrl     *gomock.Controller
+	recorder *MockManagement_SubscribeEventsServerMockRecorder
+}
+
+// MockManagement_SubscribeEventsServerMockRecorder is the mock recorder for MockManagement_SubscribeEventsServer.
+type MockManagement_SubscribeEventsServerMockRecorder struct {
+	mock *MockManagement_SubscribeEventsServer
+}
+
+// NewMockManagement_SubscribeEventsServer creates a new mock instance.
+func NewMockManagement_SubscribeEventsServer(ctrl *gomock.Controller) *MockManagement_SubscribeEventsServer {
+	mock := &MockManagement_SubscribeEventsServer{ctrl: ctrl}
+	mock.recorder = &MockManagement_SubscribeEventsServerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockManagement_SubscribeEventsServer) EXPECT() *MockManagement_SubscribeEventsServerMockRecorder {
+	return m.recorder
+}
+
+// Context mocks base method.
+func (m *MockManagement_SubscribeEventsServer) Context() context.Context {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Context")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
+}
+
+// Context indicates an expected call of Context.
+func (mr *MockManagement_SubscribeEventsServerMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockManagement_SubscribeEventsServer)(nil).Context))
+}
+
+// RecvMsg mocks base method.
+func (m_2 *MockManagement_SubscribeEventsServer) RecvMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecvMsg indicates an expected call of RecvMsg.
+func (mr *MockManagement_SubscribeEventsServerMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockManagement_SubscribeEventsServer)(nil).RecvMsg), m)
+}
+
+// Send mocks base method.
+func (m *MockManagement_SubscribeEventsServer) Send(arg0 *v2.Progress) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Send", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Send indicates an expected call of Send.
+func (mr *MockManagement_SubscribeEventsServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockManagement_SubscribeEventsServer)(nil).Send), arg0)
+}
+
+// SendHeader mocks base method.
+func (m *MockManagement_SubscribeEventsServer) SendHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendHeader indicates an expected call of SendHeader.
+func (mr *MockManagement_SubscribeEventsServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockManagement_SubscribeEventsServer)(nil).SendHeader), arg0)
+}
+
+// SendMsg mocks base method.
+func (m_2 *MockManagement_SubscribeEventsServer) SendMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendMsg indicates an expected call of SendMsg.
+func (mr *MockManagement_SubscribeEventsServerMockRecorder) SendMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockManagement_SubscribeEventsServer)(nil).SendMsg), m)
+}
+
+// SetHeader mocks base method.
+func (m *MockManagement_SubscribeEventsServer) SetHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetHeader indicates an expected call of SetHeader.
+func (mr *MockManagement_SubscribeEventsServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockManagement_SubscribeEventsServer)(nil).SetHeader), arg0)
+}
+
+// SetTrailer mocks base method.
+func (m *MockManagement_SubscribeEventsServer) SetTrailer(arg0 metadata.MD) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTrailer", arg0)
+}
+
+// SetTrailer indicates an expected call of SetTrailer.
+func (mr *MockManagement_SubscribeEventsServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockManagement_SubscribeEventsServer)(nil).SetTrailer), arg0)
 }

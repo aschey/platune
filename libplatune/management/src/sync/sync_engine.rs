@@ -1,24 +1,17 @@
+use ignore::WalkBuilder;
+use itertools::Itertools;
+use katatsuki::ReadOnlyTrack;
+use regex::Regex;
+use sqlx::{Pool, Sqlite};
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
-    time::Duration,
 };
-
-use itertools::Itertools;
-use katatsuki::Track;
-use regex::Regex;
-use sqlx::{Pool, Sqlite};
 use thiserror::Error;
-use tokio::{
-    sync::{
-        broadcast,
-        mpsc::{channel, Receiver, Sender},
-    },
-    task::JoinHandle,
-    time::timeout,
-};
-use tracing::{debug, error, info, warn};
+use tokio::{sync::broadcast, task::JoinHandle};
+use tracing::{error, info, warn};
+use walkdir::WalkDir;
 
 use crate::{consts::MIN_WORDS, db_error::DbError, path_util::clean_file_path};
 
@@ -52,10 +45,6 @@ pub(crate) struct SyncEngine {
     pool: Pool<Sqlite>,
     mount: Option<String>,
     tx: broadcast::Sender<Option<Result<f32, SyncError>>>,
-    dispatch_tx: async_channel::Sender<Option<PathBuf>>,
-    dispatch_rx: async_channel::Receiver<Option<PathBuf>>,
-    finished_tx: Sender<DirRead>,
-    finished_rx: Receiver<DirRead>,
 }
 
 impl SyncEngine {
@@ -65,169 +54,134 @@ impl SyncEngine {
         mount: Option<String>,
         tx: broadcast::Sender<Option<Result<f32, SyncError>>>,
     ) -> Self {
-        let (dispatch_tx, dispatch_rx) = async_channel::bounded(100);
-        let (finished_tx, finished_rx) = channel(100);
-
         Self {
             paths,
             pool,
             mount,
             tx,
-            dispatch_tx,
-            dispatch_rx,
-            finished_tx,
-            finished_rx,
         }
     }
 
     pub(crate) async fn start(&mut self) {
         info!("Starting sync process");
-        let (tags_tx, tags_rx) = channel(100);
-        let tags_handle = self.tags_task(tags_rx);
 
-        for path in &self.paths {
-            if let Err(e) = self.dispatch_tx.send(Some(PathBuf::from(path))).await {
-                self.tx
-                    .send_error(SyncError::AsyncError(format!("{:?}", e)));
+        if self.paths.is_empty() {
+            return;
+        }
+
+        let mut walker_builder = WalkBuilder::new(&self.paths[0]);
+        walker_builder.threads(10).standard_filters(false);
+
+        if self.paths.len() > 1 {
+            for path in &self.paths[1..] {
+                walker_builder.add(path);
             }
         }
-        if let Err(e) = self.task_loop(&tags_tx).await {
-            self.tx.send_error(e);
-        }
+        let walker = walker_builder.build_parallel();
 
-        if let Err(e) = tags_tx.send(None).await {
-            self.tx
-                .send_error(SyncError::AsyncError(format!("{:?}", e)));
-        }
+        let (tags_tx, tags_rx) = flume::unbounded();
 
+        let (dir_tx, dir_rx) = flume::unbounded();
+        let dir_tx_ = dir_tx.clone();
+        let mount = self.mount.clone();
+        let paths = self.paths.clone();
+        let counter_thread = tokio::task::spawn_blocking(move || {
+            for path in paths {
+                WalkDir::new(&path)
+                    .into_iter()
+                    .for_each(|_| dir_tx_.send(Some(DirRead::Found)).unwrap());
+            }
+        });
+
+        let walker_thread = tokio::task::spawn_blocking(move || {
+            walker.run(|| {
+                let tags_tx = tags_tx.clone();
+                let dir_tx = dir_tx.clone();
+                let mount = mount.clone();
+                Box::new(move |result| {
+                    dir_tx.send(Some(DirRead::Completed)).unwrap();
+                    if let Ok(result) = result {
+                        let file_path = result.into_path();
+                        if file_path.is_file() {
+                            if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path) {
+                                let file_path_str = clean_file_path(&file_path, &mount);
+                                tags_tx
+                                    .send(Some((metadata, file_path_str, file_path)))
+                                    .map_err(|e| {
+                                        SyncError::AsyncError(format!("Error sending tag: {:?}", e))
+                                    })
+                                    .unwrap();
+                            }
+                        }
+                    }
+                    ignore::WalkState::Continue
+                })
+            });
+            dir_tx.send(None).unwrap();
+        });
+
+        let tags_handle = self.tags_task(tags_rx);
+
+        self.progress_loop(dir_rx).await;
+        walker_thread.await.unwrap();
+
+        counter_thread.await.unwrap();
         match tags_handle.await {
             Ok(Err(e)) => self.tx.send_error(e),
             Ok(Ok(())) => {}
             Err(e) => {
-                self.tx
-                    .send_error(SyncError::AsyncError(format!("{:?}", e)));
+                self.tx.send_error(SyncError::AsyncError(format!(
+                    "Error joining tags handle {:?}",
+                    e
+                )));
             }
         }
+
         if let Err(e) = self.tx.send(None) {
             warn!("Error sending message to clients {:?}", e);
         }
     }
 
-    async fn task_loop(
-        &mut self,
-        tags_tx: &Sender<Option<(Track, String, PathBuf)>>,
-    ) -> Result<(), SyncError> {
-        let mut num_tasks = 1;
-        let max_tasks = 100;
-
-        let mut handles = vec![];
-        for _ in 0..num_tasks {
-            handles.push(self.spawn_task(tags_tx.clone()));
-        }
-
-        let mut total_dirs = 0;
-        let mut dirs_processed = 0;
-        loop {
-            match timeout(Duration::from_millis(1), self.finished_rx.recv()).await {
-                Ok(Some(DirRead::Completed)) => {
-                    dirs_processed += 1;
-                    debug!(
-                        "Read dir. Dirs processed: {} Total dirs: {}",
-                        dirs_processed, total_dirs
-                    );
-                    // edge case - entire dir is empty
-                    if total_dirs == 0 {
-                        self.tx
-                            .send(Some(Ok(1.)))
-                            .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
-                        break;
-                    }
-                    if let Err(e) = self
-                        .tx
-                        .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
-                    {
-                        warn!("Error sending progress message to receiver: {:?}", e);
-                    }
-
-                    if total_dirs == dirs_processed {
-                        break;
-                    }
-                }
-                Ok(Some(DirRead::Found)) => {
-                    total_dirs += 1;
-                    debug!(
-                        "Found dir. Dirs processed: {} Total dirs: {}",
-                        dirs_processed, total_dirs
-                    );
-                    if let Err(e) = self
-                        .tx
-                        .send(Some(Ok((dirs_processed as f32) / (total_dirs as f32))))
-                    {
-                        warn!("Error sending progress message to receiver: {:?}", e);
-                    }
-                }
-                Ok(None) => {
-                    break;
-                }
-                Err(_) => {
-                    if num_tasks < max_tasks {
-                        handles.push(self.spawn_task(tags_tx.clone()));
-                        num_tasks += 1;
-                        debug!("Spawning task. Num tasks: {:?}", num_tasks);
-                    }
-                }
+    async fn progress_loop(&self, dir_rx: flume::Receiver<Option<DirRead>>) {
+        let mut processed = 0.0;
+        let mut file_count = 0.0;
+        while let Ok(Some(dir_read)) = dir_rx.recv_async().await {
+            match dir_read {
+                DirRead::Found => file_count += 1.0,
+                DirRead::Completed => processed += 1.0,
+            }
+            if file_count > 0.0 && processed <= file_count {
+                self.tx.send(Some(Ok(processed / file_count))).unwrap();
             }
         }
-
-        for _ in 0..handles.len() {
-            self.dispatch_tx
-                .send(None)
-                .await
-                .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
-        }
-        for handle in handles {
-            if let Err(e) = handle
-                .await
-                .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?
-            {
-                return Err(e);
-            }
-        }
-
-        Ok(())
     }
 
     fn tags_task(
         &self,
-        mut tags_rx: Receiver<Option<(Track, String, PathBuf)>>,
+        tags_rx: flume::Receiver<Option<(ReadOnlyTrack, String, PathBuf)>>,
     ) -> JoinHandle<Result<(), SyncError>> {
         let pool = self.pool.clone();
 
         tokio::spawn(async move {
             let mut dal = SyncDAL::try_new(pool).await?;
-            while let Some(metadata) = tags_rx.recv().await {
-                match metadata {
-                    Some((metadata, path_str, path)) => {
-                        let mut hasher = DefaultHasher::new();
-                        metadata.hash(&mut hasher);
-                        let file_size = path
-                            .metadata()
-                            .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
-                            .len();
-                        file_size.hash(&mut hasher);
-                        let fingerprint = hasher.finish().to_string();
+            while let Ok(Some((metadata, path_str, path))) = tags_rx.recv_async().await {
+                let mut hasher = DefaultHasher::new();
+                metadata.hash(&mut hasher);
 
-                        dal.add_artist(&metadata.artist).await?;
-                        dal.add_album_artist(&metadata.album_artists).await?;
-                        dal.add_album(&metadata.album, &metadata.album_artists)
-                            .await?;
-                        dal.sync_song(&path_str, &metadata, file_size as i64, &fingerprint)
-                            .await?;
-                    }
-                    None => {
-                        break;
-                    }
-                }
+                let file_size = path
+                    .metadata()
+                    .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
+                    .len();
+                file_size.hash(&mut hasher);
+                let fingerprint = hasher.finish().to_string();
+
+                dal.add_artist(&metadata.artist).await?;
+                dal.add_album_artist(&metadata.album_artists).await?;
+                dal.add_album(&metadata.album, &metadata.album_artists)
+                    .await?;
+
+                dal.sync_song(&path_str, &metadata, file_size as i64, &fingerprint)
+                    .await?;
             }
 
             dal.update_missing_songs().await?;
@@ -274,86 +228,16 @@ impl SyncEngine {
         Ok(())
     }
 
-    fn spawn_task(
-        &self,
-        tags_tx: Sender<Option<(Track, String, PathBuf)>>,
-    ) -> JoinHandle<Result<(), SyncError>> {
-        let mount = self.mount.clone();
-        let dispatch_tx = self.dispatch_tx.clone();
-        let dispatch_rx = self.dispatch_rx.clone();
-        let finished_tx = self.finished_tx.clone();
-        tokio::spawn(async move {
-            while let Ok(path) = dispatch_rx.recv().await {
-                match path {
-                    Some(path) => {
-                        SyncEngine::parse_dir(path, &mount, &tags_tx, &dispatch_tx, &finished_tx)
-                            .await?;
-                    }
-                    None => {
-                        break;
-                    }
-                }
-            }
-
-            Ok(())
-        })
-    }
-
-    async fn parse_dir(
-        path: PathBuf,
-        mount: &Option<String>,
-        tags_tx: &Sender<Option<(Track, String, PathBuf)>>,
-        dispatch_tx: &async_channel::Sender<Option<PathBuf>>,
-        finished_tx: &Sender<DirRead>,
-    ) -> Result<(), SyncError> {
-        debug!("Reading dir {:?}", path);
-        for dir_result in path
-            .read_dir()
-            .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
-        {
-            let dir = dir_result.map_err(|e| SyncError::IOError(format!("{:?}", e)))?;
-
-            if dir
-                .file_type()
-                .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
-                .is_file()
-            {
-                let file_path = dir.path();
-                if let Some(metadata) = SyncEngine::parse_metadata(&file_path)? {
-                    let file_path_str = clean_file_path(&file_path, mount);
-                    tags_tx
-                        .send(Some((metadata, file_path_str, file_path)))
-                        .await
-                        .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
-                }
-            } else {
-                dispatch_tx
-                    .send(Some(dir.path()))
-                    .await
-                    .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
-                finished_tx
-                    .send(DirRead::Found)
-                    .await
-                    .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?;
-            }
-        }
-
-        Ok(finished_tx
-            .send(DirRead::Completed)
-            .await
-            .map_err(|e| SyncError::AsyncError(format!("{:?}", e)))?)
-    }
-
-    fn parse_metadata(file_path: &Path) -> Result<Option<Track>, SyncError> {
+    fn parse_metadata(file_path: &Path) -> Result<Option<ReadOnlyTrack>, SyncError> {
         let name = file_path.extension().unwrap_or_default();
         let _size = file_path
             .metadata()
             .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
             .len();
-        let mut song_metadata: Option<Track> = None;
+        let mut song_metadata: Option<ReadOnlyTrack> = None;
         match &name.to_str().unwrap_or_default().to_lowercase()[..] {
             "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
-                let tag_result = Track::from_path(file_path, None);
+                let tag_result = ReadOnlyTrack::from_path(file_path, None);
                 match tag_result {
                     Err(e) => {
                         error!("{:?}", e);

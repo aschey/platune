@@ -42,6 +42,7 @@ Platune is a cross-platform music player that uses a client-server architecture 
 - Mobile app functions as both a standalone player and a remote control
 - Custom audio visualizations
 - Gapless audio playback
+- Database automatically syncs with your filesystem
 - Push-based architecture - all running clients should be notified and kept in sync with the current state of the server
 
 ## Project Goals
