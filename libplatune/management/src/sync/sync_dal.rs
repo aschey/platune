@@ -4,7 +4,10 @@ use itertools::Itertools;
 use katatsuki::ReadOnlyTrack;
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite, Transaction};
 
-use crate::{consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix};
+use crate::{
+    consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix,
+    sql_util::generate_parameterized_bindings,
+};
 
 pub(crate) struct SyncDAL<'a> {
     tran: Transaction<'a, Sqlite>,
@@ -83,19 +86,27 @@ impl<'a> SyncDAL<'a> {
             .await
     }
 
-    pub(crate) async fn update_missing_songs(&mut self) -> Result<(), DbError> {
+    pub(crate) async fn update_missing_songs(&mut self, paths: Vec<String>) -> Result<(), DbError> {
         // Add songs not found in the last scan attempt to the list of deleted songs
-        sqlx::query!(
+        let query_str = format!(
             "
             INSERT INTO deleted_song(song_id)
-            SELECT song_id FROM song WHERE last_scanned_date < ?
+            SELECT song_id FROM song WHERE last_scanned_date < $1
+            AND song_path IN ({})
             ON CONFLICT DO NOTHING;
             ",
-            self.timestamp
-        )
-        .execute(&mut self.tran)
-        .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            generate_parameterized_bindings(2, paths.len())
+        );
+
+        let mut query = sqlx::query(&query_str).bind(self.timestamp);
+        for path in paths {
+            query = query.bind(path);
+        }
+
+        query
+            .execute(&mut self.tran)
+            .await
+            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
 
         // If a song was previously missing but was found in the most recent scan,
         // remove it from the list of deleted songs

@@ -4,9 +4,7 @@ use crate::rpc::*;
 use futures::StreamExt;
 use libplatune_management::manager;
 use libplatune_management::manager::{Manager, SearchOptions};
-use notify::{
-    DebouncedEvent, INotifyWatcher, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher,
-};
+use notify::{DebouncedEvent, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
 use prost_types::Timestamp;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
@@ -31,7 +29,7 @@ pub struct ManagementImpl {
 #[derive(Clone)]
 pub(crate) struct ManagerWrapper {
     manager: Arc<RwLock<Manager>>,
-    watcher: Arc<INotifyWatcher>,
+    watcher: Arc<RecommendedWatcher>,
 }
 
 impl Deref for ManagerWrapper {
@@ -75,25 +73,30 @@ impl ManagerWrapper {
             while let Ok(val) = sync_rx.recv_async().await {
                 match val {
                     SyncMessage::All => {
-                        let mut rx = manager_.write().await.sync().await.unwrap();
+                        let mut rx = manager_.write().await.sync(None).await.unwrap();
                         while let Some(m) = rx.next().await {
                             progress_tx
                                 .send(Progress {
                                     job: "sync".to_string(),
                                     percentage: m.unwrap(),
                                 })
-                                .unwrap();
+                                .unwrap_or_default();
                         }
                     }
                     SyncMessage::Path(path) => {
-                        let mut rx = manager_.write().await.sync().await.unwrap();
+                        let mut rx = manager_
+                            .write()
+                            .await
+                            .sync(Some(vec![path.to_string_lossy().into_owned()]))
+                            .await
+                            .unwrap();
                         while let Some(m) = rx.next().await {
                             progress_tx
                                 .send(Progress {
                                     job: "sync".to_string(),
                                     percentage: m.unwrap(),
                                 })
-                                .unwrap();
+                                .unwrap_or_default();
                         }
                     }
                 }
@@ -152,7 +155,7 @@ impl Management for ManagementImpl {
             loop {
                 match progress_rx.recv().await {
                     Ok(val) => {
-                        tx.send(Ok(val)).await.unwrap();
+                        tx.send(Ok(val)).await.unwrap_or_default();
                     }
                     Err(RecvError::Lagged(_)) => {}
                     _ => {

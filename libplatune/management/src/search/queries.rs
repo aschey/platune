@@ -1,7 +1,10 @@
 use itertools::Itertools;
 use regex::Regex;
 
-use crate::consts::{END_MATCH_TEXT, START_MATCH_TEXT};
+use crate::{
+    consts::{END_MATCH_TEXT, START_MATCH_TEXT},
+    sql_util::generate_parameterized_bindings,
+};
 
 use super::spellfix_result::SpellfixResult;
 
@@ -123,13 +126,6 @@ fn replace_special_chars(query: &str) -> String {
     // Replace all special characters with whitespace because they cause sqlite to error
     let special_chars = Regex::new(r"[^A-Za-z0-9&\*\s]").unwrap();
     return special_chars.replace_all(query, " ").trim().to_owned();
-}
-
-fn generate_parameterized_bindings(start: usize, count: usize) -> String {
-    (start..start + count)
-        .map(|i| "$".to_owned() + &i.to_string())
-        .collect_vec()
-        .join(",")
 }
 
 fn get_spellfix_query(index: usize) -> String {

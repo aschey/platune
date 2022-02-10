@@ -94,8 +94,12 @@ impl Manager {
         Ok(self.expand_paths(folders).await)
     }
 
-    pub async fn sync(&mut self) -> Result<ProgressStream, DbError> {
-        let folders = self.get_all_folders().await?;
+    pub async fn sync(&mut self, paths: Option<Vec<String>>) -> Result<ProgressStream, DbError> {
+        let folders = match paths {
+            Some(paths) => paths,
+            None => self.get_all_folders().await?,
+        };
+
         let mount = self.get_registered_mount().await;
         Ok(self.db.sync(folders, mount).await)
     }

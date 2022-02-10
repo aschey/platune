@@ -151,7 +151,9 @@ impl SyncEngine {
                 DirRead::Completed => processed += 1.0,
             }
             if file_count > 0.0 && processed <= file_count {
-                self.tx.send(Some(Ok(processed / file_count))).unwrap();
+                self.tx
+                    .send(Some(Ok(processed / file_count)))
+                    .unwrap_or_default();
             }
         }
     }
@@ -161,7 +163,11 @@ impl SyncEngine {
         tags_rx: flume::Receiver<Option<(ReadOnlyTrack, String, PathBuf)>>,
     ) -> JoinHandle<Result<(), SyncError>> {
         let pool = self.pool.clone();
-
+        let cleaned_paths = self
+            .paths
+            .iter()
+            .map(|p| clean_file_path(p, &self.mount))
+            .collect();
         tokio::spawn(async move {
             let mut dal = SyncDAL::try_new(pool).await?;
             while let Ok(Some((metadata, path_str, path))) = tags_rx.recv_async().await {
@@ -184,7 +190,7 @@ impl SyncEngine {
                     .await?;
             }
 
-            dal.update_missing_songs().await?;
+            dal.update_missing_songs(cleaned_paths).await?;
 
             dal.sync_spellfix().await?;
             SyncEngine::add_search_aliases(&mut dal).await?;
