@@ -17,7 +17,7 @@ use tokio::sync::{broadcast, mpsc, RwLock};
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 pub struct ManagementImpl {
     manager: ManagerWrapper,
@@ -49,7 +49,7 @@ impl ManagerWrapper {
     ) -> Self {
         let (event_tx, event_rx) = std::sync::mpsc::channel();
 
-        let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(5000)).unwrap();
+        let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(2500)).unwrap();
         let paths = manager.get_all_folders().await.unwrap();
         for path in paths {
             watcher.watch(path, RecursiveMode::Recursive).unwrap();
@@ -57,9 +57,11 @@ impl ManagerWrapper {
 
         thread::spawn(move || {
             while let Ok(event) = event_rx.recv() {
-                println!("{event:?}");
+                info!("Received file watcher event {event:?}");
                 match event {
-                    DebouncedEvent::Create(path) | DebouncedEvent::Write(path) => {
+                    DebouncedEvent::Create(path)
+                    | DebouncedEvent::Write(path)
+                    | DebouncedEvent::Remove(path) => {
                         sync_tx.send(SyncMessage::Path(path)).unwrap();
                     }
                     _ => {}
@@ -70,9 +72,11 @@ impl ManagerWrapper {
         let manager_ = manager.clone();
 
         tokio::spawn(async move {
-            while let Ok(val) = sync_rx.recv_async().await {
-                match val {
-                    SyncMessage::All => {
+            let mut paths: Vec<PathBuf> = vec![];
+            loop {
+                match tokio::time::timeout(Duration::from_millis(5000), sync_rx.recv_async()).await
+                {
+                    Ok(Ok(SyncMessage::All)) => {
                         let mut rx = manager_.write().await.sync(None).await.unwrap();
                         while let Some(m) = rx.next().await {
                             progress_tx
@@ -83,13 +87,30 @@ impl ManagerWrapper {
                                 .unwrap_or_default();
                         }
                     }
-                    SyncMessage::Path(path) => {
-                        let mut rx = manager_
-                            .write()
-                            .await
-                            .sync(Some(vec![path.to_string_lossy().into_owned()]))
-                            .await
-                            .unwrap();
+                    Ok(Ok(SyncMessage::Path(new_path))) => {
+                        // New path is a parent of some existing path
+                        // Replace existing path with new path
+                        if let Some(index) = paths.iter().position(|p| p.starts_with(&new_path)) {
+                            paths[index] = new_path;
+                        }
+                        // If parent of new path already exists, we don't need to add the new path
+                        else if paths.iter().all(|p| !new_path.starts_with(p)) {
+                            paths.push(new_path);
+                        }
+                        info!("Paths to be synced: {paths:?}");
+                    }
+                    Ok(Err(_)) => {
+                        break;
+                    }
+                    Err(_) => {
+                        if paths.is_empty() {
+                            continue;
+                        }
+                        let folders = paths
+                            .iter()
+                            .map(|p| p.to_string_lossy().into_owned())
+                            .collect();
+                        let mut rx = manager_.write().await.sync(Some(folders)).await.unwrap();
                         while let Some(m) = rx.next().await {
                             progress_tx
                                 .send(Progress {
@@ -98,6 +119,7 @@ impl ManagerWrapper {
                                 })
                                 .unwrap_or_default();
                         }
+                        paths.clear();
                     }
                 }
             }

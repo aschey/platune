@@ -50,26 +50,6 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     let (sync_tx, sync_rx) = flume::unbounded();
     let manager = ManagerWrapper::new(manager, progress_tx.clone(), sync_tx.clone(), sync_rx).await;
 
-    //let (event_tx, event_rx) = std::sync::mpsc::channel();
-
-    // let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(5000)).unwrap();
-    // let paths = manager.read().await.get_all_folders().await.unwrap();
-    // for path in paths {
-    //     watcher.watch(path, RecursiveMode::Recursive).unwrap();
-    // }
-
-    // let event_tx_async_ = event_tx_async.clone();
-    // thread::spawn(move || {
-    //     while let Ok(event) = event_rx.recv() {
-    //         match event {
-    //             DebouncedEvent::Create(path) | DebouncedEvent::Write(path) => {
-    //                 event_tx_async_.send(path).unwrap();
-    //             }
-    //             _ => {}
-    //         }
-    //     }
-    // });
-
     let mut servers = Vec::<_>::new();
     let http_server = run_server(
         shutdown_tx.clone(),

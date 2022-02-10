@@ -31,7 +31,7 @@ pub async fn test_sync_empty() {
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
     let mut msgs = vec![];
     while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
@@ -49,7 +49,7 @@ pub async fn test_sync_no_folder() {
     let tempdir = TempDir::new().unwrap();
     let (db, mut manager) = setup(&tempdir).await;
 
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
     let mut msgs = vec![];
     while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
@@ -78,7 +78,7 @@ pub async fn test_sync_basic() {
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
 
     let mut msgs = vec![];
     while let Some(msg) = receiver.next().await {
@@ -124,8 +124,8 @@ pub async fn test_sync_multiple() {
         .await
         .unwrap();
 
-    let mut receiver1 = manager.sync().await.unwrap();
-    let mut receiver2 = manager.sync().await.unwrap();
+    let mut receiver1 = manager.sync(None).await.unwrap();
+    let mut receiver2 = manager.sync(None).await.unwrap();
 
     let handle1 = tokio::spawn(async move {
         let mut msgs = vec![];
@@ -157,7 +157,7 @@ async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager)
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
 
     while receiver.next().await.is_some() {}
 
@@ -165,11 +165,11 @@ async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager)
     // We store unix timestamps at a granularity of seconds so we need to wait for enough time to pass
     std::thread::sleep(Duration::from_secs(2));
 
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
     while receiver.next().await.is_some() {}
 
     // sync twice after deleting to ensure no unique constraint errors
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
     while receiver.next().await.is_some() {}
 }
 
@@ -223,7 +223,7 @@ pub async fn test_sync_delete_and_readd() {
 
     fs::copy("../test_assets/test3.mp3", last_song.clone()).unwrap();
 
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
     while receiver.next().await.is_some() {}
 
     let deleted2 = manager.get_deleted_songs().await.unwrap();
@@ -762,7 +762,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = manager.sync().await.unwrap();
+    let mut receiver = manager.sync(None).await.unwrap();
 
     while receiver.next().await.is_some() {}
 
