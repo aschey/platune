@@ -173,7 +173,7 @@ impl SyncEngine {
             .paths
             .iter()
             .map(|p| clean_file_path(p, &self.mount))
-            .collect();
+            .collect_vec();
         tokio::spawn(async move {
             let mut dal = SyncDAL::try_new(pool).await?;
             while let Some(Some((metadata, path_str, path))) = tags_rx.recv().await {
@@ -196,7 +196,9 @@ impl SyncEngine {
                     .await?;
             }
 
-            dal.update_missing_songs(cleaned_paths).await?;
+            for path in cleaned_paths {
+                dal.update_missing_songs(path).await?;
+            }
 
             dal.sync_spellfix().await?;
             SyncEngine::add_search_aliases(&mut dal).await?;

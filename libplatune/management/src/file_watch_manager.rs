@@ -10,6 +10,8 @@ use tracing::info;
 #[derive(Debug)]
 pub(crate) enum SyncMessage {
     Path(PathBuf),
+    Rename(PathBuf, PathBuf),
+    Hold,
     All,
 }
 
@@ -58,6 +60,13 @@ impl FileWatchManager {
                     | DebouncedEvent::Remove(path) => {
                         sync_tx_.try_send(SyncMessage::Path(path)).unwrap();
                     }
+                    DebouncedEvent::NoticeWrite(_) | DebouncedEvent::NoticeRemove(_) => {
+                        // Write or remove pending, don't need to send the path yet but we can reset the debouncer
+                        sync_tx_.try_send(SyncMessage::Hold).unwrap();
+                    }
+                    DebouncedEvent::Rename(from, to) => {
+                        sync_tx_.try_send(SyncMessage::Rename(from, to)).unwrap();
+                    }
                     _ => {}
                 }
             }
@@ -83,15 +92,29 @@ impl FileWatchManager {
                     Ok(Some(SyncMessage::Path(new_path))) => {
                         // New path is a parent of some existing path
                         // Replace existing path with new path
-                        if let Some(index) = paths.iter().position(|p| p.starts_with(&new_path)) {
-                            paths[index] = new_path;
+                        let mut new_paths = vec![];
+                        let mut add_new_path = true;
+                        for path in paths.into_iter() {
+                            // Keep the path if the new path is not an ancestor of this path
+                            if !path.starts_with(&new_path) {
+                                new_paths.push(path.clone());
+                            }
+                            // If a parent of this path is already being tracked, we don't need the new path
+                            if new_path.starts_with(path) {
+                                add_new_path = false;
+                            }
                         }
-                        // If parent of new path already exists, we don't need to add the new path
-                        else if paths.iter().all(|p| !new_path.starts_with(p)) {
-                            paths.push(new_path);
+                        if add_new_path {
+                            new_paths.push(new_path);
                         }
+                        paths = new_paths;
+
                         info!("Paths to be synced: {paths:?}");
                     }
+                    Ok(Some(SyncMessage::Rename(from, to))) => {
+                        manager_.write().await.rename_path(from, to).await.unwrap();
+                    }
+                    Ok(Some(SyncMessage::Hold)) => {}
                     Ok(None) => {
                         break;
                     }
@@ -99,6 +122,7 @@ impl FileWatchManager {
                         if paths.is_empty() {
                             continue;
                         }
+
                         let folders = paths
                             .iter()
                             .map(|p| p.to_string_lossy().into_owned())

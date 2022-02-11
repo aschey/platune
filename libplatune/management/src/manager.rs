@@ -150,6 +150,17 @@ impl Manager {
         Ok(res)
     }
 
+    pub async fn rename_path<P>(&mut self, from: P, to: P) -> Result<(), DbError>
+    where
+        P: AsRef<Path>,
+    {
+        let mount = self.get_registered_mount().await;
+        let from = clean_file_path(&from, &mount);
+        let to = clean_file_path(&to, &mount);
+        self.db.rename_path(from, to).await?;
+        Ok(())
+    }
+
     pub async fn get_song_by_path<P>(&self, path: P) -> Result<Option<LookupEntry>, DbError>
     where
         P: AsRef<Path>,

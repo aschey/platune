@@ -284,6 +284,16 @@
       "nullable": []
     }
   },
+  "6ba24af8370d3b84314555d9c24a5f2a91dcadf26a958b48ac30bbb58db0eaa0": {
+    "query": "\n            INSERT INTO deleted_song(song_id)\n            SELECT song_id FROM song WHERE last_scanned_date < ?\n            AND song_path like ?\n            ON CONFLICT DO NOTHING;\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
   "6fbdb5793f80cd5ce88257dfca285c188935eaa7f30d4f9d8dcc3ea3ef63e170": {
     "query": "INSERT OR IGNORE INTO album_artist(album_artist_name, created_date) values(?, ?);",
     "describe": {
@@ -330,6 +340,16 @@
       "nullable": [
         true
       ]
+    }
+  },
+  "b34211820c171672780a09dce05bcec6c8379fc701eceec27c7b3c685275a5c6": {
+    "query": "\n        UPDATE song\n        set song_path = REPLACE(song_path, ?, ?)\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
     }
   },
   "b936aefc6646218a43d4c682298327f156abbc7af38449332fb0918a01241586": {

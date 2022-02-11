@@ -109,6 +109,24 @@ impl Database {
             .await
     }
 
+    pub(crate) async fn rename_path(
+        &mut self,
+        from: String,
+        to: String,
+    ) -> Result<SqliteQueryResult, DbError> {
+        sqlx::query!(
+            "
+        UPDATE song
+        set song_path = REPLACE(song_path, ?, ?)
+        ",
+            from,
+            to
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+    }
+
     pub(crate) async fn lookup(
         &self,
         correlation_ids: Vec<i32>,
