@@ -82,6 +82,16 @@
       ]
     }
   },
+  "2cef422a45e57e5bc8e533be5924fe45ca0776b0aba6bf72310068556dcc5755": {
+    "query": "\n            UPDATE OR IGNORE song\n            set song_path = REPLACE(song_path, ?, ?)\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Right": 2
+      },
+      "nullable": []
+    }
+  },
   "46b9dc2157711890bf9720a027d18dc8991504b0bb6c79c40579e588f9b77bc6": {
     "query": "\n        INSERT OR IGNORE INTO album(album_name, album_artist_id, created_date) \n        values(?, (SELECT album_artist_id FROM album_artist WHERE album_artist_name = ?), ?);",
     "describe": {
@@ -340,16 +350,6 @@
       "nullable": [
         true
       ]
-    }
-  },
-  "b34211820c171672780a09dce05bcec6c8379fc701eceec27c7b3c685275a5c6": {
-    "query": "\n        UPDATE song\n        set song_path = REPLACE(song_path, ?, ?)\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Right": 2
-      },
-      "nullable": []
     }
   },
   "b936aefc6646218a43d4c682298327f156abbc7af38449332fb0918a01241586": {

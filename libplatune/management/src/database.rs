@@ -114,11 +114,12 @@ impl Database {
         from: String,
         to: String,
     ) -> Result<SqliteQueryResult, DbError> {
+        // Update could cause duplicate paths so just ignore if that happens
         sqlx::query!(
             "
-        UPDATE song
-        set song_path = REPLACE(song_path, ?, ?)
-        ",
+            UPDATE OR IGNORE song
+            set song_path = REPLACE(song_path, ?, ?)
+            ",
             from,
             to
         )

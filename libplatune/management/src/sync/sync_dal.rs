@@ -4,10 +4,7 @@ use itertools::Itertools;
 use katatsuki::ReadOnlyTrack;
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite, Transaction};
 
-use crate::{
-    consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix,
-    sql_util::generate_parameterized_bindings,
-};
+use crate::{consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix};
 
 pub(crate) struct SyncDAL<'a> {
     tran: Transaction<'a, Sqlite>,
