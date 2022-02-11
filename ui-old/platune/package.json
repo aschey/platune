@@ -61,7 +61,7 @@
     "electron-is-dev": "^1.2.0",
     "global": "^4.4.0",
     "lodash": "^4.17.20",
-    "node-sass": "^4.14.1",
+    "node-sass": "^7.0.0",
     "react": "^16.13.1",
     "react-beautiful-dnd": "^13.0.0",
     "react-color": "^2.18.1",
