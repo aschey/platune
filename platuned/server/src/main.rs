@@ -8,11 +8,9 @@ mod unix;
 #[cfg(windows)]
 mod windows;
 
-use color_eyre::config::PanicHook;
 use directories::ProjectDirs;
 use rpc::*;
 use std::io::stdout;
-use std::panic;
 use std::process::exit;
 use time::format_description::well_known;
 use time::UtcOffset;
@@ -90,7 +88,9 @@ fn main() {
     collector.init();
 
     // Don't set panic hook until after logging is set up
-    let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default().into_hooks();
+    let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
+        .add_default_filters()
+        .into_hooks();
     eyre_hook.install().unwrap();
     std::panic::set_hook(Box::new(move |pi| {
         error!("{}", panic_hook.panic_report(pi));

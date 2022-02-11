@@ -7,9 +7,13 @@ use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
+    time::Instant,
 };
 use thiserror::Error;
-use tokio::{sync::broadcast, task::JoinHandle};
+use tokio::{
+    sync::{broadcast, mpsc},
+    task::JoinHandle,
+};
 use tracing::{error, info, warn};
 use walkdir::WalkDir;
 
@@ -63,6 +67,7 @@ impl SyncEngine {
     }
 
     pub(crate) async fn start(&mut self) {
+        let start = Instant::now();
         info!("Starting sync process");
 
         if self.paths.is_empty() {
@@ -79,9 +84,8 @@ impl SyncEngine {
         }
         let walker = walker_builder.build_parallel();
 
-        let (tags_tx, tags_rx) = flume::unbounded();
-
-        let (dir_tx, dir_rx) = flume::unbounded();
+        let (tags_tx, tags_rx) = mpsc::channel(10000);
+        let (dir_tx, dir_rx) = mpsc::channel(10000);
         let dir_tx_ = dir_tx.clone();
         let mount = self.mount.clone();
         let paths = self.paths.clone();
@@ -89,7 +93,7 @@ impl SyncEngine {
             for path in paths {
                 WalkDir::new(&path)
                     .into_iter()
-                    .for_each(|_| dir_tx_.send(Some(DirRead::Found)).unwrap());
+                    .for_each(|_| dir_tx_.try_send(Some(DirRead::Found)).unwrap());
             }
         });
 
@@ -99,14 +103,14 @@ impl SyncEngine {
                 let dir_tx = dir_tx.clone();
                 let mount = mount.clone();
                 Box::new(move |result| {
-                    dir_tx.send(Some(DirRead::Completed)).unwrap();
+                    dir_tx.try_send(Some(DirRead::Completed)).unwrap();
                     if let Ok(result) = result {
                         let file_path = result.into_path();
                         if file_path.is_file() {
                             if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path) {
                                 let file_path_str = clean_file_path(&file_path, &mount);
                                 tags_tx
-                                    .send(Some((metadata, file_path_str, file_path)))
+                                    .try_send(Some((metadata, file_path_str, file_path)))
                                     .map_err(|e| {
                                         SyncError::AsyncError(format!("Error sending tag: {:?}", e))
                                     })
@@ -117,7 +121,7 @@ impl SyncEngine {
                     ignore::WalkState::Continue
                 })
             });
-            dir_tx.send(None).unwrap();
+            dir_tx.try_send(None).unwrap();
         });
 
         let tags_handle = self.tags_task(tags_rx);
@@ -140,12 +144,14 @@ impl SyncEngine {
         if let Err(e) = self.tx.send(None) {
             warn!("Error sending message to clients {:?}", e);
         }
+
+        info!("Sync took {:?}", start.elapsed());
     }
 
-    async fn progress_loop(&self, dir_rx: flume::Receiver<Option<DirRead>>) {
+    async fn progress_loop(&self, mut dir_rx: mpsc::Receiver<Option<DirRead>>) {
         let mut processed = 0.0;
         let mut file_count = 0.0;
-        while let Ok(Some(dir_read)) = dir_rx.recv_async().await {
+        while let Some(Some(dir_read)) = dir_rx.recv().await {
             match dir_read {
                 DirRead::Found => file_count += 1.0,
                 DirRead::Completed => processed += 1.0,
@@ -160,7 +166,7 @@ impl SyncEngine {
 
     fn tags_task(
         &self,
-        tags_rx: flume::Receiver<Option<(ReadOnlyTrack, String, PathBuf)>>,
+        mut tags_rx: mpsc::Receiver<Option<(ReadOnlyTrack, String, PathBuf)>>,
     ) -> JoinHandle<Result<(), SyncError>> {
         let pool = self.pool.clone();
         let cleaned_paths = self
@@ -170,7 +176,7 @@ impl SyncEngine {
             .collect();
         tokio::spawn(async move {
             let mut dal = SyncDAL::try_new(pool).await?;
-            while let Ok(Some((metadata, path_str, path))) = tags_rx.recv_async().await {
+            while let Some(Some((metadata, path_str, path))) = tags_rx.recv().await {
                 let mut hasher = DefaultHasher::new();
                 metadata.hash(&mut hasher);
 

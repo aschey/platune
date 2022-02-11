@@ -2,148 +2,29 @@ use crate::management_server::Management;
 use crate::rpc::*;
 
 use futures::StreamExt;
+use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager;
-use libplatune_management::manager::{Manager, SearchOptions};
-use notify::{DebouncedEvent, PollWatcher, RecommendedWatcher, RecursiveMode, Watcher};
+use libplatune_management::manager::SearchOptions;
 use prost_types::Timestamp;
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::sync::Arc;
-use std::thread;
 use std::time::Duration;
 use tokio::sync::broadcast::error::RecvError;
-use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio::sync::{broadcast, mpsc};
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 pub struct ManagementImpl {
-    manager: ManagerWrapper,
+    manager: FileWatchManager,
     shutdown_tx: broadcast::Sender<()>,
-    sync_tx: flume::Sender<SyncMessage>,
-    progress_tx: broadcast::Sender<Progress>,
-}
-
-#[derive(Clone)]
-pub(crate) struct ManagerWrapper {
-    manager: Arc<RwLock<Manager>>,
-    watcher: Arc<RecommendedWatcher>,
-}
-
-impl Deref for ManagerWrapper {
-    type Target = RwLock<Manager>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.manager
-    }
-}
-
-impl ManagerWrapper {
-    pub(crate) async fn new(
-        manager: Manager,
-        progress_tx: broadcast::Sender<Progress>,
-        sync_tx: flume::Sender<SyncMessage>,
-        sync_rx: flume::Receiver<SyncMessage>,
-    ) -> Self {
-        let (event_tx, event_rx) = std::sync::mpsc::channel();
-
-        let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(2500)).unwrap();
-        let paths = manager.get_all_folders().await.unwrap();
-        for path in paths {
-            watcher.watch(path, RecursiveMode::Recursive).unwrap();
-        }
-
-        thread::spawn(move || {
-            while let Ok(event) = event_rx.recv() {
-                info!("Received file watcher event {event:?}");
-                match event {
-                    DebouncedEvent::Create(path)
-                    | DebouncedEvent::Write(path)
-                    | DebouncedEvent::Remove(path) => {
-                        sync_tx.send(SyncMessage::Path(path)).unwrap();
-                    }
-                    _ => {}
-                }
-            }
-        });
-        let manager = Arc::new(RwLock::new(manager));
-        let manager_ = manager.clone();
-
-        tokio::spawn(async move {
-            let mut paths: Vec<PathBuf> = vec![];
-            loop {
-                match tokio::time::timeout(Duration::from_millis(5000), sync_rx.recv_async()).await
-                {
-                    Ok(Ok(SyncMessage::All)) => {
-                        let mut rx = manager_.write().await.sync(None).await.unwrap();
-                        while let Some(m) = rx.next().await {
-                            progress_tx
-                                .send(Progress {
-                                    job: "sync".to_string(),
-                                    percentage: m.unwrap(),
-                                })
-                                .unwrap_or_default();
-                        }
-                    }
-                    Ok(Ok(SyncMessage::Path(new_path))) => {
-                        // New path is a parent of some existing path
-                        // Replace existing path with new path
-                        if let Some(index) = paths.iter().position(|p| p.starts_with(&new_path)) {
-                            paths[index] = new_path;
-                        }
-                        // If parent of new path already exists, we don't need to add the new path
-                        else if paths.iter().all(|p| !new_path.starts_with(p)) {
-                            paths.push(new_path);
-                        }
-                        info!("Paths to be synced: {paths:?}");
-                    }
-                    Ok(Err(_)) => {
-                        break;
-                    }
-                    Err(_) => {
-                        if paths.is_empty() {
-                            continue;
-                        }
-                        let folders = paths
-                            .iter()
-                            .map(|p| p.to_string_lossy().into_owned())
-                            .collect();
-                        let mut rx = manager_.write().await.sync(Some(folders)).await.unwrap();
-                        while let Some(m) = rx.next().await {
-                            progress_tx
-                                .send(Progress {
-                                    job: "sync".to_string(),
-                                    percentage: m.unwrap(),
-                                })
-                                .unwrap_or_default();
-                        }
-                        paths.clear();
-                    }
-                }
-            }
-        });
-
-        Self {
-            manager,
-            watcher: Arc::new(watcher),
-        }
-    }
 }
 
 impl ManagementImpl {
-    pub(crate) fn new(
-        manager: ManagerWrapper,
-        shutdown_tx: broadcast::Sender<()>,
-        sync_tx: flume::Sender<SyncMessage>,
-        progress_tx: broadcast::Sender<Progress>,
-    ) -> Self {
+    pub(crate) fn new(manager: FileWatchManager, shutdown_tx: broadcast::Sender<()>) -> Self {
         Self {
             manager,
             shutdown_tx,
-            sync_tx,
-            progress_tx,
         }
     }
 }
@@ -153,15 +34,10 @@ fn format_error(msg: String) -> Status {
     Status::internal(msg)
 }
 
-pub(crate) enum SyncMessage {
-    Path(PathBuf),
-    All,
-}
-
 #[tonic::async_trait]
 impl Management for ManagementImpl {
     async fn start_sync(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        self.sync_tx.send_async(SyncMessage::All).await.unwrap();
+        self.manager.start_sync_all().await;
         Ok(Response::new(()))
     }
 
@@ -171,13 +47,18 @@ impl Management for ManagementImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
-        let mut progress_rx = self.progress_tx.subscribe();
+        let mut progress_rx = self.manager.subscribe_progress();
         let (tx, rx) = mpsc::channel(32);
         tokio::spawn(async move {
             loop {
                 match progress_rx.recv().await {
                     Ok(val) => {
-                        tx.send(Ok(val)).await.unwrap_or_default();
+                        tx.send(Ok(Progress {
+                            job: val.job,
+                            percentage: val.percentage,
+                        }))
+                        .await
+                        .unwrap_or_default();
                     }
                     Err(RecvError::Lagged(_)) => {}
                     _ => {

@@ -2,23 +2,17 @@ use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
 use crate::rpc;
 use crate::services::management::ManagementImpl;
-use crate::services::management::ManagerWrapper;
-use crate::services::management::SyncMessage;
 use crate::services::player::PlayerImpl;
 #[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
-use crate::Progress;
 use anyhow::Context;
 use anyhow::Result;
 use futures::future::try_join_all;
 use libplatune_management::config::Config;
 use libplatune_management::database::Database;
+use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
-use notify::DebouncedEvent;
-use notify::RecommendedWatcher;
-use notify::RecursiveMode;
-use notify::Watcher;
 #[cfg(unix)]
 use std::env;
 use std::env::var;
@@ -28,10 +22,7 @@ use std::path::Path;
 #[cfg(unix)]
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 use tokio::sync::broadcast;
-use tokio::sync::RwLock;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 #[cfg(unix)]
@@ -46,16 +37,12 @@ enum Transport {
 pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     let platune_player = Arc::new(PlatunePlayer::new(Default::default()));
     let manager = init_manager().await?;
-    let (progress_tx, _) = broadcast::channel(32);
-    let (sync_tx, sync_rx) = flume::unbounded();
-    let manager = ManagerWrapper::new(manager, progress_tx.clone(), sync_tx.clone(), sync_rx).await;
+    let manager = FileWatchManager::new(manager).await;
 
     let mut servers = Vec::<_>::new();
     let http_server = run_server(
         shutdown_tx.clone(),
-        sync_tx.clone(),
         platune_player.clone(),
-        progress_tx.clone(),
         manager.clone(),
         Transport::Http("0.0.0.0:50051".parse().unwrap()),
     );
@@ -107,10 +94,8 @@ async fn init_manager() -> Result<Manager> {
 
 async fn run_server(
     shutdown_tx: broadcast::Sender<()>,
-    sync_tx: flume::Sender<SyncMessage>,
     platune_player: Arc<PlatunePlayer>,
-    progress_tx: broadcast::Sender<Progress>,
-    manager: ManagerWrapper,
+    manager: FileWatchManager,
     transport: Transport,
 ) -> Result<()> {
     let reflection_service = Builder::configure()
@@ -120,7 +105,7 @@ async fn run_server(
 
     let player = PlayerImpl::new(platune_player, shutdown_tx.clone());
 
-    let management = ManagementImpl::new(manager, shutdown_tx.clone(), sync_tx, progress_tx);
+    let management = ManagementImpl::new(manager, shutdown_tx.clone());
     let builder = Server::builder()
         .add_service(reflection_service)
         .add_service(PlayerServer::new(player))
