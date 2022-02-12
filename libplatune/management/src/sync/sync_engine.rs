@@ -13,8 +13,11 @@ use std::{
 };
 use thiserror::Error;
 use tokio::{
-    sync::{broadcast, mpsc},
-    task::JoinHandle,
+    sync::{
+        broadcast,
+        mpsc::{self, Sender},
+    },
+    task::{spawn_blocking, JoinHandle},
 };
 use tracing::{error, info, warn};
 use walkdir::WalkDir;
@@ -80,25 +83,84 @@ impl SyncEngine {
                 walker_builder.add(path);
             }
         }
-        let walker = walker_builder.build_parallel();
 
         let (tags_tx, tags_rx) = mpsc::channel(10000);
         let (dir_tx, dir_rx) = mpsc::channel(10000);
         let dir_tx_ = dir_tx.clone();
-        let mount = self.mount.clone();
+
+        let counter_task = self.dir_counter(dir_tx_);
+        let tags_task = self.tags_parser(tags_tx, dir_tx);
+        let db_task = self.db_updater(tags_rx);
+
+        self.progress_loop(dir_rx).await;
+
+        if let Err(e) = tags_task.await {
+            self.tx.send_error(SyncError::ThreadCommError(format!(
+                "Error joining tags handle {:?}",
+                e
+            )));
+        }
+
+        match counter_task.await {
+            Ok(Err(e)) => self.tx.send_error(e),
+            Ok(Ok(())) => {}
+            Err(e) => {
+                self.tx.send_error(SyncError::ThreadCommError(format!(
+                    "Error joining counter handle {:?}",
+                    e
+                )));
+            }
+        }
+
+        match db_task.await {
+            Ok(Err(e)) => self.tx.send_error(e),
+            Ok(Ok(())) => {}
+            Err(e) => {
+                self.tx.send_error(SyncError::ThreadCommError(format!(
+                    "Error joining tags handle {:?}",
+                    e
+                )));
+            }
+        }
+
+        if let Err(e) = self.tx.send(None) {
+            warn!("Error sending message to clients {:?}", e);
+        }
+
+        info!("Sync took {:?}", start.elapsed());
+    }
+
+    fn dir_counter(&self, dir_tx: Sender<Option<DirRead>>) -> JoinHandle<Result<(), SyncError>> {
         let paths = self.paths.clone();
-        let counter_thread = tokio::task::spawn_blocking::<_, Result<(), SyncError>>(move || {
+        spawn_blocking::<_, Result<(), SyncError>>(move || {
             for path in paths {
                 for _ in WalkDir::new(&path).into_iter() {
-                    dir_tx_
+                    dir_tx
                         .blocking_send(Some(DirRead::Found))
                         .map_err(|e| SyncError::ThreadCommError(e.to_string()))?;
                 }
             }
             Ok(())
-        });
+        })
+    }
 
-        let walker_thread = tokio::task::spawn_blocking(move || {
+    fn tags_parser(
+        &self,
+        tags_tx: Sender<Option<(ReadOnlyTrack, String, PathBuf)>>,
+        dir_tx: Sender<Option<DirRead>>,
+    ) -> JoinHandle<()> {
+        let mut walker_builder = WalkBuilder::new(&self.paths[0]);
+        walker_builder.threads(10).standard_filters(false);
+
+        if self.paths.len() > 1 {
+            for path in &self.paths[1..] {
+                walker_builder.add(path);
+            }
+        }
+        let walker = walker_builder.build_parallel();
+        let mount = self.mount.clone();
+
+        spawn_blocking(move || {
             walker.run(|| {
                 let tags_tx = tags_tx.clone();
                 let dir_tx = dir_tx.clone();
@@ -130,45 +192,7 @@ impl SyncEngine {
             if let Err(e) = dir_tx.blocking_send(None) {
                 error!("Error sending dir walker completed: {e:?}");
             }
-        });
-
-        let tags_handle = self.tags_task(tags_rx);
-
-        self.progress_loop(dir_rx).await;
-        if let Err(e) = walker_thread.await {
-            self.tx.send_error(SyncError::ThreadCommError(format!(
-                "Error joining tags handle {:?}",
-                e
-            )));
-        }
-
-        match counter_thread.await {
-            Ok(Err(e)) => self.tx.send_error(e),
-            Ok(Ok(())) => {}
-            Err(e) => {
-                self.tx.send_error(SyncError::ThreadCommError(format!(
-                    "Error joining counter handle {:?}",
-                    e
-                )));
-            }
-        }
-
-        match tags_handle.await {
-            Ok(Err(e)) => self.tx.send_error(e),
-            Ok(Ok(())) => {}
-            Err(e) => {
-                self.tx.send_error(SyncError::ThreadCommError(format!(
-                    "Error joining tags handle {:?}",
-                    e
-                )));
-            }
-        }
-
-        if let Err(e) = self.tx.send(None) {
-            warn!("Error sending message to clients {:?}", e);
-        }
-
-        info!("Sync took {:?}", start.elapsed());
+        })
     }
 
     async fn progress_loop(&self, mut dir_rx: mpsc::Receiver<Option<DirRead>>) {
@@ -187,7 +211,7 @@ impl SyncEngine {
         }
     }
 
-    fn tags_task(
+    fn db_updater(
         &self,
         mut tags_rx: mpsc::Receiver<Option<(ReadOnlyTrack, String, PathBuf)>>,
     ) -> JoinHandle<Result<(), SyncError>> {
@@ -197,6 +221,7 @@ impl SyncEngine {
             .iter()
             .map(|p| clean_file_path(p, &self.mount))
             .collect_vec();
+
         tokio::spawn(async move {
             let mut dal = SyncDAL::try_new(pool).await?;
             while let Some(Some((metadata, path_str, path))) = tags_rx.recv().await {
