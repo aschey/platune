@@ -135,13 +135,13 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             move |err| match err {
                 StreamError::DeviceNotAvailable => {
                     info!("Device unplugged. Resetting...");
-                    if let Err(e) = cmd_sender.try_send(Command::Reset) {
+                    if let Err(e) = cmd_sender.send(Command::Reset) {
                         error!("Error sending reset command: {e:?}");
                     }
                 }
                 StreamError::BackendSpecific { err } => {
                     error!("Playback error: {err}");
-                    if let Err(e) = cmd_sender.try_send(Command::Stop) {
+                    if let Err(e) = cmd_sender.send(Command::Stop) {
                         error!("Error sending stop command: {e:?}");
                     }
                 }

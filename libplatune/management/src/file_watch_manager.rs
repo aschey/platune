@@ -58,14 +58,16 @@ impl FileWatchManager {
                     DebouncedEvent::Create(path)
                     | DebouncedEvent::Write(path)
                     | DebouncedEvent::Remove(path) => {
-                        sync_tx_.try_send(SyncMessage::Path(path)).unwrap();
+                        sync_tx_.blocking_send(SyncMessage::Path(path)).unwrap();
                     }
                     DebouncedEvent::NoticeWrite(_) | DebouncedEvent::NoticeRemove(_) => {
                         // Write or remove pending, don't need to send the path yet but we can reset the debouncer
-                        sync_tx_.try_send(SyncMessage::Hold).unwrap();
+                        sync_tx_.blocking_send(SyncMessage::Hold).unwrap();
                     }
                     DebouncedEvent::Rename(from, to) => {
-                        sync_tx_.try_send(SyncMessage::Rename(from, to)).unwrap();
+                        sync_tx_
+                            .blocking_send(SyncMessage::Rename(from, to))
+                            .unwrap();
                     }
                     _ => {}
                 }

@@ -151,7 +151,7 @@ impl<'a> AudioProcessor<'a> {
         match self.decoder.next() {
             val @ Ok(Some(_)) => val,
             val => {
-                if let Err(e) = self.player_cmd_tx.try_send(Command::Ended) {
+                if let Err(e) = self.player_cmd_tx.send(Command::Ended) {
                     error!("Unable to send ended command: {e:?}");
                 }
                 val

@@ -6,7 +6,7 @@ use tokio::{
         oneshot,
     },
 };
-use tracing::error;
+use tracing::{error, info};
 
 use super::{
     progress_stream::ProgressStream,
@@ -53,8 +53,8 @@ impl SyncController {
                 let rt = Runtime::new().unwrap();
                 let mut engine = SyncEngine::new(folders, pool, mount, tx);
                 rt.block_on(engine.start());
-                if let Err(e) = finished_tx.send(()) {
-                    error!("Error sending sync finished signal {:?}", e);
+                if finished_tx.send(()).is_err() {
+                    info!("Couldn't send sync finished signal");
                 }
                 finished_callback();
             });

@@ -1,4 +1,6 @@
-use ignore::WalkBuilder;
+use super::{dir_read::DirRead, sync_dal::SyncDAL};
+use crate::{consts::MIN_WORDS, db_error::DbError, path_util::clean_file_path};
+use ignore::{WalkBuilder, WalkState};
 use itertools::Itertools;
 use katatsuki::ReadOnlyTrack;
 use regex::Regex;
@@ -17,16 +19,12 @@ use tokio::{
 use tracing::{error, info, warn};
 use walkdir::WalkDir;
 
-use crate::{consts::MIN_WORDS, db_error::DbError, path_util::clean_file_path};
-
-use super::{dir_read::DirRead, sync_dal::SyncDAL};
-
 #[derive(Error, Debug, Clone)]
 pub enum SyncError {
     #[error(transparent)]
     DbError(#[from] DbError),
     #[error("Async error: {0}")]
-    AsyncError(String),
+    ThreadCommError(String),
     #[error("IO Error: {0}")]
     IOError(String),
 }
@@ -89,12 +87,15 @@ impl SyncEngine {
         let dir_tx_ = dir_tx.clone();
         let mount = self.mount.clone();
         let paths = self.paths.clone();
-        let counter_thread = tokio::task::spawn_blocking(move || {
+        let counter_thread = tokio::task::spawn_blocking::<_, Result<(), SyncError>>(move || {
             for path in paths {
-                WalkDir::new(&path)
-                    .into_iter()
-                    .for_each(|_| dir_tx_.try_send(Some(DirRead::Found)).unwrap());
+                for _ in WalkDir::new(&path).into_iter() {
+                    dir_tx_
+                        .blocking_send(Some(DirRead::Found))
+                        .map_err(|e| SyncError::ThreadCommError(e.to_string()))?;
+                }
             }
+            Ok(())
         });
 
         let walker_thread = tokio::task::spawn_blocking(move || {
@@ -103,38 +104,60 @@ impl SyncEngine {
                 let dir_tx = dir_tx.clone();
                 let mount = mount.clone();
                 Box::new(move |result| {
-                    dir_tx.try_send(Some(DirRead::Completed)).unwrap();
+                    if let Err(e) = dir_tx.blocking_send(Some(DirRead::Completed)) {
+                        error!("Error sending completed dir read: {e:?}");
+                        return WalkState::Quit;
+                    }
                     if let Ok(result) = result {
                         let file_path = result.into_path();
                         if file_path.is_file() {
                             if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path) {
                                 let file_path_str = clean_file_path(&file_path, &mount);
-                                tags_tx
-                                    .try_send(Some((metadata, file_path_str, file_path)))
-                                    .map_err(|e| {
-                                        SyncError::AsyncError(format!("Error sending tag: {:?}", e))
-                                    })
-                                    .unwrap();
+                                if let Err(e) = tags_tx.blocking_send(Some((
+                                    metadata,
+                                    file_path_str,
+                                    file_path,
+                                ))) {
+                                    error!("Error sending tag: {e:?}");
+                                    return WalkState::Quit;
+                                }
                             }
                         }
                     }
-                    ignore::WalkState::Continue
+                    WalkState::Continue
                 })
             });
-            dir_tx.try_send(None).unwrap();
+            if let Err(e) = dir_tx.blocking_send(None) {
+                error!("Error sending dir walker completed: {e:?}");
+            }
         });
 
         let tags_handle = self.tags_task(tags_rx);
 
         self.progress_loop(dir_rx).await;
-        walker_thread.await.unwrap();
+        if let Err(e) = walker_thread.await {
+            self.tx.send_error(SyncError::ThreadCommError(format!(
+                "Error joining tags handle {:?}",
+                e
+            )));
+        }
 
-        counter_thread.await.unwrap();
+        match counter_thread.await {
+            Ok(Err(e)) => self.tx.send_error(e),
+            Ok(Ok(())) => {}
+            Err(e) => {
+                self.tx.send_error(SyncError::ThreadCommError(format!(
+                    "Error joining counter handle {:?}",
+                    e
+                )));
+            }
+        }
+
         match tags_handle.await {
             Ok(Err(e)) => self.tx.send_error(e),
             Ok(Ok(())) => {}
             Err(e) => {
-                self.tx.send_error(SyncError::AsyncError(format!(
+                self.tx.send_error(SyncError::ThreadCommError(format!(
                     "Error joining tags handle {:?}",
                     e
                 )));
@@ -214,7 +237,7 @@ impl SyncEngine {
     async fn add_search_aliases(dal: &mut SyncDAL<'_>) -> Result<(), DbError> {
         let long_vals = dal.get_long_entries().await?;
 
-        let re = Regex::new(r"[\s-]+").unwrap();
+        let re = Regex::new(r"[\s-]+").expect("regex failed to compile");
         for entry_value in long_vals {
             let words = re.split(&entry_value).collect_vec();
             if words.len() < MIN_WORDS {

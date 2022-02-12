@@ -1,4 +1,4 @@
-use flume::{Receiver, RecvError, SendError, Sender, TryRecvError, TrySendError};
+use flume::{Receiver, RecvError, SendError, Sender, TryRecvError};
 use tokio::sync::oneshot::{channel as oneshot_channel, Sender as OneShotSender};
 
 pub(crate) fn two_way_channel<TIn, TOut>() -> (TwoWaySender<TIn, TOut>, TwoWayReceiver<TIn, TOut>) {
@@ -31,8 +31,8 @@ impl<TIn, TOut> TwoWaySender<TIn, TOut> {
         self.main_tx.send_async((message, None)).await
     }
 
-    pub(crate) fn try_send(&self, message: TIn) -> Result<(), TrySendError<Responder<TIn, TOut>>> {
-        self.main_tx.try_send((message, None))
+    pub(crate) fn send(&self, message: TIn) -> Result<(), SendError<Responder<TIn, TOut>>> {
+        self.main_tx.send((message, None))
     }
 
     pub(crate) async fn get_response(&self, message: TIn) -> Result<TOut, String> {
