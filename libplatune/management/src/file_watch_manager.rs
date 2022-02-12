@@ -3,6 +3,7 @@ use futures::StreamExt;
 use notify::{DebouncedEvent, Watcher};
 use notify::{RecommendedWatcher, RecursiveMode};
 use std::ops::Deref;
+use std::path::Path;
 use std::{path::PathBuf, sync::Arc, thread, time::Duration};
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tracing::info;
@@ -47,7 +48,19 @@ impl FileWatchManager {
 
         let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(2500)).unwrap();
         let paths = manager.get_all_folders().await.unwrap();
-        for path in paths {
+        let mut watch_paths = vec![];
+        for path_str in &paths {
+            let path = PathBuf::from(&path_str);
+            match path.parent() {
+                Some(parent) => {
+                    watch_paths = Self::normalize_paths(watch_paths, parent.to_owned());
+                }
+                None => {
+                    watch_paths = Self::normalize_paths(watch_paths, path);
+                }
+            }
+        }
+        for path in watch_paths {
             watcher.watch(path, RecursiveMode::Recursive).unwrap();
         }
 
