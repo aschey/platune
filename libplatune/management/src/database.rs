@@ -59,7 +59,7 @@ impl Database {
 
         let pool = SqlitePool::connect_with(opts.clone())
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         Ok(Self {
             search_engine: SearchEngine::new(pool.clone()),
             sync_controller: Arc::new(Mutex::new(SyncController::new(pool.clone()))),
@@ -125,7 +125,7 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn lookup(
@@ -161,7 +161,7 @@ impl Database {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -181,7 +181,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     async fn all_by_album_artists(
@@ -203,7 +203,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -223,7 +223,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
@@ -243,7 +243,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn get_deleted_songs(&self) -> Result<Vec<DeletedEntry>, DbError> {
@@ -256,7 +256,7 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn delete_tracks(&self, ids: Vec<i64>) -> Result<(), DbError> {
@@ -264,22 +264,22 @@ impl Database {
             .pool
             .begin()
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         for id in ids {
             sqlx::query!("DELETE FROM deleted_song WHERE song_id = ?;", id)
                 .execute(&mut tran)
                 .await
-                .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+                .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
             sqlx::query!("DELETE FROM song WHERE song_id = ?;", id)
                 .execute(&mut tran)
                 .await
-                .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+                .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         }
 
         tran.commit()
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))
+            .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn add_folders(&self, paths: Vec<String>) -> Result<(), DbError> {
@@ -287,16 +287,16 @@ impl Database {
             .pool
             .begin()
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         for path in paths {
             sqlx::query!("INSERT OR IGNORE INTO folder(folder_path) VALUES(?);", path)
                 .execute(&mut tran)
                 .await
-                .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+                .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         }
         tran.commit()
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))
+            .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn update_folder(
@@ -311,14 +311,14 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
         Ok(sqlx::query!("SELECT folder_path FROM folder;")
             .fetch_all(&self.pool)
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?
             .into_iter()
             .map(|r| r.folder_path)
             .collect())
@@ -338,12 +338,12 @@ impl Database {
         sqlx::query!(r"INSERT OR IGNORE INTO mount(mount_path) VALUES(?);", path)
             .execute(&self.pool)
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         let res = sqlx::query!(r"SELECT mount_id FROM mount WHERE mount_path = ?;", path)
             .fetch_one(&self.pool)
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         Ok(res.mount_id)
     }
@@ -356,7 +356,7 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         Ok(res.rows_affected())
     }

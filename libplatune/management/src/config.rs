@@ -71,7 +71,7 @@ impl Config {
         let mut file =
             File::create(&self.config_path).with_context(|| "Error opening file for writing")?;
 
-        write!(file, "{:?}", id)
+        write!(file, "{id:?}")
             .with_context(|| format!("Error writing to config file {:?}", self.config_path))
     }
 }

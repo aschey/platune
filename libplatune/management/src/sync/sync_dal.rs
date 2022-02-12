@@ -16,7 +16,7 @@ impl<'a> SyncDAL<'a> {
         let mut tran = pool
             .begin()
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         load_spellfix(&mut tran).await?;
 
         let timestamp = SystemTime::now()
@@ -35,7 +35,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn add_album_artist(
@@ -49,7 +49,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn add_album(
@@ -67,7 +67,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn sync_song(
@@ -98,7 +98,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         // If a song was previously missing but was found in the most recent scan,
         // remove it from the list of deleted songs
@@ -111,7 +111,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         Ok(())
     }
@@ -130,7 +130,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         sqlx::query(
             "
@@ -143,7 +143,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         Ok(())
     }
@@ -160,7 +160,7 @@ impl<'a> SyncDAL<'a> {
         )
         .fetch_all(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?
         .into_iter()
         .map(|r| r.entry_value.unwrap_or_default())
         .collect_vec();
@@ -186,7 +186,7 @@ impl<'a> SyncDAL<'a> {
         .bind(acronym)
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         if acronym.contains('&') {
             let replaced = acronym.replace("&", "a");
@@ -200,7 +200,7 @@ impl<'a> SyncDAL<'a> {
         self.tran
             .commit()
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))
+            .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     async fn insert_alt_alias(
@@ -221,7 +221,7 @@ impl<'a> SyncDAL<'a> {
         .bind(acronym)
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     async fn add_song(
@@ -291,7 +291,7 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     async fn update_song(
@@ -340,6 +340,6 @@ impl<'a> SyncDAL<'a> {
         )
         .execute(&mut self.tran)
         .await
-        .map_err(|e| DbError::DbError(format!("{:?}", e)))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 }

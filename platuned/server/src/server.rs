@@ -63,9 +63,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
         let socket_path = Path::new(&socket_base).join("platuned/platuned.sock");
         let unix_server = run_server(
             shutdown_tx.clone(),
-            sync_tx,
             platune_player.clone(),
-            progress_tx,
             manager,
             Transport::Uds(socket_path),
         );

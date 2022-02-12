@@ -62,15 +62,12 @@ impl SearchEngine {
                     .await?;
                 let time_taken = start.elapsed();
                 if time_taken > Duration::from_millis(50) {
-                    warn!(
-                        "Search for {} was slow: {:?}. Caching result",
-                        query, time_taken
-                    );
+                    warn!("Search for {query} was slow: {time_taken:?}. Caching result");
                     let mut write_tx = self.cache.write();
                     write_tx.insert(query.to_owned(), res.clone());
                     write_tx.commit();
                 } else {
-                    info!("Search for {} finished in {:?}", query, time_taken);
+                    info!("Search for {query} finished in {time_taken:?}");
                 }
 
                 return Ok(res);
@@ -138,7 +135,7 @@ impl SearchEngine {
         let mut spellfix_results = corrected
             .fetch_all(conn)
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))?;
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         if let Some(last) = terms.last() {
             let last = last.to_string();
             spellfix_results.push(SpellfixResult {
@@ -274,7 +271,7 @@ impl SearchEngine {
             })
             .fetch_all(con)
             .await
-            .map_err(|e| DbError::DbError(format!("{:?}", e)))
+            .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     fn convert_entries(&self, mut search_entries: Vec<SearchEntry>) -> Vec<SearchResult> {

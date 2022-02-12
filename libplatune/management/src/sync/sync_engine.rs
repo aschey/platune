@@ -38,9 +38,9 @@ trait SendSyncError {
 
 impl SendSyncError for broadcast::Sender<Option<Result<f32, SyncError>>> {
     fn send_error(&self, err: SyncError) {
-        error!("{:?}", err);
+        error!("{err:?}");
         if let Err(e) = self.send(Some(Err(err))) {
-            error!("Error sending broadcast message to clients {:?}", e);
+            error!("Error sending broadcast message to clients {e:?}");
         }
     }
 }
@@ -96,8 +96,7 @@ impl SyncEngine {
 
         if let Err(e) = tags_task.await {
             self.tx.send_error(SyncError::ThreadCommError(format!(
-                "Error joining tags handle {:?}",
-                e
+                "Error joining tags handle {e:?}"
             )));
         }
 
@@ -106,8 +105,7 @@ impl SyncEngine {
             Ok(Ok(())) => {}
             Err(e) => {
                 self.tx.send_error(SyncError::ThreadCommError(format!(
-                    "Error joining counter handle {:?}",
-                    e
+                    "Error joining counter handle {e:?}"
                 )));
             }
         }
@@ -117,14 +115,13 @@ impl SyncEngine {
             Ok(Ok(())) => {}
             Err(e) => {
                 self.tx.send_error(SyncError::ThreadCommError(format!(
-                    "Error joining tags handle {:?}",
-                    e
+                    "Error joining tags handle {e:?}"
                 )));
             }
         }
 
         if let Err(e) = self.tx.send(None) {
-            warn!("Error sending message to clients {:?}", e);
+            warn!("Error sending message to clients {e:?}");
         }
 
         info!("Sync took {:?}", start.elapsed());
@@ -230,7 +227,7 @@ impl SyncEngine {
 
                 let file_size = path
                     .metadata()
-                    .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
+                    .map_err(|e| SyncError::IOError(format!("{e:?}")))?
                     .len();
                 file_size.hash(&mut hasher);
                 let fingerprint = hasher.finish().to_string();
@@ -294,7 +291,7 @@ impl SyncEngine {
         let name = file_path.extension().unwrap_or_default();
         let _size = file_path
             .metadata()
-            .map_err(|e| SyncError::IOError(format!("{:?}", e)))?
+            .map_err(|e| SyncError::IOError(format!("{e:?}")))?
             .len();
         let mut song_metadata: Option<ReadOnlyTrack> = None;
         match &name.to_str().unwrap_or_default().to_lowercase()[..] {
@@ -302,7 +299,7 @@ impl SyncEngine {
                 let tag_result = ReadOnlyTrack::from_path(file_path, None);
                 match tag_result {
                     Err(e) => {
-                        error!("{:?}", e);
+                        error!("Error reading tag: {e:?}");
                     }
                     Ok(tag) => {
                         song_metadata = Some(tag);

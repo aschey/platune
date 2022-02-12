@@ -121,10 +121,7 @@ impl Manager {
 
     pub async fn expand_paths(&self, folders: Vec<String>) -> Vec<String> {
         let res = match self.get_registered_mount().await {
-            Some(mount) => folders
-                .into_iter()
-                .map(|f| format!("{}{}", mount, f))
-                .collect(),
+            Some(mount) => folders.into_iter().map(|f| format!("{mount}{f}")).collect(),
             None => folders,
         };
         res.into_iter()
@@ -235,7 +232,7 @@ impl Manager {
 
         self.config
             .set_drive_id(id)
-            .map_err(|e| ManagerError::WriteError(format!("{:?}", e)))
+            .map_err(|e| ManagerError::WriteError(format!("{e:?}")))
     }
 }
 

@@ -21,7 +21,7 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
         let start = num_base_args + 1;
         let artist_list = generate_parameterized_bindings(start, num_artists);
 
-        format!("WHERE {} in ({})", artist_select, artist_list)
+        format!("WHERE {artist_select} in ({artist_list})")
     };
 
     let type_filter = if allowed_entry_types.is_empty() {
@@ -31,13 +31,13 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
         let start = num_base_args + num_artists + 1;
         let in_list = generate_parameterized_bindings(start, allowed_entry_types.len());
 
-        format!("AND entry_type in ({})", &in_list)
+        format!("AND entry_type in ({in_list})")
     };
 
     let full_query = format!("
     WITH CTE AS (
         SELECT DISTINCT entry, entry_type, rank, $1 start_highlight, $2 end_highlight, assoc_id correlation_id,
-        {0} artist,
+        {artist_select} artist,
         al2.album_name album,
         -- Partition results to prevent returning the same value for artist and album artist
         -- Only return the album artist if there is no equivalent artist entry
@@ -45,11 +45,11 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
         -- if there are multiple results only differing by and/&, both are returned
         ROW_NUMBER() OVER (PARTITION BY 
             entry_value, 
-            {0}, 
+            {artist_select}, 
             CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
             CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
             ORDER BY entry_type DESC) row_num
-        FROM (SELECT entry_type, assoc_id, entry_value, highlight(search_index, 0, '{3}', '{4}') entry, rank FROM search_index WHERE entry_value match $3 {2}) search_query
+        FROM (SELECT entry_type, assoc_id, entry_value, highlight(search_index, 0, '{START_MATCH_TEXT}', '{END_MATCH_TEXT}') entry, rank FROM search_index WHERE entry_value match $3 {type_filter}) search_query
         LEFT OUTER JOIN song s on s.song_id = assoc_id
         LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
         LEFT OUTER JOIN album al on al.album_id = assoc_id
@@ -57,14 +57,14 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
         LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
         LEFT OUTER JOIN artist ar2 on ar2.artist_id = assoc_id
         LEFT OUTER JOIN album_artist aa2 on aa2.album_artist_id = assoc_id
-        {1}
+        {artist_filter_clause}
         ORDER BY rank
         LIMIT $4
     )
     SELECT entry, entry_type, artist, album, correlation_id, start_highlight, end_highlight FROM cte
     WHERE row_num = 1
     ORDER BY rank
-    LIMIT $5;", artist_select, artist_filter_clause, type_filter, START_MATCH_TEXT, END_MATCH_TEXT);
+    LIMIT $5;");
 
     full_query
 }
@@ -144,34 +144,30 @@ fn get_spellfix_query(index: usize) -> String {
         "
         --beginsql
         SELECT * FROM (
-            SELECT DISTINCT word, ${0} search, {3} score FROM (
+            SELECT DISTINCT word, ${index} search, {score_clause} score FROM (
                 SELECT * FROM (
                     SELECT word, CASE 
-                        WHEN word like '% %' then (distance * 1.0 / (LENGTH(word) - LENGTH(REPLACE(word, ' ', '')))) * {1}
-                        ELSE EDITDIST3(${0}, word) * 1.0 / LENGTH(word) END score
+                        WHEN word like '% %' then (distance * 1.0 / (LENGTH(word) - LENGTH(REPLACE(word, ' ', '')))) * {word_normalization_factor}
+                        ELSE EDITDIST3(${index}, word) * 1.0 / LENGTH(word) END score
                     FROM search_spellfix
-                    WHERE word match REPLACE(${0}, '*', '')
+                    WHERE word match REPLACE(${index}, '*', '')
                 ) 
                 UNION ALL
                 -- Sometimes the match function is too conservative for our purposes
                 -- so we need to include results based on the raw distance as well
                 SELECT * FROM (
-                    SELECT word, EDITDIST3(${0}, word) * 1.0 / LENGTH(word) score 
+                    SELECT word, EDITDIST3(${index}, word) * 1.0 / LENGTH(word) score 
                     FROM search_spellfix
-                    WHERE EDITDIST3(REPLACE(${0}, '*', ''), word) * 1.0 / LENGTH(word) <= {2}
+                    WHERE EDITDIST3(REPLACE(${index}, '*', ''), word) * 1.0 / LENGTH(word) <= {max_score}
                 )
                 
             )
             LEFT OUTER JOIN search_vocab sv ON sv.term = word
-            WHERE score <= {2}
-            ORDER BY {3}
+            WHERE score <= {max_score}
+            ORDER BY {score_clause}
             LIMIT 5
         )
         --endsql
-        ",
-        index,
-        word_normalization_factor,
-        max_score,
-        score_clause
+        "
     )
 }

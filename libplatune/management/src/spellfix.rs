@@ -35,18 +35,18 @@ async fn load_extension<P: AsRef<Path>>(
     let handle = con
         .lock_handle()
         .await
-        .map_err(|e| format!("{:?}", e))?
+        .map_err(|e| format!("{e:?}"))?
         .as_raw_handle();
 
     // Safety: we shouldn't run any untrusted queries while the extension guard is active
     unsafe {
         let rusqlite_con =
-            rusqlite::Connection::from_handle(handle.as_ptr()).map_err(|e| format!("{:?}", e))?;
-        let _guard = LoadExtensionGuard::new(&rusqlite_con).map_err(|e| format!("{:?}", e))?;
+            rusqlite::Connection::from_handle(handle.as_ptr()).map_err(|e| format!("{e:?}"))?;
+        let _guard = LoadExtensionGuard::new(&rusqlite_con).map_err(|e| format!("{e:?}"))?;
 
         rusqlite_con
             .load_extension(dylib_path, None)
-            .map_err(|e| format!("{:?}", e))?;
+            .map_err(|e| format!("{e:?}"))?;
     }
 
     Ok(())

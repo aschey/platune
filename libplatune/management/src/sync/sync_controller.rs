@@ -59,7 +59,7 @@ impl SyncController {
                 finished_callback();
             });
         } else if let Err(e) = tx.send(None) {
-            error!("Error sending sync finished signal {:?}", e);
+            error!("Error sending sync finished signal {e:?}");
         }
 
         ProgressStream::new(rx)
