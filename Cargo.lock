@@ -1680,6 +1680,7 @@ dependencies = [
  "lazy_static 1.4.0",
  "log",
  "notify",
+ "num_cpus",
  "regex 1.5.4",
  "rstest",
  "rusqlite",

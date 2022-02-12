@@ -27,6 +27,7 @@ katatsuki = {git = "https://github.com/aschey/seiri", rev = "40dd21274ee17827598
 lazy_static = "1.4.0"
 log = "0.4.14"
 notify = "4.0.17"
+num_cpus = "1.13.1"
 regex = "1.5.4"
 rusqlite = {version = "0.26.3", default-features = false, features = ["load_extension"]}
 sqlx = {version = "0.5.10", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}

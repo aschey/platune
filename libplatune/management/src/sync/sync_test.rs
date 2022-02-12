@@ -1,6 +1,7 @@
 use crate::{config::Config, database::Database, manager::Manager};
 use futures::StreamExt;
 use itertools::Itertools;
+use rstest::*;
 use std::{
     fs::{self, create_dir, create_dir_all},
     path::Path,
@@ -63,8 +64,9 @@ pub async fn test_sync_no_folder() {
     assert_eq!(Vec::<f32>::new(), msgs);
 }
 
+#[rstest(use_mount, case(true), case(false))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-pub async fn test_sync_basic() {
+pub async fn test_sync_basic(use_mount: bool) {
     let tempdir = TempDir::new().unwrap();
     let (db, mut manager) = setup(&tempdir).await;
     let music_dir = tempdir.path().join("configdir");
@@ -84,6 +86,11 @@ pub async fn test_sync_basic() {
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
+
+    if use_mount {
+        let mount = music_dir.parent().unwrap();
+        manager.register_drive(mount).await.unwrap();
+    }
     let mut receiver = manager.sync(None).await.unwrap();
 
     let mut msgs = vec![];
@@ -95,11 +102,7 @@ pub async fn test_sync_basic() {
     assert_eq!(vec![0.2, 0.4, 0.6, 0.8, 1.0], msgs);
 
     for path in paths {
-        assert!(db
-            .get_song_by_path(path.to_str().unwrap().to_string().replace("\\", "/"))
-            .await
-            .unwrap()
-            .is_some());
+        assert!(manager.get_song_by_path(path).await.unwrap().is_some());
     }
 
     timeout(Duration::from_secs(5), db.close())
@@ -148,11 +151,7 @@ pub async fn test_sync_multiple() {
         .unwrap();
 
     for path in paths {
-        assert!(db
-            .get_song_by_path(path.to_str().unwrap().to_string().replace("\\", "/"))
-            .await
-            .unwrap()
-            .is_some());
+        assert!(manager.get_song_by_path(path).await.unwrap().is_some());
     }
 
     timeout(Duration::from_secs(5), db.close())

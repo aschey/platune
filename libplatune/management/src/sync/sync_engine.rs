@@ -75,15 +75,6 @@ impl SyncEngine {
             return;
         }
 
-        let mut walker_builder = WalkBuilder::new(&self.paths[0]);
-        walker_builder.threads(10).standard_filters(false);
-
-        if self.paths.len() > 1 {
-            for path in &self.paths[1..] {
-                walker_builder.add(path);
-            }
-        }
-
         let (tags_tx, tags_rx) = mpsc::channel(10000);
         let (dir_tx, dir_rx) = mpsc::channel(10000);
         let dir_tx_ = dir_tx.clone();
@@ -147,7 +138,8 @@ impl SyncEngine {
         dir_tx: Sender<Option<DirRead>>,
     ) -> JoinHandle<()> {
         let mut walker_builder = WalkBuilder::new(&self.paths[0]);
-        walker_builder.threads(10).standard_filters(false);
+        let num_cpus = num_cpus::get();
+        walker_builder.threads(num_cpus).standard_filters(false);
 
         if self.paths.len() > 1 {
             for path in &self.paths[1..] {
