@@ -83,7 +83,11 @@ impl FileWatchManager {
             let mut paths: Vec<PathBuf> = vec![];
             loop {
                 // Wait for longer than the debounce duration to ensure we get all the emitted events
-                match tokio::time::timeout(debounce_delay * 2, sync_rx.recv()).await {
+                let watch_event = tokio::time::timeout(debounce_delay * 2, sync_rx.recv()).await;
+                if watch_event.is_ok() {
+                    info!("Processing watch event: {watch_event:?}");
+                }
+                match watch_event {
                     Ok(Some(SyncMessage::All)) => {
                         let mut rx = manager_.write().await.sync(None).await.unwrap();
                         while let Some(m) = rx.next().await {

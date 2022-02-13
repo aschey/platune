@@ -8,14 +8,18 @@ use std::{
 use tempfile::TempDir;
 use tokio::time::timeout;
 
-#[rstest(add_folder_before, case(true), case(false))]
+#[rstest]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_file_sync(add_folder_before: bool) {
+async fn test_file_sync(
+    #[values(true, false)] add_folder_before: bool,
+    #[values(true, false)] rename_dir: bool,
+    #[values(true, false)] rename_file: bool,
+) {
     let tempdir = TempDir::new().unwrap();
     let (db, manager) = setup(&tempdir).await;
 
     let music_dir = tempdir.path().join("configdir");
-    let inner_dir = music_dir.join("folder1");
+    let mut inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
 
     if add_folder_before {
@@ -42,50 +46,6 @@ async fn test_file_sync(add_folder_before: bool) {
         {}
     });
 
-    let paths = vec![
-        inner_dir.join("test.mp3"),
-        inner_dir.join("test2.mp3"),
-        inner_dir.join("test3.mp3"),
-    ];
-    fs::copy("../test_assets/test.mp3", &paths[0]).unwrap();
-    fs::copy("../test_assets/test2.mp3", &paths[1]).unwrap();
-    fs::copy("../test_assets/test3.mp3", &paths[2]).unwrap();
-    msg_task.await.unwrap();
-
-    let manager = file_watch_manager.read().await;
-    for path in paths {
-        assert!(manager.get_song_by_path(path).await.unwrap().is_some());
-    }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_rename_file() {
-    let tempdir = TempDir::new().unwrap();
-    let (db, manager) = setup(&tempdir).await;
-
-    let music_dir = tempdir.path().join("configdir");
-    let inner_dir = music_dir.join("folder1");
-    create_dir_all(inner_dir.clone()).unwrap();
-
-    manager
-        .add_folder(music_dir.to_str().unwrap())
-        .await
-        .unwrap();
-
-    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(100)).await;
-    let mut receiver = file_watch_manager.subscribe_progress();
-
-    let msg_task = tokio::spawn(async move {
-        while let Ok(Progress {
-            finished: false, ..
-        }) = receiver.recv().await
-        {}
-    });
-
     let mut paths = vec![
         inner_dir.join("test.mp3"),
         inner_dir.join("test2.mp3"),
@@ -94,30 +54,56 @@ async fn test_rename_file() {
     fs::copy("../test_assets/test.mp3", &paths[0]).unwrap();
     fs::copy("../test_assets/test2.mp3", &paths[1]).unwrap();
     fs::copy("../test_assets/test3.mp3", &paths[2]).unwrap();
-    msg_task.await.unwrap();
+    timeout(Duration::from_secs(5), msg_task)
+        .await
+        .unwrap()
+        .unwrap();
 
-    let mut receiver = file_watch_manager.subscribe_progress();
-    let msg_task = tokio::spawn(async move {
-        while let Ok(Progress {
-            finished: false, ..
-        }) = receiver.recv().await
-        {}
-    });
-
-    let new_path = inner_dir.join("test4.mp3");
-    fs::rename(&paths[0], &new_path).unwrap();
-
-    msg_task.await.unwrap();
-
-    paths[0] = new_path;
-    let manager = file_watch_manager.read().await;
-    for path in paths {
-        assert!(manager.get_song_by_path(path).await.unwrap().is_some());
+    // Can't hold a readable lock outside this block because a writable lock is required to sync
+    {
+        let manager = file_watch_manager.read().await;
+        for path in &paths {
+            assert!(manager.get_song_by_path(path).await.unwrap().is_some());
+        }
     }
 
-    // Make sure renamed song doesn't get marked as deleted
-    let deleted_songs = manager.get_deleted_songs().await.unwrap();
-    assert_eq!(0, deleted_songs.len());
+    let mut msg_task = None;
+    if rename_dir || rename_file {
+        let mut receiver = file_watch_manager.subscribe_progress();
+        msg_task = Some(tokio::spawn(async move {
+            while let Ok(Progress {
+                finished: false, ..
+            }) = receiver.recv().await
+            {}
+        }));
+    }
+
+    if rename_dir {
+        let new_dir = music_dir.join("folder2");
+        fs::rename(&inner_dir, &new_dir).unwrap();
+        inner_dir = new_dir;
+        paths = vec![
+            inner_dir.join("test.mp3"),
+            inner_dir.join("test2.mp3"),
+            inner_dir.join("test3.mp3"),
+        ];
+    }
+    if rename_file {
+        let new_path = inner_dir.join("test4.mp3");
+        fs::rename(&paths[0], &new_path).unwrap();
+        paths[0] = new_path;
+    }
+    if rename_dir || rename_file {
+        timeout(Duration::from_secs(5), msg_task.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
+        let manager = file_watch_manager.read().await;
+
+        for path in paths {
+            assert!(manager.get_song_by_path(path).await.unwrap().is_some());
+        }
+    }
 
     timeout(Duration::from_secs(5), db.close())
         .await
