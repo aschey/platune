@@ -43,7 +43,7 @@ pub async fn test_sync_empty() {
         .await
         .unwrap_or_default();
 
-    assert_eq!(vec![0., 1.], msgs);
+    assert_eq!(1.0, *msgs.last().unwrap());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -99,7 +99,9 @@ pub async fn test_sync_basic(use_mount: bool) {
     }
 
     let msgs = msgs.into_iter().skip_while(|m| *m == 0.0).collect_vec();
-    assert_eq!(vec![0.2, 0.4, 0.6, 0.8, 1.0], msgs);
+    // progress message order is not deterministic so this is the best we can do
+    assert_eq!(1.0, *msgs.last().unwrap());
+    assert!(msgs.len() > 1);
 
     for path in paths {
         assert!(manager.get_song_by_path(path).await.unwrap().is_some());
