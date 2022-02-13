@@ -1,9 +1,11 @@
 use crate::db_error::DbError;
 use crate::manager::Manager;
+use crate::sync::progress_stream::ProgressStream;
 use futures::StreamExt;
 use notify::{DebouncedEvent, Watcher};
 use notify::{RecommendedWatcher, RecursiveMode};
 use std::ops::Deref;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{path::PathBuf, sync::Arc, thread, time::Duration};
 use tokio::sync::{broadcast, mpsc, Mutex, RwLock};
 use tracing::info;
@@ -58,9 +60,10 @@ impl FileWatchManager {
             while let Ok(event) = event_rx.recv() {
                 info!("Received file watcher event {event:?}");
                 match event {
-                    DebouncedEvent::Create(path)
-                    | DebouncedEvent::Write(path)
-                    | DebouncedEvent::Remove(path) => {
+                    DebouncedEvent::Create(path) | DebouncedEvent::Write(path) => {
+                        sync_tx_.blocking_send(SyncMessage::Path(path)).unwrap();
+                    }
+                    DebouncedEvent::Remove(path) => {
                         sync_tx_.blocking_send(SyncMessage::Path(path)).unwrap();
                     }
                     DebouncedEvent::NoticeWrite(_) | DebouncedEvent::NoticeRemove(_) => {
@@ -81,6 +84,7 @@ impl FileWatchManager {
 
         tokio::spawn(async move {
             let mut paths: Vec<PathBuf> = vec![];
+            let running = Arc::new(AtomicBool::new(false));
             loop {
                 // Wait for longer than the debounce duration to ensure we get all the emitted events
                 let watch_event = tokio::time::timeout(debounce_delay * 2, sync_rx.recv()).await;
@@ -89,27 +93,11 @@ impl FileWatchManager {
                 }
                 match watch_event {
                     Ok(Some(SyncMessage::All)) => {
-                        let mut rx = manager_.write().await.sync(None).await.unwrap();
-                        while let Some(m) = rx.next().await {
-                            progress_tx_
-                                .send(Progress {
-                                    job: "sync".to_string(),
-                                    percentage: m.unwrap(),
-                                    finished: false,
-                                })
-                                .unwrap_or_default();
-                        }
-                        progress_tx_
-                            .send(Progress {
-                                job: "sync".to_string(),
-                                percentage: 1.0,
-                                finished: true,
-                            })
-                            .unwrap_or_default();
+                        let rx = manager_.write().await.sync(None).await.unwrap();
+                        Self::send_progress(running.clone(), progress_tx_.clone(), rx);
                     }
                     Ok(Some(SyncMessage::Path(new_path))) => {
                         paths = Self::normalize_paths(paths, new_path);
-                        info!("Paths to be synced: {paths:?}");
                     }
                     Ok(Some(SyncMessage::Rename(from, to))) => {
                         manager_
@@ -118,6 +106,7 @@ impl FileWatchManager {
                             .rename_path(from, to.clone())
                             .await
                             .unwrap();
+
                         // Add new path to sync list in case the new path maps to paths that are currently marked as deleted
                         // So we need to now mark them as un-deleted
                         paths = Self::normalize_paths(paths, to);
@@ -128,6 +117,12 @@ impl FileWatchManager {
                     }
                     Err(_) => {
                         if paths.is_empty() {
+                            //info!("paths empty, ignoring");
+                            // If no paths were changed, no need to sync
+                            continue;
+                        }
+                        if running.load(Ordering::SeqCst) {
+                            info!("Sync already running, will start sync on next debounce timeout");
                             continue;
                         }
 
@@ -135,23 +130,9 @@ impl FileWatchManager {
                             .iter()
                             .map(|p| p.to_string_lossy().into_owned())
                             .collect();
-                        let mut rx = manager_.write().await.sync(Some(folders)).await.unwrap();
-                        while let Some(m) = rx.next().await {
-                            progress_tx_
-                                .send(Progress {
-                                    job: "sync".to_string(),
-                                    percentage: m.unwrap(),
-                                    finished: false,
-                                })
-                                .unwrap_or_default();
-                        }
-                        progress_tx_
-                            .send(Progress {
-                                job: "sync".to_string(),
-                                percentage: 1.0,
-                                finished: true,
-                            })
-                            .unwrap_or_default();
+                        info!("Syncing {folders:?}");
+                        let rx = manager_.write().await.sync(Some(folders)).await.unwrap();
+                        Self::send_progress(running.clone(), progress_tx_.clone(), rx);
                         paths.clear();
                     }
                 }
@@ -164,6 +145,33 @@ impl FileWatchManager {
             sync_tx,
             progress_tx,
         }
+    }
+
+    fn send_progress(
+        running: Arc<AtomicBool>,
+        progress_tx: broadcast::Sender<Progress>,
+        mut rx: ProgressStream,
+    ) {
+        tokio::spawn(async move {
+            running.store(true, Ordering::SeqCst);
+            while let Some(m) = rx.next().await {
+                progress_tx
+                    .send(Progress {
+                        job: "sync".to_string(),
+                        percentage: m.unwrap(),
+                        finished: false,
+                    })
+                    .unwrap_or_default();
+            }
+            progress_tx
+                .send(Progress {
+                    job: "sync".to_string(),
+                    percentage: 1.0,
+                    finished: true,
+                })
+                .unwrap_or_default();
+            running.store(false, Ordering::SeqCst);
+        });
     }
 
     fn normalize_paths(paths: Vec<PathBuf>, new_path: PathBuf) -> Vec<PathBuf> {

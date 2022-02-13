@@ -9,14 +9,16 @@ use std::{
     time::Duration,
 };
 use tempfile::TempDir;
-use tokio::time::timeout;
+use tokio::{sync::mpsc, time::timeout};
+use tracing::info;
 
 #[rstest]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_file_sync(
+async fn test_file_sync_sequential(
     #[values(true, false)] add_folder_before: bool,
     #[values(true, false)] rename_dir: bool,
     #[values(true, false)] rename_file: bool,
+    #[values(1, 100)] debounce_time: u64,
 ) {
     let tempdir = TempDir::new().unwrap();
     let (db, manager) = setup(&tempdir).await;
@@ -26,16 +28,19 @@ async fn test_file_sync(
     create_dir_all(inner_dir.clone()).unwrap();
 
     if add_folder_before {
+        // Test that folder gets added to watcher
         manager
             .add_folder(music_dir.to_str().unwrap())
             .await
             .unwrap();
     }
 
-    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(100)).await;
+    let file_watch_manager =
+        FileWatchManager::new(manager, Duration::from_millis(debounce_time)).await;
     let mut receiver = file_watch_manager.subscribe_progress();
 
     if !add_folder_before {
+        // Test that watcher picks up existing folder
         file_watch_manager
             .add_folder(music_dir.to_str().unwrap())
             .await
@@ -43,9 +48,10 @@ async fn test_file_sync(
     }
 
     let msg_task = tokio::spawn(async move {
-        while let Ok(Progress {
-            finished: false, ..
-        }) = receiver.recv().await
+        // Wait for all syncs to finish
+        while timeout(Duration::from_secs(1), receiver.recv())
+            .await
+            .is_ok()
         {}
     });
 
@@ -57,6 +63,8 @@ async fn test_file_sync(
     fs::copy("../test_assets/test.mp3", &paths[0]).unwrap();
     fs::copy("../test_assets/test2.mp3", &paths[1]).unwrap();
     fs::copy("../test_assets/test3.mp3", &paths[2]).unwrap();
+
+    // Wait until sync finished
     timeout(Duration::from_secs(5), msg_task)
         .await
         .unwrap()
@@ -64,6 +72,7 @@ async fn test_file_sync(
 
     // Can't hold a readable lock outside this block because a writable lock is required to sync
     {
+        // Make sure all files synced
         let manager = file_watch_manager.read().await;
         for path in &paths {
             assert!(manager.get_song_by_path(path).await.unwrap().is_some());
@@ -74,9 +83,10 @@ async fn test_file_sync(
     if rename_dir || rename_file {
         let mut receiver = file_watch_manager.subscribe_progress();
         msg_task = Some(tokio::spawn(async move {
-            while let Ok(Progress {
-                finished: false, ..
-            }) = receiver.recv().await
+            // Wait for all syncs to finish
+            while timeout(Duration::from_secs(1), receiver.recv())
+                .await
+                .is_ok()
             {}
         }));
     }
@@ -91,18 +101,22 @@ async fn test_file_sync(
             inner_dir.join("test3.mp3"),
         ];
     }
+
     if rename_file {
         let new_path = inner_dir.join("test4.mp3");
         fs::rename(&paths[0], &new_path).unwrap();
         paths[0] = new_path;
     }
+
     if rename_dir || rename_file {
+        // Wait for second sync to finish
         timeout(Duration::from_secs(5), msg_task.unwrap())
             .await
             .unwrap()
             .unwrap();
         let manager = file_watch_manager.read().await;
 
+        // Make sure paths got upated
         for path in paths {
             assert!(manager.get_song_by_path(path).await.unwrap().is_some());
         }
@@ -113,9 +127,81 @@ async fn test_file_sync(
         .unwrap_or_default();
 }
 
-#[rstest]
+#[rstest(rename, case(true), case(false))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_file_sync_concurrent(rename: bool) {
+    let tempdir = TempDir::new().unwrap();
+    let (db, manager) = setup(&tempdir).await;
+
+    let music_dir = tempdir.path().join("configdir");
+    let inner_dir = music_dir.join("folder1");
+
+    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(10)).await;
+    let mut receiver = file_watch_manager.subscribe_progress();
+
+    let (started_tx, mut started_rx) = mpsc::channel(1);
+    let msg_task = tokio::spawn(async move {
+        // Wait for all syncs to finish
+        while timeout(Duration::from_secs(1), receiver.recv())
+            .await
+            .is_ok()
+        {
+            started_tx.try_send(()).unwrap_or_default();
+        }
+    });
+
+    let mut paths = vec![];
+    for i in 0..100 {
+        let new_dir = inner_dir.clone().join(format!("test{i}"));
+        let new_dir_str = new_dir.to_string_lossy().to_string();
+        create_dir_all(new_dir).unwrap();
+
+        file_watch_manager.add_folder(&new_dir_str).await.unwrap();
+
+        let dir1 = inner_dir.join(format!("test{i}/test.mp3"));
+        fs::copy("../test_assets/test.mp3", &dir1).unwrap();
+        paths.push(dir1);
+
+        let dir2 = inner_dir.join(format!("test{i}/test2.mp3"));
+        fs::copy("../test_assets/test2.mp3", &dir2).unwrap();
+        paths.push(dir2);
+
+        let dir3 = inner_dir.join(format!("test{i}/test3.mp3"));
+        fs::copy("../test_assets/test3.mp3", &dir3).unwrap();
+        paths.push(dir3);
+    }
+
+    started_rx.recv().await;
+    // Make second file change as soon as first sync starts, don't wait for it to complete
+    let new_path = inner_dir.join("test0/test4.mp3");
+    if rename {
+        fs::rename(&paths[0], &new_path).unwrap();
+        paths[0] = new_path;
+    } else {
+        let new_path = inner_dir.join("test0/test4.mp3");
+        fs::copy("../test_assets/test.mp3", &new_path).unwrap();
+        paths.push(new_path);
+    }
+
+    timeout(Duration::from_secs(5), msg_task)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let manager = file_watch_manager.read().await;
+
+    for path in &paths {
+        assert!(manager.get_song_by_path(path).await.unwrap().is_some());
+    }
+
+    timeout(Duration::from_secs(5), db.close())
+        .await
+        .unwrap_or_default();
+}
+
+#[rstest(sync_twice, case(true), case(false))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_sync_all() {
+async fn test_sync_all(sync_twice: bool) {
     let tempdir = TempDir::new().unwrap();
     let (db, manager) = setup(&tempdir).await;
 
@@ -147,7 +233,26 @@ async fn test_sync_all() {
         {}
     });
 
+    let mut msg_task2 = None;
+    if sync_twice {
+        let mut receiver2 = file_watch_manager.subscribe_progress();
+
+        msg_task2 = Some(tokio::spawn(async move {
+            while let Ok(Progress {
+                finished: false, ..
+            }) = receiver2.recv().await
+            {}
+        }));
+    }
+
     file_watch_manager.start_sync_all().await;
+
+    if sync_twice {
+        timeout(Duration::from_secs(5), msg_task2.unwrap())
+            .await
+            .unwrap()
+            .unwrap();
+    }
 
     timeout(Duration::from_secs(5), msg_task)
         .await
@@ -181,6 +286,7 @@ fn test_normalize(paths: Vec<&str>, new_path: &str, expected: Vec<&str>) {
 
 async fn setup(tempdir: &TempDir) -> (Database, Manager) {
     let sql_path = tempdir.path().join("platune.db");
+    info!("sql path: {sql_path:?}");
     let config_path = tempdir.path().join("platuneconfig");
     let db = Database::connect(sql_path, true).await.unwrap();
     db.migrate().await.unwrap();

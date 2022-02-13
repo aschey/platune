@@ -24,7 +24,7 @@ jobs:
           profile: minimal
           components: rustfmt, clippy
       - name: Test
-        run: cargo test --locked -- --test-threads=2
+        run: cargo test --locked
   go:
     name: Run Go tests
     runs-on: ubuntu-latest

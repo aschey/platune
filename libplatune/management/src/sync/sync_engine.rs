@@ -106,7 +106,7 @@ impl SyncEngine {
             Ok(Ok(())) => {}
             Err(e) => {
                 self.tx.send_error(SyncError::ThreadCommError(format!(
-                    "Error joining tags handle {e:?}"
+                    "Error joining db handle {e:?}"
                 )));
             }
         }
@@ -217,7 +217,11 @@ impl SyncEngine {
 
                 let file_size = path
                     .metadata()
-                    .map_err(|e| SyncError::IOError(format!("Error getting path metadata: {e:?}")))?
+                    .map_err(|e| {
+                        SyncError::IOError(format!(
+                            "Error getting path metadata for {path:?}: {e:?}"
+                        ))
+                    })?
                     .len();
                 file_size.hash(&mut hasher);
                 let fingerprint = hasher.finish().to_string();
@@ -281,10 +285,15 @@ impl SyncEngine {
         let name = file_path.extension().unwrap_or_default();
         let _size = file_path
             .metadata()
-            .map_err(|e| SyncError::IOError(format!("Error getting track metadata: {e:?}")))?
+            .map_err(|e| {
+                SyncError::IOError(format!(
+                    "Error getting track metadata for {file_path:?}: {e:?}"
+                ))
+            })?
             .len();
         let mut song_metadata: Option<ReadOnlyTrack> = None;
-        match &name.to_str().unwrap_or_default().to_lowercase()[..] {
+        let name = &name.to_str().unwrap_or_default().to_lowercase()[..];
+        match name {
             "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
                 let tag_result = ReadOnlyTrack::from_path(file_path, None);
                 match tag_result {
