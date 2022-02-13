@@ -1,5 +1,6 @@
 use super::{FileWatchManager, Progress};
 use crate::{config::Config, database::Database, manager::Manager};
+use rstest::*;
 use std::{
     fs::{self, create_dir_all},
     time::Duration,
@@ -7,8 +8,9 @@ use std::{
 use tempfile::TempDir;
 use tokio::time::timeout;
 
+#[rstest(add_folder_before, case(true), case(false))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
-async fn test_file_sync() {
+async fn test_file_sync(add_folder_before: bool) {
     let tempdir = TempDir::new().unwrap();
     let (db, manager) = setup(&tempdir).await;
 
@@ -16,13 +18,22 @@ async fn test_file_sync() {
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
 
-    manager
-        .add_folder(music_dir.to_str().unwrap())
-        .await
-        .unwrap();
+    if add_folder_before {
+        manager
+            .add_folder(music_dir.to_str().unwrap())
+            .await
+            .unwrap();
+    }
 
     let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(100)).await;
     let mut receiver = file_watch_manager.subscribe_progress();
+
+    if !add_folder_before {
+        file_watch_manager
+            .add_folder(music_dir.to_str().unwrap())
+            .await
+            .unwrap();
+    }
 
     let msg_task = tokio::spawn(async move {
         while let Ok(Progress {
