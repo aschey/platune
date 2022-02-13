@@ -56,6 +56,7 @@ impl Management for ManagementImpl {
                         tx.send(Ok(Progress {
                             job: val.job,
                             percentage: val.percentage,
+                            finished: val.finished,
                         }))
                         .await
                         .unwrap_or_default();
@@ -72,68 +73,6 @@ impl Management for ManagementImpl {
             tokio_stream::wrappers::ReceiverStream::new(rx),
         )))
     }
-
-    // async fn sync(
-    //     &self,
-    //     request: Request<Streaming<()>>,
-    // ) -> Result<Response<Self::SyncStream>, Status> {
-    //     let mut messages = request.into_inner();
-    //     let manager = self.manager.clone();
-    //     // Close stream when shutdown is requested
-    //     let mut shutdown_rx = self.shutdown_tx.subscribe();
-    //     let mut file_changed_rx = self.file_changed_tx.subscribe();
-    //     let (response_tx, response_rx) = tokio::sync::mpsc::channel(32);
-    //     tokio::spawn(async move {
-    //         while let Some(msg) = tokio::select! {
-    //             val = messages.next() => match val { Some(Ok(_)) => Some(SyncMessage::All), _ => None },
-    //             val = file_changed_rx.recv() => match val { Ok(val) => Some(SyncMessage::Path(val)), _ => None },
-    //             _ = shutdown_rx.recv() => None
-    //         } {
-    //             let mut manager = manager.write().await;
-    //             match msg {
-    //                 SyncMessage::Path(path) => {
-    //                     let mut rx = match manager.sync().await {
-    //                         Ok(rx) => rx,
-    //                         Err(e) => {
-    //                             return Err(format_error(format!("Error syncing files {:?}", e)))
-    //                         }
-    //                     };
-    //                     while let Some(r) = rx.next().await {
-    //                         response_tx.send(r).await.unwrap();
-    //                     }
-    //                 }
-    //                 SyncMessage::All => {
-    //                     let mut rx = match manager.sync().await {
-    //                         Ok(rx) => rx,
-    //                         Err(e) => {
-    //                             return Err(format_error(format!("Error syncing files {:?}", e)))
-    //                         }
-    //                     };
-    //                     while let Some(r) = rx.next().await {
-    //                         response_tx.send(r).await.unwrap();
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         Ok(())
-    //     });
-
-    // Ok(Response::new(Box::pin(rx.map(
-    //     |progress_result| match progress_result {
-    //         Ok(percentage) => Ok(Progress { percentage }),
-    //         Err(e) => Err(format_error(format!("Error syncing files {:?}", e))),
-    //     },
-    // ))))
-
-    //     Ok(Response::new(Box::pin({
-    //         tokio_stream::wrappers::ReceiverStream::new(response_rx).map(|progress_result| {
-    //             match progress_result {
-    //                 Ok(percentage) => Ok(Progress { percentage }),
-    //                 Err(e) => Err(format_error(format!("Error syncing files {:?}", e))),
-    //             }
-    //         })
-    //     })))
-    // }
 
     async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
         if let Err(e) = self

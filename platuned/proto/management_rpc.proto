@@ -27,6 +27,7 @@ service Management {
 message Progress {
   string job = 1;
   float percentage = 2;
+  bool finished = 3;
 }
 
 message FoldersMessage { repeated string folders = 1; }

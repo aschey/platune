@@ -7,7 +7,6 @@ use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
-use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::sync::Arc;
 use std::{path::Path, time::Duration};
@@ -109,11 +108,7 @@ impl Database {
             .await
     }
 
-    pub(crate) async fn rename_path(
-        &mut self,
-        from: String,
-        to: String,
-    ) -> Result<SqliteQueryResult, DbError> {
+    pub(crate) async fn rename_path(&mut self, from: String, to: String) -> Result<(), DbError> {
         // Update could cause duplicate paths so just ignore if that happens
         sqlx::query!(
             "
@@ -125,7 +120,9 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{e:?}")))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
+
+        Ok(())
     }
 
     pub(crate) async fn lookup(
@@ -303,7 +300,7 @@ impl Database {
         &self,
         old_path: String,
         new_path: String,
-    ) -> Result<SqliteQueryResult, DbError> {
+    ) -> Result<(), DbError> {
         sqlx::query!(
             "UPDATE folder SET folder_path = ? WHERE folder_path = ?;",
             new_path,
@@ -311,7 +308,9 @@ impl Database {
         )
         .execute(&self.pool)
         .await
-        .map_err(|e| DbError::DbError(format!("{e:?}")))
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
+
+        Ok(())
     }
 
     pub(crate) async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {

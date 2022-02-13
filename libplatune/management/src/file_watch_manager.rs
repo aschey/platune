@@ -1,11 +1,11 @@
+use crate::db_error::DbError;
 use crate::manager::Manager;
 use futures::StreamExt;
 use notify::{DebouncedEvent, Watcher};
 use notify::{RecommendedWatcher, RecursiveMode};
 use std::ops::Deref;
-use std::path::Path;
 use std::{path::PathBuf, sync::Arc, thread, time::Duration};
-use tokio::sync::{broadcast, mpsc, RwLock};
+use tokio::sync::{broadcast, mpsc, Mutex, RwLock};
 use tracing::info;
 
 #[derive(Debug)]
@@ -16,16 +16,17 @@ pub(crate) enum SyncMessage {
     All,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Progress {
     pub job: String,
     pub percentage: f32,
+    pub finished: bool,
 }
 
 #[derive(Clone)]
 pub struct FileWatchManager {
     manager: Arc<RwLock<Manager>>,
-    watcher: Arc<RecommendedWatcher>,
+    watcher: Arc<Mutex<RecommendedWatcher>>,
     sync_tx: mpsc::Sender<SyncMessage>,
     progress_tx: broadcast::Sender<Progress>,
 }
@@ -48,20 +49,9 @@ impl FileWatchManager {
 
         let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(2500)).unwrap();
         let paths = manager.get_all_folders().await.unwrap();
-        let mut watch_paths = vec![];
-        for path_str in &paths {
-            let path = PathBuf::from(&path_str);
-            match path.parent() {
-                Some(parent) => {
-                    watch_paths = Self::normalize_paths(watch_paths, parent.to_owned());
-                }
-                None => {
-                    watch_paths = Self::normalize_paths(watch_paths, path);
-                }
-            }
-        }
-        for path in watch_paths {
-            watcher.watch(path, RecursiveMode::Recursive).unwrap();
+
+        for path in &paths {
+            watcher.watch(&path, RecursiveMode::Recursive).unwrap();
         }
 
         thread::spawn(move || {
@@ -100,9 +90,17 @@ impl FileWatchManager {
                                 .send(Progress {
                                     job: "sync".to_string(),
                                     percentage: m.unwrap(),
+                                    finished: false,
                                 })
                                 .unwrap_or_default();
                         }
+                        progress_tx_
+                            .send(Progress {
+                                job: "sync".to_string(),
+                                percentage: 1.0,
+                                finished: true,
+                            })
+                            .unwrap_or_default();
                     }
                     Ok(Some(SyncMessage::Path(new_path))) => {
                         paths = Self::normalize_paths(paths, new_path);
@@ -138,9 +136,17 @@ impl FileWatchManager {
                                 .send(Progress {
                                     job: "sync".to_string(),
                                     percentage: m.unwrap(),
+                                    finished: false,
                                 })
                                 .unwrap_or_default();
                         }
+                        progress_tx_
+                            .send(Progress {
+                                job: "sync".to_string(),
+                                percentage: 1.0,
+                                finished: true,
+                            })
+                            .unwrap_or_default();
                         paths.clear();
                     }
                 }
@@ -149,7 +155,7 @@ impl FileWatchManager {
 
         Self {
             manager,
-            watcher: Arc::new(watcher),
+            watcher: Arc::new(Mutex::new(watcher)),
             sync_tx,
             progress_tx,
         }
@@ -184,4 +190,29 @@ impl FileWatchManager {
     pub fn subscribe_progress(&self) -> broadcast::Receiver<Progress> {
         self.progress_tx.subscribe()
     }
+
+    pub async fn add_folder(&self, path: &str) -> Result<(), DbError> {
+        self.add_folders(vec![path]).await
+    }
+
+    pub async fn add_folders(&self, paths: Vec<&str>) -> Result<(), DbError> {
+        self.manager
+            .write()
+            .await
+            .add_folders(paths.clone())
+            .await?;
+
+        for path in paths {
+            self.watcher
+                .lock()
+                .await
+                .watch(path, RecursiveMode::Recursive)
+                .unwrap();
+        }
+        Ok(())
+    }
 }
+
+#[cfg(test)]
+#[path = "./file_watch_manager_test.rs"]
+mod file_watch_manager_test;
