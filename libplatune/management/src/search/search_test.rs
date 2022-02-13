@@ -1,5 +1,6 @@
 use crate::{config::Config, database::Database, manager::Manager};
 use futures::StreamExt;
+use pretty_assertions::assert_eq;
 use rstest::*;
 use std::{
     fs::{self, create_dir_all},

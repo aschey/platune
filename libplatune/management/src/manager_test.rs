@@ -1,10 +1,9 @@
-use std::time::Duration;
-
+use super::Manager;
 use crate::{config::Config, database::Database};
+use pretty_assertions::assert_eq;
+use std::time::Duration;
 use tempfile::TempDir;
 use tokio::time::timeout;
-
-use super::Manager;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_add_folders() {
