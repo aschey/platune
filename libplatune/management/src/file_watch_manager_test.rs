@@ -1,4 +1,4 @@
-use super::FileWatchManager;
+use super::{FileWatchManager, Progress};
 use crate::{config::Config, database::Database, manager::Manager};
 use std::{
     fs::{self, create_dir_all},
@@ -21,15 +21,14 @@ async fn test_file_sync() {
         .await
         .unwrap();
 
-    let file_watch_manager = FileWatchManager::new(manager).await;
+    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(100)).await;
     let mut receiver = file_watch_manager.subscribe_progress();
 
     let msg_task = tokio::spawn(async move {
-        while let Ok(msg) = receiver.recv().await {
-            if msg.finished {
-                break;
-            }
-        }
+        while let Ok(Progress {
+            finished: false, ..
+        }) = receiver.recv().await
+        {}
     });
 
     let paths = vec![

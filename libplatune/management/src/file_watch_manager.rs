@@ -40,14 +40,14 @@ impl Deref for FileWatchManager {
 }
 
 impl FileWatchManager {
-    pub async fn new(manager: Manager) -> Self {
+    pub async fn new(manager: Manager, debounce_delay: Duration) -> Self {
         let (event_tx, event_rx) = std::sync::mpsc::channel();
         let (sync_tx, mut sync_rx) = tokio::sync::mpsc::channel(32);
         let sync_tx_ = sync_tx.clone();
         let (progress_tx, _) = broadcast::channel(32);
         let progress_tx_ = progress_tx.clone();
 
-        let mut watcher = RecommendedWatcher::new(event_tx, Duration::from_millis(2500)).unwrap();
+        let mut watcher = RecommendedWatcher::new(event_tx, debounce_delay).unwrap();
         let paths = manager.get_all_folders().await.unwrap();
 
         for path in &paths {
@@ -82,7 +82,8 @@ impl FileWatchManager {
         tokio::spawn(async move {
             let mut paths: Vec<PathBuf> = vec![];
             loop {
-                match tokio::time::timeout(Duration::from_millis(5000), sync_rx.recv()).await {
+                // Wait for longer than the debounce duration to ensure we get all the emitted events
+                match tokio::time::timeout(debounce_delay * 2, sync_rx.recv()).await {
                     Ok(Some(SyncMessage::All)) => {
                         let mut rx = manager_.write().await.sync(None).await.unwrap();
                         while let Some(m) = rx.next().await {
