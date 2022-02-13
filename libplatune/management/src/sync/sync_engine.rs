@@ -118,14 +118,16 @@ impl SyncEngine {
         info!("Sync took {:?}", start.elapsed());
     }
 
-    fn dir_counter(&self, dir_tx: Sender<Option<DirRead>>) -> JoinHandle<Result<(), SyncError>> {
+    fn dir_counter(&self, dir_tx: Sender<DirRead>) -> JoinHandle<Result<(), SyncError>> {
         let paths = self.paths.clone();
         spawn_blocking::<_, Result<(), SyncError>>(move || {
             for path in paths {
                 for _ in WalkDir::new(&path).into_iter() {
-                    dir_tx
-                        .blocking_send(Some(DirRead::Found))
-                        .map_err(|e| SyncError::ThreadCommError(e.to_string()))?;
+                    dir_tx.blocking_send(DirRead::Found).map_err(|e| {
+                        SyncError::ThreadCommError(format!(
+                            "Error sending directory found message: {e:?}"
+                        ))
+                    })?;
                 }
             }
             Ok(())
@@ -134,8 +136,8 @@ impl SyncEngine {
 
     fn tags_parser(
         &self,
-        tags_tx: Sender<Option<(ReadOnlyTrack, String, PathBuf)>>,
-        dir_tx: Sender<Option<DirRead>>,
+        tags_tx: Sender<(ReadOnlyTrack, String, PathBuf)>,
+        dir_tx: Sender<DirRead>,
     ) -> JoinHandle<()> {
         let mut walker_builder = WalkBuilder::new(&self.paths[0]);
         let num_cpus = num_cpus::get();
@@ -155,7 +157,7 @@ impl SyncEngine {
                 let dir_tx = dir_tx.clone();
                 let mount = mount.clone();
                 Box::new(move |result| {
-                    if let Err(e) = dir_tx.blocking_send(Some(DirRead::Completed)) {
+                    if let Err(e) = dir_tx.blocking_send(DirRead::Completed) {
                         error!("Error sending completed dir read: {e:?}");
                         return WalkState::Quit;
                     }
@@ -164,11 +166,9 @@ impl SyncEngine {
                         if file_path.is_file() {
                             if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path) {
                                 let file_path_str = clean_file_path(&file_path, &mount);
-                                if let Err(e) = tags_tx.blocking_send(Some((
-                                    metadata,
-                                    file_path_str,
-                                    file_path,
-                                ))) {
+                                if let Err(e) =
+                                    tags_tx.blocking_send((metadata, file_path_str, file_path))
+                                {
                                     error!("Error sending tag: {e:?}");
                                     return WalkState::Quit;
                                 }
@@ -178,16 +178,14 @@ impl SyncEngine {
                     WalkState::Continue
                 })
             });
-            if let Err(e) = dir_tx.blocking_send(None) {
-                error!("Error sending dir walker completed: {e:?}");
-            }
         })
     }
 
-    async fn progress_loop(&self, mut dir_rx: mpsc::Receiver<Option<DirRead>>) {
+    async fn progress_loop(&self, mut dir_rx: mpsc::Receiver<DirRead>) {
         let mut processed = 0.0;
         let mut file_count = 0.0;
-        while let Some(Some(dir_read)) = dir_rx.recv().await {
+
+        while let Some(dir_read) = dir_rx.recv().await {
             match dir_read {
                 DirRead::Found => file_count += 1.0,
                 DirRead::Completed => processed += 1.0,
@@ -202,7 +200,7 @@ impl SyncEngine {
 
     fn db_updater(
         &self,
-        mut tags_rx: mpsc::Receiver<Option<(ReadOnlyTrack, String, PathBuf)>>,
+        mut tags_rx: mpsc::Receiver<(ReadOnlyTrack, String, PathBuf)>,
     ) -> JoinHandle<Result<(), SyncError>> {
         let pool = self.pool.clone();
         let cleaned_paths = self
@@ -213,13 +211,13 @@ impl SyncEngine {
 
         tokio::spawn(async move {
             let mut dal = SyncDAL::try_new(pool).await?;
-            while let Some(Some((metadata, path_str, path))) = tags_rx.recv().await {
+            while let Some((metadata, path_str, path)) = tags_rx.recv().await {
                 let mut hasher = DefaultHasher::new();
                 metadata.hash(&mut hasher);
 
                 let file_size = path
                     .metadata()
-                    .map_err(|e| SyncError::IOError(format!("{e:?}")))?
+                    .map_err(|e| SyncError::IOError(format!("Error getting path metadata: {e:?}")))?
                     .len();
                 file_size.hash(&mut hasher);
                 let fingerprint = hasher.finish().to_string();
@@ -283,7 +281,7 @@ impl SyncEngine {
         let name = file_path.extension().unwrap_or_default();
         let _size = file_path
             .metadata()
-            .map_err(|e| SyncError::IOError(format!("{e:?}")))?
+            .map_err(|e| SyncError::IOError(format!("Error getting track metadata: {e:?}")))?
             .len();
         let mut song_metadata: Option<ReadOnlyTrack> = None;
         match &name.to_str().unwrap_or_default().to_lowercase()[..] {
