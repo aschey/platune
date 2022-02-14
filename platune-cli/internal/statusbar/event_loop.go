@@ -30,7 +30,7 @@ func (s *StatusBar) StartEventLoop() {
 	s.platuneClient.EnableReconnect()
 
 	eventCh := make(chan *platune.EventResponse, 1)
-	go s.platuneClient.SubscribeEvents(eventCh)
+	go s.platuneClient.SubscribePlayerEvents(eventCh)
 
 	connCh := make(chan connectivity.State, 1)
 	ctx := context.Background()

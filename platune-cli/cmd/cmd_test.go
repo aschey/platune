@@ -20,6 +20,7 @@ import (
 	"github.com/aschey/platune/cli/v2/test"
 	platune "github.com/aschey/platune/client"
 	"github.com/golang/mock/gomock"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type completionCase struct {
@@ -243,10 +244,14 @@ func TestStop(t *testing.T) {
 func TestSync(t *testing.T) {
 	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
 		ctrl := gomock.NewController(t)
-		stream := test.NewMockManagement_SyncClient(ctrl)
-		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1}, nil)
-		stream.EXPECT().Recv().Return(nil, io.EOF)
-		expect.Sync(gomock.Any(), gomock.Any()).Return(stream, nil)
+		stream := test.NewMockManagement_SubscribeEventsClient(ctrl)
+		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1, Finished: false, Job: "sync"}, nil)
+		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1, Finished: false, Job: "somethingElse"}, nil)
+		// subscriber channel runs in a separate goroutine so we don't know how many times it will execute before the main thread finishes
+		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 1.0, Finished: true, Job: "sync"}, nil).AnyTimes()
+		expect.SubscribeEvents(gomock.Any(), gomock.Any()).Return(stream, nil)
+		expect.StartSync(gomock.Any(), &emptypb.Empty{}).Return(&emptypb.Empty{}, nil)
+
 		expect.GetDeleted(gomock.Any(), gomock.Any()).Return(&platune.GetDeletedResponse{
 			Results: []*platune.DeletedResult{},
 		}, nil)

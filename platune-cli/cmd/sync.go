@@ -6,6 +6,7 @@ import (
 
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/deleted"
+	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 	"github.com/superhawk610/bar"
@@ -23,15 +24,22 @@ func syncProgress(client *internal.PlatuneClient, deleted *deleted.Deleted) {
 				lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Render(":percent"),
 				lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Render(":elapsed"))))
 
-	sync := client.Sync()
-	if sync == nil {
-		return
-	}
+	progressCh := make(chan *platune.Progress, 1)
+
+	go client.SubscribeManagementEvents(progressCh)
+	client.StartSync()
 
 	start := time.Now()
-	for progress := range sync {
+	for progress := range progressCh {
+		if progress.Job != "sync" {
+			continue
+		}
+
 		b.Update(int(progress.Percentage*1000),
 			bar.Context{bar.Ctx("elapsed", time.Since(start).Round(time.Millisecond*10).String())})
+		if progress.Finished {
+			break
+		}
 	}
 
 	fmt.Println()

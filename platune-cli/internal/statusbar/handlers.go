@@ -15,7 +15,8 @@ type playerEvent struct {
 func (s *StatusBar) handlePlayerEvent(timer *timer, msg *platune.EventResponse, currentSong *platune.LookupEntry) playerEvent {
 	switch msg.Event {
 	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED, platune.Event_ENDED, platune.Event_NEXT, platune.Event_PREVIOUS:
-		res := s.platuneClient.GetSongByPath(msg.State.Queue[msg.State.QueuePosition])
+		state := msg.GetState()
+		res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
 		timer.setTime(0)
 		return playerEvent{
 			icon:    "",
@@ -23,7 +24,7 @@ func (s *StatusBar) handlePlayerEvent(timer *timer, msg *platune.EventResponse, 
 			newSong: res.Song,
 		}
 	case platune.Event_SEEK:
-		timer.setTime(int64(*msg.SeekMillis))
+		timer.setTime(int64(*&msg.GetSeekData().SeekMillis))
 		return playerEvent{
 			icon:    "",
 			color:   "14",
@@ -53,7 +54,7 @@ func (s *StatusBar) handlePlayerEvent(timer *timer, msg *platune.EventResponse, 
 			newSong: currentSong,
 		}
 	case platune.Event_POSITION:
-		timer.setTime(msg.Progress.Position.AsDuration().Milliseconds())
+		timer.setTime(msg.GetProgress().Position.AsDuration().Milliseconds())
 		return playerEvent{
 			icon:    "",
 			color:   "14",

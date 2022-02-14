@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"strconv"
@@ -18,13 +17,14 @@ import (
 )
 
 type PlatuneClient struct {
-	conn             *grpc.ClientConn
-	playerClient     platune.PlayerClient
-	managementClient platune.ManagementClient
-	searchClient     *platune.Management_SearchClient
-	eventClient      *platune.Player_SubscribeEventsClient
-	statusNotifier   *StatusNotifier
-	attemptReconnect bool
+	conn                  *grpc.ClientConn
+	playerClient          platune.PlayerClient
+	managementClient      platune.ManagementClient
+	searchClient          *platune.Management_SearchClient
+	playerEventClient     *platune.Player_SubscribeEventsClient
+	managementEventClient *platune.Management_SubscribeEventsClient
+	statusNotifier        *StatusNotifier
+	attemptReconnect      bool
 }
 
 func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
@@ -60,19 +60,36 @@ func NewTestClient(playerClient platune.PlayerClient, managementClient platune.M
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
-func (p *PlatuneClient) SubscribeEvents(eventCh chan *platune.EventResponse) {
-	if err := p.initEventClient(); err != nil {
+func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *platune.EventResponse) {
+	if err := p.initPlayerEventClient(); err != nil {
 		fmt.Println(err)
 	}
 	for {
-		if *p.eventClient == nil {
+		if *p.playerEventClient == nil {
 			time.Sleep(10 * time.Millisecond)
 			continue
 		}
 
-		msg, err := (*p.eventClient).Recv()
+		msg, err := (*p.playerEventClient).Recv()
 		if err == nil {
 			eventCh <- msg
+		}
+	}
+}
+
+func (p *PlatuneClient) SubscribeManagementEvents(progressCh chan *platune.Progress) {
+	if err := p.initManagementEventClient(); err != nil {
+		fmt.Println(err)
+	}
+	for {
+		if *p.managementEventClient == nil {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		msg, err := (*p.managementEventClient).Recv()
+		if err == nil {
+			progressCh <- msg
 		}
 	}
 }
@@ -103,8 +120,8 @@ func (p *PlatuneClient) ResetStreams() {
 	if p.searchClient != nil {
 		p.initSearchClient() //nolint:errcheck
 	}
-	if p.eventClient != nil {
-		p.initEventClient() //nolint:errcheck
+	if p.playerEventClient != nil {
+		p.initPlayerEventClient() //nolint:errcheck
 	}
 }
 
@@ -193,46 +210,26 @@ func (p *PlatuneClient) Seek(seekTime string) {
 	})
 }
 
-func (p *PlatuneClient) initEventClient() error {
+func (p *PlatuneClient) initPlayerEventClient() error {
 	ctx := context.Background()
 	events, err := p.playerClient.SubscribeEvents(ctx, &emptypb.Empty{})
 
-	p.eventClient = &events
+	p.playerEventClient = &events
 	return err
 }
 
-func (p *PlatuneClient) initSyncClient() (platune.Management_SyncClient, error) {
+func (p *PlatuneClient) initManagementEventClient() error {
 	ctx := context.Background()
-	sync, err := p.managementClient.Sync(ctx, &emptypb.Empty{})
+	events, err := p.managementClient.SubscribeEvents(ctx, &emptypb.Empty{})
 
-	return sync, err
+	p.managementEventClient = &events
+	return err
 }
 
-func (p *PlatuneClient) Sync() <-chan *platune.Progress {
-	p.retryConnection()
-
-	syncClient, err := p.initSyncClient()
-	if err != nil {
-		fmt.Println(err)
-		return nil
-	}
-
-	out := make(chan *platune.Progress)
-	go func() {
-		defer close(out)
-		for {
-			progress, err := syncClient.Recv()
-			if err == nil {
-				out <- progress
-			} else if err == io.EOF {
-				return
-			} else {
-				fmt.Println(err)
-			}
-		}
-	}()
-
-	return out
+func (p *PlatuneClient) StartSync() {
+	p.runCommand("Sync started", func(ctx context.Context) (*emptypb.Empty, error) {
+		return p.managementClient.StartSync(ctx, &emptypb.Empty{})
+	})
 }
 
 func (p *PlatuneClient) initSearchClient() error {
