@@ -192,7 +192,7 @@ impl FileWatchManager {
         if add_new_path {
             new_paths.push(new_path);
         }
-        info!("Paths to be synced: {new_paths:?}");
+
         new_paths
     }
 

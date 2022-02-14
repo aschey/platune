@@ -30,7 +30,8 @@ notify = "4.0.17"
 num_cpus = "1.13.1"
 regex = "1.5.4"
 rusqlite = {version = "0.26.3", default-features = false, features = ["load_extension"]}
-sqlx = {version = "0.5.10", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}
+# Switch back to main repo when this PR is merged to fix db locked errors: https://github.com/launchbadge/sqlx/pull/1658
+sqlx = {git = "https://github.com/madadam/sqlx", rev = "140641875858c85d01ceb516a8f5415ca3f18a4b", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}
 strum = {version = "0.23.0", features = ["derive"]}
 symphonia = {version = "0.5.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 thiserror = "1.0.30"
