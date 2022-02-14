@@ -248,7 +248,7 @@ func TestSync(t *testing.T) {
 		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1, Finished: false, Job: "sync"}, nil)
 		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 0.1, Finished: false, Job: "somethingElse"}, nil)
 		// subscriber channel runs in a separate goroutine so we don't know how many times it will execute before the main thread finishes
-		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 1.0, Finished: true, Job: "sync"}, nil).AnyTimes()
+		stream.EXPECT().Recv().Return(&platune.Progress{Percentage: 1.0, Finished: true, Job: "sync"}, nil).MinTimes(1)
 		expect.SubscribeEvents(gomock.Any(), gomock.Any()).Return(stream, nil)
 		expect.StartSync(gomock.Any(), &emptypb.Empty{}).Return(&emptypb.Empty{}, nil)
 
