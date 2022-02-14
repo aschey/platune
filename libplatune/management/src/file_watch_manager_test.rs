@@ -142,7 +142,7 @@ async fn test_file_sync_concurrent(rename: bool) {
     let (started_tx, mut started_rx) = mpsc::channel(1);
     let msg_task = tokio::spawn(async move {
         // Wait for all syncs to finish
-        while timeout(Duration::from_secs(1), receiver.recv())
+        while timeout(Duration::from_secs(5), receiver.recv())
             .await
             .is_ok()
         {
@@ -183,7 +183,7 @@ async fn test_file_sync_concurrent(rename: bool) {
         paths.push(new_path);
     }
 
-    timeout(Duration::from_secs(5), msg_task)
+    timeout(Duration::from_secs(20), msg_task)
         .await
         .unwrap()
         .unwrap();
