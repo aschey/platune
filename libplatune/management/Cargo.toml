@@ -20,7 +20,7 @@ async-channel = "1.6.1"
 concread = "0.2.21"
 directories = "4.0.1"
 dotenv = "0.15.0"
-futures = "0.3.19"
+futures = "0.3.21"
 ignore = "0.4.18"
 itertools = "0.10.3"
 katatsuki = {git = "https://github.com/aschey/seiri", rev = "40dd21274ee17827598918bde9a5d890bc2e1a4a"}
@@ -35,9 +35,9 @@ sqlx = {git = "https://github.com/madadam/sqlx", rev = "140641875858c85d01ceb516
 strum = {version = "0.23.0", features = ["derive"]}
 symphonia = {version = "0.5.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 thiserror = "1.0.30"
-tokio = {version = "1.15.0", features = ["rt-multi-thread", "macros"]}
+tokio = {version = "1.16.1", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.8", features = ["net", "sync"]}
-tracing = "0.1.29"
+tracing = "0.1.30"
 walkdir = "2.3.2"
 
 [dev-dependencies]
@@ -46,4 +46,4 @@ ctor = "0.1.21"
 pretty_assertions = "1.1.0"
 rstest = "0.12.0"
 tempfile = "3.3.0"
-tracing-subscriber = "0.3.6"
+tracing-subscriber = "0.3.8"
