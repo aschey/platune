@@ -274,7 +274,8 @@ async fn test_sync_all(sync_twice: bool) {
     case(vec!["/test/path/1"], "/test/path/2", vec!["/test/path/1", "/test/path/2"]),
     case(vec!["/test/path"], "/test/path/1", vec!["/test/path"]),
     case(vec!["/test/path/1"], "/test/path", vec!["/test/path"]),
-    case(vec!["/test/path/1","/test/path/2"], "/test", vec!["/test"]))]
+    case(vec!["/test/path/1","/test/path/2"], "/test", vec!["/test"]),
+    case(vec!["/test/path/1"], "/test/path/1", vec!["/test/path/1"]))]
 fn test_normalize(paths: Vec<&str>, new_path: &str, expected: Vec<&str>) {
     let new_paths = FileWatchManager::normalize_paths(
         paths.into_iter().map(PathBuf::from).collect(),

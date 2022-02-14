@@ -60,10 +60,9 @@ impl FileWatchManager {
             while let Ok(event) = event_rx.recv() {
                 info!("Received file watcher event {event:?}");
                 match event {
-                    DebouncedEvent::Create(path) | DebouncedEvent::Write(path) => {
-                        sync_tx_.blocking_send(SyncMessage::Path(path)).unwrap();
-                    }
-                    DebouncedEvent::Remove(path) => {
+                    DebouncedEvent::Create(path)
+                    | DebouncedEvent::Write(path)
+                    | DebouncedEvent::Remove(path) => {
                         sync_tx_.blocking_send(SyncMessage::Path(path)).unwrap();
                     }
                     DebouncedEvent::NoticeWrite(_) | DebouncedEvent::NoticeRemove(_) => {
@@ -181,7 +180,7 @@ impl FileWatchManager {
         // i.e. we don't need to sync /test/dir and /test/dir/1 separately because the second is a subset of the first
         for path in paths.into_iter() {
             // Keep the path if the new path is not an ancestor of this path
-            if !path.starts_with(&new_path) {
+            if !path.starts_with(&new_path) || path == new_path {
                 new_paths.push(path.clone());
             }
             // If a parent of this path is already being tracked, we don't need the new path
