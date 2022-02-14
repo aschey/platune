@@ -7,15 +7,15 @@ use tokio::sync::{broadcast, oneshot};
 use tracing::{error, info};
 
 pub(crate) struct SyncController {
-    pool: Pool<Sqlite>,
+    write_pool: Pool<Sqlite>,
     progress_tx: Option<broadcast::Sender<Option<Result<f32, SyncError>>>>,
     finished_rx: Option<oneshot::Receiver<()>>,
 }
 
 impl SyncController {
-    pub(crate) fn new(pool: Pool<Sqlite>) -> Self {
+    pub(crate) fn new(write_pool: Pool<Sqlite>) -> Self {
         Self {
-            pool,
+            write_pool,
             progress_tx: None,
             finished_rx: None,
         }
@@ -43,10 +43,10 @@ impl SyncController {
 
         self.progress_tx = Some(tx.clone());
         if !folders.is_empty() {
-            let pool = self.pool.clone();
+            let write_pool = self.write_pool.clone();
 
             tokio::task::spawn(async move {
-                let mut engine = SyncEngine::new(folders, pool, mount, tx);
+                let mut engine = SyncEngine::new(folders, write_pool, mount, tx);
                 engine.start().await;
                 if finished_tx.send(()).is_err() {
                     info!("Couldn't send sync finished signal");

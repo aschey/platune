@@ -12,8 +12,8 @@ pub(crate) struct SyncDAL<'a> {
 }
 
 impl<'a> SyncDAL<'a> {
-    pub(crate) async fn try_new(pool: Pool<Sqlite>) -> Result<SyncDAL<'a>, DbError> {
-        let mut tran = pool
+    pub(crate) async fn try_new(write_pool: Pool<Sqlite>) -> Result<SyncDAL<'a>, DbError> {
+        let mut tran = write_pool
             .begin()
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;

@@ -47,7 +47,7 @@ impl SendSyncError for broadcast::Sender<Option<Result<f32, SyncError>>> {
 
 pub(crate) struct SyncEngine {
     paths: Vec<String>,
-    pool: Pool<Sqlite>,
+    write_pool: Pool<Sqlite>,
     mount: Option<String>,
     tx: broadcast::Sender<Option<Result<f32, SyncError>>>,
 }
@@ -55,13 +55,13 @@ pub(crate) struct SyncEngine {
 impl SyncEngine {
     pub(crate) fn new(
         paths: Vec<String>,
-        pool: Pool<Sqlite>,
+        write_pool: Pool<Sqlite>,
         mount: Option<String>,
         tx: broadcast::Sender<Option<Result<f32, SyncError>>>,
     ) -> Self {
         Self {
             paths,
-            pool,
+            write_pool,
             mount,
             tx,
         }
@@ -202,7 +202,7 @@ impl SyncEngine {
         &self,
         mut tags_rx: mpsc::Receiver<(ReadOnlyTrack, String, PathBuf)>,
     ) -> JoinHandle<Result<(), SyncError>> {
-        let pool = self.pool.clone();
+        let write_pool = self.write_pool.clone();
         let cleaned_paths = self
             .paths
             .iter()
@@ -210,7 +210,7 @@ impl SyncEngine {
             .collect_vec();
 
         tokio::spawn(async move {
-            let mut dal = SyncDAL::try_new(pool).await?;
+            let mut dal = SyncDAL::try_new(write_pool).await?;
             while let Some((metadata, path_str, path)) = tags_rx.recv().await {
                 let mut hasher = DefaultHasher::new();
                 metadata.hash(&mut hasher);

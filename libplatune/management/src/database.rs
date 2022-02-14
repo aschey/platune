@@ -15,7 +15,8 @@ use tracing::info;
 
 #[derive(Clone)]
 pub struct Database {
-    pool: Pool<Sqlite>,
+    write_pool: Pool<Sqlite>,
+    read_pool: Pool<Sqlite>,
     search_engine: SearchEngine,
     sync_controller: Arc<Mutex<SyncController>>,
 }
@@ -49,25 +50,44 @@ impl PathMut for DeletedEntry {
 
 impl Database {
     pub async fn connect(path: impl AsRef<Path>, create_if_missing: bool) -> Result<Self, DbError> {
-        let opts = SqliteConnectOptions::new()
+        // Per https://github.com/launchbadge/sqlx/issues/451#issuecomment-649866619,
+        // it is recommended to use a separate reader and writer pool.
+        // The writer pool should have 1 connection to avoid db locks and the reader pool should set readonly=true
+        let reader_opts = SqliteConnectOptions::new()
+            .filename(path.as_ref())
+            .create_if_missing(create_if_missing)
+            .read_only(true)
+            .log_statements(LevelFilter::Debug)
+            .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
+            .to_owned();
+
+        let writer_opts = SqliteConnectOptions::new()
             .filename(path.as_ref())
             .create_if_missing(create_if_missing)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
             .to_owned();
 
-        let pool = SqlitePool::connect_with(opts.clone())
+        let write_pool = sqlx::pool::PoolOptions::new()
+            .max_connections(1)
+            .connect_with(writer_opts)
+            .await
+            .unwrap();
+
+        let read_pool = SqlitePool::connect_with(reader_opts.clone())
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
+
         Ok(Self {
-            search_engine: SearchEngine::new(pool.clone()),
-            sync_controller: Arc::new(Mutex::new(SyncController::new(pool.clone()))),
-            pool,
+            search_engine: SearchEngine::new(read_pool.clone()),
+            sync_controller: Arc::new(Mutex::new(SyncController::new(write_pool.clone()))),
+            read_pool,
+            write_pool,
         })
     }
 
     pub async fn migrate(&self) -> Result<(), DbError> {
-        let mut con = acquire_with_spellfix(&self.pool).await?;
+        let mut con = acquire_with_spellfix(&self.write_pool).await?;
 
         info!("Migrating");
         sqlx::migrate!("./migrations")
@@ -80,7 +100,8 @@ impl Database {
     }
 
     pub async fn close(&self) {
-        self.pool.close().await;
+        self.write_pool.close().await;
+        self.read_pool.close().await;
     }
 
     pub(crate) async fn search(
@@ -118,7 +139,7 @@ impl Database {
             from,
             to
         )
-        .execute(&self.pool)
+        .execute(&self.write_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -156,7 +177,7 @@ impl Database {
             ",
             path
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(&self.read_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -176,7 +197,7 @@ impl Database {
             ",
             artist_ids[0]
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&self.read_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -198,7 +219,7 @@ impl Database {
             ORDER BY aa.album_artist_id, al.album_id, s.track_number;",
             album_artist_ids[0]
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&self.read_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -218,7 +239,7 @@ impl Database {
             ",
             album_ids[0]
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&self.read_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -238,7 +259,7 @@ impl Database {
             ",
             song_ids[0]
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&self.read_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -251,14 +272,14 @@ impl Database {
             INNER JOIN song s ON s.song_id = ds.song_id;
             "
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&self.read_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
     pub(crate) async fn delete_tracks(&self, ids: Vec<i64>) -> Result<(), DbError> {
         let mut tran = self
-            .pool
+            .write_pool
             .begin()
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
@@ -281,7 +302,7 @@ impl Database {
 
     pub(crate) async fn add_folders(&self, paths: Vec<String>) -> Result<(), DbError> {
         let mut tran = self
-            .pool
+            .write_pool
             .begin()
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
@@ -306,7 +327,7 @@ impl Database {
             new_path,
             old_path
         )
-        .execute(&self.pool)
+        .execute(&self.write_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -315,7 +336,7 @@ impl Database {
 
     pub(crate) async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
         Ok(sqlx::query!("SELECT folder_path FROM folder;")
-            .fetch_all(&self.pool)
+            .fetch_all(&self.read_pool)
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?
             .into_iter()
@@ -325,7 +346,7 @@ impl Database {
 
     pub(crate) async fn get_mount(&self, mount_id: i64) -> Option<String> {
         match sqlx::query!("SELECT mount_path FROM mount WHERE mount_id = ?;", mount_id)
-            .fetch_one(&self.pool)
+            .fetch_one(&self.read_pool)
             .await
         {
             Ok(res) => Some(res.mount_path),
@@ -335,12 +356,12 @@ impl Database {
 
     pub(crate) async fn add_mount(&self, path: &str) -> Result<i64, DbError> {
         sqlx::query!(r"INSERT OR IGNORE INTO mount(mount_path) VALUES(?);", path)
-            .execute(&self.pool)
+            .execute(&self.write_pool)
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         let res = sqlx::query!(r"SELECT mount_id FROM mount WHERE mount_path = ?;", path)
-            .fetch_one(&self.pool)
+            .fetch_one(&self.read_pool)
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -353,7 +374,7 @@ impl Database {
             path,
             mount_id
         )
-        .execute(&self.pool)
+        .execute(&self.write_pool)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
