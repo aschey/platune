@@ -119,7 +119,7 @@ pub(crate) fn clean_query(query: &str) -> String {
 }
 
 pub(crate) fn replace_ampersand(string: &str) -> String {
-    string.replace(" & ", " and ").replace("&", " ")
+    string.replace(" & ", " and ").replace('&', " ")
 }
 
 fn replace_special_chars(query: &str) -> String {

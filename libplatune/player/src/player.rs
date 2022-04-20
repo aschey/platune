@@ -79,14 +79,13 @@ impl Player {
                 }
             };
             let extension = Path::new(&path)
-                    .extension()
-                    .map(|e| match e.to_str() {
+                    .extension().and_then(|e| match e.to_str() {
                         None => {
                             warn!("File extension for {path} contains invalid unicode. Not using extension hint");
                             None
                         },
                         extension => extension.map(|e| e.to_owned())
-                    }).flatten();
+                    });
 
             let reader = BufReader::new(file);
 

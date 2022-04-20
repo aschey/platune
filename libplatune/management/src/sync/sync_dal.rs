@@ -189,7 +189,7 @@ impl<'a> SyncDAL<'a> {
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         if acronym.contains('&') {
-            let replaced = acronym.replace("&", "a");
+            let replaced = acronym.replace('&', "a");
             self.insert_alt_alias(entry_value, &replaced).await?;
         }
 

@@ -20,8 +20,8 @@ pub(crate) struct SearchEntry {
 lazy_static! {
     static ref MATCH_REGEX: String = format!(
         r"(?:{}(.*?){}[^\s]*).*",
-        START_MATCH_TEXT.replace("{", r"\{").replace("}", r"\}"),
-        END_MATCH_TEXT.replace("{", r"\{").replace("}", r"\}")
+        START_MATCH_TEXT.replace('{', r"\{").replace('}', r"\}"),
+        END_MATCH_TEXT.replace('{', r"\{").replace('}', r"\}")
     );
 }
 

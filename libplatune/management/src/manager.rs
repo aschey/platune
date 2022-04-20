@@ -49,7 +49,7 @@ impl Manager {
             return Err(ManagerError::InvalidPath(path.to_owned()));
         }
 
-        let path = self.clean_path(&path.to_string_lossy().into_owned());
+        let path = self.clean_path(&path.to_string_lossy());
 
         match self.config.get_drive_id() {
             Some(drive_id) => {
@@ -128,7 +128,7 @@ impl Manager {
             None => folders,
         };
         res.into_iter()
-            .map(|r| r.replace("/", self.delim))
+            .map(|r| r.replace('/', self.delim))
             .collect()
     }
 
@@ -178,7 +178,7 @@ impl Manager {
         }
     }
 
-    async fn update_paths<T>(&self, paths: &mut Vec<T>)
+    async fn update_paths<T>(&self, paths: &mut [T])
     where
         T: PathMut,
     {
@@ -203,7 +203,7 @@ impl Manager {
         query: &str,
         options: SearchOptions<'_>,
     ) -> Result<Vec<SearchResult>, DbError> {
-        Ok(self.db.search(query, options).await?)
+        self.db.search(query, options).await
     }
 
     pub async fn get_deleted_songs(&self) -> Result<Vec<DeletedEntry>, DbError> {

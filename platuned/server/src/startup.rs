@@ -9,7 +9,7 @@ async fn run_server() -> Result<()> {
     let (tx, _) = broadcast::channel(32);
     let signal_handler = SignalHandler::start(tx.clone())?;
     server::run_all(tx).await?;
-    Ok(signal_handler.close().await?)
+    signal_handler.close().await
 }
 
 #[cfg(windows)]

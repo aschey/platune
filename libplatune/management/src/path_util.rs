@@ -33,7 +33,7 @@ where
     let file_path = file_path.as_ref();
     let mut file_path_str = file_path.to_string_lossy().to_string();
     if cfg!(windows) {
-        file_path_str = file_path_str.replace(r"\", r"/");
+        file_path_str = file_path_str.replace('\\', "/");
     }
 
     if let Some(ref mount) = mount {
