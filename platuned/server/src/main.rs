@@ -117,19 +117,3 @@ async fn run_async(file_guard: WorkerGuard, stdout_guard: WorkerGuard) {
         exit(1);
     }
 }
-
-// fn set_panic_hook(panic_hook: PanicHook) {
-//     panic::set_hook(Box::new(|panic_info| {
-//         if let Some(location) = panic_info.location() {
-//             error!(
-//                 report = panic_hook.panic_report(panic_info),
-//                 message = %panic_info,
-//                 panic.file = location.file(),
-//                 panic.line = location.line(),
-//                 panic.column = location.column(),
-//             );
-//         } else {
-//             error!(message = %panic_info);
-//         }
-//     }));
-// }

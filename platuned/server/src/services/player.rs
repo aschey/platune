@@ -35,13 +35,6 @@ fn get_event_response(event: Event, state: PlayerState) -> EventResponse {
             queue_position: state.queue_position as u32,
             volume: state.volume,
         })),
-        // state: Some(State {
-        //     queue: state.queue,
-        //     queue_position: state.queue_position as u32,
-        //     volume: state.volume,
-        // }),
-        // progress: None,
-        // seek_data: None,
     }
 }
 
