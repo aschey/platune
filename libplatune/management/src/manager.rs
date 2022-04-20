@@ -9,7 +9,10 @@ use crate::{
     sync::progress_stream::ProgressStream,
 };
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -25,16 +28,16 @@ pub enum ManagerError {
 #[derive(Clone)]
 pub struct Manager {
     db: Database,
-    config: Config,
+    config: Arc<Box<dyn Config + Send + Sync>>,
     validate_paths: bool,
     delim: &'static str,
 }
 
 impl Manager {
-    pub fn new(db: &Database, config: &Config) -> Self {
+    pub fn new(db: &Database, config: Arc<Box<dyn Config + Send + Sync>>) -> Self {
         Self {
             db: db.clone(),
-            config: config.clone(),
+            config,
             validate_paths: true,
             delim: if cfg!(windows) { r"\" } else { "/" },
         }

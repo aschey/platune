@@ -8,6 +8,7 @@ use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::{path::Path, time::Duration};
 use tokio::sync::Mutex;
@@ -86,6 +87,23 @@ impl Database {
         })
     }
 
+    pub async fn connect_in_memory() -> Result<Self, DbError> {
+        let opts = SqliteConnectOptions::from_str(":memory:")
+            .unwrap()
+            .log_statements(LevelFilter::Debug)
+            .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
+            .to_owned();
+
+        let pool = SqlitePool::connect_with(opts).await.unwrap();
+
+        Ok(Self {
+            search_engine: SearchEngine::new(pool.clone()),
+            sync_controller: Arc::new(Mutex::new(SyncController::new(pool.clone()))),
+            read_pool: pool.clone(),
+            write_pool: pool,
+        })
+    }
+
     pub async fn migrate(&self) -> Result<(), DbError> {
         let mut con = acquire_with_spellfix(&self.write_pool).await?;
 
@@ -99,6 +117,7 @@ impl Database {
         Ok(())
     }
 
+    // TODO: make sure this gets called on shutdown
     pub async fn close(&self) {
         self.write_pool.close().await;
         self.read_pool.close().await;

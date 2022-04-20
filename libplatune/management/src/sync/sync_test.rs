@@ -1,4 +1,4 @@
-use crate::{config::Config, database::Database, manager::Manager};
+use crate::{config::MemoryConfig, database::Database, manager::Manager};
 use futures::StreamExt;
 use itertools::Itertools;
 use pretty_assertions::assert_eq;
@@ -6,11 +6,11 @@ use rstest::*;
 use std::{
     fs::{self, create_dir, create_dir_all},
     path::Path,
+    sync::Arc,
     time::Duration,
 };
 use tempfile::TempDir;
-use tokio::time::timeout;
-use tracing::{info, Level};
+use tracing::Level;
 
 #[ctor::ctor]
 fn init() {
@@ -27,7 +27,7 @@ fn init() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_empty() {
     let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
+    let (_, mut manager) = setup().await;
     let music_dir = tempdir.path().join("configdir");
     create_dir(music_dir.clone()).unwrap();
     manager
@@ -40,27 +40,18 @@ pub async fn test_sync_empty() {
         msgs.push(msg.unwrap());
     }
 
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
-
     assert_eq!(1.0, *msgs.last().unwrap());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_no_folder() {
-    let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
+    let (_, mut manager) = setup().await;
 
     let mut receiver = manager.sync(None).await.unwrap();
     let mut msgs = vec![];
     while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
     }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 
     assert_eq!(Vec::<f32>::new(), msgs);
 }
@@ -69,7 +60,7 @@ pub async fn test_sync_no_folder() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_basic(use_mount: bool) {
     let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
+    let (_, mut manager) = setup().await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
@@ -102,21 +93,17 @@ pub async fn test_sync_basic(use_mount: bool) {
     let msgs = msgs.into_iter().skip_while(|m| *m == 0.0).collect_vec();
     // progress message order is not deterministic so this is the best we can do
     assert_eq!(1.0, *msgs.last().unwrap());
-    assert!(msgs.len() > 1);
+    assert!(!msgs.is_empty());
 
     for path in paths {
         assert!(manager.get_song_by_path(path).await.unwrap().is_some());
     }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_multiple() {
     let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
+    let (_, mut manager) = setup().await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
 
@@ -156,10 +143,6 @@ pub async fn test_sync_multiple() {
     for path in paths {
         assert!(manager.get_song_by_path(path).await.unwrap().is_some());
     }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 }
 
 async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager) {
@@ -191,7 +174,7 @@ async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager)
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_delete() {
     let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
+    let (_, mut manager) = setup().await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
@@ -206,10 +189,6 @@ pub async fn test_sync_delete() {
         .unwrap();
 
     let deleted2 = manager.get_deleted_songs().await.unwrap();
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 
     let last_song = inner_dir.join("test3.mp3");
 
@@ -226,7 +205,7 @@ pub async fn test_sync_delete() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_delete_and_readd() {
     let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
+    let (_, mut manager) = setup().await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
@@ -243,10 +222,6 @@ pub async fn test_sync_delete_and_readd() {
 
     let deleted2 = manager.get_deleted_songs().await.unwrap();
 
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
-
     assert_eq!(1, deleted.len());
     assert_eq!(
         deleted[0].song_path,
@@ -257,13 +232,10 @@ pub async fn test_sync_delete_and_readd() {
     assert_eq!(0, deleted2.len());
 }
 
-async fn setup(tempdir: &TempDir) -> (Database, Manager) {
-    let sql_path = tempdir.path().join("platune.db");
-    info!("{:?}", sql_path);
-    let config_path = tempdir.path().join("platuneconfig");
-    let db = Database::connect(sql_path, true).await.unwrap();
+async fn setup() -> (Database, Manager) {
+    let db = Database::connect_in_memory().await.unwrap();
     db.migrate().await.unwrap();
-    let config = Config::new_from_path(config_path).unwrap();
-    let manager = Manager::new(&db, &config);
+    let config = Arc::new(MemoryConfig::new_boxed());
+    let manager = Manager::new(&db, config.clone());
     (db, manager)
 }

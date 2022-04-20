@@ -79,7 +79,8 @@ fn main() {
                 .with_thread_names(true)
                 .with_writer(non_blocking_stdout)
                 .with_filter(LevelFilter::INFO)
-        });
+        })
+        .with(tracing_error::ErrorLayer::default());
 
     #[cfg(feature = "console")]
     let collector = collector.with(console_subscriber::spawn());

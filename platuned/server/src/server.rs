@@ -8,7 +8,7 @@ use crate::unix::unix_stream::UnixStream;
 use anyhow::Context;
 use anyhow::Result;
 use futures::future::try_join_all;
-use libplatune_management::config::Config;
+use libplatune_management::config::FileConfig;
 use libplatune_management::database::Database;
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::Manager;
@@ -85,8 +85,8 @@ async fn init_manager() -> Result<Manager> {
     db.migrate()
         .await
         .with_context(|| "Error migrating database")?;
-    let config = Config::try_new()?;
-    let manager = Manager::new(&db, &config);
+    let config = Arc::new(FileConfig::try_new()?);
+    let manager = Manager::new(&db, config);
 
     Ok(manager)
 }

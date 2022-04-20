@@ -2475,6 +2475,7 @@ dependencies = [
  "tonic-reflection",
  "tracing",
  "tracing-appender",
+ "tracing-error",
  "tracing-subscriber",
  "windows-service",
 ]

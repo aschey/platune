@@ -1,13 +1,12 @@
-use crate::{config::Config, database::Database, manager::Manager};
+use crate::{config::MemoryConfig, database::Database, manager::Manager};
 use futures::StreamExt;
 use pretty_assertions::assert_eq;
 use rstest::*;
 use std::{
     fs::{self, create_dir_all},
-    time::Duration,
+    sync::Arc,
 };
 use tempfile::TempDir;
-use tokio::time::timeout;
 use tracing::{info, Level};
 
 #[ctor::ctor]
@@ -513,7 +512,7 @@ pub struct SearchResultTest {
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, search: &str) {
     let tempdir = TempDir::new().unwrap();
-    let (db, mut manager) = setup(&tempdir).await;
+    let (_, mut manager) = setup().await;
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
@@ -563,19 +562,12 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         //     assert_eq!(&ids[j], id);
         // }
     }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 }
 
-async fn setup(tempdir: &TempDir) -> (Database, Manager) {
-    let sql_path = tempdir.path().join("platune.db");
-    info!("{:?}", sql_path);
-    let config_path = tempdir.path().join("platuneconfig");
-    let db = Database::connect(sql_path, true).await.unwrap();
+async fn setup() -> (Database, Manager) {
+    let db = Database::connect_in_memory().await.unwrap();
     db.migrate().await.unwrap();
-    let config = Config::new_from_path(config_path).unwrap();
-    let manager = Manager::new(&db, &config);
+    let config = Arc::new(MemoryConfig::new_boxed());
+    let manager = Manager::new(&db, config);
     (db, manager)
 }

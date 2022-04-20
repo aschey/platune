@@ -1,19 +1,32 @@
 use super::{FileWatchManager, Progress};
-use crate::{config::Config, database::Database, manager::Manager};
+use crate::{config::MemoryConfig, database::Database, manager::Manager};
 use itertools::Itertools;
 use pretty_assertions::assert_eq;
 use rstest::*;
 use std::{
     fs::{self, create_dir_all},
     path::PathBuf,
+    sync::Arc,
     time::Duration,
 };
 use tempfile::TempDir;
 use tokio::{sync::mpsc, time::timeout};
-use tracing::info;
+use tracing::Level;
+
+#[ctor::ctor]
+fn init() {
+    tracing_subscriber::fmt()
+        .pretty()
+        .with_thread_ids(true)
+        .with_thread_names(true)
+        .with_test_writer()
+        .with_max_level(Level::INFO)
+        .try_init()
+        .unwrap_or_default();
+}
 
 #[rstest]
-#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_file_sync_sequential(
     #[values(true, false)] add_folder_before: bool,
     #[values(true, false)] rename_dir: bool,
@@ -21,7 +34,7 @@ async fn test_file_sync_sequential(
     #[values(1, 100)] debounce_time: u64,
 ) {
     let tempdir = TempDir::new().unwrap();
-    let (db, manager) = setup(&tempdir).await;
+    let (_, manager) = setup().await;
 
     let music_dir = tempdir.path().join("configdir");
     let mut inner_dir = music_dir.join("folder1");
@@ -121,17 +134,13 @@ async fn test_file_sync_sequential(
             assert!(manager.get_song_by_path(path).await.unwrap().is_some());
         }
     }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 }
 
 #[rstest(rename, case(true), case(false))]
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_file_sync_concurrent(rename: bool) {
     let tempdir = TempDir::new().unwrap();
-    let (db, manager) = setup(&tempdir).await;
+    let (_, manager) = setup().await;
 
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
@@ -193,17 +202,13 @@ async fn test_file_sync_concurrent(rename: bool) {
     for path in &paths {
         assert!(manager.get_song_by_path(path).await.unwrap().is_some());
     }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 }
 
 #[rstest(sync_twice, case(true), case(false))]
-#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_sync_all(sync_twice: bool) {
     let tempdir = TempDir::new().unwrap();
-    let (db, manager) = setup(&tempdir).await;
+    let (_, manager) = setup().await;
 
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
@@ -263,10 +268,6 @@ async fn test_sync_all(sync_twice: bool) {
     for path in &paths {
         assert!(manager.get_song_by_path(path).await.unwrap().is_some());
     }
-
-    timeout(Duration::from_secs(5), db.close())
-        .await
-        .unwrap_or_default();
 }
 
 #[rstest(paths, new_path, expected,
@@ -285,14 +286,11 @@ fn test_normalize(paths: Vec<&str>, new_path: &str, expected: Vec<&str>) {
     assert_eq!(expected, new_paths);
 }
 
-async fn setup(tempdir: &TempDir) -> (Database, Manager) {
-    let sql_path = tempdir.path().join("platune.db");
-    info!("sql path: {sql_path:?}");
-    let config_path = tempdir.path().join("platuneconfig");
-    let db = Database::connect(sql_path, true).await.unwrap();
+async fn setup() -> (Database, Manager) {
+    let db = Database::connect_in_memory().await.unwrap();
     db.migrate().await.unwrap();
-    let config = Config::new_from_path(config_path).unwrap();
-    let manager = Manager::new(&db, &config);
+    let config = Arc::new(MemoryConfig::new_boxed());
+    let manager = Manager::new(&db, config);
 
     (db, manager)
 }
