@@ -7,26 +7,26 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.53"
-async-stream = "0.3.2"
-color-eyre = "0.6.0"
-console-subscriber = {version = "0.1.2", features = ["parking_lot"], optional = true}
+anyhow = "1.0.56"
+async-stream = "0.3.3"
+color-eyre = "0.6.1"
+console-subscriber = {version = "0.1.4", features = ["parking_lot"], optional = true}
 directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.21"
 libplatune-management = {path = "../../libplatune/management"}
 libplatune-player = {path = "../../libplatune/player"}
-prost = "0.9.0"
-prost-types = "0.9.0"
-time = "0.3.7"
-tokio = {version = "1.16.1", features = ["rt-multi-thread", "macros"]}
+prost = "0.10.1"
+prost-types = "0.10.1"
+time = "0.3.9"
+tokio = {version = "1.17.0", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.8", features = ["net"]}
-tonic = "0.6.2"
-tonic-reflection = "0.3.0"
-tracing = "0.1.30"
-tracing-appender = "0.2.0"
+tonic = "0.7.1"
+tonic-reflection = "0.4.0"
+tracing = "0.1.34"
+tracing-appender = "0.2.2"
 tracing-error = "0.2.0"
-tracing-subscriber = {version = "0.3.8", features = ["local-time", "env-filter"]}
+tracing-subscriber = {version = "0.3.11", features = ["local-time", "env-filter"]}
 
 [features]
 console = ["console-subscriber", "tokio/tracing"]
@@ -40,4 +40,4 @@ signal-hook = "0.3.13"
 signal-hook-tokio = {version = "0.3.1", features = ["futures-v0_3"]}
 
 [build-dependencies]
-tonic-build = {version = "0.6.2", features = ["prost"]}
+tonic-build = {version = "0.7.0", features = ["prost"]}

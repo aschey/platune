@@ -124,10 +124,11 @@ fn decode_sources(
         sample_rate_out,
         resample_chunk_size,
         out_channels,
-    );
+    )
+    .unwrap();
     let len = paths.len();
 
-    let mut n_frames = resampler.nbr_frames_needed();
+    let mut n_frames = resampler.input_frames_next();
     let mut resampler_index = 0;
     let mut resampler_buf = vec![vec![0.0; n_frames]; out_channels];
 
@@ -209,7 +210,7 @@ fn decode_sources(
                 for chan in &mut resampler_buf {
                     chan[resampler_index..].iter_mut().for_each(|d| *d = 0.0);
                 }
-                let next_resample = resampler.process(&resampler_buf).unwrap();
+                let next_resample = resampler.process(&resampler_buf, None).unwrap();
                 for i in 0..next_resample[0].len() {
                     for channel in next_resample.iter() {
                         all_samples.push(channel[i]);
@@ -223,8 +224,9 @@ fn decode_sources(
                 sample_rate_out,
                 resample_chunk_size,
                 out_channels,
-            );
-            n_frames = resampler.nbr_frames_needed();
+            )
+            .unwrap();
+            n_frames = resampler.input_frames_next();
             resampler_index = 0;
             resampler_buf = vec![vec![0.0; n_frames]; out_channels];
         }
@@ -250,7 +252,7 @@ fn decode_sources(
                             for chan in &mut resampler_buf {
                                 chan[resampler_index..].iter_mut().for_each(|d| *d = 0.0);
                             }
-                            let next_resample = resampler.process(&resampler_buf).unwrap();
+                            let next_resample = resampler.process(&resampler_buf, None).unwrap();
                             for i in 0..next_resample[0].len() {
                                 for channel in next_resample.iter() {
                                     all_samples.push(channel[i]);
@@ -262,7 +264,7 @@ fn decode_sources(
                 }
             }
 
-            let next_resample = resampler.process(&resampler_buf).unwrap(); //resampler_buf.clone();
+            let next_resample = resampler.process(&resampler_buf, None).unwrap();
             for i in 0..next_resample[0].len() {
                 for channel in next_resample.iter() {
                     all_samples.push(channel[i]);

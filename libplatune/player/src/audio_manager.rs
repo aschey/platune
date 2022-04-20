@@ -33,9 +33,10 @@ impl AudioManager {
             default_sample_rate,
             1024,
             default_channels,
-        );
+        )
+        .expect("failed to create resampler");
 
-        let n_frames = resampler.nbr_frames_needed();
+        let n_frames = resampler.input_frames_next();
         Self {
             in_buf: ChannelBuffer::new(n_frames, default_channels),
             out_buf: Vec::with_capacity(n_frames * default_channels),
@@ -52,8 +53,9 @@ impl AudioManager {
             self.output.sample_rate(),
             resample_chunk_size,
             self.output.channels(),
-        );
-        let n_frames = self.resampler.nbr_frames_needed();
+        )
+        .expect("failed to create resampler");
+        let n_frames = self.resampler.input_frames_next();
         let channels = self.output.channels();
 
         self.in_buf = ChannelBuffer::new(n_frames, channels);
@@ -85,7 +87,7 @@ impl AudioManager {
         // This shouldn't panic as long as we calculated the number of channels and frames correctly
         let resampled = self
             .resampler
-            .process(self.in_buf.inner())
+            .process(self.in_buf.inner(), None)
             .expect("number of frames was not correctly calculated");
         self.in_buf.reset();
 
