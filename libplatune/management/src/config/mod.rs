@@ -1,5 +1,4 @@
 mod config_error;
-mod config_trait;
 mod file_config;
 mod memory_config;
 

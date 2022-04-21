@@ -225,7 +225,7 @@ pub async fn test_sync_delete_and_readd() {
     assert_eq!(1, deleted.len());
     assert_eq!(
         deleted[0].song_path,
-        last_song.to_string_lossy().to_string().replace("\\", "/")
+        last_song.to_string_lossy().to_string().replace('\\', "/")
     );
 
     // TODO: add test to check if number of songs decreased once we have an endpoint to get all songs

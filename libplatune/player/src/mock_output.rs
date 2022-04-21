@@ -1,11 +1,11 @@
 use std::thread;
 use std::time::Duration;
 
-use cpal::{traits::StreamTrait, BufferSize, ChannelCount, InputDevices, OutputDevices, Sample};
+use cpal::{traits::StreamTrait, ChannelCount, InputDevices, OutputDevices, Sample};
 use cpal::{
     BuildStreamError, DefaultStreamConfigError, DeviceNameError, DevicesError, InputCallbackInfo,
     PauseStreamError, PlayStreamError, SampleFormat, SampleRate, StreamConfig, StreamError,
-    SupportedBufferSize, SupportedStreamConfigRange, SupportedStreamConfigsError,
+    SupportedStreamConfigRange, SupportedStreamConfigsError,
 };
 use flume::Sender;
 use spin_sleep::SpinSleeper;
@@ -38,7 +38,6 @@ pub struct OutputStreamTimestamp {
 pub struct SupportedStreamConfig {
     channels: ChannelCount,
     sample_rate: SampleRate,
-    buffer_size: SupportedBufferSize,
     sample_format: SampleFormat,
 }
 
@@ -51,20 +50,8 @@ impl SupportedStreamConfig {
         self.sample_rate
     }
 
-    pub fn buffer_size(&self) -> &SupportedBufferSize {
-        &self.buffer_size
-    }
-
     pub fn sample_format(&self) -> SampleFormat {
         self.sample_format
-    }
-
-    pub fn config(&self) -> StreamConfig {
-        StreamConfig {
-            channels: self.channels,
-            sample_rate: self.sample_rate,
-            buffer_size: BufferSize::Default,
-        }
     }
 }
 
@@ -269,10 +256,6 @@ impl DeviceTrait for Device {
         Ok(SupportedStreamConfig {
             channels: 2,
             sample_rate: SampleRate(44100),
-            buffer_size: SupportedBufferSize::Range {
-                min: 0,
-                max: u32::MAX,
-            },
             sample_format: SampleFormat::F32,
         })
     }
@@ -282,10 +265,6 @@ impl DeviceTrait for Device {
         Ok(SupportedStreamConfig {
             channels: self.channels,
             sample_rate: SampleRate(self.sample_rate),
-            buffer_size: SupportedBufferSize::Range {
-                min: 0,
-                max: u32::MAX,
-            },
             sample_format: SampleFormat::F32,
         })
     }

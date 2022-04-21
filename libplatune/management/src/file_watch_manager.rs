@@ -116,7 +116,6 @@ impl FileWatchManager {
                     }
                     Err(_) => {
                         if paths.is_empty() {
-                            //info!("paths empty, ignoring");
                             // If no paths were changed, no need to sync
                             continue;
                         }
