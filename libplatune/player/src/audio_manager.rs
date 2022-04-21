@@ -21,6 +21,7 @@ pub(crate) struct AudioManager {
     input_sample_rate: usize,
     output: Box<dyn AudioOutput>,
     resampler: FftFixedInOut<f64>,
+    resampler_buf: Vec<Vec<f64>>,
     volume: f64,
 }
 
@@ -36,12 +37,15 @@ impl AudioManager {
         )
         .expect("failed to create resampler");
 
+        let resampler_buf = resampler.input_buffer_allocate();
         let n_frames = resampler.input_frames_next();
+
         Self {
             in_buf: ChannelBuffer::new(n_frames, default_channels),
             out_buf: Vec::with_capacity(n_frames * default_channels),
             input_sample_rate: default_sample_rate,
             resampler,
+            resampler_buf,
             output,
             volume,
         }
@@ -56,8 +60,9 @@ impl AudioManager {
         )
         .expect("failed to create resampler");
         let n_frames = self.resampler.input_frames_next();
-        let channels = self.output.channels();
+        self.resampler_buf = self.resampler.input_buffer_allocate();
 
+        let channels = self.output.channels();
         self.in_buf = ChannelBuffer::new(n_frames, channels);
         self.out_buf = Vec::with_capacity(n_frames * channels);
     }
@@ -85,13 +90,13 @@ impl AudioManager {
 
     fn write_output(&mut self) {
         // This shouldn't panic as long as we calculated the number of channels and frames correctly
-        let resampled = self
-            .resampler
-            .process(self.in_buf.inner(), None)
+
+        self.resampler
+            .process_into_buffer(self.in_buf.inner(), &mut self.resampler_buf, None)
             .expect("number of frames was not correctly calculated");
         self.in_buf.reset();
 
-        self.out_buf.fill_from_deinterleaved(resampled);
+        self.out_buf.fill_from_deinterleaved(&self.resampler_buf);
         self.output.write(&self.out_buf);
     }
 
