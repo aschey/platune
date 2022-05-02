@@ -66,6 +66,7 @@ pub(crate) fn decode_loop(
             }
             Err(TryRecvError::Empty) => {
                 // If no pending source, stop the output to preserve cpu
+                info!("No pending source, stopping output");
                 audio_manager.play_remaining();
                 audio_manager.stop();
                 match queue_rx.recv() {
@@ -85,7 +86,9 @@ pub(crate) fn decode_loop(
                             None,
                         );
                     }
-                    Err(_) => break,
+                    Err(_) => {
+                        info!("Queue receiver disconnected");
+                    }
                 };
             }
             Err(TryRecvError::Disconnected) => {

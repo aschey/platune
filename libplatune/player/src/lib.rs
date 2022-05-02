@@ -220,11 +220,12 @@ pub mod platune_player {
                 .send_async(Command::Stop)
                 .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))?;
-
+            info!("Sent stop command");
             self.cmd_sender
                 .send_async(Command::Shutdown)
                 .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))?;
+            info!("Sent shutdown command");
             self.joined = true;
             Ok(())
         }

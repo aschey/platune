@@ -26,8 +26,9 @@ impl<'a> AudioProcessor<'a> {
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
     ) -> Result<Self, DecoderError> {
-        let decoder = Decoder::new(decoder_params)?;
+        let decoder_result = Decoder::new(decoder_params);
 
+        // Always send the initialization response, even if decoding failed
         match cmd_rx.recv() {
             Ok(DecoderCommand::WaitForInitialization) => {
                 info!("Notifying decoder started");
@@ -43,13 +44,23 @@ impl<'a> AudioProcessor<'a> {
             }
         }
 
-        Ok(Self {
-            decoder,
-            cmd_rx,
-            player_cmd_tx,
-            event_tx,
-            last_send_time: Duration::default(),
-        })
+        match decoder_result {
+            Ok(decoder) => Ok(Self {
+                decoder,
+                cmd_rx,
+                player_cmd_tx,
+                event_tx,
+                last_send_time: Duration::default(),
+            }),
+            Err(e) => {
+                // Consider the current source ended since it failed to decode
+                if let Err(e) = player_cmd_tx.send(Command::Ended) {
+                    error!("Unable to send ended command: {e:?}");
+                }
+
+                Err(e)
+            }
+        }
     }
 
     pub(crate) fn sample_rate(&self) -> usize {
