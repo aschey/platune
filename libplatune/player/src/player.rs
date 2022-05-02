@@ -143,21 +143,34 @@ impl Player {
             }
         }
 
-        if success {
-            self.wait_for_decoder().await;
+        if success && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded {
             self.audio_status = AudioStatus::Playing;
         }
 
         success
     }
 
-    async fn wait_for_decoder(&self) {
-        if let Err(e) = self
+    async fn wait_for_decoder(&self) -> DecoderResponse {
+        match self
             .cmd_sender
             .get_response(DecoderCommand::WaitForInitialization)
             .await
         {
-            error!("Error receiving initialization response {e:?}");
+            Ok(DecoderResponse::InitializationSucceeded) => {
+                DecoderResponse::InitializationSucceeded
+            }
+            Ok(DecoderResponse::InitializationFailed) => {
+                warn!("Decoder initialization failed");
+                DecoderResponse::InitializationFailed
+            }
+            Ok(response) => {
+                error!("Got unexpected decoder response: {:?}", response);
+                response
+            }
+            Err(e) => {
+                error!("Failed to get decoder response: {:?}", e);
+                DecoderResponse::InitializationFailed
+            }
         }
     }
 

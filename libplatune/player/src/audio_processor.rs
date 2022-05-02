@@ -26,15 +26,9 @@ impl<'a> AudioProcessor<'a> {
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
     ) -> Result<Self, DecoderError> {
-        let decoder_result = Decoder::new(decoder_params);
-
-        // Always send the initialization response, even if decoding failed
         match cmd_rx.recv() {
             Ok(DecoderCommand::WaitForInitialization) => {
                 info!("Notifying decoder started");
-                if let Err(e) = cmd_rx.respond(DecoderResponse::Received) {
-                    error!("Error sending decoder started response {e:?}");
-                }
             }
             Ok(cmd) => {
                 error!("Got unexpected command {cmd:?}");
@@ -44,20 +38,24 @@ impl<'a> AudioProcessor<'a> {
             }
         }
 
-        match decoder_result {
-            Ok(decoder) => Ok(Self {
-                decoder,
-                cmd_rx,
-                player_cmd_tx,
-                event_tx,
-                last_send_time: Duration::default(),
-            }),
-            Err(e) => {
-                // Consider the current source ended since it failed to decode
-                if let Err(e) = player_cmd_tx.send(Command::Ended) {
-                    error!("Unable to send ended command: {e:?}");
+        match Decoder::new(decoder_params) {
+            Ok(decoder) => {
+                if let Err(e) = cmd_rx.respond(DecoderResponse::InitializationSucceeded) {
+                    error!("Error sending decoder initialization succeeded response {e:?}");
                 }
 
+                Ok(Self {
+                    decoder,
+                    cmd_rx,
+                    player_cmd_tx,
+                    event_tx,
+                    last_send_time: Duration::default(),
+                })
+            }
+            Err(e) => {
+                if let Err(e) = cmd_rx.respond(DecoderResponse::InitializationFailed) {
+                    error!("Error sending decoder initialization failed {e:?}");
+                }
                 Err(e)
             }
         }

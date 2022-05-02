@@ -486,3 +486,19 @@ async fn test_decode_all_data(
         }
     }
 }
+
+#[rstest(wait_for_recv, case(true), case(false))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn test_decode_invalid(wait_for_recv: bool) {
+    let player = PlatunePlayer::new(Default::default());
+    let mut receiver = player.subscribe();
+    player
+        .set_queue(vec![get_path("invalid_file.mp3")])
+        .await
+        .unwrap();
+    if wait_for_recv {
+        receiver.timed_recv().await;
+    }
+
+    assert_matches!(timed_await(player.join()).await, Ok(Ok(())));
+}
