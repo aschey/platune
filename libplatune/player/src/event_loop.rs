@@ -3,8 +3,11 @@ use std::time::Duration;
 use crate::{
     audio_manager::AudioManager,
     dto::{
-        command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
-        player_response::PlayerResponse, queue_source::QueueSource,
+        command::Command,
+        decoder_command::DecoderCommand,
+        decoder_response::DecoderResponse,
+        player_response::PlayerResponse,
+        queue_source::{QueueSource, QueueStartMode},
     },
     output::CpalAudioOutput,
     platune_player::PlayerEvent,
@@ -37,31 +40,36 @@ pub(crate) fn decode_loop(
         match queue_rx.try_recv() {
             Ok(queue_source) => {
                 info!("try_recv got source {queue_source:?}");
-                if queue_source.force_restart_output {
-                    info!("Restarting output stream");
-                    audio_manager.stop();
-                    if let Err(e) = audio_manager.reset(queue_source.settings.resample_chunk_size) {
-                        error!("Error resetting output stream: {e:?}");
-                        return;
+                match queue_source.queue_start_mode {
+                    QueueStartMode::ForceRestart => {
+                        info!("Restarting output stream");
+                        audio_manager.stop();
+                        if let Err(e) =
+                            audio_manager.reset(queue_source.settings.resample_chunk_size)
+                        {
+                            error!("Error resetting output stream: {e:?}");
+                            return;
+                        }
+                        prev_stop_position = audio_manager.decode_source(
+                            queue_source,
+                            &mut cmd_rx,
+                            &player_cmd_tx,
+                            &event_tx,
+                            Some(prev_stop_position),
+                        );
                     }
-                    prev_stop_position = audio_manager.decode_source(
-                        queue_source,
-                        &mut cmd_rx,
-                        &player_cmd_tx,
-                        &event_tx,
-                        Some(prev_stop_position),
-                    );
-                } else {
-                    if let Err(e) = audio_manager.start() {
-                        error!("Error starting output stream: {e:?}");
+                    QueueStartMode::Normal => {
+                        if let Err(e) = audio_manager.start() {
+                            error!("Error starting output stream: {e:?}");
+                        }
+                        prev_stop_position = audio_manager.decode_source(
+                            queue_source,
+                            &mut cmd_rx,
+                            &player_cmd_tx,
+                            &event_tx,
+                            None,
+                        );
                     }
-                    prev_stop_position = audio_manager.decode_source(
-                        queue_source,
-                        &mut cmd_rx,
-                        &player_cmd_tx,
-                        &event_tx,
-                        None,
-                    );
                 }
             }
             Err(TryRecvError::Empty) => {

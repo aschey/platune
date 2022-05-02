@@ -5,9 +5,13 @@ use tracing::{error, info, warn};
 
 use crate::{
     dto::{
-        audio_status::AudioStatus, decoder_command::DecoderCommand,
-        decoder_response::DecoderResponse, player_event::PlayerEvent, player_state::PlayerState,
-        player_status::TrackStatus, queue_source::QueueSource,
+        audio_status::AudioStatus,
+        decoder_command::DecoderCommand,
+        decoder_response::DecoderResponse,
+        player_event::PlayerEvent,
+        player_state::PlayerState,
+        player_status::TrackStatus,
+        queue_source::{QueueSource, QueueStartMode},
     },
     http_stream_reader::HttpStreamReader,
     settings::Settings,
@@ -93,7 +97,7 @@ impl Player {
         }
     }
 
-    async fn append_file(&mut self, path: String, force_restart_output: bool) -> bool {
+    async fn append_file(&mut self, path: String, queue_start_mode: QueueStartMode) -> bool {
         match self.get_source(path.clone()).await {
             Some(source) => {
                 info!("Sending source {path}");
@@ -102,7 +106,7 @@ impl Player {
                     .send_async(QueueSource {
                         source,
                         settings: self.settings.clone(),
-                        force_restart_output,
+                        queue_start_mode,
                         volume: self.pending_volume.take(),
                     })
                     .await
@@ -125,17 +129,24 @@ impl Player {
         }
     }
 
-    async fn start(&mut self, force_restart_output: bool) -> bool {
+    async fn start(&mut self, queue_start_mode: QueueStartMode) -> bool {
         let mut success = false;
         // Keep trying until a valid source is found or we reach the end of the queue
         while !success {
             match self.get_current() {
                 Some(path) => {
-                    success |= self.append_file(path.clone(), force_restart_output).await;
+                    success |= self.append_file(path.clone(), queue_start_mode).await;
 
                     if let Some(path) = self.get_next() {
                         success |= self
-                            .append_file(path, force_restart_output && !success)
+                            .append_file(
+                                path,
+                                if queue_start_mode == QueueStartMode::ForceRestart && !success {
+                                    QueueStartMode::ForceRestart
+                                } else {
+                                    QueueStartMode::Normal
+                                },
+                            )
                             .await;
                     }
                 }
@@ -302,18 +313,20 @@ impl Player {
         }
 
         if let Some(file) = self.get_next() {
-            self.append_file(file, false).await;
+            self.append_file(file, QueueStartMode::Normal).await;
         }
     }
 
     pub(crate) async fn reset(&mut self) {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
-        self.set_queue_internal(queue, queue_position, true).await;
+        self.set_queue_internal(queue, queue_position, QueueStartMode::ForceRestart)
+            .await;
     }
 
     pub(crate) async fn set_queue(&mut self, queue: Vec<String>) {
-        self.set_queue_internal(queue, 0, false).await;
+        self.set_queue_internal(queue, 0, QueueStartMode::Normal)
+            .await;
         self.event_tx
             .send(PlayerEvent::StartQueue(self.state.clone()))
             .unwrap_or_default();
@@ -323,7 +336,7 @@ impl Player {
         &mut self,
         queue: Vec<String>,
         start_position: usize,
-        force_restart_output: bool,
+        queue_start_mode: QueueStartMode,
     ) {
         // Don't need to send stop signal if no sources are playing
         if self.queued_count > 0 {
@@ -332,7 +345,7 @@ impl Player {
 
         self.state.queue_position = start_position;
         self.state.queue = queue;
-        self.start(force_restart_output).await;
+        self.start(queue_start_mode).await;
     }
 
     pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) {
@@ -350,7 +363,7 @@ impl Player {
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
             // so we need to add it here explicitly
             if self.queued_count == 1 {
-                self.append_file(song, false).await;
+                self.append_file(song, QueueStartMode::Normal).await;
             }
 
             self.event_tx
@@ -381,7 +394,7 @@ impl Player {
             );
             self.state.queue_position += 1;
             self.reset_queue().await;
-            if self.start(false).await {
+            if self.start(QueueStartMode::Normal).await {
                 self.event_tx
                     .send(PlayerEvent::Next(self.state.clone()))
                     .unwrap_or_default();
@@ -402,7 +415,7 @@ impl Player {
             );
             self.state.queue_position -= 1;
             self.reset_queue().await;
-            if self.start(false).await {
+            if self.start(QueueStartMode::Normal).await {
                 self.event_tx
                     .send(PlayerEvent::Previous(self.state.clone()))
                     .unwrap_or_default();
