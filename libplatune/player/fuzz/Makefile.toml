@@ -2,4 +2,4 @@
 args = ["fuzz", "run", "player", "--", "-detect_leaks=0"]
 command = "cargo"
 condition = {platforms = ["linux"]}
-install_crate = "fuzz"
+install_crate = "cargo-fuzz"
