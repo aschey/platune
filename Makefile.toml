@@ -3,12 +3,18 @@ default_to_workspace = false
 
 [tasks.setup]
 script = '''
+# precommit hooks
 npm install
 npm run prepare
+# mocking for cli
 go install github.com/golang/mock/mockgen@v1.6.0
+# cli grpc generation
 go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.1
+# go linting
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.43.0
+# rust code coverage
+rustup component add llvm-tools-preview
 '''
 script_runner = "@shell"
 
@@ -24,7 +30,7 @@ script_runner = "@shell"
 [tasks.test]
 clear = true
 script = '''
-cargo test --release --locked -- ${@}
+cargo test --locked -- ${@}
 cd ./platune-cli
 go test ./...
 '''
@@ -96,3 +102,43 @@ script = '''
 cd libplatune/player/fuzz
 makers fuzz
 '''
+
+[tasks.gen-coverage]
+env = {RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw"}
+run_task = "test"
+
+[tasks.gen-coverage-report]
+args = [
+  ".",
+  "-s",
+  ".",
+  "--binary-path",
+  "./target/debug/",
+  "-t",
+  "html",
+  "--branch",
+  "--ignore-not-existing",
+  "--ignore",
+  "target/debug/**/*",
+  "-o",
+  "./target/debug/coverage/",
+]
+command = "grcov"
+dependencies = ["gen-coverage"]
+install_crate = "grcov"
+
+[tasks.cleanup-coverage]
+clear = true
+dependencies = ["gen-coverage-report"]
+script = """
+handle = glob_array ./**/*.profraw
+for path in ${handle}
+    rm ${path}
+end
+"""
+script_runner = "@duckscript"
+
+[tasks.coverage]
+clear = true
+dependencies = ["cleanup-coverage"]
+script = "xdg-open target/debug/coverage/index.html"
