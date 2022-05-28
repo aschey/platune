@@ -142,3 +142,21 @@ script_runner = "@duckscript"
 clear = true
 dependencies = ["cleanup-coverage"]
 script = "xdg-open target/debug/coverage/index.html"
+
+[tasks.update]
+args = ["update"]
+command = "cargo"
+install_crate = "cargo-add"
+
+[tasks.upgrade]
+args = ["upgrade", "--workspace"]
+command = "cargo"
+install_crate = "cargo-add"
+
+[tasks.update-all]
+dependencies = ["update", "upgrade"]
+
+[tasks.deny]
+args = ["deny", "--workspace", "check"]
+command = "cargo"
+install_crate = "cargo-deny"
