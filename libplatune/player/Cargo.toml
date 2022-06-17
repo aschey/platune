@@ -12,21 +12,21 @@ path = "src/lib.rs"
 [dependencies]
 anyhow = "1.0.57"
 cpal = "0.13.5"
-flume = "0.10.12"
+flume = "0.10.13"
 futures-util = "0.3.21"
 rb = "0.4.0"
-reqwest = {version = "0.11.10", features = ["stream"]}
+reqwest = {version = "0.11.11", features = ["stream"]}
 rubato = "0.12.0"
-strum = {version = "0.24.0", features = ["derive"]}
+strum = {version = "0.24.1", features = ["derive"]}
 symphonia = {version = "0.5.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 tempfile = "3.3.0"
 thiserror = "1.0.31"
-tokio = {version = "1.18.2", features = ["rt-multi-thread", "macros"]}
-tracing = "0.1.34"
+tokio = {version = "1.19.2", features = ["rt-multi-thread", "macros"]}
+tracing = "0.1.35"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.53"
+async-trait = "0.1.56"
 ctor = "0.1.22"
 futures = "0.3.21"
 pretty_assertions = "1.2.1"
