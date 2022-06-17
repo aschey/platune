@@ -23,6 +23,8 @@ jobs:
           default: true
           profile: minimal
           components: rustfmt, clippy
+      - name: Clippy
+        run: cargo clippy -- -D warnings
       - name: Test
         run: cargo test --locked
   go:
