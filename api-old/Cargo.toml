@@ -26,7 +26,7 @@ subprocess = "0.2.4"
 fstrings = "0.2.2"
 futures = "0.3.5"
 dirs = "2.0.2"
-diesel = { version = "1.4.4", features = ["sqlite"] }
+diesel = { version = "1.4.6", features = ["sqlite"] }
 diesel_migrations = "1.4.0"
 paperclip = { git = "https://github.com/wafflespeanut/paperclip", rev = "90038bf", features = ["actix"] }
 paperclip-actix = { git = "https://github.com/wafflespeanut/paperclip", rev = "90038bf" }
