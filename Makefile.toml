@@ -29,9 +29,9 @@ script_runner = "@shell"
 
 [tasks.test]
 clear = true
-install_crate = "cargo-nextest"
 script = '''
-cargo nextest --locked -- ${@}
+cargo install cargo-nextest
+cargo nextest run --locked -- ${@}
 cd ./platune-cli
 go test ./...
 '''
@@ -108,7 +108,6 @@ makers fuzz
 args = ["test", "--locked"]
 command = "cargo"
 env = {RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw"}
-install_crate = "cargo-nextest"
 
 [tasks.gen-coverage-report]
 args = [
