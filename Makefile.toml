@@ -104,8 +104,9 @@ makers fuzz
 '''
 
 [tasks.gen-coverage]
+args = ["test", "--locked"]
+command = "cargo"
 env = {RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw"}
-run_task = "test"
 
 [tasks.gen-coverage-report]
 args = [
