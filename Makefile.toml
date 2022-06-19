@@ -148,7 +148,7 @@ args = [
   "--ignore",
   "**/*/*_test.rs",
   "-o",
-  "./target/debug/coverage/lcov.info",
+  "./target/debug/lcov.info",
 ]
 command = "grcov"
 dependencies = ["gen-coverage"]
