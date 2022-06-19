@@ -29,8 +29,9 @@ script_runner = "@shell"
 
 [tasks.test]
 clear = true
+install_crate = "nextest"
 script = '''
-cargo test --locked -- ${@}
+cargo nextest --locked -- ${@}
 cd ./platune-cli
 go test ./...
 '''
@@ -104,9 +105,10 @@ makers fuzz
 '''
 
 [tasks.gen-coverage]
-args = ["test", "--locked"]
+args = ["nextest", "run", "--locked"]
 command = "cargo"
 env = {RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw"}
+install_crate = "nextest"
 
 [tasks.gen-coverage-report]
 args = [
@@ -121,8 +123,32 @@ args = [
   "--ignore-not-existing",
   "--ignore",
   "target/debug/**/*",
+  "--ignore",
+  "**/*/*_test.rs",
   "-o",
   "./target/debug/coverage/",
+]
+command = "grcov"
+dependencies = ["gen-coverage"]
+install_crate = "grcov"
+
+[tasks.gen-coverage-ci]
+args = [
+  ".",
+  "-s",
+  ".",
+  "--binary-path",
+  "./target/debug/",
+  "-t",
+  "lcov",
+  "--branch",
+  "--ignore-not-existing",
+  "--ignore",
+  "target/debug/**/*",
+  "--ignore",
+  "**/*/*_test.rs",
+  "-o",
+  "./target/debug/coverage/lcov.info",
 ]
 command = "grcov"
 dependencies = ["gen-coverage"]
