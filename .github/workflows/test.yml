@@ -22,11 +22,11 @@ jobs:
           toolchain: stable
           default: true
           profile: minimal
-          components: rustfmt, clippy, llvm-tools-preview
+          components: rustfmt, clippy
       - name: Clippy
         run: cargo clippy -- -D warnings
       - name: Test
-        run: cargo install cargo-make && makers gen-coverage-ci
+        run: cargo install cargo-make && rustup component add llvm-tools-preview && makers gen-coverage-ci
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
