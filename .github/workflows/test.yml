@@ -34,7 +34,7 @@ jobs:
       - name: Clippy
         run: cargo clippy -- -D warnings
       - name: Test
-        run: cargo install cargo-make && rustup component add llvm-tools-preview && makers gen-coverage-ci
+        run: rustup component add llvm-tools-preview && makers gen-coverage-ci
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
