@@ -105,7 +105,7 @@ makers fuzz
 '''
 
 [tasks.gen-coverage]
-args = ["nextest", "run", "--locked"]
+args = ["test", "--locked"]
 command = "cargo"
 env = {RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw"}
 install_crate = "cargo-nextest"

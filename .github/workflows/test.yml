@@ -23,6 +23,11 @@ jobs:
           default: true
           profile: minimal
           components: rustfmt, clippy
+      - name: Install binaries
+        run: |
+          wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-gnu.tgz -O cargo-binstall.tgz
+          tar -xzvf cargo-binstall.tgz
+          ./cargo-binstall cargo-make --no-confirm
       - uses: Swatinem/rust-cache@v1
         with:
           sharedKey: cache-${{ hashFiles('**/Cargo.lock') }}
