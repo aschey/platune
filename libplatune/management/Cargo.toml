@@ -15,7 +15,7 @@ name = "bench"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.57"
+anyhow = "1.0.58"
 async-channel = "1.6.1"
 concread = "0.3.4"
 directories = "4.0.1"
@@ -33,6 +33,7 @@ rusqlite = {version = "0.27.0", default-features = false, features = ["load_exte
 sqlx = {version = "0.6.0", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}
 strum = {version = "0.24.1", features = ["derive"]}
 symphonia = {version = "0.5.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
+tap = "1.0.1"
 thiserror = "1.0.31"
 tokio = {version = "1.19.2", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.9", features = ["net", "sync"]}

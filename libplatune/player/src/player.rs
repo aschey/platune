@@ -1,5 +1,6 @@
 use flume::{Receiver, Sender};
 use std::{fs::File, io::BufReader, path::Path, time::Duration};
+use tap::{TapFallible, TapOptional};
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
 
@@ -18,6 +19,12 @@ use crate::{
     source::{ReadSeekSource, Source},
     two_way_channel::TwoWaySender,
 };
+
+#[derive(Debug)]
+enum AppendError {
+    SourceUnavailable,
+    SendFailed,
+}
 
 pub(crate) struct Player {
     state: PlayerState,
@@ -59,37 +66,28 @@ impl Player {
     async fn get_source(&self, path: String) -> Option<Box<dyn Source>> {
         if path.starts_with("http") {
             info!("Creating http stream");
-            let http_reader = match HttpStreamReader::new(path.to_owned()).await {
-                Ok(http_reader) => http_reader,
-                Err(e) => {
-                    error!("Error downloading http file {e:?}");
-                    return None;
-                }
-            };
-            Some(http_reader.into_source())
+
+            HttpStreamReader::new(path.to_owned())
+                .await
+                .map(|r| r.into_source())
+                .tap_err(|e| error!("Error downloading http file {e:?}"))
+                .ok()
         } else {
-            let file = match File::open(&path) {
-                Ok(file) => file,
-                Err(e) => {
-                    error!("Error opening file {e:?}");
-                    return None;
-                }
-            };
-            let file_len = match file.metadata() {
-                Ok(metadata) => Some(metadata.len()),
-                Err(e) => {
-                    warn!("Error reading file metadata: {e:?}");
-                    None
-                }
-            };
+            let file = File::open(&path)
+                .tap_err(|e| error!("Error opening file {e:?}"))
+                .ok()?;
+
+            let file_len = file
+                .metadata()
+                .map(|m| m.len())
+                .tap_err(|e| warn!("Error reading file metadata: {e:?}"))
+                .ok();
+
             let extension = Path::new(&path)
-                    .extension().and_then(|e| match e.to_str() {
-                        None => {
-                            warn!("File extension for {path} contains invalid unicode. Not using extension hint");
-                            None
-                        },
-                        extension => extension.map(|e| e.to_owned())
-                    });
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .tap_none(|| warn!("File extension for {path} contains invalid unicode. Not using extension hint"))
+                .map(|ext| ext.to_owned());
 
             let reader = BufReader::new(file);
 
@@ -97,7 +95,11 @@ impl Player {
         }
     }
 
-    async fn append_file(&mut self, path: String, queue_start_mode: QueueStartMode) -> bool {
+    async fn append_file(
+        &mut self,
+        path: String,
+        queue_start_mode: QueueStartMode,
+    ) -> Result<(), AppendError> {
         match self.get_source(path.clone()).await {
             Some(source) => {
                 info!("Sending source {path}");
@@ -114,47 +116,67 @@ impl Player {
                     Ok(()) => {
                         self.queued_count += 1;
                         info!("Queued count {}", self.queued_count);
+                        Ok(())
                     }
                     Err(e) => {
                         error!("Error sending source {e:?}");
+                        Err(AppendError::SendFailed)
                     }
                 }
-                true
             }
             None => {
                 let queue = self.state.queue.clone();
                 self.state.queue = queue.into_iter().filter(|q| *q != path).collect();
-                false
+                Err(AppendError::SourceUnavailable)
             }
         }
     }
 
-    async fn start(&mut self, queue_start_mode: QueueStartMode) -> bool {
-        let mut success = false;
+    async fn start(&mut self, queue_start_mode: QueueStartMode) -> Result<(), Option<AppendError>> {
+        let mut success: Result<(), Option<AppendError>> = Err(None);
         // Keep trying until a valid source is found or we reach the end of the queue
-        while !success {
+        while success.is_err() {
             match self.get_current() {
                 Some(path) => {
-                    success |= self.append_file(path.clone(), queue_start_mode).await;
+                    match self.append_file(path.clone(), queue_start_mode).await {
+                        Ok(_) => {
+                            success = Ok(());
+                        }
+                        Err(AppendError::SendFailed) => return Err(Some(AppendError::SendFailed)),
+                        Err(AppendError::SourceUnavailable) => {}
+                    }
 
                     if let Some(path) = self.get_next() {
-                        success |= self
+                        match self
                             .append_file(
                                 path,
-                                if queue_start_mode == QueueStartMode::ForceRestart && !success {
+                                if queue_start_mode == QueueStartMode::ForceRestart
+                                    && success.is_err()
+                                {
                                     QueueStartMode::ForceRestart
                                 } else {
                                     QueueStartMode::Normal
                                 },
                             )
-                            .await;
+                            .await
+                        {
+                            Ok(_) => {
+                                success = Ok(());
+                            }
+                            Err(AppendError::SendFailed) => {
+                                return Err(Some(AppendError::SendFailed))
+                            }
+                            Err(AppendError::SourceUnavailable) => {}
+                        }
                     }
                 }
-                None => return false,
+                None => return Err(None),
             }
         }
 
-        if success && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded {
+        if success.is_ok()
+            && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded
+        {
             self.audio_status = AudioStatus::Playing;
         }
 
@@ -189,45 +211,56 @@ impl Player {
         self.state.queue.is_empty()
     }
 
-    pub(crate) async fn play(&mut self) {
+    pub(crate) async fn play(&mut self) -> Result<(), String> {
         if self.is_empty() {
-            return;
+            return Ok(());
         }
-        if let Err(e) = self.cmd_sender.get_response(DecoderCommand::Play).await {
-            error!("Error sending play command {e:?}");
-        }
+
+        self.cmd_sender
+            .get_response(DecoderCommand::Play)
+            .await
+            .tap_err(|e| error!("Error sending play command {e:?}"))?;
+
         self.audio_status = AudioStatus::Playing;
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
             .unwrap_or_default();
+
+        Ok(())
     }
 
-    pub(crate) async fn pause(&mut self) {
+    pub(crate) async fn pause(&mut self) -> Result<(), String> {
         if self.is_empty() {
-            return;
+            return Ok(());
         }
-        if let Err(e) = self.cmd_sender.get_response(DecoderCommand::Pause).await {
-            error!("Error sending pause command {e:?}");
-        }
+
+        self.cmd_sender
+            .get_response(DecoderCommand::Pause)
+            .await
+            .tap_err(|e| error!("Error sending pause command {e:?}"))?;
+
         self.audio_status = AudioStatus::Paused;
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
             .unwrap_or_default();
+
+        Ok(())
     }
 
-    pub(crate) async fn set_volume(&mut self, volume: f64) {
+    pub(crate) async fn set_volume(&mut self, volume: f64) -> Result<(), String> {
         if self.audio_status == AudioStatus::Stopped {
             // Decoder isn't running so we can't set the volume yet
             // This will get sent with the next source
             self.pending_volume = Some(volume);
-        } else if let Err(e) = self
-            .cmd_sender
-            .get_response(DecoderCommand::SetVolume(volume))
-            .await
-        {
-            error!("Error sending set volume command {e:?}");
+        } else {
+            self.cmd_sender
+                .get_response(DecoderCommand::SetVolume(volume))
+                .await
+                .tap_err(|e| error!("Error sending set volume command {e:?}"))?;
         }
+
         self.state.volume = volume;
+        Ok(())
     }
 
     pub(crate) async fn seek(&mut self, time: Duration) {
@@ -240,28 +273,28 @@ impl Player {
             .get_response(DecoderCommand::Seek(time))
             .await
         {
-            Ok(DecoderResponse::SeekResponse(seek_result)) => match seek_result {
-                Ok(seek_result) => {
-                    info!("Seeked to {seek_result:?}");
-                    self.event_tx
-                        .send(PlayerEvent::Seek(self.state.clone(), time))
-                        .unwrap_or_default();
-                }
-                Err(e) => warn!("Error seeking: {e:?}"),
-            },
+            Ok(DecoderResponse::SeekResponse(Ok(seek_result))) => {
+                info!("Seeked to {seek_result:?}");
+                self.event_tx
+                    .send(PlayerEvent::Seek(self.state.clone(), time))
+                    .unwrap_or_default();
+            }
+            Ok(DecoderResponse::SeekResponse(Err(e))) => warn!("Error seeking: {e:?}"),
             Err(e) => error!("Error receiving seek result {e:?}"),
             _ => unreachable!("Should only receive SeekResponse"),
         }
     }
 
-    pub(crate) async fn stop(&mut self) {
-        self.reset_queue().await;
+    pub(crate) async fn stop(&mut self) -> Result<(), String> {
+        self.reset_queue().await?;
         self.state.queue_position = 0;
         self.state.queue = vec![];
         self.queued_count = 0;
         self.event_tx
             .send(PlayerEvent::Stop(self.state.clone()))
             .unwrap_or_default();
+
+        Ok(())
     }
 
     pub(crate) fn get_current_status(&self) -> TrackStatus {
@@ -271,20 +304,21 @@ impl Player {
         }
     }
 
-    async fn reset_queue(&mut self) {
+    async fn reset_queue(&mut self) -> Result<(), String> {
         // Get rid of any pending sources
         self.queue_rx.drain();
         self.queued_count = 0;
         // If decoder is already stopped then sending additional stop events will cause the next song to skip
         if self.audio_status != AudioStatus::Stopped {
             info!("Sending decoder stop command");
-            if let Err(e) = self.cmd_sender.get_response(DecoderCommand::Stop).await {
-                error!("Error sending stop command {e:?}");
-            } else {
-                info!("Received stop response");
-            }
+            self.cmd_sender
+                .get_response(DecoderCommand::Stop)
+                .await
+                .tap_err(|e| error!("Error sending stop command {e:?}"))?;
+            info!("Received stop response");
         }
         self.audio_status = AudioStatus::Stopped;
+        Ok(())
     }
 
     pub(crate) async fn on_ended(&mut self) {
@@ -313,23 +347,29 @@ impl Player {
         }
 
         if let Some(file) = self.get_next() {
-            self.append_file(file, QueueStartMode::Normal).await;
+            self.append_file(file, QueueStartMode::Normal)
+                .await
+                .unwrap_or_default();
         }
     }
 
-    pub(crate) async fn reset(&mut self) {
+    pub(crate) async fn reset(&mut self) -> Result<(), String> {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
         self.set_queue_internal(queue, queue_position, QueueStartMode::ForceRestart)
-            .await;
+            .await?;
+
+        Ok(())
     }
 
-    pub(crate) async fn set_queue(&mut self, queue: Vec<String>) {
+    pub(crate) async fn set_queue(&mut self, queue: Vec<String>) -> Result<(), String> {
         self.set_queue_internal(queue, 0, QueueStartMode::Normal)
-            .await;
+            .await?;
         self.event_tx
             .send(PlayerEvent::StartQueue(self.state.clone()))
             .unwrap_or_default();
+
+        Ok(())
     }
 
     async fn set_queue_internal(
@@ -337,39 +377,49 @@ impl Player {
         queue: Vec<String>,
         start_position: usize,
         queue_start_mode: QueueStartMode,
-    ) {
+    ) -> Result<(), String> {
         // Don't need to send stop signal if no sources are playing
         if self.queued_count > 0 {
-            self.reset_queue().await;
+            self.reset_queue().await?;
         }
 
         self.state.queue_position = start_position;
         self.state.queue = queue;
-        self.start(queue_start_mode).await;
-    }
 
-    pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) {
-        for song in songs {
-            self.add_one_to_queue(song).await;
+        match self.start(queue_start_mode).await {
+            Err(Some(append_err)) => Err(format!("Failed to start queue: {append_err:?}")),
+            _ => Ok(()),
         }
     }
 
-    async fn add_one_to_queue(&mut self, song: String) {
+    pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) -> Result<(), String> {
+        for song in songs {
+            self.add_one_to_queue(song).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn add_one_to_queue(&mut self, song: String) -> Result<(), String> {
         // Queue is not currently running, need to start it
         if self.queued_count == 0 {
-            self.set_queue(vec![song]).await;
+            self.set_queue(vec![song]).await?;
         } else {
             self.state.queue.push(song.clone());
             // Special case: if we started with only one song, then the new song will never get triggered by the ended event
             // so we need to add it here explicitly
             if self.queued_count == 1 {
-                self.append_file(song, QueueStartMode::Normal).await;
+                self.append_file(song, QueueStartMode::Normal)
+                    .await
+                    .unwrap_or_default();
             }
 
             self.event_tx
                 .send(PlayerEvent::QueueUpdated(self.state.clone()))
                 .unwrap_or_default();
         }
+
+        Ok(())
     }
 
     fn get_current(&self) -> Option<String> {
@@ -384,7 +434,7 @@ impl Player {
         self.state.queue.get(position).map(String::to_owned)
     }
 
-    pub(crate) async fn go_next(&mut self) {
+    pub(crate) async fn go_next(&mut self) -> Result<(), String> {
         let queue_len = self.state.queue.len();
         // need to check for length > 0 first because an unsigned value of 0 - 1 panics
         if queue_len > 0 && self.state.queue_position < queue_len - 1 {
@@ -393,8 +443,8 @@ impl Player {
                 self.state.queue_position
             );
             self.state.queue_position += 1;
-            self.reset_queue().await;
-            if self.start(QueueStartMode::Normal).await {
+            self.reset_queue().await?;
+            if self.start(QueueStartMode::Normal).await.is_ok() {
                 self.event_tx
                     .send(PlayerEvent::Next(self.state.clone()))
                     .unwrap_or_default();
@@ -405,17 +455,19 @@ impl Player {
                 self.state.queue_position
             );
         }
+
+        Ok(())
     }
 
-    pub(crate) async fn go_previous(&mut self) {
+    pub(crate) async fn go_previous(&mut self) -> Result<(), String> {
         if self.state.queue_position > 0 {
             info!(
                 "Current position: {}, Going to previous track.",
                 self.state.queue_position
             );
             self.state.queue_position -= 1;
-            self.reset_queue().await;
-            if self.start(QueueStartMode::Normal).await {
+            self.reset_queue().await?;
+            if self.start(QueueStartMode::Normal).await.is_ok() {
                 self.event_tx
                     .send(PlayerEvent::Previous(self.state.clone()))
                     .unwrap_or_default();
@@ -426,5 +478,7 @@ impl Player {
                 self.state.queue_position
             );
         }
+
+        Ok(())
     }
 }

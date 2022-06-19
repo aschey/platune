@@ -1,14 +1,15 @@
 use crate::{
-    decoder::{Decoder, DecoderError, DecoderParams},
+    decoder::{Decoder, DecoderParams},
     dto::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
-        player_response::PlayerResponse,
+        player_response::PlayerResponse, processor_error::ProcessorError,
     },
     platune_player::PlayerEvent,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
 use flume::TryRecvError;
 use std::time::Duration;
+use tap::TapFallible;
 use tracing::{error, info};
 
 pub(crate) struct AudioProcessor<'a> {
@@ -19,13 +20,18 @@ pub(crate) struct AudioProcessor<'a> {
     event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
 }
 
+enum InputResult {
+    Continue,
+    Stop,
+}
+
 impl<'a> AudioProcessor<'a> {
     pub(crate) fn new(
         decoder_params: DecoderParams,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
-    ) -> Result<Self, DecoderError> {
+    ) -> Result<Self, ProcessorError> {
         match cmd_rx.recv() {
             Ok(DecoderCommand::WaitForInitialization) => {
                 info!("Notifying decoder started");
@@ -40,9 +46,10 @@ impl<'a> AudioProcessor<'a> {
 
         match Decoder::new(decoder_params) {
             Ok(decoder) => {
-                if let Err(e) = cmd_rx.respond(DecoderResponse::InitializationSucceeded) {
-                    error!("Error sending decoder initialization succeeded response {e:?}");
-                }
+                cmd_rx
+                    .respond(DecoderResponse::InitializationSucceeded)
+                    .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                    .tap_err(|e| error!("Error sending decoder initialization succeeded: {e:?}"))?;
 
                 Ok(Self {
                     decoder,
@@ -53,10 +60,12 @@ impl<'a> AudioProcessor<'a> {
                 })
             }
             Err(e) => {
-                if let Err(e) = cmd_rx.respond(DecoderResponse::InitializationFailed) {
-                    error!("Error sending decoder initialization failed {e:?}");
-                }
-                Err(e)
+                cmd_rx
+                    .respond(DecoderResponse::InitializationFailed)
+                    .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                    .tap_err(|e| error!("Error sending decoder initialization failed: {e:?}"))?;
+
+                Err(ProcessorError::DecoderError(e))
             }
         }
     }
@@ -73,7 +82,7 @@ impl<'a> AudioProcessor<'a> {
         self.decoder.current_position().position
     }
 
-    fn process_input(&mut self) -> bool {
+    fn process_input(&mut self) -> Result<InputResult, ProcessorError> {
         match self.cmd_rx.try_recv() {
             Ok(command) => {
                 info!("Got decoder command {:?}", command);
@@ -81,49 +90,58 @@ impl<'a> AudioProcessor<'a> {
                 match command {
                     DecoderCommand::Play => {
                         self.decoder.resume();
-                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
-                            error!("Error sending stopped response: {e:?}");
-                        }
+
+                        self.cmd_rx
+                            .respond(DecoderResponse::Received)
+                            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                            .tap_err(|e| error!("Error sending stopped response: {e:?}"))?;
                     }
                     DecoderCommand::Stop => {
                         info!("Completed decoder command");
-                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
-                            error!("Error sending stopped response: {e:?}");
-                        }
-                        return false;
+
+                        self.cmd_rx
+                            .respond(DecoderResponse::Received)
+                            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                            .tap_err(|e| error!("Error sending stopped response: {e:?}"))?;
+
+                        return Ok(InputResult::Stop);
                     }
                     DecoderCommand::Seek(time) => {
                         let seek_response = match self.decoder.seek(time) {
                             Ok(seeked_to) => Ok(seeked_to.actual_ts),
                             Err(e) => Err(e.to_string()),
                         };
-                        if let Err(e) = self
-                            .cmd_rx
+
+                        self.cmd_rx
                             .respond(DecoderResponse::SeekResponse(seek_response))
-                        {
-                            error!("Unable to send seek result: {e:?}");
-                        }
+                            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                            .tap_err(|e| error!("Unable to send seek result: {e:?}"))?;
                     }
                     DecoderCommand::Pause => {
                         self.decoder.pause();
-                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
-                            error!("Error sending stopped response: {e:?}");
-                        }
+
+                        self.cmd_rx
+                            .respond(DecoderResponse::Received)
+                            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                            .tap_err(|e| error!("Error sending stopped response: {e:?}"))?;
                     }
                     DecoderCommand::SetVolume(volume) => {
                         self.decoder.set_volume(volume);
-                        if let Err(e) = self.cmd_rx.respond(DecoderResponse::Received) {
-                            error!("Error sending set volume response: {e:?}");
-                        }
+
+                        self.cmd_rx
+                            .respond(DecoderResponse::Received)
+                            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                            .tap_err(|e| error!("Error sending set volume response: {e:?}"))?;
                     }
                     DecoderCommand::GetCurrentPosition => {
                         let time = self.decoder.current_position();
-                        if let Err(e) = self
-                            .cmd_rx
+
+                        self.cmd_rx
                             .respond(DecoderResponse::CurrentPositionResponse(time))
-                        {
-                            error!("Unable to send current position response {e:?}");
-                        }
+                            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                            .tap_err(|e| {
+                                error!("Unable to send current position response: {e:?}")
+                            })?;
                     }
                     DecoderCommand::WaitForInitialization => {
                         unreachable!("Should only send this during initialization");
@@ -142,28 +160,31 @@ impl<'a> AudioProcessor<'a> {
             }
             Err(TryRecvError::Disconnected) => {
                 info!("Decoder command sender has disconnected");
-                return false;
+                return Ok(InputResult::Stop);
             }
         }
 
-        true
+        Ok(InputResult::Continue)
     }
 
     pub(crate) fn current(&self) -> &[f64] {
         self.decoder.current()
     }
 
-    pub(crate) fn next(&mut self) -> Result<Option<&[f64]>, DecoderError> {
-        if !self.process_input() {
-            return Ok(None);
-        }
+    pub(crate) fn next(&mut self) -> Result<Option<&[f64]>, ProcessorError> {
+        match self.process_input() {
+            Ok(InputResult::Continue) => {}
+            Ok(InputResult::Stop) => return Ok(None),
+            Err(e) => return Err(e),
+        };
         match self.decoder.next() {
-            val @ Ok(Some(_)) => val,
+            Ok(Some(val)) => Ok(Some(val)),
             val => {
-                if let Err(e) = self.player_cmd_tx.send(Command::Ended) {
-                    error!("Unable to send ended command: {e:?}");
-                }
-                val
+                self.player_cmd_tx
+                    .send(Command::Ended)
+                    .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                    .tap_err(|e| error!("Unable to send ended command: {e:?}"))?;
+                val.map_err(ProcessorError::DecoderError)
             }
         }
     }

@@ -3,3 +3,16 @@ args = ["fuzz", "run", "player", "--", "-detect_leaks=0"]
 command = "cargo"
 condition = {platforms = ["linux"]}
 install_crate = "cargo-fuzz"
+
+[tasks.update]
+args = ["update"]
+command = "cargo"
+install_crate = "cargo-add"
+
+[tasks.upgrade]
+args = ["upgrade", "--workspace"]
+command = "cargo"
+install_crate = "cargo-add"
+
+[tasks.update-all]
+dependencies = ["update", "upgrade"]

@@ -155,6 +155,10 @@ install_crate = "cargo-add"
 
 [tasks.update-all]
 dependencies = ["update", "upgrade"]
+script = '''
+cd libplatune/player/fuzz
+makers update-all
+'''
 
 [tasks.deny]
 args = ["deny", "--workspace", "check"]

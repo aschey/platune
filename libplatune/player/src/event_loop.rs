@@ -110,39 +110,39 @@ pub(crate) fn decode_loop(
 pub(crate) async fn main_loop(
     mut receiver: TwoWayReceiver<Command, PlayerResponse>,
     mut player: Player,
-) {
+) -> Result<(), String> {
     while let Ok(next_command) = receiver.recv_async().await {
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {
-                player.set_queue(songs).await;
+                player.set_queue(songs).await?;
             }
             Command::AddToQueue(song) => {
-                player.add_to_queue(song).await;
+                player.add_to_queue(song).await?;
             }
             Command::Seek(millis) => {
                 player.seek(millis).await;
             }
             Command::SetVolume(volume) => {
-                player.set_volume(volume).await;
+                player.set_volume(volume).await?;
             }
             Command::Pause => {
-                player.pause().await;
+                player.pause().await?;
             }
             Command::Resume => {
-                player.play().await;
+                player.play().await?;
             }
             Command::Stop => {
-                player.stop().await;
+                player.stop().await?;
             }
             Command::Ended => {
                 player.on_ended().await;
             }
             Command::Next => {
-                player.go_next().await;
+                player.go_next().await?;
             }
             Command::Previous => {
-                player.go_previous().await;
+                player.go_previous().await?;
             }
             Command::GetCurrentStatus => {
                 let current_status = player.get_current_status();
@@ -151,13 +151,14 @@ pub(crate) async fn main_loop(
                 }
             }
             Command::Reset => {
-                player.reset().await;
+                player.reset().await?;
             }
             Command::Shutdown => {
-                return;
+                return Ok(());
             }
         }
         info!("Completed command");
     }
     info!("Request loop completed");
+    Ok(())
 }

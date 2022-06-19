@@ -24,6 +24,7 @@ use concread::arcache::{ARCache, ARCacheBuilder};
 use itertools::Itertools;
 use regex::Regex;
 use sqlx::{pool::PoolConnection, Pool, Row, Sqlite};
+use tap::Tap;
 use tracing::{info, warn};
 
 #[derive(Clone)]
@@ -274,9 +275,9 @@ impl SearchEngine {
             .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    fn convert_entries(&self, mut search_entries: Vec<SearchEntry>) -> Vec<SearchResult> {
-        search_entries.sort();
+    fn convert_entries(&self, search_entries: Vec<SearchEntry>) -> Vec<SearchResult> {
         search_entries
+            .tap_mut(|s| s.sort())
             .into_iter()
             .group_by(|key| (key.get_formatted_entry(), key.get_description()))
             .into_iter()

@@ -29,6 +29,12 @@ pub enum AudioOutputError {
 
 pub type Result<T> = result::Result<T, AudioOutputError>;
 
+#[derive(PartialEq, Eq)]
+enum WriteBufResult {
+    Stop,
+    Continue,
+}
+
 use rb::*;
 
 use tracing::{error, info};
@@ -52,12 +58,9 @@ impl CpalAudioOutput {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
     ) -> Result<Box<dyn AudioOutput>> {
         // Get the default audio output device.
-        let device = match host.default_output_device() {
-            Some(device) => device,
-            None => {
-                return Err(AudioOutputError::NoDefaultDevice);
-            }
-        };
+        let device = host
+            .default_output_device()
+            .ok_or(AudioOutputError::NoDefaultDevice)?;
 
         let config = match device.default_output_config() {
             Ok(config) => config,
@@ -148,22 +151,15 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             },
         );
 
-        let stream = match stream_result {
-            Ok(stream) => stream,
-            Err(e) => {
-                return Err(AudioOutputError::OpenStreamError(e));
-            }
-        };
+        let stream = stream_result.map_err(AudioOutputError::OpenStreamError)?;
 
         // Start the output stream.
-        if let Err(e) = stream.play() {
-            return Err(AudioOutputError::StartStreamError(e));
-        }
+        stream.play().map_err(AudioOutputError::StartStreamError)?;
 
         Ok(stream)
     }
 
-    fn write_buf(&mut self, end_index: Option<usize>) -> bool {
+    fn write_buf(&mut self, end_index: Option<usize>) -> WriteBufResult {
         if let Some(ring_buf_producer) = &mut self.ring_buf_producer {
             let mut samples = match end_index {
                 Some(end_index) => &self.buf[..end_index],
@@ -180,12 +176,12 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
                     }
                     Err(_) => {
                         info!("Consumer stalled. Terminating.");
-                        return true;
+                        return WriteBufResult::Stop;
                     }
                 }
             }
         }
-        false
+        WriteBufResult::Continue
     }
 }
 
@@ -195,7 +191,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
 
         for frame in sample_iter {
             if i == self.buf.len() {
-                if self.write_buf(None) {
+                if self.write_buf(None) == WriteBufResult::Stop {
                     return;
                 }
 
@@ -223,19 +219,15 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         }
 
         // Get the default audio output device.
-        let device = match self.host.default_output_device() {
-            Some(device) => device,
-            None => {
-                return Err(AudioOutputError::NoDefaultDevice);
-            }
-        };
+        let device = self
+            .host
+            .default_output_device()
+            .ok_or(AudioOutputError::NoDefaultDevice)?;
 
-        let config = match device.default_output_config() {
-            Ok(config) => config,
-            Err(e) => {
-                return Err(AudioOutputError::OutputDeviceConfigError(e));
-            }
-        };
+        let config = device
+            .default_output_config()
+            .map_err(AudioOutputError::OutputDeviceConfigError)?;
+
         let ring_buf = SpscRb::<T>::new(8 * 1024);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 

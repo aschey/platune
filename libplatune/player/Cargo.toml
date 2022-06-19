@@ -10,7 +10,7 @@ name = "libplatune_player"
 path = "src/lib.rs"
 
 [dependencies]
-anyhow = "1.0.57"
+anyhow = "1.0.58"
 cpal = "0.13.5"
 flume = "0.10.13"
 futures-util = "0.3.21"
@@ -19,6 +19,7 @@ reqwest = {version = "0.11.11", features = ["stream"]}
 rubato = "0.12.0"
 strum = {version = "0.24.1", features = ["derive"]}
 symphonia = {version = "0.5.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
+tap = "1.0.1"
 tempfile = "3.3.0"
 thiserror = "1.0.31"
 tokio = {version = "1.19.2", features = ["rt-multi-thread", "macros"]}

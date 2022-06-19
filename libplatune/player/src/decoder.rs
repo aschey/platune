@@ -1,4 +1,7 @@
-use crate::{dto::current_position::CurrentPosition, source::Source};
+use crate::{
+    dto::{current_position::CurrentPosition, decoder_error::DecoderError},
+    source::Source,
+};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use symphonia::core::{
     audio::{Channels, SampleBuffer, SignalSpec},
@@ -10,28 +13,20 @@ use symphonia::core::{
     probe::Hint,
     units::{Time, TimeBase},
 };
-use thiserror::Error;
+use tap::TapFallible;
 use tracing::{error, info, warn};
-
-#[derive(Error, Debug)]
-pub(crate) enum DecoderError {
-    #[error("No tracks were found")]
-    NoTracks,
-    #[error("No readable format was discovered: {0}")]
-    FormatNotFound(Error),
-    #[error("The codec is unsupported: {0}")]
-    UnsupportedCodec(Error),
-    #[error("The format is unsupported: {0}")]
-    UnsupportedFormat(String),
-    #[error("Error occurred during decoding: {0}")]
-    DecodeError(Error),
-}
 
 pub(crate) struct DecoderParams {
     pub(crate) source: Box<dyn Source>,
     pub(crate) volume: f64,
     pub(crate) output_channels: usize,
     pub(crate) start_position: Option<Duration>,
+}
+
+#[derive(PartialEq, Eq)]
+enum InitializeOpt {
+    TrimSilence,
+    PreserveSilence,
 }
 
 const NANOS_PER_SEC: f64 = 1_000_000_000.0;
@@ -125,9 +120,9 @@ impl Decoder {
             if let Err(e) = decoder.seek(start_position) {
                 warn!("Unable to seek to {start_position:?}: {e:?}");
             }
-            decoder.initialize(false)?;
+            decoder.initialize(InitializeOpt::PreserveSilence)?;
         } else {
-            decoder.initialize(true)?;
+            decoder.initialize(InitializeOpt::TrimSilence)?;
         }
 
         Ok(decoder)
@@ -185,16 +180,14 @@ impl Decoder {
     pub(crate) fn current_position(&self) -> CurrentPosition {
         let time = self.time_base.calc_time(self.timestamp);
         let millis = ((time.seconds as f64 + time.frac) * 1000.0) as u64;
+        let retrieval_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .tap_err(|e| warn!("Unable to get duration from system time. The system clock is probably in a bad state: {e:?}"))
+            .ok();
 
         CurrentPosition {
             position: Duration::from_millis(millis),
-            retrieval_time: match SystemTime::now().duration_since(UNIX_EPOCH) {
-                Ok(time) => Some(time),
-                Err(e) => {
-                    warn!("Unable to get duration from system time. The system clock is probably in a bad state: {e:?}");
-                    None
-                }
-            },
+            retrieval_time,
         }
     }
 
@@ -208,10 +201,10 @@ impl Decoder {
         )
     }
 
-    fn initialize(&mut self, skip_silence: bool) -> Result<(), DecoderError> {
+    fn initialize(&mut self, initialize_opt: InitializeOpt) -> Result<(), DecoderError> {
         let mut samples_skipped = 0;
         let volume = self.volume;
-        if skip_silence {
+        if initialize_opt == InitializeOpt::TrimSilence {
             // Edge case: if the volume is 0 then this will cause an issue because every sample will come back as silent
             // Need to set the volume to 1 until we find the silence, then we can set it back
             self.volume = 1.0;
@@ -222,7 +215,7 @@ impl Decoder {
             if self.time_base.denom == 1 {
                 self.time_base = TimeBase::new(1, self.sample_rate as u32);
             }
-            if !skip_silence {
+            if initialize_opt == InitializeOpt::PreserveSilence {
                 break;
             }
             if let Some(mut index) = self.buf.iter().position(|s| *s != 0.0) {
