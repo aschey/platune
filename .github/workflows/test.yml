@@ -22,7 +22,7 @@ jobs:
           toolchain: stable
           default: true
           profile: minimal
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools-preview
       - name: Clippy
         run: cargo clippy -- -D warnings
       - name: Test
