@@ -2,6 +2,7 @@
 
 [![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/master/LICENSE)
 [![CI](https://github.com/aschey/Platune/actions/workflows/test.yml/badge.svg)](https://github.com/aschey/Platune/actions/workflows/test.yml)
+![codecov](https://codecov.io/gh/aschey/platune/branch/master/graph/badge.svg?token=NWS6Q3W4FP)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)
 ![Lines of Code](https://tokei-zjgz.onrender.com/b1/github/aschey/platune)
 
