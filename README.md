@@ -1,8 +1,8 @@
 ![Platune](res/platune-title.png)
 
-[![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/master/LICENSE)
+[![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/main/LICENSE)
 [![CI](https://github.com/aschey/Platune/actions/workflows/test.yml/badge.svg)](https://github.com/aschey/Platune/actions/workflows/test.yml)
-![codecov](https://codecov.io/gh/aschey/platune/branch/master/graph/badge.svg?token=NWS6Q3W4FP)
+![codecov](https://codecov.io/gh/aschey/platune/branch/main/graph/badge.svg?token=NWS6Q3W4FP)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)
 ![Lines of Code](https://tokei-zjgz.onrender.com/b1/github/aschey/platune)
 
@@ -10,24 +10,24 @@
 
 ## Overview
 
-Platune is a cross-platform music player that uses a client-server architecture over gRPC. It is both a complete solution and a set of modular components to allow users to create their own custom players. At its core, Platune is a set of [protobuf definitions](https://github.com/aschey/Platune/tree/master/platuned/proto) that create the contract. Any gRPC client or server that implements these protobufs will be compatible with the rest of the ecosystem.
+Platune is a cross-platform music player that uses a client-server architecture over gRPC. It is both a complete solution and a set of modular components to allow users to create their own custom players. At its core, Platune is a set of [protobuf definitions](https://github.com/aschey/Platune/tree/main/platuned/proto) that create the contract. Any gRPC client or server that implements these protobufs will be compatible with the rest of the ecosystem.
 
 ### Structure
 
-- [libplatune](https://github.com/aschey/Platune/tree/master/libplatune) -
+- [libplatune](https://github.com/aschey/Platune/tree/main/libplatune) -
   Set of libraries containing business logic. Can be used to create custom servers.
-  - [management](https://github.com/aschey/Platune/tree/master/libplatune/management) -
+  - [management](https://github.com/aschey/Platune/tree/main/libplatune/management) -
     Library for managing an audio database
-  - [player](https://github.com/aschey/Platune/tree/master/libplatune/player) -
+  - [player](https://github.com/aschey/Platune/tree/main/libplatune/player) -
     Library for audio playback
-- [platuned](https://github.com/aschey/Platune/tree/master/platuned)
-  - [client](https://github.com/aschey/Platune/tree/master/platuned/client) -
+- [platuned](https://github.com/aschey/Platune/tree/main/platuned)
+  - [client](https://github.com/aschey/Platune/tree/main/platuned/client) -
     Generated client stubs for multiple languages
-  - [server](https://github.com/aschey/Platune/tree/master/platuned/server) -
+  - [server](https://github.com/aschey/Platune/tree/main/platuned/server) -
     gRPC server frontend for libplatune
-- [platune-cli](https://github.com/aschey/Platune/tree/master/platune-cli) -
+- [platune-cli](https://github.com/aschey/Platune/tree/main/platune-cli) -
   Simple command line client designed for quick and easy usage
-- [platune-tui](https://github.com/aschey/Platune/tree/master/platune-cli) -
+- [platune-tui](https://github.com/aschey/Platune/tree/main/platune-cli) -
   Terminal client for those who hate using mice
 - platune-gui (not yet implemented) -
   Feature-rich graphical client
