@@ -23,6 +23,7 @@ jobs:
           default: true
           profile: minimal
           components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v1
       - name: Clippy
         run: cargo clippy -- -D warnings
       - name: Test
