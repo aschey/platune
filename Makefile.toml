@@ -105,9 +105,10 @@ makers fuzz
 '''
 
 [tasks.gen-coverage]
-args = ["test", "--locked"]
+args = ["nextest", "run", "--locked"]
 command = "cargo"
 env = {RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw"}
+install_crate = "cargo-nextest"
 
 [tasks.gen-coverage-report]
 args = [
@@ -129,7 +130,7 @@ args = [
 ]
 command = "grcov"
 dependencies = ["gen-coverage"]
-install_crate = {rustup_component_name = "llvm-tools-preview", binary = "grcov"}
+install_crate = {rustup_component_name = "llvm-tools-preview", crate_name = "grcov"}
 
 [tasks.cleanup-coverage]
 clear = true
@@ -146,6 +147,12 @@ script_runner = "@duckscript"
 clear = true
 dependencies = ["cleanup-coverage"]
 script = "xdg-open target/debug/coverage/index.html"
+
+[tasks.coverage.windows]
+clear = true
+dependencies = ["cleanup-coverage"]
+script = "./target/debug/coverage/index.html"
+script_runner = "@shell"
 
 [tasks.update]
 args = ["update"]
