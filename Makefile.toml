@@ -131,27 +131,6 @@ command = "grcov"
 dependencies = ["gen-coverage"]
 install_crate = {rustup_component_name = "llvm-tools-preview", binary = "grcov"}
 
-[tasks.gen-coverage-ci]
-args = [
-  ".",
-  "-s",
-  ".",
-  "--binary-path",
-  "./target/debug/",
-  "-t",
-  "lcov",
-  "--branch",
-  "--ignore-not-existing",
-  "--ignore",
-  "target/debug/**/*",
-  "--ignore",
-  "**/*/*_test.rs",
-  "-o",
-  "./target/debug/lcov.info",
-]
-command = "grcov"
-dependencies = ["gen-coverage"]
-
 [tasks.cleanup-coverage]
 clear = true
 dependencies = ["gen-coverage-report"]
