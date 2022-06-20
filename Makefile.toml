@@ -121,7 +121,7 @@ args = [
   "--branch",
   "--ignore-not-existing",
   "--ignore",
-  "target/debug/**/*",
+  "target/**/*",
   "--ignore",
   "**/*/*_test.rs",
   "-o",
