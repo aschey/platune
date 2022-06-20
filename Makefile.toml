@@ -129,7 +129,7 @@ args = [
 ]
 command = "grcov"
 dependencies = ["gen-coverage"]
-install_crate = "grcov"
+install_crate = {rustup_component_name = "llvm-tools-preview", binary = "grcov"}
 
 [tasks.gen-coverage-ci]
 args = [
@@ -151,7 +151,6 @@ args = [
 ]
 command = "grcov"
 dependencies = ["gen-coverage"]
-install_crate = "grcov"
 
 [tasks.cleanup-coverage]
 clear = true
