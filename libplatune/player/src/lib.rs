@@ -32,6 +32,7 @@ pub mod platune_player {
     use std::fs::remove_file;
     use std::thread;
     use std::time::Duration;
+    use tap::TapFallible;
     use thiserror::Error;
     use tokio::sync::broadcast;
     use tracing::{error, info, warn};
@@ -89,22 +90,19 @@ pub mod platune_player {
         }
 
         fn clean_temp_files() {
-            match std::env::temp_dir().read_dir() {
-                Ok(temp_dir) => {
-                    for entry in temp_dir.flatten() {
-                        if entry
-                            .file_name()
-                            .to_string_lossy()
-                            .starts_with("platunecache")
-                        {
-                            if let Err(e) = remove_file(entry.path()) {
-                                error!("Error removing temp file {:?}", e);
-                            }
-                        }
+            if let Ok(temp_dir) = std::env::temp_dir()
+                .read_dir()
+                .tap_err(|e| error!("Error reading temp dir {:?}", e))
+            {
+                for entry in temp_dir.flatten() {
+                    if entry
+                        .file_name()
+                        .to_string_lossy()
+                        .starts_with("platunecache")
+                    {
+                        let _ = remove_file(entry.path())
+                            .tap_err(|e| error!("Error removing temp file {:?}", e));
                     }
-                }
-                Err(e) => {
-                    error!("Error reading temp dir {:?}", e);
                 }
             }
         }
@@ -235,14 +233,13 @@ pub mod platune_player {
         fn drop(&mut self) {
             if self.joined {
                 info!("Waiting for decoder thread to terminate");
-                if let Err(e) = self
+                let _ = self
                     .decoder_handle
                     .take()
                     .expect("decoder_handle should not be None")
                     .join()
-                {
-                    warn!("Error terminating decoder thread: {:?}", e);
-                }
+                    .tap_err(|e| warn!("Error terminating decoder thread: {:?}", e));
+
                 info!("Decoder thread terminated");
             } else {
                 info!("join() not called, won't wait for decoder thread to terminate");

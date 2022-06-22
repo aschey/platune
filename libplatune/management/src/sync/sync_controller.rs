@@ -3,6 +3,7 @@ use super::{
     sync_engine::{SyncEngine, SyncError},
 };
 use sqlx::{Pool, Sqlite};
+use tap::TapFallible;
 use tokio::sync::{broadcast, oneshot};
 use tracing::{error, info};
 
@@ -48,13 +49,16 @@ impl SyncController {
             tokio::task::spawn(async move {
                 let mut engine = SyncEngine::new(folders, write_pool, mount, tx);
                 engine.start().await;
-                if finished_tx.send(()).is_err() {
-                    info!("Couldn't send sync finished signal");
-                }
+                let _ = finished_tx
+                    .send(())
+                    .tap_err(|e| info!("Couldn't send sync finished signal: {e:?}"));
+
                 finished_callback();
             });
-        } else if let Err(e) = tx.send(None) {
-            error!("Error sending sync finished signal {e:?}");
+        } else {
+            let _ = tx
+                .send(None)
+                .map_err(|e| error!("Error sending sync finished signal {e:?}"));
         }
 
         ProgressStream::new(rx)

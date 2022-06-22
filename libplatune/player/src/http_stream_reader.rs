@@ -10,6 +10,7 @@ use std::{
         Arc,
     },
 };
+use tap::TapFallible;
 use tempfile::{Builder, NamedTempFile};
 use tracing::{error, info};
 
@@ -43,13 +44,11 @@ impl HttpStreamReader {
             .reopen()
             .with_context(|| "Error reading http stream reader temp file")?;
         let url_ = url.clone();
+
         tokio::spawn(async move {
-            if let Err(e) =
-                Self::download_file(&url_, tempfile, bytes_written_, wait_written_rx, ready_tx)
-                    .await
-            {
-                error!("Error downloading file {:?}", e);
-            }
+            let _ = Self::download_file(&url_, tempfile, bytes_written_, wait_written_rx, ready_tx)
+                .await
+                .tap_err(|e| error!("Error downloading file {:?}", e));
         });
 
         let file_len = ready_rx

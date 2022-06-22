@@ -11,6 +11,7 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
+use tap::TapFallible;
 use thiserror::Error;
 use tokio::{
     sync::{
@@ -39,9 +40,9 @@ trait SendSyncError {
 impl SendSyncError for broadcast::Sender<Option<Result<f32, SyncError>>> {
     fn send_error(&self, err: SyncError) {
         error!("{err:?}");
-        if let Err(e) = self.send(Some(Err(err))) {
-            error!("Error sending broadcast message to clients {e:?}");
-        }
+        let _ = self
+            .send(Some(Err(err)))
+            .tap_err(|e| error!("Error sending broadcast message to clients {e:?}"));
     }
 }
 
@@ -85,35 +86,35 @@ impl SyncEngine {
 
         self.progress_loop(dir_rx).await;
 
-        if let Err(e) = tags_task.await {
+        let _ = tags_task.await.tap_err(|e| {
             self.tx.send_error(SyncError::ThreadCommError(format!(
                 "Error joining tags handle {e:?}"
-            )));
-        }
-
+            )))
+        });
         match counter_task.await {
             Ok(Err(e)) => self.tx.send_error(e),
-            Ok(Ok(())) => {}
             Err(e) => {
                 self.tx.send_error(SyncError::ThreadCommError(format!(
                     "Error joining counter handle {e:?}"
                 )));
             }
+            _ => {}
         }
 
         match db_task.await {
             Ok(Err(e)) => self.tx.send_error(e),
-            Ok(Ok(())) => {}
             Err(e) => {
                 self.tx.send_error(SyncError::ThreadCommError(format!(
                     "Error joining db handle {e:?}"
                 )));
             }
+            _ => {}
         }
 
-        if let Err(e) = self.tx.send(None) {
-            warn!("Error sending message to clients {e:?}");
-        }
+        let _ = self
+            .tx
+            .send(None)
+            .tap_err(|e| warn!("Error sending message to clients {e:?}"));
 
         info!("Sync took {:?}", start.elapsed());
     }
@@ -157,19 +158,25 @@ impl SyncEngine {
                 let dir_tx = dir_tx.clone();
                 let mount = mount.clone();
                 Box::new(move |result| {
-                    if let Err(e) = dir_tx.blocking_send(DirRead::Completed) {
-                        error!("Error sending completed dir read: {e:?}");
+                    if dir_tx
+                        .blocking_send(DirRead::Completed)
+                        .tap_err(|e| error!("Error sending completed dir read: {e:?}"))
+                        .is_err()
+                    {
                         return WalkState::Quit;
                     }
+
                     if let Ok(result) = result {
                         let file_path = result.into_path();
                         if file_path.is_file() {
                             if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path) {
                                 let file_path_str = clean_file_path(&file_path, &mount);
-                                if let Err(e) =
-                                    tags_tx.blocking_send((metadata, file_path_str, file_path))
+
+                                if tags_tx
+                                    .blocking_send((metadata, file_path_str, file_path))
+                                    .tap_err(|e| error!("Error sending tag: {e:?}"))
+                                    .is_err()
                                 {
-                                    error!("Error sending tag: {e:?}");
                                     return WalkState::Quit;
                                 }
                             }

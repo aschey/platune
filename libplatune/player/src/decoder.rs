@@ -117,9 +117,9 @@ impl Decoder {
         };
         if let Some(start_position) = start_position {
             // Stream may not be seekable
-            if let Err(e) = decoder.seek(start_position) {
-                warn!("Unable to seek to {start_position:?}: {e:?}");
-            }
+            let _ = decoder
+                .seek(start_position)
+                .tap_err(|e| warn!("Unable to seek to {start_position:?}: {e:?}"));
             decoder.initialize(InitializeOpt::PreserveSilence)?;
         } else {
             decoder.initialize(InitializeOpt::TrimSilence)?;
@@ -341,9 +341,7 @@ impl Decoder {
                 };
             };
             self.timestamp = packet.ts();
-            if let Err(e) = self.process_output(&packet) {
-                return Err(e);
-            }
+            self.process_output(&packet)?;
         }
         Ok(Some(self.current()))
     }

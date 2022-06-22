@@ -3,6 +3,7 @@ use std::result;
 use std::{fmt::Debug, time::Duration};
 use symphonia::core::audio::RawSample;
 use symphonia::core::conv::ConvertibleSample;
+use tap::TapFallible;
 use thiserror::Error;
 
 pub(crate) trait AudioOutput {
@@ -138,15 +139,15 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             move |err| match err {
                 StreamError::DeviceNotAvailable => {
                     info!("Device unplugged. Resetting...");
-                    if let Err(e) = cmd_sender.send(Command::Reset) {
-                        error!("Error sending reset command: {e:?}");
-                    }
+                    let _ = cmd_sender
+                        .send(Command::Reset)
+                        .tap_err(|e| error!("Error sending reset command: {e:?}"));
                 }
                 StreamError::BackendSpecific { err } => {
                     error!("Playback error: {err}");
-                    if let Err(e) = cmd_sender.send(Command::Stop) {
-                        error!("Error sending stop command: {e:?}");
-                    }
+                    let _ = cmd_sender
+                        .send(Command::Stop)
+                        .tap_err(|e| error!("Error sending stop command: {e:?}"));
                 }
             },
         );

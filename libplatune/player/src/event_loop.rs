@@ -17,6 +17,7 @@ use crate::{
 
 use crate::audio_output::*;
 use flume::{Receiver, TryRecvError};
+use tap::TapFallible;
 use tracing::{error, info};
 
 pub(crate) fn decode_loop(
@@ -44,12 +45,14 @@ pub(crate) fn decode_loop(
                     QueueStartMode::ForceRestart => {
                         info!("Restarting output stream");
                         audio_manager.stop();
-                        if let Err(e) =
-                            audio_manager.reset(queue_source.settings.resample_chunk_size)
+                        if audio_manager
+                            .reset(queue_source.settings.resample_chunk_size)
+                            .tap_err(|e| error!("Error resetting output stream: {e:?}"))
+                            .is_err()
                         {
-                            error!("Error resetting output stream: {e:?}");
                             return;
                         }
+
                         prev_stop_position = audio_manager.decode_source(
                             queue_source,
                             &mut cmd_rx,
@@ -59,9 +62,14 @@ pub(crate) fn decode_loop(
                         );
                     }
                     QueueStartMode::Normal => {
-                        if let Err(e) = audio_manager.start() {
-                            error!("Error starting output stream: {e:?}");
+                        if audio_manager
+                            .start()
+                            .tap_err(|e| error!("Error starting output stream: {e:?}"))
+                            .is_err()
+                        {
+                            return;
                         }
+
                         prev_stop_position = audio_manager.decode_source(
                             queue_source,
                             &mut cmd_rx,
