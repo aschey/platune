@@ -7,8 +7,10 @@ use notify::{RecommendedWatcher, RecursiveMode};
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{path::PathBuf, sync::Arc, thread, time::Duration};
+use tap::TapFallible;
+use thiserror::Error;
 use tokio::sync::{broadcast, mpsc, Mutex, RwLock};
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Debug)]
 pub(crate) enum SyncMessage {
@@ -23,6 +25,16 @@ pub struct Progress {
     pub job: String,
     pub percentage: f32,
     pub finished: bool,
+}
+
+#[derive(Error, Debug)]
+pub enum FileWatchError {
+    #[error(transparent)]
+    WatchError(#[from] notify::Error),
+    #[error(transparent)]
+    DbError(#[from] DbError),
+    #[error("Thread communication error: {0}")]
+    ThreadCommError(String),
 }
 
 #[derive(Clone)]
@@ -42,20 +54,28 @@ impl Deref for FileWatchManager {
 }
 
 impl FileWatchManager {
-    pub async fn new(manager: Manager, debounce_delay: Duration) -> Self {
+    pub async fn new(manager: Manager, debounce_delay: Duration) -> Result<Self, FileWatchError> {
         let (event_tx, event_rx) = std::sync::mpsc::channel();
         let (sync_tx, mut sync_rx) = tokio::sync::mpsc::channel(32);
         let sync_tx_ = sync_tx.clone();
         let (progress_tx, _) = broadcast::channel(32);
         let progress_tx_ = progress_tx.clone();
 
-        let mut watcher = RecommendedWatcher::new(event_tx, debounce_delay).unwrap();
-        let paths = manager.get_all_folders().await.unwrap();
+        let mut watcher = RecommendedWatcher::new(event_tx, debounce_delay)
+            .map_err(FileWatchError::WatchError)?;
+
+        let paths = manager
+            .get_all_folders()
+            .await
+            .map_err(FileWatchError::DbError)?;
 
         for path in &paths {
-            watcher.watch(&path, RecursiveMode::Recursive).unwrap();
+            watcher
+                .watch(&path, RecursiveMode::Recursive)
+                .map_err(FileWatchError::WatchError)?;
         }
 
+        // TODO: add a way to terminate these child tasks
         thread::spawn(move || {
             while let Ok(event) = event_rx.recv() {
                 info!("Received file watcher event {event:?}");
@@ -63,16 +83,20 @@ impl FileWatchManager {
                     DebouncedEvent::Create(path)
                     | DebouncedEvent::Write(path)
                     | DebouncedEvent::Remove(path) => {
-                        sync_tx_.blocking_send(SyncMessage::Path(path)).unwrap();
+                        let _ = sync_tx_
+                            .blocking_send(SyncMessage::Path(path))
+                            .tap_err(|e| error!("Error sending path message: {e:?}"));
                     }
                     DebouncedEvent::NoticeWrite(_) | DebouncedEvent::NoticeRemove(_) => {
                         // Write or remove pending, don't need to send the path yet but we can reset the debouncer
-                        sync_tx_.blocking_send(SyncMessage::Hold).unwrap();
+                        let _ = sync_tx_
+                            .blocking_send(SyncMessage::Hold)
+                            .tap_err(|e| error!("Error sending hold message: {e:?}"));
                     }
                     DebouncedEvent::Rename(from, to) => {
-                        sync_tx_
+                        let _ = sync_tx_
                             .blocking_send(SyncMessage::Rename(from, to))
-                            .unwrap();
+                            .tap_err(|e| error!("Error sending rename message: {e:?}"));
                     }
                     _ => {}
                 }
@@ -86,25 +110,32 @@ impl FileWatchManager {
             let running = Arc::new(AtomicBool::new(false));
             loop {
                 // Wait for longer than the debounce duration to ensure we get all the emitted events
-                let watch_event = tokio::time::timeout(debounce_delay * 2, sync_rx.recv()).await;
-                if watch_event.is_ok() {
-                    info!("Processing watch event: {watch_event:?}");
-                }
+                let watch_event = tokio::time::timeout(debounce_delay * 2, sync_rx.recv())
+                    .await
+                    .tap_ok(|event| info!("Processing watch event: {event:?}"));
+
                 match watch_event {
                     Ok(Some(SyncMessage::All)) => {
-                        let rx = manager_.write().await.sync(None).await.unwrap();
-                        Self::send_progress(running.clone(), progress_tx_.clone(), rx);
+                        if let Ok(rx) = manager_
+                            .write()
+                            .await
+                            .sync(None)
+                            .await
+                            .tap_err(|e| error!("Error syncing: {e:?}"))
+                        {
+                            Self::send_progress(running.clone(), progress_tx_.clone(), rx);
+                        }
                     }
                     Ok(Some(SyncMessage::Path(new_path))) => {
                         paths = Self::normalize_paths(paths, new_path);
                     }
                     Ok(Some(SyncMessage::Rename(from, to))) => {
-                        manager_
+                        let _ = manager_
                             .write()
                             .await
                             .rename_path(from, to.clone())
                             .await
-                            .unwrap();
+                            .tap_err(|e| error!("Error renaming path: {e:?}"));
 
                         // Add new path to sync list in case the new path maps to paths that are currently marked as deleted
                         // So we need to now mark them as un-deleted
@@ -129,20 +160,29 @@ impl FileWatchManager {
                             .map(|p| p.to_string_lossy().into_owned())
                             .collect();
                         info!("Syncing {folders:?}");
-                        let rx = manager_.write().await.sync(Some(folders)).await.unwrap();
-                        Self::send_progress(running.clone(), progress_tx_.clone(), rx);
+
+                        if let Ok(rx) = manager_
+                            .write()
+                            .await
+                            .sync(Some(folders))
+                            .await
+                            .tap_err(|e| error!("Error syncing: {e:?}"))
+                        {
+                            Self::send_progress(running.clone(), progress_tx_.clone(), rx);
+                        }
+
                         paths.clear();
                     }
                 }
             }
         });
 
-        Self {
+        Ok(Self {
             manager,
             watcher: Arc::new(Mutex::new(watcher)),
             sync_tx,
             progress_tx,
-        }
+        })
     }
 
     fn send_progress(
@@ -156,7 +196,9 @@ impl FileWatchManager {
                 progress_tx
                     .send(Progress {
                         job: "sync".to_string(),
-                        percentage: m.unwrap(),
+                        percentage: m
+                            .tap_err(|e| error!("Error getting progress: {e:?}"))
+                            .unwrap_or(0.0),
                         finished: false,
                     })
                     .unwrap_or_default();
@@ -194,19 +236,22 @@ impl FileWatchManager {
         new_paths
     }
 
-    pub async fn start_sync_all(&self) {
-        self.sync_tx.send(SyncMessage::All).await.unwrap();
+    pub async fn start_sync_all(&self) -> Result<(), FileWatchError> {
+        self.sync_tx
+            .send(SyncMessage::All)
+            .await
+            .map_err(|e| FileWatchError::ThreadCommError(e.to_string()))
     }
 
     pub fn subscribe_progress(&self) -> broadcast::Receiver<Progress> {
         self.progress_tx.subscribe()
     }
 
-    pub async fn add_folder(&self, path: &str) -> Result<(), DbError> {
+    pub async fn add_folder(&self, path: &str) -> Result<(), FileWatchError> {
         self.add_folders(vec![path]).await
     }
 
-    pub async fn add_folders(&self, paths: Vec<&str>) -> Result<(), DbError> {
+    pub async fn add_folders(&self, paths: Vec<&str>) -> Result<(), FileWatchError> {
         self.manager
             .write()
             .await
@@ -218,7 +263,7 @@ impl FileWatchManager {
                 .lock()
                 .await
                 .watch(path, RecursiveMode::Recursive)
-                .unwrap();
+                .map_err(FileWatchError::WatchError)?;
         }
         Ok(())
     }

@@ -38,7 +38,9 @@ enum Transport {
 pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     let platune_player = Arc::new(PlatunePlayer::new(Default::default()));
     let manager = init_manager().await?;
-    let manager = FileWatchManager::new(manager, Duration::from_millis(500)).await;
+    let manager = FileWatchManager::new(manager, Duration::from_millis(500))
+        .await
+        .with_context(|| "error starting file watch manager")?;
 
     let mut servers = Vec::<_>::new();
     let http_server = run_server(

@@ -27,10 +27,12 @@ use walkdir::WalkDir;
 pub enum SyncError {
     #[error(transparent)]
     DbError(#[from] DbError),
-    #[error("Async error: {0}")]
+    #[error("Thread communication error: {0}")]
     ThreadCommError(String),
     #[error("IO Error: {0}")]
     IOError(String),
+    #[error("Tag read error: {0}")]
+    TagReadError(String),
 }
 
 trait SendSyncError {
@@ -169,7 +171,9 @@ impl SyncEngine {
                     if let Ok(result) = result {
                         let file_path = result.into_path();
                         if file_path.is_file() {
-                            if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path) {
+                            if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path)
+                                .tap_err(|e| error!("Error parsing tag metadata: {e:?}"))
+                            {
                                 let file_path_str = clean_file_path(&file_path, &mount);
 
                                 if tags_tx
@@ -298,24 +302,17 @@ impl SyncEngine {
                 ))
             })?
             .len();
-        let mut song_metadata: Option<ReadOnlyTrack> = None;
+
         let name = &name.to_str().unwrap_or_default().to_lowercase()[..];
         match name {
             "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
-                let tag_result = ReadOnlyTrack::from_path(file_path, None);
-                match tag_result {
-                    Err(e) => {
-                        error!("Error reading tag: {e:?}");
-                    }
-                    Ok(tag) => {
-                        song_metadata = Some(tag);
-                    }
-                }
+                return Ok(Some(ReadOnlyTrack::from_path(file_path, None).map_err(
+                    |e| SyncError::TagReadError(format!("Error reading tag: {e:?}")),
+                )?));
             }
-
             _ => {}
         }
 
-        Ok(song_metadata)
+        Ok(None)
     }
 }

@@ -58,7 +58,7 @@ impl SyncController {
         } else {
             let _ = tx
                 .send(None)
-                .map_err(|e| error!("Error sending sync finished signal {e:?}"));
+                .tap_err(|e| error!("Error sending sync finished signal {e:?}"));
         }
 
         ProgressStream::new(rx)

@@ -48,8 +48,9 @@ async fn test_file_sync_sequential(
             .unwrap();
     }
 
-    let file_watch_manager =
-        FileWatchManager::new(manager, Duration::from_millis(debounce_time)).await;
+    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(debounce_time))
+        .await
+        .unwrap();
     let mut receiver = file_watch_manager.subscribe_progress();
 
     if !add_folder_before {
@@ -145,7 +146,9 @@ async fn test_file_sync_concurrent(rename: bool) {
     let music_dir = tempdir.path().join("configdir");
     let inner_dir = music_dir.join("folder1");
 
-    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(10)).await;
+    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(10))
+        .await
+        .unwrap();
     let mut receiver = file_watch_manager.subscribe_progress();
 
     let (started_tx, mut started_rx) = mpsc::channel(1);
@@ -228,7 +231,9 @@ async fn test_sync_all(sync_twice: bool) {
         .await
         .unwrap();
 
-    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(100)).await;
+    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(100))
+        .await
+        .unwrap();
     let mut receiver = file_watch_manager.subscribe_progress();
 
     let msg_task = tokio::spawn(async move {
@@ -250,7 +255,7 @@ async fn test_sync_all(sync_twice: bool) {
         }));
     }
 
-    file_watch_manager.start_sync_all().await;
+    file_watch_manager.start_sync_all().await.unwrap();
 
     if sync_twice {
         timeout(Duration::from_secs(5), msg_task2.unwrap())

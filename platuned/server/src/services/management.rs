@@ -37,8 +37,10 @@ fn format_error(msg: String) -> Status {
 #[tonic::async_trait]
 impl Management for ManagementImpl {
     async fn start_sync(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        self.manager.start_sync_all().await;
-        Ok(Response::new(()))
+        match self.manager.start_sync_all().await {
+            Ok(_) => Ok(Response::new(())),
+            Err(e) => Err(format_error(e.to_string())),
+        }
     }
 
     type SubscribeEventsStream =
