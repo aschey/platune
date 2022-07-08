@@ -4,7 +4,7 @@
 [![CI](https://github.com/aschey/Platune/actions/workflows/test.yml/badge.svg)](https://github.com/aschey/Platune/actions/workflows/test.yml)
 ![codecov](https://codecov.io/gh/aschey/platune/branch/main/graph/badge.svg?token=NWS6Q3W4FP)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)
-![Lines of Code](https://tokei-zjgz.onrender.com/b1/github/aschey/platune)
+![Lines of Code](https://aschey.tech/tokei/github/aschey/platune)
 
 **NOTE: This project is still in its early stages and most of these features do not work yet**
 
