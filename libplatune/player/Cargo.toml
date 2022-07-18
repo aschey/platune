@@ -18,11 +18,11 @@ rb = "0.4.0"
 reqwest = {version = "0.11.11", features = ["stream"]}
 rubato = "0.12.0"
 strum = {version = "0.24.1", features = ["derive"]}
-symphonia = {version = "0.5.0", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
+symphonia = {version = "0.5.1", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 tap = "1.0.1"
 tempfile = "3.3.0"
 thiserror = "1.0.31"
-tokio = {version = "1.19.2", features = ["rt-multi-thread", "macros"]}
+tokio = {version = "1.20.0", features = ["rt-multi-thread", "macros"]}
 tracing = "0.1.35"
 
 [dev-dependencies]
