@@ -1,4 +1,7 @@
-use std::task::Poll;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use futures::StreamExt;
 use tokio::sync::broadcast;
@@ -23,10 +26,7 @@ impl ProgressStream {
 impl futures::Stream for ProgressStream {
     type Item = Result<f32, SyncError>;
 
-    fn poll_next(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.inner.poll_next_unpin(cx) {
             Poll::Ready(progress_val_option) => match progress_val_option {
                 None => Poll::Ready(None),

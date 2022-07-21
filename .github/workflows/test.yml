@@ -36,8 +36,9 @@ jobs:
           wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-gnu.tgz -O cargo-binstall.tgz
           tar -xzvf cargo-binstall.tgz
           ./cargo-binstall grcov --no-confirm
+          ./cargo-binstall cargo-nextest --no-confirm
           rustup component add llvm-tools-preview 
-          cargo test --locked
+          cargo nextest run --locked
           grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing --ignore "target/**/*" --ignore "**/*/*_test.rs" -o ./target/debug/lcov.info
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

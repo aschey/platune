@@ -33,6 +33,7 @@ impl SyncController {
             // Otherwise, the sync is curently in progress
             if finished_rx.try_recv().is_err() {
                 if let Some(tx) = &self.progress_tx {
+                    info!("Subscribing to sync in progress");
                     return ProgressStream::new(tx.subscribe());
                 }
             }
@@ -47,6 +48,7 @@ impl SyncController {
             let write_pool = self.write_pool.clone();
 
             tokio::task::spawn(async move {
+                info!("Starting new sync");
                 let mut engine = SyncEngine::new(folders, write_pool, mount, tx);
                 engine.start().await;
                 let _ = finished_tx
@@ -56,6 +58,7 @@ impl SyncController {
                 finished_callback();
             });
         } else {
+            info!("No folders to sync");
             let _ = tx
                 .send(None)
                 .tap_err(|e| error!("Error sending sync finished signal {e:?}"));
