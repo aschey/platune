@@ -232,6 +232,73 @@ pub async fn test_sync_delete_and_readd() {
     assert_eq!(0, deleted2.len());
 }
 
+#[rstest(do_update, case(true), case(false))]
+#[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+pub async fn test_sync_duplicate_album_name(do_update: bool) {
+    let tempdir = TempDir::new().unwrap();
+    let (_, mut manager) = setup().await;
+    let music_dir = tempdir.path().join("configdir");
+    let inner_dir = music_dir.join("folder1");
+    create_dir_all(inner_dir.clone()).unwrap();
+
+    let song1_path = inner_dir.join("test.mp3");
+    let song2_path = inner_dir.join("test2.mp3");
+    fs::copy("../test_assets/test.mp3", &song1_path).unwrap();
+    fs::copy("../test_assets/test2.mp3", &song2_path).unwrap();
+
+    let track1 = katatsuki::ReadWriteTrack::from_path(&song1_path, None).unwrap();
+    track1.set_album("album");
+    track1.set_album_artists("artist1");
+    track1.set_title("track1");
+    track1.save();
+
+    let track2 = katatsuki::ReadWriteTrack::from_path(&song2_path, None).unwrap();
+    track2.set_album("album");
+    if do_update {
+        track2.set_album_artists("artist1");
+    } else {
+        track2.set_album_artists("artist2");
+    }
+
+    track2.set_title("track2");
+    track2.save();
+
+    manager
+        .add_folder(music_dir.to_str().unwrap())
+        .await
+        .unwrap();
+
+    let mut receiver = manager.sync(None).await.unwrap();
+    while (receiver.next().await).is_some() {}
+
+    if do_update {
+        let track2 = katatsuki::ReadWriteTrack::from_path(&song2_path, None).unwrap();
+        track2.set_album_artists("artist2");
+        track2.save();
+
+        let mut receiver = manager.sync(None).await.unwrap();
+        while (receiver.next().await).is_some() {}
+    }
+
+    let song1_entry = manager
+        .get_song_by_path(&song1_path)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!("album", song1_entry.album);
+    assert_eq!("artist1", song1_entry.album_artist);
+    assert_eq!("track1", song1_entry.song);
+
+    let song2_entry = manager
+        .get_song_by_path(&song2_path)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!("album", song2_entry.album);
+    assert_eq!("artist2", song2_entry.album_artist);
+    assert_eq!("track2", song2_entry.song);
+}
+
 async fn setup() -> (Database, Manager) {
     let db = Database::connect_in_memory().await.unwrap();
     db.migrate().await.unwrap();
