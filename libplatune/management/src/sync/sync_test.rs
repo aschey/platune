@@ -245,23 +245,26 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
     let song2_path = inner_dir.join("test2.mp3");
     fs::copy("../test_assets/test.mp3", &song1_path).unwrap();
     fs::copy("../test_assets/test2.mp3", &song2_path).unwrap();
-
-    let track1 = katatsuki::ReadWriteTrack::from_path(&song1_path, None).unwrap();
-    track1.set_album("album");
-    track1.set_album_artists("artist1");
-    track1.set_title("track1");
-    track1.save();
-
-    let track2 = katatsuki::ReadWriteTrack::from_path(&song2_path, None).unwrap();
-    track2.set_album("album");
-    if do_update {
-        track2.set_album_artists("artist1");
-    } else {
-        track2.set_album_artists("artist2");
+    {
+        let track1 = katatsuki::ReadWriteTrack::from_path(&song1_path, None).unwrap();
+        track1.set_album("album");
+        track1.set_album_artists("artist1");
+        track1.set_title("track1");
+        track1.save();
     }
 
-    track2.set_title("track2");
-    track2.save();
+    {
+        let track2 = katatsuki::ReadWriteTrack::from_path(&song2_path, None).unwrap();
+        track2.set_album("album");
+        if do_update {
+            track2.set_album_artists("artist1");
+        } else {
+            track2.set_album_artists("artist2");
+        }
+
+        track2.set_title("track2");
+        track2.save();
+    }
 
     manager
         .add_folder(music_dir.to_str().unwrap())
@@ -272,9 +275,11 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
     while (receiver.next().await).is_some() {}
 
     if do_update {
-        let track2 = katatsuki::ReadWriteTrack::from_path(&song2_path, None).unwrap();
-        track2.set_album_artists("artist2");
-        track2.save();
+        {
+            let track2 = katatsuki::ReadWriteTrack::from_path(&song2_path, None).unwrap();
+            track2.set_album_artists("artist2");
+            track2.save();
+        }
 
         let mut receiver = manager.sync(None).await.unwrap();
         while (receiver.next().await).is_some() {}
