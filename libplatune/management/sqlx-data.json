@@ -324,16 +324,6 @@
     },
     "query": "\n            DELETE FROM deleted_song as ds\n            WHERE EXISTS(SELECT 1 FROM song s WHERE s.song_id = ds.song_id AND s.last_scanned_date = ?)\n            "
   },
-  "a65c7e93559c7ebc8727338a22594b8da6a7c719aaf106db041e6cfe509b2a0e": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 16
-      }
-    },
-    "query": "\n        UPDATE song\n            SET modified_date = $2,\n            artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),\n            song_title = $4,\n            album_id = (SELECT album_id FROM album WHERE album_name = $5),\n            track_number = $6,\n            disc_number = $7,\n            song_year = $8,\n            song_month = $9,\n            song_day = $10,\n            duration = $11,\n            sample_rate = $12,\n            bit_rate = $13,\n            file_size = $14,\n            album_art_path = $15,\n            fingerprint = $16\n        WHERE song_path = $1 AND fingerprint != $16;\n        "
-  },
   "b2f28d8f611691beda9499ef24c23f4bdd22e5789b1a89561cc4753cf1e5355f": {
     "describe": {
       "columns": [
@@ -389,6 +379,16 @@
       }
     },
     "query": "SELECT mount_path FROM mount WHERE mount_id = ?;"
+  },
+  "d6e41aa54ec2b46d45b25324041b3da54d42b65f9bb03cfbf653c273e2743658": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 17
+      }
+    },
+    "query": "\n        UPDATE song\n            SET modified_date = $2,\n            artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),\n            song_title = $4,\n            album_id = (SELECT album_id FROM album a\n                        INNER JOIN album_artist aa ON a.album_artist_id = aa.album_artist_id\n                        WHERE a.album_name = $5 AND aa.album_artist_name = $6),\n            track_number = $7,\n            disc_number = $8,\n            song_year = $9,\n            song_month = $10,\n            song_day = $11,\n            duration = $12,\n            sample_rate = $13,\n            bit_rate = $14,\n            file_size = $15,\n            album_art_path = $16,\n            fingerprint = $17\n        WHERE song_path = $1 AND fingerprint != $17;\n        "
   },
   "e4ce417888facebb6ce04ddfb664fe787b8840a09f1bff10fdcf06849d1edcdb": {
     "describe": {
