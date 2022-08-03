@@ -8,7 +8,7 @@ jobs:
       SQLX_OFFLINE: true
       RUSTFLAGS: "-Cinstrument-coverage"
       LLVM_PROFILE_FILE: "platune-%p-%m.profraw"
-      PROTOC: "$HOME/protoc/bin/protoc"
+      PROTOC: "/home/runner/protoc/bin/protoc"
     name: Run Rust tests
     runs-on: ubuntu-latest
     steps:
@@ -19,9 +19,7 @@ jobs:
         run: $(command -v sudo>/dev/null && echo "sudo") apt-get update
       - name: Install deps
         run: |
-          $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev cmake build-essential pkg-config git zlib1g-dev 
-          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip
-          unzip protoc-3.19.4-linux-x86_64.zip -d "$HOME/protoc"
+          $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev cmake build-essential pkg-config git zlib1g-dev
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
@@ -33,7 +31,10 @@ jobs:
         with:
           sharedKey: cache-${{ hashFiles('**/Cargo.lock') }}
       - name: Clippy
-        run: cargo clippy -- -D warnings
+        run: |
+          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip
+          unzip protoc-3.19.4-linux-x86_64.zip -d "$HOME/protoc"
+          cargo clippy -- -D warnings
       - name: Test
         run: |
           # Install precompiled binaries to improve build time
