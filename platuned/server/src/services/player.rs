@@ -27,14 +27,59 @@ fn format_error(msg: String) -> Status {
     Status::internal(msg)
 }
 
-fn get_event_response(event: Event, state: PlayerState) -> EventResponse {
-    EventResponse {
+fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse, Status> {
+    Ok(EventResponse {
         event: event.into(),
         event_payload: Some(EventPayload::State(State {
             queue: state.queue,
             queue_position: state.queue_position as u32,
             volume: state.volume,
         })),
+    })
+}
+
+fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
+    match msg {
+        PlayerEvent::Stop(state) => get_event_response(Event::Stop, state),
+        PlayerEvent::Pause(state) => get_event_response(Event::Pause, state),
+        PlayerEvent::Resume(state) => get_event_response(Event::Resume, state),
+        PlayerEvent::Ended(state) => get_event_response(Event::Ended, state),
+        PlayerEvent::Next(state) => get_event_response(Event::Next, state),
+        PlayerEvent::StartQueue(state) => get_event_response(Event::StartQueue, state),
+        PlayerEvent::QueueUpdated(state) => get_event_response(Event::QueueUpdated, state),
+        PlayerEvent::Seek(state, time) => Ok(EventResponse {
+            event: Event::Seek.into(),
+            event_payload: Some(EventPayload::SeekData(SeekResponse {
+                state: Some(State {
+                    queue: state.queue,
+                    queue_position: state.queue_position as u32,
+                    volume: state.volume,
+                }),
+                seek_millis: time.as_millis() as u64,
+            })),
+        }),
+        PlayerEvent::Previous(state) => get_event_response(Event::Previous, state),
+        PlayerEvent::QueueEnded(state) => get_event_response(Event::QueueEnded, state),
+        PlayerEvent::Position(position) => Ok(EventResponse {
+            event: Event::Position.into(),
+            event_payload: Some(EventPayload::Progress(PositionResponse {
+                position: Some(
+                    position
+                        .position
+                        .try_into()
+                        .map_err(|e| format_error(format!("Error converting position: {e:?}")))?,
+                ),
+                retrieval_time: position
+                    .retrieval_time
+                    .map(|t| {
+                        t.try_into().map_err(|e| {
+                            format_error(format!("Error converting retrieval time: {e:?}"))
+                        })
+                    })
+                    .map_or(Ok(None), |r| r.map(Some))?,
+            })),
+        }),
+        _ => unreachable!("Encountered unhandled event {:?}", msg.to_string()),
     }
 }
 
@@ -118,12 +163,31 @@ impl Player for PlayerImpl {
     }
 
     async fn get_current_status(&self, _: Request<()>) -> Result<Response<StatusResponse>, Status> {
-        let status = self.player.get_current_status().await.unwrap();
+        let status = self
+            .player
+            .get_current_status()
+            .await
+            .map_err(|e| format_error(format!("Error getting current status: {e:?}")))?;
 
-        let progress = status.current_position.map(|p| PositionResponse {
-            position: Some(prost_types::Duration::from(p.position)),
-            retrieval_time: p.retrieval_time.map(prost_types::Duration::from),
-        });
+        let progress =
+            status
+                .current_position
+                .map(|p| {
+                    Ok(PositionResponse {
+                        position: Some(p.position.try_into().map_err(|e| {
+                            format_error(format!("Error converting duration: {e:?}"))
+                        })?),
+                        retrieval_time: p
+                            .retrieval_time
+                            .map(|t| {
+                                t.try_into().map_err(|e| {
+                                    format_error(format!("Error converting retrieval time: {e:?}"))
+                                })
+                            })
+                            .map_or(Ok(None), |r| r.map(Some))?,
+                    })
+                })
+                .map_or(Ok(None), |r: Result<_, Status>| r.map(Some))?;
 
         Ok(Response::new(StatusResponse {
             progress,
@@ -150,42 +214,9 @@ impl Player for PlayerImpl {
             while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.recv() => Err(RecvError::Closed) }
             {
                 info!("Server received event {:?}", msg);
-                tx.send(Ok(match msg {
-                    PlayerEvent::Stop(state) => get_event_response(Event::Stop, state),
-                    PlayerEvent::Pause(state) => get_event_response(Event::Pause, state),
-                    PlayerEvent::Resume(state) => get_event_response(Event::Resume, state),
-                    PlayerEvent::Ended(state) => get_event_response(Event::Ended, state),
-                    PlayerEvent::Next(state) => get_event_response(Event::Next, state),
-                    PlayerEvent::StartQueue(state) => get_event_response(Event::StartQueue, state),
-                    PlayerEvent::QueueUpdated(state) => {
-                        get_event_response(Event::QueueUpdated, state)
-                    }
-                    PlayerEvent::Seek(state, time) => EventResponse {
-                        event: Event::Seek.into(),
-                        event_payload: Some(EventPayload::SeekData(SeekResponse {
-                            state: Some(State {
-                                queue: state.queue,
-                                queue_position: state.queue_position as u32,
-                                volume: state.volume,
-                            }),
-                            seek_millis: time.as_millis() as u64,
-                        })),
-                    },
-                    PlayerEvent::Previous(state) => get_event_response(Event::Previous, state),
-                    PlayerEvent::QueueEnded(state) => get_event_response(Event::QueueEnded, state),
-                    PlayerEvent::Position(position) => EventResponse {
-                        event: Event::Position.into(),
-                        event_payload: Some(EventPayload::Progress(PositionResponse {
-                            position: Some(prost_types::Duration::from(position.position)),
-                            retrieval_time: position
-                                .retrieval_time
-                                .map(prost_types::Duration::from),
-                        })),
-                    },
-                    _ => unreachable!("Encountered unhandled event {:?}", msg.to_string()),
-                }))
-                .await
-                .unwrap_or_default()
+                let msg = map_response(msg);
+
+                tx.send(msg).await.unwrap_or_default()
             }
         });
         Ok(Response::new(Box::pin(
