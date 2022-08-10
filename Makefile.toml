@@ -152,6 +152,11 @@ dependencies = ["cleanup-coverage"]
 script = "./target/debug/coverage/index.html"
 script_runner = "@shell"
 
+[tasks.unused]
+args = ["+nightly", "udeps"]
+command = "cargo"
+install_crate = "cargo-udeps"
+
 [tasks.update]
 args = ["update"]
 command = "cargo"
@@ -163,7 +168,7 @@ command = "cargo"
 install_crate = "cargo-add"
 
 [tasks.update-all]
-dependencies = ["update", "upgrade"]
+dependencies = ["unused", "update", "upgrade"]
 script = '''
 cd libplatune/player/fuzz
 makers update-all
