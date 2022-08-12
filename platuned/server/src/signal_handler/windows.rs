@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::eyre::Result;
 use tokio::sync::broadcast::Sender;
 use tracing::{info, log::error};
 

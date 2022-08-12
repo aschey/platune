@@ -5,7 +5,7 @@ mod memory_config;
 pub use file_config::*;
 pub use memory_config::*;
 
-use anyhow::Result;
+use eyre::Result;
 
 pub trait Config {
     fn get_drive_id(&self) -> Option<i64>;

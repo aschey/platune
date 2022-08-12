@@ -1630,11 +1630,11 @@ dependencies = [
 name = "libplatune-management"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "concread",
  "criterion",
  "ctor",
  "directories",
+ "eyre",
  "futures",
  "ignore",
  "itertools",
@@ -1663,11 +1663,11 @@ dependencies = [
 name = "libplatune-player"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "assert_matches",
  "async-trait",
  "cpal",
  "ctor",
+ "eyre",
  "flume",
  "futures",
  "futures-util",

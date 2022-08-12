@@ -1,5 +1,5 @@
 use super::Config;
-use anyhow::Result;
+use eyre::Result;
 use std::{cell::RefCell, sync::Mutex};
 
 pub struct MemoryConfig {

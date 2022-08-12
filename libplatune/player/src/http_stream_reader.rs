@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use eyre::{eyre, Context, Result};
 use flume::{Receiver, Sender};
 use futures_util::StreamExt;
 use std::{
@@ -38,11 +38,11 @@ impl HttpStreamReader {
         let tempfile_ = Builder::new()
             .prefix("platunecache")
             .tempfile()
-            .with_context(|| "Error creating http stream reader temp file")?;
+            .wrap_err("Error creating http stream reader temp file")?;
 
         let tempfile = tempfile_
             .reopen()
-            .with_context(|| "Error reading http stream reader temp file")?;
+            .wrap_err("Error reading http stream reader temp file")?;
         let url_ = url.clone();
 
         tokio::spawn(async move {
@@ -54,7 +54,7 @@ impl HttpStreamReader {
         let file_len = ready_rx
             .recv_async()
             .await
-            .with_context(|| "Error receiving ready signal from file http file download")?;
+            .wrap_err("Error receiving ready signal from file http file download")?;
 
         let output_reader = BufReader::new(tempfile_);
         Ok(HttpStreamReader {
@@ -96,18 +96,14 @@ impl HttpStreamReader {
             .head(url)
             .send()
             .await
-            .with_context(|| format!("Error sending HEAD request to url {}", url))?;
+            .wrap_err(format!("Error sending HEAD request to url {}", url))?;
 
         let file_len = res
             .headers()
             .get(reqwest::header::CONTENT_LENGTH)
-            .with_context(|| "Content length missing")?;
-        let file_len = u64::from_str(
-            file_len
-                .to_str()
-                .with_context(|| "Invalid content length")?,
-        )
-        .with_context(|| "Invalid content length")?;
+            .ok_or_else(|| eyre!("Content length missing"))?;
+        let file_len = u64::from_str(file_len.to_str().wrap_err("Invalid content length")?)
+            .wrap_err("Invalid content length")?;
 
         info!("File length={}", file_len);
 
@@ -115,16 +111,16 @@ impl HttpStreamReader {
             .get(url)
             .send()
             .await
-            .with_context(|| format!("Error fetching url {}", url))?
+            .wrap_err(format!("Error fetching url {}", url))?
             .bytes_stream();
 
         // Pre-buffer 1% of the file
         let mut target = (file_len as f32 * 0.01) as u32;
         while let Some(item) = stream.next().await {
-            let item = item.with_context(|| "Error receiving bytes from http download")?;
+            let item = item.wrap_err("Error receiving bytes from http download")?;
             let len = item.len();
             std::io::copy(&mut item.take(len as u64), &mut tempfile)
-                .with_context(|| "Error copying http download data to temp file")?;
+                .wrap_err("Error copying http download data to temp file")?;
             let new_len = bytes_written.load(Ordering::SeqCst) + len as u32;
             bytes_written.store(new_len, Ordering::SeqCst);
 
@@ -137,7 +133,7 @@ impl HttpStreamReader {
                 ready_tx
                     .send_async(file_len)
                     .await
-                    .with_context(|| "Error sending http file download ready signal")?;
+                    .wrap_err("Error sending http file download ready signal")?;
 
                 // reset target to prevent this branch from triggering again
                 target = u32::MAX;

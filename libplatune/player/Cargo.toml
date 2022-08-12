@@ -10,8 +10,8 @@ name = "libplatune_player"
 path = "src/lib.rs"
 
 [dependencies]
-anyhow = "1.0.60"
 cpal = "0.13.5"
+eyre = "0.6.8"
 flume = "0.10.14"
 futures-util = "0.3.21"
 rb = "0.4.0"
