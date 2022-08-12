@@ -21,8 +21,11 @@ pub struct UnixStream(pub tokio::net::UnixStream);
 impl UnixStream {
     pub fn get_async_stream(
         path: impl AsRef<Path>,
-    ) -> anyhow::Result<
-        AsyncStream<anyhow::Result<UnixStream, std::io::Error>, impl futures::Future<Output = ()>>,
+    ) -> color_eyre::eyre::Result<
+        AsyncStream<
+            color_eyre::eyre::Result<UnixStream, std::io::Error>,
+            impl futures::Future<Output = ()>,
+        >,
     > {
         let path = path.as_ref();
 

@@ -1,10 +1,10 @@
-use anyhow::{Context, Result};
+use color_eyre::eyre::{self, Context, Result};
+use eyre::eyre;
 use std::{
     io::ErrorKind,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
-
 use tracing::error;
 
 pub struct UnixListener {
@@ -18,35 +18,34 @@ impl UnixListener {
 
         Self::create_socket_path(&path)?;
 
-        let listener = tokio::net::UnixListener::bind(&path)
-            .with_context(|| "Error binding to Unix socket")?;
+        let listener =
+            tokio::net::UnixListener::bind(&path).wrap_err("Error binding to Unix socket")?;
 
         let mut perms = path
             .metadata()
-            .with_context(|| "Error reading metadata from Unix socket file")?
+            .wrap_err("Error reading metadata from Unix socket file")?
             .permissions();
         perms.set_mode(0o666);
         std::fs::set_permissions(&path, perms)
-            .with_context(|| "Error setting permissions on Unix socket file")?;
+            .wrap_err("Error setting permissions on Unix socket file")?;
 
         Ok(Self { path, listener })
     }
 
-    fn create_socket_path(path: &Path) -> anyhow::Result<()> {
+    fn create_socket_path(path: &Path) -> Result<()> {
         let parent_dir = path
             .parent()
-            .with_context(|| "Socket path should have a parent directory")?;
+            .ok_or_else(|| eyre!("Socket path should have a parent directory"))?;
         if let Err(e) = std::fs::remove_file(path) {
             if e.kind() != ErrorKind::NotFound {
-                return Err(e).with_context(|| "Unable to delete old Unix socket");
+                return Err(e).wrap_err("Unable to delete old Unix socket");
             }
         }
 
-        std::fs::create_dir_all(parent_dir)
-            .with_context(|| "Unable to create Unix socket directory")?;
+        std::fs::create_dir_all(parent_dir).wrap_err("Unable to create Unix socket directory")?;
         let mut perms = parent_dir
             .metadata()
-            .with_context(|| "Error setting socket directory metadata")?
+            .wrap_err("Error setting socket directory metadata")?
             .permissions();
         perms.set_mode(0o644);
         Ok(())

@@ -109,7 +109,8 @@ impl Manager {
 
     async fn replace_prefix(&self, paths: Vec<&str>) -> Vec<String> {
         let paths = paths.into_iter().map(|new_path| self.clean_path(new_path));
-        let new_paths = match self.get_registered_mount().await {
+
+        match self.get_registered_mount().await {
             Some(mount) => paths
                 .map(|path| match path.find(&mount[..]) {
                     Some(0) => path.replacen(&mount[..], "", 1),
@@ -117,9 +118,7 @@ impl Manager {
                 })
                 .collect::<Vec<_>>(),
             None => paths.collect(),
-        };
-
-        new_paths
+        }
     }
 
     pub async fn expand_paths(&self, folders: Vec<String>) -> Vec<String> {

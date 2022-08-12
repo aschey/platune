@@ -5,8 +5,7 @@ use crate::services::management::ManagementImpl;
 use crate::services::player::PlayerImpl;
 #[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
-use anyhow::Context;
-use anyhow::Result;
+use color_eyre::eyre::{Context, Result};
 use futures::future::try_join_all;
 use libplatune_management::config::FileConfig;
 use libplatune_management::database::Database;
@@ -40,7 +39,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
     let manager = init_manager().await?;
     let manager = FileWatchManager::new(manager, Duration::from_millis(500))
         .await
-        .with_context(|| "error starting file watch manager")?;
+        .wrap_err("error starting file watch manager")?;
 
     let mut servers = Vec::<_>::new();
     let http_server = run_server(
@@ -82,11 +81,9 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
 }
 
 async fn init_manager() -> Result<Manager> {
-    let path = var("DATABASE_URL").with_context(|| "DATABASE_URL environment variable not set")?;
+    let path = var("DATABASE_URL").wrap_err("DATABASE_URL environment variable not set")?;
     let db = Database::connect(path, true).await?;
-    db.migrate()
-        .await
-        .with_context(|| "Error migrating database")?;
+    db.migrate().await.wrap_err("Error migrating database")?;
     let config = Arc::new(FileConfig::try_new()?);
     let manager = Manager::new(&db, config);
 
@@ -102,7 +99,7 @@ async fn run_server(
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
         .build()
-        .with_context(|| "Error building tonic server")?;
+        .wrap_err("Error building tonic server")?;
 
     let player = PlayerImpl::new(platune_player, shutdown_tx.clone());
 
@@ -117,15 +114,15 @@ async fn run_server(
         Transport::Http(addr) => builder
             .serve_with_shutdown(addr, async { shutdown_rx.recv().await.unwrap_or_default() })
             .await
-            .with_context(|| "Error running HTTP server"),
+            .wrap_err("Error running HTTP server"),
         #[cfg(unix)]
         Transport::Uds(path) => builder
             .serve_with_incoming_shutdown(UnixStream::get_async_stream(&path)?, async {
                 shutdown_rx.recv().await.unwrap_or_default()
             })
             .await
-            .with_context(|| "Error running UDS server"),
+            .wrap_err("Error running UDS server"),
     };
 
-    server_result.with_context(|| "Error running server")
+    server_result.wrap_err("Error running server")
 }

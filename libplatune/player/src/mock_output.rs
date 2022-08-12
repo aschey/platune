@@ -14,7 +14,7 @@ pub fn default_host() -> Host {
     Host::new().unwrap()
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OutputCallbackInfo {
     timestamp: OutputStreamTimestamp,
 }

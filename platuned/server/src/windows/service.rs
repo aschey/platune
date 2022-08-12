@@ -1,5 +1,5 @@
 use crate::server;
-use anyhow::{Context, Result};
+use color_eyre::eyre::{Context, Result};
 use std::{
     env::current_exe,
     ffi::{OsStr, OsString},
@@ -23,25 +23,25 @@ const SERVICE_NAME: &str = "platuned";
 const SERVICE_TYPE: ServiceType = ServiceType::OWN_PROCESS;
 
 pub fn run() -> Result<()> {
-    service_dispatcher::start(SERVICE_NAME, service_main).with_context(|| "Error starting service")
+    service_dispatcher::start(SERVICE_NAME, service_main).wrap_err("Error starting service")
 }
 
 pub fn install() -> Result<()> {
     let manager_access = ServiceManagerAccess::CONNECT | ServiceManagerAccess::CREATE_SERVICE;
     let service_manager = ServiceManager::local_computer(None::<&str>, manager_access)
-        .with_context(|| "Error connecting to service database")?;
+        .wrap_err("Error connecting to service database")?;
     let service_access = ServiceAccess::QUERY_STATUS | ServiceAccess::STOP | ServiceAccess::DELETE;
     if let Ok(service) = service_manager.open_service(SERVICE_NAME, service_access) {
         let status = service
             .query_status()
-            .with_context(|| "Error querying service status")?;
+            .wrap_err("Error querying service status")?;
         if status.current_state == ServiceState::Running {
-            service.stop().with_context(|| "Error stopping service")?;
+            service.stop().wrap_err("Error stopping service")?;
         }
-        service.delete().with_context(|| "Error deleting service")?;
+        service.delete().wrap_err("Error deleting service")?;
     }
 
-    let service_binary_path = current_exe().with_context(|| "Error getting current exe path")?;
+    let service_binary_path = current_exe().wrap_err("Error getting current exe path")?;
 
     let service_info = ServiceInfo {
         name: OsString::from(SERVICE_NAME),
@@ -61,10 +61,10 @@ pub fn install() -> Result<()> {
     )?;
     service
         .set_description("platune service")
-        .with_context(|| "Unable to set service description")?;
+        .wrap_err("Unable to set service description")?;
     service
         .start(&[OsStr::new("Started")])
-        .with_context(|| "Unable to start service")?;
+        .wrap_err("Unable to start service")?;
 
     Ok(())
 }

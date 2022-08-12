@@ -34,7 +34,8 @@ jobs:
         run: |
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip
           unzip protoc-3.19.4-linux-x86_64.zip -d "$HOME/protoc"
-          cargo clippy -- -D warnings
+          # TODO: re-enable for every crate once tonic fixes clippy warnings
+          cargo clippy -p libplatune-management -p libplatune-player -- -D warnings
       - name: Test
         run: |
           # Install precompiled binaries to improve build time

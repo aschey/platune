@@ -159,11 +159,9 @@ pub mod platune_player {
                                 track_status,
                             })
                         }
-                        Err(e) => {
-                            return Err(PlayerError(format!(
-                                "Error getting current position: {e:?}"
-                            )))
-                        }
+                        Err(e) => Err(PlayerError(format!(
+                            "Error getting current position: {e:?}"
+                        ))),
                         _ => unreachable!("Should only receive CurrentPositionResponse"),
                     }
                 }

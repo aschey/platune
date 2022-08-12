@@ -2311,7 +2311,6 @@ checksum = "1df8c4ec4b0627e53bdf214615ad287367e482558cf84b109250b37464dc03ae"
 name = "platuned"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "async-stream",
  "color-eyre",
  "console-subscriber",

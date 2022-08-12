@@ -6,6 +6,8 @@ script = '''
 # precommit hooks
 npm install
 npm run prepare
+# DB cli
+cargo install sqlx-cli --no-default-features --features sqlite,rustls
 # mocking for cli
 go install github.com/golang/mock/mockgen@v1.6.0
 # cli grpc generation

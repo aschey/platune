@@ -1,8 +1,7 @@
+use color_eyre::eyre::Result;
+use futures::stream::StreamExt;
 use signal_hook::consts::signal::*;
 use signal_hook_tokio::{Handle, Signals};
-
-use anyhow::Result;
-use futures::stream::StreamExt;
 use tokio::sync::broadcast::Sender;
 use tokio::task::JoinHandle;
 use tracing::info;
