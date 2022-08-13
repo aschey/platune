@@ -2,7 +2,7 @@ use crate::server;
 use crate::signal_handler::platform::SignalHandler;
 #[cfg(windows)]
 use crate::windows::service;
-use color_eyre::eyre::{Context, Result};
+use color_eyre::eyre::Result;
 use tokio::sync::broadcast;
 
 async fn run_server() -> Result<()> {

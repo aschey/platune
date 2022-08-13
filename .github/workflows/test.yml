@@ -19,7 +19,7 @@ jobs:
         run: $(command -v sudo>/dev/null && echo "sudo") apt-get update
       - name: Install deps
         run: |
-          $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev cmake build-essential pkg-config git zlib1g-dev
+          $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev git
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:

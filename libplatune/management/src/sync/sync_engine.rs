@@ -1,8 +1,8 @@
-use super::{dir_read::DirRead, sync_dal::SyncDAL};
+use super::{dir_read::DirRead, sync_dal::SyncDAL, tag::Tag};
 use crate::{consts::MIN_WORDS, db_error::DbError, path_util::clean_file_path};
 use ignore::{WalkBuilder, WalkState};
 use itertools::Itertools;
-use katatsuki::ReadOnlyTrack;
+use lofty::Probe;
 use regex::Regex;
 use sqlx::{Pool, Sqlite};
 use std::{
@@ -139,7 +139,7 @@ impl SyncEngine {
 
     fn tags_parser(
         &self,
-        tags_tx: Sender<(ReadOnlyTrack, String, PathBuf)>,
+        tags_tx: Sender<(Tag, String, PathBuf)>,
         dir_tx: Sender<DirRead>,
     ) -> JoinHandle<()> {
         let mut walker_builder = WalkBuilder::new(&self.paths[0]);
@@ -211,7 +211,7 @@ impl SyncEngine {
 
     fn db_updater(
         &self,
-        mut tags_rx: mpsc::Receiver<(ReadOnlyTrack, String, PathBuf)>,
+        mut tags_rx: mpsc::Receiver<(Tag, String, PathBuf)>,
     ) -> JoinHandle<Result<(), SyncError>> {
         let write_pool = self.write_pool.clone();
         let cleaned_paths = self
@@ -237,7 +237,7 @@ impl SyncEngine {
                 file_size.hash(&mut hasher);
                 let fingerprint = hasher.finish().to_string();
 
-                dal.add_artist(&metadata.artist).await?;
+                dal.add_artist(&metadata.artists).await?;
                 dal.add_album_artist(&metadata.album_artists).await?;
                 dal.add_album(&metadata.album, &metadata.album_artists)
                     .await?;
@@ -292,7 +292,7 @@ impl SyncEngine {
         Ok(())
     }
 
-    fn parse_metadata(file_path: &Path) -> Result<Option<ReadOnlyTrack>, SyncError> {
+    fn parse_metadata(file_path: &Path) -> Result<Option<Tag>, SyncError> {
         let name = file_path.extension().unwrap_or_default();
         let _size = file_path
             .metadata()
@@ -306,9 +306,17 @@ impl SyncEngine {
         let name = &name.to_str().unwrap_or_default().to_lowercase()[..];
         match name {
             "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
-                return Ok(Some(ReadOnlyTrack::from_path(file_path, None).map_err(
-                    |e| SyncError::TagReadError(format!("Error reading tag: {e:?}")),
-                )?));
+                let tagged_file = Probe::open(file_path)
+                    .map_err(|e| {
+                        SyncError::TagReadError(format!("Error opening file {file_path:?}: {e:?}"))
+                    })?
+                    .read(true)
+                    .map_err(|e| {
+                        SyncError::TagReadError(format!(
+                            "Error reading tag from file {file_path:?}: {e:?}"
+                        ))
+                    })?;
+                return Ok(Some(tagged_file.into()));
             }
             _ => {}
         }

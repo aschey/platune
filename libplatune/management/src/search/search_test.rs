@@ -1,5 +1,6 @@
 use crate::{config::MemoryConfig, database::Database, manager::Manager};
 use futures::StreamExt;
+use lofty::{Accessor, ItemKey, Probe, TagExt};
 use pretty_assertions::assert_eq;
 use rstest::*;
 use std::{
@@ -518,23 +519,23 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
     create_dir_all(inner_dir.clone()).unwrap();
 
     for (i, song) in songs.iter().enumerate() {
-        let song_path = inner_dir.join(format!("test{}.mp3", i));
+        let song_path = inner_dir.join(format!("test{i}.mp3"));
         fs::copy("../test_assets/test.mp3", song_path.clone()).unwrap();
-        let t = katatsuki::ReadWriteTrack::from_path(&song_path, None).unwrap();
-
+        let mut t = Probe::open(&song_path).unwrap().read(false).unwrap();
+        let tag = t.primary_tag_mut().unwrap();
         if let Some(title) = song.title {
-            t.set_title(title);
+            tag.set_title(title.to_owned());
         }
         if let Some(artist) = song.artist {
-            t.set_artist(artist);
+            tag.set_artist(artist.to_owned());
         }
         if let Some(album_artist) = song.album_artist {
-            t.set_album_artists(album_artist);
+            tag.insert_text(ItemKey::AlbumArtist, album_artist.to_owned());
         }
         if let Some(album) = song.album {
-            t.set_album(album);
+            tag.set_album(album.to_owned());
         }
-        t.save();
+        tag.save_to_path(song_path).unwrap();
     }
 
     manager
