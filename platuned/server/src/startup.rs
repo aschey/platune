@@ -2,6 +2,7 @@ use crate::server;
 use crate::signal_handler::platform::SignalHandler;
 #[cfg(windows)]
 use crate::windows::service;
+use color_eyre::eyre::Context;
 use color_eyre::eyre::Result;
 use tokio::sync::broadcast;
 
@@ -18,10 +19,11 @@ pub async fn start() -> Result<()> {
     if args.len() > 1 && args[1] == "-i" {
         service::install()
     } else if args.len() > 1 && args[1] == "-s" {
-        dotenv::from_path(r"C:\Users\asche\code\platune\platuned\server\.env")?;
+        dotenv::from_path(r"C:\Users\asche\code\platune\platuned\server\.env")
+            .wrap_err("Error loading env file")?;
         service::run()
     } else {
-        dotenv::from_path("./.env")?;
+        dotenv::from_path("./.env").wrap_err("Error loading env file")?;
         run_server().await
     }
 }
