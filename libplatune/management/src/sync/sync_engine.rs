@@ -20,7 +20,7 @@ use tokio::{
     },
     task::{spawn_blocking, JoinHandle},
 };
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use walkdir::WalkDir;
 
 #[derive(Error, Debug, Clone)]
