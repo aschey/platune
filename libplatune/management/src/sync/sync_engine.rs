@@ -20,7 +20,7 @@ use tokio::{
     },
     task::{spawn_blocking, JoinHandle},
 };
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use walkdir::WalkDir;
 
 #[derive(Error, Debug, Clone)]
@@ -112,11 +112,6 @@ impl SyncEngine {
             }
             _ => {}
         }
-
-        let _ = self
-            .tx
-            .send(None)
-            .tap_err(|e| warn!("Error sending message to clients {e:?}"));
 
         info!("Sync took {:?}", start.elapsed());
     }
