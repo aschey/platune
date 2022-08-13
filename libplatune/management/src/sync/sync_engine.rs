@@ -113,11 +113,6 @@ impl SyncEngine {
             _ => {}
         }
 
-        let _ = self
-            .tx
-            .send(None)
-            .tap_err(|e| warn!("Error sending message to clients {e:?}"));
-
         info!("Sync took {:?}", start.elapsed());
     }
 

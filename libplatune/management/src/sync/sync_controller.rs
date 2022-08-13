@@ -5,7 +5,7 @@ use super::{
 use sqlx::{Pool, Sqlite};
 use tap::TapFallible;
 use tokio::sync::{broadcast, oneshot};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 pub(crate) struct SyncController {
     write_pool: Pool<Sqlite>,
@@ -49,13 +49,19 @@ impl SyncController {
 
             tokio::task::spawn(async move {
                 info!("Starting new sync");
-                let mut engine = SyncEngine::new(folders, write_pool, mount, tx);
+                let mut engine = SyncEngine::new(folders, write_pool, mount, tx.clone());
                 engine.start().await;
+
+                finished_callback();
+
                 let _ = finished_tx
                     .send(())
                     .tap_err(|e| info!("Couldn't send sync finished signal: {e:?}"));
 
-                finished_callback();
+                // Don't send final sync message until we've completed all of the cleanup steps
+                let _ = tx
+                    .send(None)
+                    .tap_err(|e| warn!("Error sending final sync message to clients {e:?}"));
             });
         } else {
             info!("No folders to sync");
