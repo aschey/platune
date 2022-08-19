@@ -162,19 +162,27 @@ install_crate = "cargo-udeps"
 [tasks.update]
 args = ["update"]
 command = "cargo"
-install_crate = "cargo-add"
+install_crate = "cargo-edit"
 
 [tasks.upgrade]
-args = ["upgrade", "--workspace"]
+args = ["upgrade", "--workspace", "--exclude", "rusqlite"]
 command = "cargo"
-install_crate = "cargo-add"
+install_crate = "cargo-edit"
 
 [tasks.update-all]
-dependencies = ["unused", "update", "upgrade"]
+dependencies = ["update", "upgrade"]
 script = '''
 cd libplatune/player/fuzz
 makers update-all
 '''
+
+[tasks.cleanup]
+args = ["sweep", "-t", "30"]
+command = "cargo"
+install_crate = "cargo-sweep"
+
+[tasks.maintenance]
+dependencies = ["unused", "cleanup", "update-all"]
 
 [tasks.deny]
 args = ["deny", "--workspace", "check"]
