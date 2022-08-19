@@ -3,9 +3,6 @@ default_to_workspace = false
 
 [tasks.setup]
 script = '''
-# precommit hooks
-npm install
-npm run prepare
 # DB cli
 cargo install sqlx-cli --no-default-features --features sqlite,rustls
 # mocking for cli
