@@ -1512,6 +1512,7 @@ dependencies = [
  "regex",
  "rstest",
  "rusqlite",
+ "sloughi",
  "sqlx",
  "strum",
  "tap",
@@ -2888,6 +2889,12 @@ checksum = "4614a76b2a8be0058caa9dbbaf66d988527d86d003c11a94fbd335d7661edcef"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "sloughi"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0569fee432a4d80dbdcb77b16df865536b49baa45b72fff3ee4b6ea11033bfd0"
 
 [[package]]
 name = "smallvec"

@@ -1,0 +1,4 @@
+#!/bin/sh
+. "$(dirname "$0")/_/sloughi.sh"
+
+echo "Running Sloughi pre-commit..."
