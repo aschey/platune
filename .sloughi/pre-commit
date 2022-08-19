@@ -1,4 +1,6 @@
 #!/bin/sh
 . "$(dirname "$0")/_/sloughi.sh"
 
-echo "Running Sloughi pre-commit..."
+echo "Running pre-commit..."
+
+cd $(dirname "$0")/../libplatune/management && cargo sqlx prepare -- --lib && git add sqlx-data.json
