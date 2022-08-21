@@ -70,9 +70,10 @@ impl FileWatchManager {
             .map_err(FileWatchError::DbError)?;
 
         for path in &paths {
-            watcher
-                .watch(&path, RecursiveMode::Recursive)
-                .map_err(FileWatchError::WatchError)?;
+            if let Err(e) = watcher.watch(&path, RecursiveMode::Recursive) {
+                // Probably a bad file path
+                error!("Error watching path {path}: {e:?}");
+            }
         }
 
         // TODO: add a way to terminate these child tasks
