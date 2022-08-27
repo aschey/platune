@@ -20,16 +20,9 @@ jobs:
       - name: Install deps
         run: |
           $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev git
-      - name: Install rust
-        uses: actions-rs/toolchain@v1
+      - uses: Swatinem/rust-cache@v2
         with:
-          toolchain: stable
-          default: true
-          profile: minimal
-          components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v1
-        with:
-          sharedKey: cache-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: cache-${{ hashFiles('**/Cargo.lock') }}
       - name: Clippy
         run: |
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip
