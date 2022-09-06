@@ -46,7 +46,7 @@ dependencies = [
  "alsa-sys",
  "bitflags",
  "libc",
- "nix 0.23.1",
+ "nix",
 ]
 
 [[package]]
@@ -619,7 +619,7 @@ dependencies = [
  "mach",
  "ndk",
  "ndk-glue",
- "nix 0.23.1",
+ "nix",
  "oboe",
  "parking_lot 0.11.2",
  "stdweb",
@@ -853,16 +853,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ctrlc"
-version = "3.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d91974fbbe88ec1df0c24a4f00f99583667a7e2e6272b2b92d294d81e462173"
-dependencies = [
- "nix 0.25.0",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "daemon-slayer"
 version = "0.1.0"
 source = "git+https://github.com/aschey/daemon-slayer?rev=ff93347cb8e10eb75c90e01fd653a09772066428#ff93347cb8e10eb75c90e01fd653a09772066428"
@@ -902,7 +892,7 @@ dependencies = [
  "launchd",
  "regex",
  "systemd_client 0.2.1 (git+https://github.com/aschey/systemd-client?rev=3e5358c5961fee8f354e894d8ce6b10ec86033ce)",
- "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55)",
+ "windows-service",
 ]
 
 [[package]]
@@ -939,7 +929,7 @@ dependencies = [
  "tracing-ipc",
  "tracing-journald",
  "tracing-subscriber",
- "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55)",
+ "windows-service",
 ]
 
 [[package]]
@@ -971,7 +961,7 @@ dependencies = [
  "systemd_client 0.2.1 (git+https://github.com/aschey/systemd-client?rev=5402ac4722cd6c0cf3c0f277c382ba20a1f5b3e6)",
  "tokio",
  "tracing",
- "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55)",
+ "windows-service",
 ]
 
 [[package]]
@@ -2260,18 +2250,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nix"
-version = "0.25.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e322c04a9e3440c327fca7b6c8a63e6890a32fa2ad689db972425f07e0d22abb"
-dependencies = [
- "autocfg",
- "bitflags",
- "cfg-if 1.0.0",
- "libc",
-]
-
-[[package]]
 name = "nom"
 version = "7.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2648,7 +2626,6 @@ dependencies = [
  "async-stream",
  "color-eyre",
  "console-subscriber",
- "ctrlc",
  "daemon-slayer",
  "daemon-slayer-server",
  "directories",
@@ -2658,8 +2635,6 @@ dependencies = [
  "libplatune-player",
  "prost",
  "prost-types",
- "signal-hook",
- "signal-hook-tokio",
  "time",
  "tokio",
  "tokio-stream",
@@ -2670,7 +2645,6 @@ dependencies = [
  "tracing-appender",
  "tracing-error",
  "tracing-subscriber",
- "windows-service 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -4728,18 +4702,6 @@ dependencies = [
 [[package]]
 name = "windows-service"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "917fdb865e7ff03af9dd86609f8767bc88fefba89e8efd569de8e208af8724b3"
-dependencies = [
- "bitflags",
- "err-derive",
- "widestring",
- "windows-sys",
-]
-
-[[package]]
-name = "windows-service"
-version = "0.5.0"
 source = "git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55#467408c9aba7d8221e5cf5a9992765ad7abeeb55"
 dependencies = [
  "bitflags",
@@ -4876,7 +4838,7 @@ dependencies = [
  "futures-util",
  "hex",
  "lazy_static",
- "nix 0.23.1",
+ "nix",
  "once_cell",
  "ordered-stream",
  "rand 0.8.5",

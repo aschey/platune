@@ -4,8 +4,6 @@ mod services;
 mod startup;
 #[cfg(unix)]
 mod unix;
-#[cfg(windows)]
-mod windows;
 
 use daemon_slayer::cli::Action;
 use daemon_slayer::cli::CliAsync;
