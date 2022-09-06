@@ -1,13 +1,21 @@
 mod rpc;
 mod server;
 mod services;
-mod signal_handler;
 mod startup;
 #[cfg(unix)]
 mod unix;
 #[cfg(windows)]
 mod windows;
 
+use daemon_slayer::cli::Action;
+use daemon_slayer::cli::CliAsync;
+use daemon_slayer::cli::CliHandlerAsync;
+use daemon_slayer::client::Level;
+use daemon_slayer::client::Manager;
+use daemon_slayer::client::ServiceManager;
+use daemon_slayer::logging::LoggerBuilder;
+use daemon_slayer::logging::LoggerGuard;
+use daemon_slayer_server::HandlerAsync;
 use directories::ProjectDirs;
 use rpc::*;
 use std::io::stdout;
@@ -24,70 +32,36 @@ use tracing_subscriber::{
     filter::LevelFilter, fmt::Layer, layer::SubscriberExt, EnvFilter, Layer as SubscriberLayer,
 };
 
+use crate::startup::ServiceHandler;
+
 fn main() {
-    // IMPORTANT: retrieving the timezone must be done before the program spawns any threads,
-    // which means it must be done before the Tokio runtime is initialized
-    // To be safe, it should be the first line in the program
-    // If retrieving the local time fails, fall back to UTC
-    let (offset, is_local) = match OffsetTime::local_rfc_3339() {
-        Ok(offset) => (offset, true),
-        Err(_) => (OffsetTime::new(UtcOffset::UTC, well_known::Rfc3339), false),
-    };
+    let logger_builder = LoggerBuilder::new(ServiceHandler::get_service_name());
 
-    let proj_dirs =
-        ProjectDirs::from("", "", "platune").expect("Unable to find a valid home directory");
-    let log_dir = proj_dirs.cache_dir();
-    let file_appender = tracing_appender::rolling::hourly(log_dir, "platuned.log");
+    run_async(logger_builder);
+}
 
-    // The default number of buffered lines is quite large and uses a ton of memory
-    // We aren't logging a ton of messages so setting this value somewhat low is fine in order to conserve memory
-    let buffer_limit = 256;
-    let (non_blocking_stdout, stdout_guard) =
-        tracing_appender::non_blocking::NonBlockingBuilder::default()
-            .buffered_lines_limit(buffer_limit)
-            .finish(stdout());
+#[tokio::main]
+async fn run_async(logger_builder: LoggerBuilder) {
+    let manager = ServiceManager::builder(ServiceHandler::get_service_name())
+        .with_description("platune service")
+        .with_service_level(Level::User)
+        .with_args(["run"])
+        .build()
+        .unwrap();
+    let cli = CliAsync::<ServiceHandler>::new(manager);
+    let mut logger_guard: Option<LoggerGuard> = None;
 
-    let (non_blocking_file, file_guard) =
-        tracing_appender::non_blocking::NonBlockingBuilder::default()
-            .buffered_lines_limit(buffer_limit)
-            .finish(file_appender);
-
-    // Tokio console requires trace level logs to be sent to the console
-    // but we don't need to enable trace level logs for other layers
-    let level = if cfg!(feature = "console") {
-        tracing::Level::TRACE
-    } else {
-        tracing::Level::INFO
-    };
-
-    let collector = tracing_subscriber::registry()
-        .with(EnvFilter::from_default_env().add_directive(level.into()))
-        .with({
-            Layer::new()
-                .with_timer(offset.clone())
-                .with_thread_ids(true)
-                .with_thread_names(true)
-                .with_ansi(false)
-                .with_writer(non_blocking_file)
-                .with_filter(LevelFilter::INFO)
-        })
-        .with({
-            Layer::new()
-                .pretty()
-                .with_timer(offset)
-                .with_thread_ids(true)
-                .with_thread_names(true)
-                .with_writer(non_blocking_stdout)
-                .with_filter(LevelFilter::INFO)
-        })
-        .with(tracing_error::ErrorLayer::default());
-
-    #[cfg(feature = "console")]
-    let collector = collector.with(console_subscriber::spawn());
-
-    // This has to be ran directly in the main function
-    collector.init();
-
+    if cli.action_type() == Action::Server {
+        let (logger, guard) = logger_builder.build();
+        logger_guard = Some(guard);
+        logger.init();
+        dotenv::from_path("./.env").unwrap();
+        let path = std::env::var("DATABASE_URL").unwrap();
+        let db = libplatune_management::database::Database::connect(path, true)
+            .await
+            .unwrap();
+        db.migrate().await.unwrap();
+    }
     // Don't set panic hook until after logging is set up
     let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
         .add_default_filters()
@@ -96,24 +70,10 @@ fn main() {
     std::panic::set_hook(Box::new(move |pi| {
         error!("{}", panic_hook.panic_report(pi));
     }));
-
-    if !is_local {
-        warn!("Using UTC time for logging because the local offset wasn't determined");
-    }
-    info!("Log dir: {:?}", log_dir);
-    info!("Starting...");
-
-    run_async(file_guard, stdout_guard);
-}
-
-#[tokio::main]
-async fn run_async(file_guard: WorkerGuard, stdout_guard: WorkerGuard) {
-    if let Err(e) = startup::start().await {
+    if let Err(e) = cli.handle_input().await {
         error!("{:?}", e);
-
         // Drop guards to ensure logs are flushed
-        drop(stdout_guard);
-        drop(file_guard);
+        drop(logger_guard);
         exit(1);
     }
 }
