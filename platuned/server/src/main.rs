@@ -50,7 +50,17 @@ async fn run_async(logger_builder: LoggerBuilder) {
     let mut logger_guard: Option<LoggerGuard> = None;
 
     if cli.action_type() == Action::Server {
-        let (logger, guard) = logger_builder.build();
+        let default_level = if cfg!(feature = "tokio-console") {
+            tracing::Level::TRACE
+        } else {
+            tracing::Level::INFO
+        };
+        let (logger, guard) = logger_builder
+            .with_default_log_level(default_level)
+            .with_level_filter(LevelFilter::INFO)
+            .build();
+        #[cfg(feature = "console")]
+        let logger = logger.with(console_subscriber::spawn());
         logger_guard = Some(guard);
         logger.init();
         dotenv::from_path("./.env").unwrap();
