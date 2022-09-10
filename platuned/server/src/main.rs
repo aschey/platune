@@ -7,13 +7,12 @@ mod unix;
 
 use daemon_slayer::cli::Action;
 use daemon_slayer::cli::CliAsync;
-use daemon_slayer::cli::CliHandlerAsync;
 use daemon_slayer::client::Level;
 use daemon_slayer::client::Manager;
 use daemon_slayer::client::ServiceManager;
 use daemon_slayer::logging::LoggerBuilder;
 use daemon_slayer::logging::LoggerGuard;
-use daemon_slayer_server::HandlerAsync;
+use daemon_slayer::server::HandlerAsync;
 use directories::ProjectDirs;
 use rpc::*;
 use std::io::stdout;
@@ -46,7 +45,7 @@ async fn run_async(logger_builder: LoggerBuilder) {
         .with_args(["run"])
         .build()
         .unwrap();
-    let cli = CliAsync::<ServiceHandler>::new(manager);
+    let cli = CliAsync::new(manager, ServiceHandler::new());
     let mut logger_guard: Option<LoggerGuard> = None;
 
     if cli.action_type() == Action::Server {
@@ -58,7 +57,8 @@ async fn run_async(logger_builder: LoggerBuilder) {
         let (logger, guard) = logger_builder
             .with_default_log_level(default_level)
             .with_level_filter(LevelFilter::INFO)
-            .build();
+            .build()
+            .unwrap();
         #[cfg(feature = "console")]
         let logger = logger.with(console_subscriber::spawn());
         logger_guard = Some(guard);

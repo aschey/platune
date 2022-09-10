@@ -10,10 +10,8 @@ version = "0.1.0"
 async-stream = "0.3.3"
 color-eyre = "0.6.2"
 console-subscriber = {version = "0.1.6", features = ["parking_lot"], optional = true}
-daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "fd2afb9776a5f5402bcae07aedfca0d714dd4694", features = ["all-async"]}
+daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "fe5fbaabeb4e56d580080498cfb0447fc7b3d0f1", features = ["all-async"]}
 #daemon-slayer = {path = "../../../daemon-slayer", features = ["all-async"]}
-#daemon-slayer-server = {path = "../../../daemon-slayer/daemon-slayer-server", features = ["async-tokio"]}
-daemon-slayer-server = {git = "https://github.com/aschey/daemon-slayer", rev = "fd2afb9776a5f5402bcae07aedfca0d714dd4694", features = ["async-tokio"]}
 directories = "4.0.1"
 dotenv = "0.15.0"
 futures = "0.3.21"
