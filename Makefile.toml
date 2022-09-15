@@ -170,7 +170,7 @@ command = "cargo"
 install_crate = "cargo-edit"
 
 [tasks.upgrade]
-args = ["upgrade", "--workspace", "--exclude", "rusqlite"]
+args = ["upgrade", "--exclude", "notify"]
 command = "cargo"
 install_crate = "cargo-edit"
 

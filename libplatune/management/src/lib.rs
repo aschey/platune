@@ -7,6 +7,5 @@ pub mod file_watch_manager;
 pub mod manager;
 mod path_util;
 pub mod search;
-mod spellfix;
 mod sql_util;
 pub mod sync;

@@ -3,7 +3,7 @@ use std::time::SystemTime;
 use itertools::Itertools;
 use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite, Transaction};
 
-use crate::{consts::MIN_LEN, db_error::DbError, spellfix::load_spellfix};
+use crate::{consts::MIN_LEN, db_error::DbError};
 
 use super::tag::Tag;
 
@@ -14,11 +14,10 @@ pub(crate) struct SyncDAL<'a> {
 
 impl<'a> SyncDAL<'a> {
     pub(crate) async fn try_new(write_pool: Pool<Sqlite>) -> Result<SyncDAL<'a>, DbError> {
-        let mut tran = write_pool
+        let tran = write_pool
             .begin()
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
-        load_spellfix(&mut tran).await?;
 
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)

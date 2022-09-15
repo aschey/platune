@@ -7,24 +7,23 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-stream = "0.3.3"
 color-eyre = "0.6.2"
-console-subscriber = {version = "0.1.6", features = ["parking_lot"], optional = true}
+console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
 daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "fd2afb9776a5f5402bcae07aedfca0d714dd4694", features = ["all-async"]}
 #daemon-slayer = {path = "../../../daemon-slayer", features = ["all-async"]}
 #daemon-slayer-server = {path = "../../../daemon-slayer/daemon-slayer-server", features = ["async-tokio"]}
 daemon-slayer-server = {git = "https://github.com/aschey/daemon-slayer", rev = "fd2afb9776a5f5402bcae07aedfca0d714dd4694", features = ["async-tokio"]}
 directories = "4.0.1"
 dotenv = "0.15.0"
-futures = "0.3.21"
+futures = "0.3.24"
 libplatune-management = {path = "../../libplatune/management"}
 libplatune-player = {path = "../../libplatune/player"}
 prost = "0.11.0"
 prost-types = "0.11.1"
-time = "0.3.13"
-tokio = {version = "1.20.1", features = ["rt-multi-thread", "macros"]}
+time = "0.3.14"
+tokio = {version = "1.21.1", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.9", features = ["net"]}
-tonic = "0.8.0"
+tonic = "0.8.1"
 tonic-reflection = "0.5.0"
 tracing = "0.1.36"
 tracing-appender = "0.2.2"
@@ -32,7 +31,16 @@ tracing-error = "0.2.0"
 tracing-subscriber = {version = "0.3.15", features = ["local-time", "env-filter"]}
 
 [features]
-tokio-console = ["console-subscriber", "tokio/tracing"]
+console = ["console-subscriber", "tokio/tracing"]
+
+[target.'cfg(windows)'.dependencies]
+ctrlc = "3.2.3"
+windows-service = "0.5.0"
+
+[target.'cfg(unix)'.dependencies]
+async-stream = "0.3.3"
+signal-hook = "0.3.14"
+signal-hook-tokio = {version = "0.3.1", features = ["futures-v0_3"]}
 
 [build-dependencies]
 tonic-build = {version = "0.8.0", features = ["prost"]}

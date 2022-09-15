@@ -2,7 +2,6 @@ use crate::path_util::PathMut;
 use crate::search::search_engine::SearchEngine;
 use crate::search::search_options::SearchOptions;
 use crate::search::search_result::SearchResult;
-use crate::spellfix::acquire_with_spellfix;
 use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
@@ -60,14 +59,16 @@ impl Database {
             .read_only(true)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned();
+            .to_owned()
+            .extension(Self::get_spellfix_lib());
 
         let writer_opts = SqliteConnectOptions::new()
             .filename(path.as_ref())
             .create_if_missing(create_if_missing)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned();
+            .to_owned()
+            .extension(Self::get_spellfix_lib());
 
         let write_pool = sqlx::pool::PoolOptions::new()
             .max_connections(1)
@@ -92,7 +93,8 @@ impl Database {
             .unwrap()
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned();
+            .to_owned()
+            .extension(Self::get_spellfix_lib());
 
         let pool = SqlitePool::connect_with(opts).await.unwrap();
 
@@ -104,8 +106,22 @@ impl Database {
         })
     }
 
+    fn get_spellfix_lib() -> String {
+        match std::env::var("SPELLFIX_LIB") {
+            Ok(res) => res,
+            #[cfg(target_os = "linux")]
+            Err(_) => "./assets/linux/spellfix.o".to_owned(),
+            #[cfg(target_os = "windows")]
+            Err(_) => "./assets/windows/spellfix.dll".to_owned(),
+        }
+    }
+
     pub async fn migrate(&self) -> Result<(), DbError> {
-        let mut con = acquire_with_spellfix(&self.write_pool).await?;
+        let mut con = self
+            .write_pool
+            .acquire()
+            .await
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         info!("Migrating");
         sqlx::migrate!("./migrations")
