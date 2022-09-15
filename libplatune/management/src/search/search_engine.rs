@@ -18,7 +18,6 @@ use crate::{
         queries::get_full_spellfix_query, search_entry::SearchEntry,
         spellfix_result::SpellfixResult,
     },
-    spellfix::acquire_with_spellfix,
 };
 use concread::arcache::{ARCache, ARCacheBuilder};
 use itertools::Itertools;
@@ -166,7 +165,11 @@ impl SearchEngine {
             return Ok(vec![]);
         }
 
-        let mut conn = acquire_with_spellfix(&self.pool).await?;
+        let mut conn = self
+            .pool
+            .acquire()
+            .await
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         let mut search_entries = self
             .run_search(
                 &replace_ampersand(&query),

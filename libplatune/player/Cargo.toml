@@ -10,27 +10,27 @@ name = "libplatune_player"
 path = "src/lib.rs"
 
 [dependencies]
-cpal = "0.13.5"
+cpal = "0.14.0"
 eyre = "0.6.8"
 flume = "0.10.14"
-futures-util = "0.3.21"
-rb = "0.4.0"
+futures-util = "0.3.24"
+rb = "0.4.1"
 reqwest = {version = "0.11.11", features = ["stream"]}
 rubato = "0.12.0"
 strum = {version = "0.24.1", features = ["derive"]}
 symphonia = {version = "0.5.1", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 tap = "1.0.1"
 tempfile = "3.3.0"
-thiserror = "1.0.32"
-tokio = {version = "1.20.1", features = ["rt-multi-thread", "macros"]}
+thiserror = "1.0.35"
+tokio = {version = "1.21.1", features = ["rt-multi-thread", "macros"]}
 tracing = "0.1.36"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
 async-trait = "0.1.57"
 ctor = "0.1.23"
-futures = "0.3.21"
-pretty_assertions = "1.2.1"
+futures = "0.3.24"
+pretty_assertions = "1.3.0"
 rstest = "0.15.0"
 spin_sleep = "1.1.1"
 tracing-appender = "0.2.2"

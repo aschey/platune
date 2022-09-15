@@ -10,7 +10,7 @@ command = "cargo"
 install_crate = "cargo-add"
 
 [tasks.upgrade]
-args = ["upgrade", "--workspace"]
+args = ["upgrade"]
 command = "cargo"
 install_crate = "cargo-add"
 
