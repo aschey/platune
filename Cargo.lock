@@ -474,14 +474,22 @@ version = "3.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ed5341b2301a26ab80be5cbdced622e80ed808483c52e45e3310a877d3b37d7"
 dependencies = [
+ "bitflags",
+ "clap_lex 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "indexmap",
+ "textwrap",
+]
+
+[[package]]
+name = "clap"
+version = "4.0.0-alpha.0"
+source = "git+https://github.com/clap-rs/clap?rev=bf98110adc1bfc90b044ac7faf6acd784f17f7df#bf98110adc1bfc90b044ac7faf6acd784f17f7df"
+dependencies = [
  "atty",
  "bitflags",
- "clap_lex",
- "indexmap",
- "once_cell",
+ "clap_lex 0.2.4 (git+https://github.com/clap-rs/clap?rev=bf98110adc1bfc90b044ac7faf6acd784f17f7df)",
  "strsim",
  "termcolor",
- "textwrap",
 ]
 
 [[package]]
@@ -489,6 +497,14 @@ name = "clap_lex"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2850f2f5a82cbf437dd5af4d49848fbdfc27c157c3d010345776f952765261c5"
+dependencies = [
+ "os_str_bytes",
+]
+
+[[package]]
+name = "clap_lex"
+version = "0.2.4"
+source = "git+https://github.com/clap-rs/clap?rev=bf98110adc1bfc90b044ac7faf6acd784f17f7df#bf98110adc1bfc90b044ac7faf6acd784f17f7df"
 dependencies = [
  "os_str_bytes",
 ]
@@ -692,7 +708,7 @@ dependencies = [
  "atty",
  "cast",
  "ciborium",
- "clap",
+ "clap 3.2.21",
  "criterion-plot",
  "futures",
  "itertools",
@@ -852,16 +868,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ctrlc"
-version = "3.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d91974fbbe88ec1df0c24a4f00f99583667a7e2e6272b2b92d294d81e462173"
-dependencies = [
- "nix 0.25.0",
- "winapi 0.3.9",
-]
-
-[[package]]
 name = "cty"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -870,7 +876,7 @@ checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=fd2afb9776a5f5402bcae07aedfca0d714dd4694#fd2afb9776a5f5402bcae07aedfca0d714dd4694"
+source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -882,10 +888,10 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=fd2afb9776a5f5402bcae07aedfca0d714dd4694#fd2afb9776a5f5402bcae07aedfca0d714dd4694"
+source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
 dependencies = [
  "async-trait",
- "clap",
+ "clap 4.0.0-alpha.0",
  "daemon-slayer-client",
  "daemon-slayer-console",
  "daemon-slayer-server",
@@ -900,20 +906,26 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=fd2afb9776a5f5402bcae07aedfca0d714dd4694#fd2afb9776a5f5402bcae07aedfca0d714dd4694"
+source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
 dependencies = [
+ "async-trait",
  "directories",
  "eyre",
- "launchd",
+ "launchd 0.2.0 (git+https://github.com/aschey/launchd?rev=c4d6ae24de02cfc04097b1de3b33434eeb4a5d5e)",
+ "maybe-async-cfg",
+ "once_cell",
  "regex",
- "systemd_client 0.2.1 (git+https://github.com/aschey/systemd-client?rev=3e5358c5961fee8f354e894d8ce6b10ec86033ce)",
- "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55)",
+ "registry",
+ "systemd_client",
+ "tokio",
+ "utfx",
+ "windows-service",
 ]
 
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=fd2afb9776a5f5402bcae07aedfca0d714dd4694#fd2afb9776a5f5402bcae07aedfca0d714dd4694"
+source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
 dependencies = [
  "ansi-to-tui",
  "crossterm 0.25.0",
@@ -927,12 +939,11 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=fd2afb9776a5f5402bcae07aedfca0d714dd4694#fd2afb9776a5f5402bcae07aedfca0d714dd4694"
+source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
 dependencies = [
  "async-trait",
  "directories",
  "futures",
- "maybe-async",
  "once_cell",
  "parity-tokio-ipc",
  "time",
@@ -944,13 +955,13 @@ dependencies = [
  "tracing-ipc",
  "tracing-journald",
  "tracing-subscriber",
- "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55)",
+ "windows-service",
 ]
 
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=fd2afb9776a5f5402bcae07aedfca0d714dd4694#fd2afb9776a5f5402bcae07aedfca0d714dd4694"
+source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
 dependencies = [
  "maybe-async-cfg",
  "proc-macro-crate",
@@ -962,21 +973,22 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=fd2afb9776a5f5402bcae07aedfca0d714dd4694#fd2afb9776a5f5402bcae07aedfca0d714dd4694"
+source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
 dependencies = [
  "async-trait",
  "daemon-slayer-macros",
  "futures",
- "launchd",
+ "launchd 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "maybe-async-cfg",
+ "notify 5.0.0",
+ "notify-debouncer-mini",
  "once_cell",
  "sd-notify",
  "signal-hook",
  "signal-hook-tokio",
- "systemd_client 0.2.1 (git+https://github.com/aschey/systemd-client?rev=5402ac4722cd6c0cf3c0f277c382ba20a1f5b3e6)",
  "tokio",
  "tracing",
- "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55)",
+ "windows-service",
 ]
 
 [[package]]
@@ -1219,7 +1231,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ab7d1bd1bd33cc98b0889831b72da23c0aa4df9cec7e0702f46ecea04b35db6"
 dependencies = [
  "bitflags",
- "fsevent-sys",
+ "fsevent-sys 2.0.1",
 ]
 
 [[package]]
@@ -1227,6 +1239,15 @@ name = "fsevent-sys"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f41b048a94555da0f42f1d632e2e19510084fb8e303b0daa2816e733fb3644a0"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "fsevent-sys"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76ee7a02da4d231650c7cea31349b889be2f45ddb3ef3032d2ec8185f6313fd2"
 dependencies = [
  "libc",
 ]
@@ -1658,6 +1679,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "inotify"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8069d3ec154eb856955c1c0fbffefbf5f3c40a104ec912d4797314c1801abff"
+dependencies = [
+ "bitflags",
+ "inotify-sys",
+ "libc",
+]
+
+[[package]]
 name = "inotify-sys"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1754,10 +1786,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "kqueue"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d6112e8f37b59803ac47a42d14f1f3a59bbf72fc6857ffc5be455e28a691f8e"
+dependencies = [
+ "kqueue-sys",
+ "libc",
+]
+
+[[package]]
+name = "kqueue-sys"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8367585489f01bc55dd27404dcf56b95e6da061a256a666ab23be9ba96a2e587"
+dependencies = [
+ "bitflags",
+ "libc",
+]
+
+[[package]]
 name = "launchd"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76171092ab772a784c6d18ed460d873de24311029dade617b66dffee4a4e1af9"
+dependencies = [
+ "plist",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "launchd"
+version = "0.2.0"
+source = "git+https://github.com/aschey/launchd?rev=c4d6ae24de02cfc04097b1de3b33434eeb4a5d5e#c4d6ae24de02cfc04097b1de3b33434eeb4a5d5e"
 dependencies = [
  "plist",
  "serde",
@@ -1807,7 +1869,7 @@ dependencies = [
  "lazy_static",
  "lofty",
  "log",
- "notify",
+ "notify 4.0.17",
  "num_cpus",
  "pretty_assertions",
  "regex",
@@ -1950,16 +2012,6 @@ name = "matchit"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73cbba799671b762df5a175adf59ce145165747bb891505c43d09aefbbf38beb"
-
-[[package]]
-name = "maybe-async"
-version = "0.2.6"
-source = "git+https://github.com/aschey/maybe-async-rs?rev=36bb795e18e88aa0642164934d50d8c5ee05e26f#36bb795e18e88aa0642164934d50d8c5ee05e26f"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "maybe-async-cfg"
@@ -2175,14 +2227,14 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.25.0"
+version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e322c04a9e3440c327fca7b6c8a63e6890a32fa2ad689db972425f07e0d22abb"
+checksum = "195cdbc1741b8134346d515b3a56a1c94b0912758009cfd53f99ea0f57b065fc"
 dependencies = [
- "autocfg",
  "bitflags",
  "cfg-if 1.0.0",
  "libc",
+ "memoffset",
 ]
 
 [[package]]
@@ -2204,13 +2256,40 @@ dependencies = [
  "bitflags",
  "filetime",
  "fsevent",
- "fsevent-sys",
- "inotify",
+ "fsevent-sys 2.0.1",
+ "inotify 0.7.1",
  "libc",
  "mio 0.6.23",
  "mio-extras",
  "walkdir",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "notify"
+version = "5.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed2c66da08abae1c024c01d635253e402341b4060a12e99b31c7594063bf490a"
+dependencies = [
+ "bitflags",
+ "crossbeam-channel",
+ "filetime",
+ "fsevent-sys 4.1.0",
+ "inotify 0.9.6",
+ "kqueue",
+ "libc",
+ "mio 0.8.4",
+ "walkdir",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "notify-debouncer-mini"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e23e9fa24f094b143c1eb61f90ac6457de87be6987bc70746e0179f7dbc9007b"
+dependencies = [
+ "notify 5.0.0",
 ]
 
 [[package]]
@@ -2562,29 +2641,19 @@ dependencies = [
  "async-stream",
  "color-eyre",
  "console-subscriber",
- "ctrlc",
  "daemon-slayer",
- "daemon-slayer-server",
- "directories",
  "dotenv",
  "futures",
  "libplatune-management",
  "libplatune-player",
  "prost",
  "prost-types",
- "signal-hook",
- "signal-hook-tokio",
- "time",
  "tokio",
  "tokio-stream",
  "tonic",
  "tonic-build",
  "tonic-reflection",
  "tracing",
- "tracing-appender",
- "tracing-error",
- "tracing-subscriber",
- "windows-service 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3771,19 +3840,9 @@ dependencies = [
 [[package]]
 name = "systemd_client"
 version = "0.2.1"
-source = "git+https://github.com/aschey/systemd-client?rev=3e5358c5961fee8f354e894d8ce6b10ec86033ce#3e5358c5961fee8f354e894d8ce6b10ec86033ce"
+source = "git+https://github.com/aschey/systemd-client?rev=530b606d9ed41049e4efb0a0ae85e1237e4f0784#530b606d9ed41049e4efb0a0ae85e1237e4f0784"
 dependencies = [
  "dirs",
- "thiserror",
- "tracing",
- "zbus",
-]
-
-[[package]]
-name = "systemd_client"
-version = "0.2.1"
-source = "git+https://github.com/aschey/systemd-client?rev=5402ac4722cd6c0cf3c0f277c382ba20a1f5b3e6#5402ac4722cd6c0cf3c0f277c382ba20a1f5b3e6"
-dependencies = [
  "thiserror",
  "tracing",
  "zbus",
@@ -4185,7 +4244,7 @@ dependencies = [
 [[package]]
 name = "tracing-ipc"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tracing-ipc?rev=0546f0623bbdd97979086cdd483d4ac98a849fa8#0546f0623bbdd97979086cdd483d4ac98a849fa8"
+source = "git+https://github.com/aschey/tracing-ipc?rev=90566f704bac6b5d43d9873622db57e9c755ea5d#90566f704bac6b5d43d9873622db57e9c755ea5d"
 dependencies = [
  "futures",
  "once_cell",
@@ -4629,18 +4688,6 @@ dependencies = [
 [[package]]
 name = "windows-service"
 version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "917fdb865e7ff03af9dd86609f8767bc88fefba89e8efd569de8e208af8724b3"
-dependencies = [
- "bitflags",
- "err-derive",
- "widestring",
- "windows-sys",
-]
-
-[[package]]
-name = "windows-service"
-version = "0.5.0"
 source = "git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55#467408c9aba7d8221e5cf5a9992765ad7abeeb55"
 dependencies = [
  "bitflags",
@@ -4785,9 +4832,9 @@ checksum = "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"
 
 [[package]]
 name = "zbus"
-version = "2.3.2"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d8f1a037b2c4a67d9654dc7bdfa8ff2e80555bbefdd3c1833c1d1b27c963a6b"
+checksum = "d37e0d34b881934b987b72a91fdc1daba9ebc90c1f91b7944c680991c4443fc6"
 dependencies = [
  "async-broadcast",
  "async-channel",
@@ -4806,8 +4853,7 @@ dependencies = [
  "futures-sink",
  "futures-util",
  "hex",
- "lazy_static",
- "nix 0.23.1",
+ "nix 0.24.2",
  "once_cell",
  "ordered-stream",
  "rand 0.8.5",
@@ -4825,9 +4871,9 @@ dependencies = [
 
 [[package]]
 name = "zbus_macros"
-version = "2.3.2"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f8fb5186d1c87ae88cf234974c240671238b4a679158ad3b94ec465237349a6"
+checksum = "ba7905f7c665ea41828bd69112902daa131191a85131fef0f60f7cc3bc2fbec4"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",

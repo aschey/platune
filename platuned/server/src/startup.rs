@@ -1,5 +1,7 @@
+use std::error::Error;
+
 use crate::server;
-use daemon_slayer_server::{HandlerAsync, StopHandlerAsync};
+use daemon_slayer::server::{EventHandlerAsync, HandlerAsync};
 use tokio::sync::broadcast;
 use tracing::info;
 
@@ -19,21 +21,25 @@ impl HandlerAsync for ServiceHandler {
         "platuned"
     }
 
-    fn get_stop_handler(&mut self) -> StopHandlerAsync {
+    fn get_event_handler(&mut self) -> EventHandlerAsync {
         let tx = self.tx.clone();
-        Box::new(move || {
+        Box::new(move |_| {
             let tx = tx.clone();
             Box::pin(async move {
                 info!("stopping");
-                tx.send(()).unwrap();
+                tx.send(())?;
+                Ok(())
             })
         })
     }
 
-    async fn run_service<F: FnOnce() + Send>(mut self, on_started: F) -> u32 {
+    async fn run_service<F: FnOnce() + Send>(
+        mut self,
+        on_started: F,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         info!("running service");
         on_started();
-        server::run_all(self.tx).await.unwrap();
-        0
+        server::run_all(self.tx).await?;
+        Ok(())
     }
 }
