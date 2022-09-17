@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+source $(dirname $0)/.env
+
+read -p "Are you sure you want to overwrite the local contents with the contents from the Mac VM? [yn] " -n 1 -r
+[[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+echo
+rsync -arv -e "sshpass -p ${QUICKEMU_MAC_PASSWORD} ssh -p 22221" --progress --delete --exclude target --exclude .git "${QUICKEMU_MAC_USERNAME}@localhost:/Users/${QUICKEMU_MAC_USERNAME}/platune/" .
+

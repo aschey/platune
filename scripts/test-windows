@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+source $(dirname $0)/.env
+
+$(dirname $0)/rsync-to-windows
+sshpass -p "${QUICKEMU_WINDOWS_PASSWORD}" ssh -p 22220 Quickemu@localhost << EOF
+cd C:\Users\Quickemu\platune
+cargo build
+cargo test
+EOF

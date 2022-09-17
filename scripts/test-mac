@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+source $(dirname $0)/.env
+
+$(dirname $0)/rsync-to-mac
+sshpass -p "${QUICKEMU_MAC_PASSWORD}" ssh -p 22221 "${QUICKEMU_MAC_USERNAME}@localhost" << EOF
+cd ~/platune
+cargo build
+echo "${QUICKEMU_MAC_PASSWORD}" | sudo -S cargo test
+EOF

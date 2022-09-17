@@ -113,6 +113,8 @@ impl Database {
             Err(_) => "./assets/linux/spellfix.o".to_owned(),
             #[cfg(target_os = "windows")]
             Err(_) => "./assets/windows/spellfix.dll".to_owned(),
+            #[cfg(target_os = "macos")]
+            Err(_) => "./assets/mac/spellfix.dylib".to_owned(),
         }
     }
 

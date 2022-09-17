@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+source $(dirname $0)/.env
+
+read -p "Are you sure you want to overwrite the local contents with the contents from the Windows VM? [yn] " -n 1 -r
+[[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
+echo
+rsync -arv -e "sshpass -p ${QUICKEMU_WINDOWS_PASSWORD} ssh -p 22220" --progress --delete --exclude target --exclude .git Quickemu@localhost:/c/Users/${QUICKEMU_WINDOWS_USERNAME-Quickemu}/platune/ .
