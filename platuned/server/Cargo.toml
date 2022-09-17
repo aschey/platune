@@ -9,7 +9,7 @@ version = "0.1.0"
 [dependencies]
 color-eyre = "0.6.2"
 console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
-daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "c74b587eaa159c75c615e5f70d724cff9eaca881", features = ["all-async"]}
+daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "493ddc64c0271025f24a7f74d54dedf39c769ba6", features = ["all-async", "grpc-health-check"]}
 dotenv = "0.15.0"
 futures = "0.3.24"
 libplatune-management = {path = "../../libplatune/management"}
@@ -19,6 +19,7 @@ prost-types = "0.11.1"
 tokio = {version = "1.21.1", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.9", features = ["net"]}
 tonic = "0.8.1"
+tonic-health = "0.7.1"
 tonic-reflection = "0.5.0"
 tracing = "0.1.36"
 

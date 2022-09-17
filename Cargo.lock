@@ -483,11 +483,11 @@ dependencies = [
 [[package]]
 name = "clap"
 version = "4.0.0-alpha.0"
-source = "git+https://github.com/clap-rs/clap?rev=bf98110adc1bfc90b044ac7faf6acd784f17f7df#bf98110adc1bfc90b044ac7faf6acd784f17f7df"
+source = "git+https://github.com/clap-rs/clap?rev=6dc8c9943c2aaa9d50e2664847b8a7fa5ec06928#6dc8c9943c2aaa9d50e2664847b8a7fa5ec06928"
 dependencies = [
  "atty",
  "bitflags",
- "clap_lex 0.2.4 (git+https://github.com/clap-rs/clap?rev=bf98110adc1bfc90b044ac7faf6acd784f17f7df)",
+ "clap_lex 0.2.4 (git+https://github.com/clap-rs/clap?rev=6dc8c9943c2aaa9d50e2664847b8a7fa5ec06928)",
  "strsim",
  "termcolor",
 ]
@@ -504,7 +504,7 @@ dependencies = [
 [[package]]
 name = "clap_lex"
 version = "0.2.4"
-source = "git+https://github.com/clap-rs/clap?rev=bf98110adc1bfc90b044ac7faf6acd784f17f7df#bf98110adc1bfc90b044ac7faf6acd784f17f7df"
+source = "git+https://github.com/clap-rs/clap?rev=6dc8c9943c2aaa9d50e2664847b8a7fa5ec06928#6dc8c9943c2aaa9d50e2664847b8a7fa5ec06928"
 dependencies = [
  "os_str_bytes",
 ]
@@ -876,7 +876,7 @@ checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
+source = "git+https://github.com/aschey/daemon-slayer?rev=493ddc64c0271025f24a7f74d54dedf39c769ba6#493ddc64c0271025f24a7f74d54dedf39c769ba6"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -888,12 +888,13 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
+source = "git+https://github.com/aschey/daemon-slayer?rev=493ddc64c0271025f24a7f74d54dedf39c769ba6#493ddc64c0271025f24a7f74d54dedf39c769ba6"
 dependencies = [
  "async-trait",
  "clap 4.0.0-alpha.0",
  "daemon-slayer-client",
  "daemon-slayer-console",
+ "daemon-slayer-logging",
  "daemon-slayer-server",
  "eyre",
  "futures",
@@ -906,7 +907,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
+source = "git+https://github.com/aschey/daemon-slayer?rev=493ddc64c0271025f24a7f74d54dedf39c769ba6#493ddc64c0271025f24a7f74d54dedf39c769ba6"
 dependencies = [
  "async-trait",
  "directories",
@@ -918,6 +919,8 @@ dependencies = [
  "registry",
  "systemd_client",
  "tokio",
+ "tonic",
+ "tonic-health",
  "utfx",
  "windows-service",
 ]
@@ -925,7 +928,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
+source = "git+https://github.com/aschey/daemon-slayer?rev=493ddc64c0271025f24a7f74d54dedf39c769ba6#493ddc64c0271025f24a7f74d54dedf39c769ba6"
 dependencies = [
  "ansi-to-tui",
  "crossterm 0.25.0",
@@ -939,13 +942,12 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
+source = "git+https://github.com/aschey/daemon-slayer?rev=493ddc64c0271025f24a7f74d54dedf39c769ba6#493ddc64c0271025f24a7f74d54dedf39c769ba6"
 dependencies = [
  "async-trait",
  "directories",
  "futures",
  "once_cell",
- "parity-tokio-ipc",
  "time",
  "tokio",
  "tracing",
@@ -955,13 +957,12 @@ dependencies = [
  "tracing-ipc",
  "tracing-journald",
  "tracing-subscriber",
- "windows-service",
 ]
 
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
+source = "git+https://github.com/aschey/daemon-slayer?rev=493ddc64c0271025f24a7f74d54dedf39c769ba6#493ddc64c0271025f24a7f74d54dedf39c769ba6"
 dependencies = [
  "maybe-async-cfg",
  "proc-macro-crate",
@@ -973,7 +974,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=c74b587eaa159c75c615e5f70d724cff9eaca881#c74b587eaa159c75c615e5f70d724cff9eaca881"
+source = "git+https://github.com/aschey/daemon-slayer?rev=493ddc64c0271025f24a7f74d54dedf39c769ba6#493ddc64c0271025f24a7f74d54dedf39c769ba6"
 dependencies = [
  "async-trait",
  "daemon-slayer-macros",
@@ -983,6 +984,7 @@ dependencies = [
  "notify 5.0.0",
  "notify-debouncer-mini",
  "once_cell",
+ "registry",
  "sd-notify",
  "signal-hook",
  "signal-hook-tokio",
@@ -2652,6 +2654,7 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tonic-build",
+ "tonic-health",
  "tonic-reflection",
  "tracing",
 ]
@@ -4092,6 +4095,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tonic-health"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "632faf60b81a5b5f439d9635102b2b2921ee39171faf14f3e0008d99f98689f1"
+dependencies = [
+ "async-stream",
+ "bytes",
+ "prost",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+]
+
+[[package]]
 name = "tonic-reflection"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4215,7 +4232,7 @@ dependencies = [
 [[package]]
 name = "tracing-eventlog"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tracing-eventlog?rev=e87ec17edfb374101e1a9bda14b0e5b534d1cc56#e87ec17edfb374101e1a9bda14b0e5b534d1cc56"
+source = "git+https://github.com/aschey/tracing-eventlog?rev=ba94d7635b20f8866067baae2bfb3d28bc883e63#ba94d7635b20f8866067baae2bfb3d28bc883e63"
 dependencies = [
  "embed-resource",
  "rand 0.8.5",
@@ -4244,7 +4261,7 @@ dependencies = [
 [[package]]
 name = "tracing-ipc"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tracing-ipc?rev=90566f704bac6b5d43d9873622db57e9c755ea5d#90566f704bac6b5d43d9873622db57e9c755ea5d"
+source = "git+https://github.com/aschey/tracing-ipc?rev=b59ac3328a9b08b3e75d9a9646d39aa66c8425f4#b59ac3328a9b08b3e75d9a9646d39aa66c8425f4"
 dependencies = [
  "futures",
  "once_cell",

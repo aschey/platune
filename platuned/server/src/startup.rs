@@ -39,6 +39,7 @@ impl HandlerAsync for ServiceHandler {
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         info!("running service");
         on_started();
+
         server::run_all(self.tx).await?;
         Ok(())
     }

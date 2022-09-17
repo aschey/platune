@@ -46,7 +46,7 @@ pub async fn run_all(shutdown_tx: broadcast::Sender<()>) -> Result<()> {
         shutdown_tx.clone(),
         platune_player.clone(),
         manager.clone(),
-        Transport::Http("0.0.0.0:50051".parse().unwrap()),
+        Transport::Http("[::1]:50051".parse().unwrap()),
     );
     servers.push(http_server);
 
@@ -104,10 +104,21 @@ async fn run_server(
     let player = PlayerImpl::new(platune_player, shutdown_tx.clone());
 
     let management = ManagementImpl::new(manager, shutdown_tx.clone());
+
+    let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
+
+    health_reporter
+        .set_serving::<PlayerServer<PlayerImpl>>()
+        .await;
+    health_reporter
+        .set_serving::<ManagementServer<ManagementImpl>>()
+        .await;
+
     let builder = Server::builder()
         .add_service(reflection_service)
         .add_service(PlayerServer::new(player))
-        .add_service(ManagementServer::new(management));
+        .add_service(ManagementServer::new(management))
+        .add_service(health_service);
 
     let mut shutdown_rx = shutdown_tx.subscribe();
     let server_result = match transport {
