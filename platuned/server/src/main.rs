@@ -8,6 +8,7 @@ mod unix;
 use daemon_slayer::cli::ActionType;
 use daemon_slayer::cli::CliAsync;
 use daemon_slayer::cli::ServiceCommand;
+use daemon_slayer::client::config::SystemdConfig;
 use daemon_slayer::client::health_check::GrpcHealthCheckAsync;
 use daemon_slayer::client::Level;
 use daemon_slayer::client::Manager;
@@ -34,7 +35,16 @@ async fn run_async(logger_builder: LoggerBuilder) {
     let mut manager_builder = ServiceManager::builder(ServiceHandler::get_service_name())
         .with_description("platune service")
         .with_service_level(Level::User)
+        .with_autostart(true)
+        .with_systemd_config(
+            SystemdConfig::new()
+                .with_after_target("network.target")
+                .with_after_target("network-online.target")
+                .with_after_target("NetworkManager.service")
+                .with_after_target("systemd-resolved.service"),
+        )
         .with_args(["run"]);
+
     if let Ok(()) = dotenv::from_path("./.env") {
         if let Ok(database_url) = std::env::var("DATABASE_URL") {
             manager_builder = manager_builder.with_env_var("DATABASE_URL", database_url);
