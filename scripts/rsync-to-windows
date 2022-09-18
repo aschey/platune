@@ -10,4 +10,4 @@ if not exist "C:\Users\Quickemu\daemon-slayer" (
 )
 EOF
 echo
-rsync -arv -e "sshpass -p ${QUICKEMU_WINDOWS_PASSWORD} ssh -p 22220" --delete --progress --exclude target --exclude .git ./ Quickemu@localhost:/c/Users/${QUICKEMU_WINDOWS_USERNAME:-Quickemu}/platune
+rsync -arv -e "sshpass -p ${QUICKEMU_WINDOWS_PASSWORD} ssh -p 22220" --delete --progress --exclude target --exclude .git --exclude .env ./ Quickemu@localhost:/c/Users/${QUICKEMU_WINDOWS_USERNAME:-Quickemu}/platune

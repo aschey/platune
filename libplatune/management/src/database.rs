@@ -74,7 +74,7 @@ impl Database {
             .max_connections(1)
             .connect_with(writer_opts)
             .await
-            .unwrap();
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
         let read_pool = SqlitePool::connect_with(reader_opts.clone())
             .await

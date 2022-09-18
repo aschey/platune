@@ -876,7 +876,7 @@ checksum = "b365fabc795046672053e29c954733ec3b05e4be654ab130fe8f1f94d7051f35"
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=82a040b8316264ff728a3da7418eeeab058b0569#82a040b8316264ff728a3da7418eeeab058b0569"
+source = "git+https://github.com/aschey/daemon-slayer?rev=16787339f2940a9c1ed6e39256e1d50af755f1c6#16787339f2940a9c1ed6e39256e1d50af755f1c6"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -888,7 +888,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=82a040b8316264ff728a3da7418eeeab058b0569#82a040b8316264ff728a3da7418eeeab058b0569"
+source = "git+https://github.com/aschey/daemon-slayer?rev=16787339f2940a9c1ed6e39256e1d50af755f1c6#16787339f2940a9c1ed6e39256e1d50af755f1c6"
 dependencies = [
  "async-trait",
  "clap 4.0.0-alpha.0",
@@ -907,7 +907,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=82a040b8316264ff728a3da7418eeeab058b0569#82a040b8316264ff728a3da7418eeeab058b0569"
+source = "git+https://github.com/aschey/daemon-slayer?rev=16787339f2940a9c1ed6e39256e1d50af755f1c6#16787339f2940a9c1ed6e39256e1d50af755f1c6"
 dependencies = [
  "async-trait",
  "directories",
@@ -928,7 +928,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=82a040b8316264ff728a3da7418eeeab058b0569#82a040b8316264ff728a3da7418eeeab058b0569"
+source = "git+https://github.com/aschey/daemon-slayer?rev=16787339f2940a9c1ed6e39256e1d50af755f1c6#16787339f2940a9c1ed6e39256e1d50af755f1c6"
 dependencies = [
  "ansi-to-tui",
  "crossterm 0.25.0",
@@ -942,7 +942,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=82a040b8316264ff728a3da7418eeeab058b0569#82a040b8316264ff728a3da7418eeeab058b0569"
+source = "git+https://github.com/aschey/daemon-slayer?rev=16787339f2940a9c1ed6e39256e1d50af755f1c6#16787339f2940a9c1ed6e39256e1d50af755f1c6"
 dependencies = [
  "async-trait",
  "directories",
@@ -962,7 +962,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=82a040b8316264ff728a3da7418eeeab058b0569#82a040b8316264ff728a3da7418eeeab058b0569"
+source = "git+https://github.com/aschey/daemon-slayer?rev=16787339f2940a9c1ed6e39256e1d50af755f1c6#16787339f2940a9c1ed6e39256e1d50af755f1c6"
 dependencies = [
  "maybe-async-cfg",
  "proc-macro-crate",
@@ -974,7 +974,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=82a040b8316264ff728a3da7418eeeab058b0569#82a040b8316264ff728a3da7418eeeab058b0569"
+source = "git+https://github.com/aschey/daemon-slayer?rev=16787339f2940a9c1ed6e39256e1d50af755f1c6#16787339f2940a9c1ed6e39256e1d50af755f1c6"
 dependencies = [
  "async-trait",
  "daemon-slayer-macros",
@@ -3843,7 +3843,7 @@ dependencies = [
 [[package]]
 name = "systemd_client"
 version = "0.2.1"
-source = "git+https://github.com/aschey/systemd-client?rev=530b606d9ed41049e4efb0a0ae85e1237e4f0784#530b606d9ed41049e4efb0a0ae85e1237e4f0784"
+source = "git+https://github.com/aschey/systemd-client?rev=6f202ca895f71b157aef97ffc694ce3add700c65#6f202ca895f71b157aef97ffc694ce3add700c65"
 dependencies = [
  "dirs",
  "thiserror",
