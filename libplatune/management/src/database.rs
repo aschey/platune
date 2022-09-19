@@ -6,12 +6,15 @@ use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
+use sqlx::migrate::Migrator;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{path::Path, time::Duration};
 use tokio::sync::Mutex;
 use tracing::info;
+
+static MIGRATOR: Migrator = sqlx::migrate!();
 
 #[derive(Clone)]
 pub struct Database {
@@ -119,15 +122,9 @@ impl Database {
     }
 
     pub async fn migrate(&self) -> Result<(), DbError> {
-        let mut con = self
-            .write_pool
-            .acquire()
-            .await
-            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
-
         info!("Migrating");
-        sqlx::migrate!("./migrations")
-            .run(&mut con)
+        MIGRATOR
+            .run(&self.write_pool)
             .await
             .map_err(|e| DbError::DbError(format!("Error running migrations {e:?}")))?;
         info!("Finished migrating");
