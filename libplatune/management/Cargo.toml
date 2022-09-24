@@ -20,7 +20,7 @@ directories = "4.0.1"
 eyre = "0.6.8"
 futures = "0.3.24"
 ignore = "0.4.18"
-itertools = "0.10.4"
+itertools = "0.10.5"
 lazy_static = "1.4.0"
 lofty = {version = "0.8.0", git = "https://github.com/aschey/lofty-rs", rev = "d7877f0a489f66edad47df627d2bed74098f6b11"}
 log = "0.4.17"
@@ -32,7 +32,7 @@ strum = {version = "0.24.1", features = ["derive"]}
 tap = "1.0.1"
 thiserror = "1.0.35"
 tokio = {version = "1.21.1", features = ["rt-multi-thread", "macros"]}
-tokio-stream = {version = "0.1.9", features = ["net", "sync"]}
+tokio-stream = {version = "0.1.10", features = ["net", "sync"]}
 tracing = "0.1.36"
 walkdir = "2.3.2"
 

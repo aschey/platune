@@ -15,7 +15,7 @@ eyre = "0.6.8"
 flume = "0.10.14"
 futures-util = "0.3.24"
 rb = "0.4.1"
-reqwest = {version = "0.11.11", features = ["stream"]}
+reqwest = {version = "0.11.12", features = ["stream"]}
 rubato = "0.12.0"
 strum = {version = "0.24.1", features = ["derive"]}
 symphonia = {version = "0.5.1", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
