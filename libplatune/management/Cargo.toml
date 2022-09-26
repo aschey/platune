@@ -24,7 +24,7 @@ itertools = "0.10.5"
 lazy_static = "1.4.0"
 lofty = {version = "0.8.0", git = "https://github.com/aschey/lofty-rs", rev = "d7877f0a489f66edad47df627d2bed74098f6b11"}
 log = "0.4.17"
-notify = {version = "5.0.0", default-features = false}
+notify = {version = "5.0.0", default-features = false, features = ["macos_fsevent"]}
 num_cpus = "1.13.1"
 regex = "1.6.0"
 sqlx = {version = "0.6.2", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}

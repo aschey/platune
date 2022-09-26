@@ -9,7 +9,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tempfile::TempDir;
+use tempfile::{tempdir, TempDir};
 use tokio::{sync::mpsc, time::timeout};
 use tracing::Level;
 
@@ -33,10 +33,10 @@ async fn test_file_sync_sequential(
     #[values(true, false)] rename_file: bool,
     #[values(1, 100)] debounce_time: u64,
 ) {
-    let tempdir = TempDir::new().unwrap();
+    let (_tempdir, temp_path) = create_tempdir();
     let (_, manager) = setup().await;
 
-    let music_dir = tempdir.path().join("configdir");
+    let music_dir = temp_path.join("configdir");
     let mut inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
 
@@ -140,10 +140,10 @@ async fn test_file_sync_sequential(
 #[rstest(rename, case(true), case(false))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_file_sync_concurrent(rename: bool) {
-    let tempdir = TempDir::new().unwrap();
+    let (_tempdir, temp_path) = create_tempdir();
     let (_, manager) = setup().await;
 
-    let music_dir = tempdir.path().join("configdir");
+    let music_dir = temp_path.join("configdir");
     let inner_dir = music_dir.join("folder1");
 
     let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(10))
@@ -210,10 +210,10 @@ async fn test_file_sync_concurrent(rename: bool) {
 #[rstest(sync_twice, case(true), case(false))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_sync_all(sync_twice: bool) {
-    let tempdir = TempDir::new().unwrap();
+    let (_tempdir, temp_path) = create_tempdir();
     let (_, manager) = setup().await;
 
-    let music_dir = tempdir.path().join("configdir");
+    let music_dir = temp_path.join("configdir");
     let inner_dir = music_dir.join("folder1");
     create_dir_all(inner_dir.clone()).unwrap();
 
@@ -289,6 +289,13 @@ fn test_normalize(paths: Vec<&str>, new_path: &str, expected: Vec<&str>) {
     );
     let expected = expected.into_iter().map(PathBuf::from).collect_vec();
     assert_eq!(expected, new_paths);
+}
+
+fn create_tempdir() -> (TempDir, PathBuf) {
+    let temp = tempdir().unwrap();
+    let temp_path = temp.path().to_owned();
+    create_dir_all(&temp_path).unwrap();
+    (temp, std::fs::canonicalize(temp_path).unwrap())
 }
 
 async fn setup() -> (Database, Manager) {
