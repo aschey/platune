@@ -4,20 +4,39 @@ name: CI
 
 jobs:
   rust:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: macos-latest
+            protoc-target: osx-x86_64
+            binstall-target: x86_64-apple-darwin.zip
+            binstall-extract: unzip
+          - os: ubuntu-latest
+            protoc-target: linux-x86_64
+            binstall-target: x86_64-unknown-linux-gnu.tgz
+            binstall-extract: tar -xzvf
+          - os: windows-latest
+            protoc-target: win64
+            binstall-target: x86_64-pc-windows-msvc.zip
+            binstall-extract: unzip
+      fail-fast: false
     env:
       SQLX_OFFLINE: true
       RUSTFLAGS: "-Cinstrument-coverage"
       LLVM_PROFILE_FILE: "platune-%p-%m.profraw"
-      PROTOC: "/home/runner/protoc/bin/protoc"
+      PROTOC: ${{ github.workspace }}/protoc/bin/protoc
     name: Run Rust tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       - name: apt-get update
+        if: matrix.os == 'ubuntu-latest'
         # act doesn't have sudo installed but it's required on the real actions runner
         run: $(command -v sudo>/dev/null && echo "sudo") apt-get update
       - name: Install deps
+        if: matrix.os == 'ubuntu-latest'
         run: |
           $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev git
       - uses: Swatinem/rust-cache@v2
@@ -25,29 +44,43 @@ jobs:
           shared-key: cache-${{ hashFiles('**/Cargo.lock') }}
       - name: Clippy
         run: |
-          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-linux-x86_64.zip
-          unzip protoc-3.19.4-linux-x86_64.zip -d "$HOME/protoc"
+          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-${{ matrix.protoc-target }}.zip
+          unzip protoc-3.19.4-${{ matrix.protoc-target }}.zip -d "${{ github.workspace }}/protoc"
           # TODO: re-enable for every crate once tonic fixes clippy warnings
           cargo clippy -p libplatune-management -p libplatune-player -- -D warnings
       - name: Test
         run: |
           # Install precompiled binaries to improve build time
-          wget https://github.com/ryankurte/cargo-binstall/releases/latest/download/cargo-binstall-x86_64-unknown-linux-gnu.tgz -O cargo-binstall.tgz
-          tar -xzvf cargo-binstall.tgz
-          ./cargo-binstall grcov --no-confirm --force
+          curl -LO https://github.com/cargo-bins/cargo-binstall/releases/download/v0.13.3/cargo-binstall-${{ matrix.binstall-target }}
+          ${{ matrix.binstall-extract }} cargo-binstall-${{ matrix.binstall-target }}
           ./cargo-binstall cargo-nextest --no-confirm --force
           rustup component add llvm-tools-preview 
           cargo nextest run --locked
+      - name: Generate coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          ./cargo-binstall grcov --no-confirm --force
           grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing --ignore "target/**/*" --ignore "**/*/*_test.rs" -o ./target/debug/lcov.info
       - name: Upload coverage to Codecov
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v3
         with:
           verbose: true
           fail_ci_if_error: true
           files: ./target/debug/lcov.info
   go:
+    strategy:
+      matrix:
+        # skip tests on mac for now, throws a weird error trying to open the input device
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            test-script: TERM=xterm-256color script -q -e -c "go test ./... -v"
+          - os: windows-latest
+            test-script: go test ./... -v
+      fail-fast: false
     name: Run Go tests
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -56,4 +89,4 @@ jobs:
         with:
           go-version: 1.18.x
       - name: Test
-        run: cd platune-cli && go build && TERM=xterm-256color script -q -e -c "go test ./... -v"
+        run: cd platune-cli && go build && ${{ matrix.test-script }}
