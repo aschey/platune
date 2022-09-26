@@ -293,9 +293,13 @@ fn test_normalize(paths: Vec<&str>, new_path: &str, expected: Vec<&str>) {
 
 fn create_tempdir() -> (TempDir, PathBuf) {
     let temp = tempdir().unwrap();
-    let temp_path = temp.path().to_owned();
+    let mut temp_path = temp.path().to_owned();
     create_dir_all(&temp_path).unwrap();
-    (temp, std::fs::canonicalize(temp_path).unwrap())
+    // Tempdir in mac defaults to a symlink so we need to remove the symlink so the paths all match
+    if cfg!(target_os = "macos") {
+        temp_path = std::fs::canonicalize(temp_path).unwrap();
+    }
+    (temp, temp_path)
 }
 
 async fn setup() -> (Database, Manager) {
