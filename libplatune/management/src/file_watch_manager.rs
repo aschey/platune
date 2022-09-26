@@ -2,9 +2,12 @@ use crate::db_error::DbError;
 use crate::manager::Manager;
 use crate::sync::progress_stream::ProgressStream;
 use futures::StreamExt;
-use notify::{DebouncedEvent, Watcher};
-use notify::{RecommendedWatcher, RecursiveMode};
+use notify::{
+    event::{EventKind, ModifyKind, RenameMode},
+    RecommendedWatcher, RecursiveMode, Watcher,
+};
 use std::ops::Deref;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::{path::PathBuf, sync::Arc, thread, time::Duration};
 use tap::TapFallible;
@@ -16,7 +19,6 @@ use tracing::{error, info};
 pub(crate) enum SyncMessage {
     Path(PathBuf),
     Rename(PathBuf, PathBuf),
-    Hold,
     All,
 }
 
@@ -61,7 +63,7 @@ impl FileWatchManager {
         let (progress_tx, _) = broadcast::channel(32);
         let progress_tx_ = progress_tx.clone();
 
-        let mut watcher = RecommendedWatcher::new(event_tx, debounce_delay)
+        let mut watcher = RecommendedWatcher::new(event_tx, notify::Config::default())
             .map_err(FileWatchError::WatchError)?;
 
         let paths = manager
@@ -70,7 +72,7 @@ impl FileWatchManager {
             .map_err(FileWatchError::DbError)?;
 
         for path in &paths {
-            if let Err(e) = watcher.watch(&path, RecursiveMode::Recursive) {
+            if let Err(e) = watcher.watch(Path::new(path), RecursiveMode::Recursive) {
                 // Probably a bad file path
                 error!("Error watching path {path}: {e:?}");
             }
@@ -79,27 +81,28 @@ impl FileWatchManager {
         // TODO: add a way to terminate these child tasks
         thread::spawn(move || {
             while let Ok(event) = event_rx.recv() {
-                info!("Received file watcher event {event:?}");
-                match event {
-                    DebouncedEvent::Create(path)
-                    | DebouncedEvent::Write(path)
-                    | DebouncedEvent::Remove(path) => {
-                        let _ = sync_tx_
-                            .blocking_send(SyncMessage::Path(path))
-                            .tap_err(|e| error!("Error sending path message: {e:?}"));
+                if let Ok(event) =
+                    event.tap_err(|e| error!("Error received from file watcher: {e:?}"))
+                {
+                    info!("Received file watcher event {event:?}");
+                    match event.kind {
+                        EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
+                            let _ = sync_tx_
+                                .blocking_send(SyncMessage::Rename(
+                                    event.paths[0].clone(),
+                                    event.paths[1].clone(),
+                                ))
+                                .tap_err(|e| error!("Error sending rename message: {e:?}"));
+                        }
+                        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                            for path in event.paths {
+                                let _ = sync_tx_
+                                    .blocking_send(SyncMessage::Path(path))
+                                    .tap_err(|e| error!("Error sending path message: {e:?}"));
+                            }
+                        }
+                        _ => {}
                     }
-                    DebouncedEvent::NoticeWrite(_) | DebouncedEvent::NoticeRemove(_) => {
-                        // Write or remove pending, don't need to send the path yet but we can reset the debouncer
-                        let _ = sync_tx_
-                            .blocking_send(SyncMessage::Hold)
-                            .tap_err(|e| error!("Error sending hold message: {e:?}"));
-                    }
-                    DebouncedEvent::Rename(from, to) => {
-                        let _ = sync_tx_
-                            .blocking_send(SyncMessage::Rename(from, to))
-                            .tap_err(|e| error!("Error sending rename message: {e:?}"));
-                    }
-                    _ => {}
                 }
             }
         });
@@ -110,8 +113,7 @@ impl FileWatchManager {
             let mut paths: Vec<PathBuf> = vec![];
             let running = Arc::new(AtomicBool::new(false));
             loop {
-                // Wait for longer than the debounce duration to ensure we get all the emitted events
-                let watch_event = tokio::time::timeout(debounce_delay * 2, sync_rx.recv())
+                let watch_event = tokio::time::timeout(debounce_delay, sync_rx.recv())
                     .await
                     .tap_ok(|event| info!("Processing watch event: {event:?}"));
 
@@ -142,7 +144,6 @@ impl FileWatchManager {
                         // So we need to now mark them as un-deleted
                         paths = Self::normalize_paths(paths, to);
                     }
-                    Ok(Some(SyncMessage::Hold)) => {}
                     Ok(None) => {
                         break;
                     }
@@ -259,11 +260,10 @@ impl FileWatchManager {
             .add_folders(paths.clone())
             .await?;
 
+        let mut watcher = self.watcher.lock().await;
         for path in paths {
-            self.watcher
-                .lock()
-                .await
-                .watch(path, RecursiveMode::Recursive)
+            watcher
+                .watch(Path::new(path), RecursiveMode::Recursive)
                 .map_err(FileWatchError::WatchError)?;
         }
         Ok(())

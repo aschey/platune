@@ -11,6 +11,7 @@ use daemon_slayer::cli::ServiceCommand;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
 use daemon_slayer::logging::LoggerBuilder;
 use daemon_slayer::server::HandlerAsync;
+use dotenv::dotenv;
 use rpc::*;
 use std::error::Error;
 use tracing::error;
@@ -57,6 +58,9 @@ async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
     } else {
         color_eyre::config::Theme::dark()
     };
+    if action.command == Some(ServiceCommand::Direct) {
+        dotenv().ok();
+    }
     let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
         .add_default_filters()
         .theme(theme)
