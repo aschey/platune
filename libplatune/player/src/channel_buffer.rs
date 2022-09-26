@@ -51,8 +51,10 @@ impl ChannelBuffer {
         let mut i = 0;
         while self.len() < self.capacity && i < data.len() {
             for chan in &mut self.inner {
-                chan.push(data[i]);
-                i += 1;
+                if i < data.len() {
+                    chan.push(data[i]);
+                    i += 1;
+                }
             }
         }
         i
