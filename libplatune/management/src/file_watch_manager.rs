@@ -157,16 +157,23 @@ impl FileWatchManager {
                             continue;
                         }
 
-                        let folders = paths
-                            .iter()
-                            .map(|p| p.to_string_lossy().into_owned())
-                            .collect();
-                        info!("Syncing {folders:?}");
+                        let folders = if cfg!(target_os = "macos") {
+                            info!("Syncing all folders");
+                            // Force sync all folders on mac because fsevents doesn't always track all events by design
+                            None
+                        } else {
+                            let folders = paths
+                                .iter()
+                                .map(|p| p.to_string_lossy().into_owned())
+                                .collect();
+                            info!("Syncing {folders:?}");
+                            Some(folders)
+                        };
 
                         if let Ok(rx) = manager_
                             .write()
                             .await
-                            .sync(Some(folders))
+                            .sync(folders)
                             .await
                             .tap_err(|e| error!("Error syncing: {e:?}"))
                         {
