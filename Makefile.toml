@@ -170,7 +170,7 @@ command = "cargo"
 install_crate = "cargo-edit"
 
 [tasks.upgrade]
-args = ["upgrade", "--exclude", "notify"]
+args = ["upgrade"]
 command = "cargo"
 install_crate = "cargo-edit"
 
