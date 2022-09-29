@@ -70,17 +70,17 @@ impl Player {
             HttpStreamReader::new(path.to_owned())
                 .await
                 .map(|r| r.into_source())
-                .tap_err(|e| error!("Error downloading http file {e:?}"))
+                .tap_err(|e| error!("Error downloading http file {path} {e:?}"))
                 .ok()
         } else {
             let file = File::open(&path)
-                .tap_err(|e| error!("Error opening file {e:?}"))
+                .tap_err(|e| error!("Error opening file {path} {e:?}"))
                 .ok()?;
 
             let file_len = file
                 .metadata()
                 .map(|m| m.len())
-                .tap_err(|e| warn!("Error reading file metadata: {e:?}"))
+                .tap_err(|e| warn!("Error reading file metadata from {path}: {e:?}"))
                 .ok();
 
             let extension = Path::new(&path)
