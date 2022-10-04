@@ -5,10 +5,16 @@ use daemon_slayer::{
     client::{
         config::SystemdConfig, health_check::GrpcHealthCheckAsync, Level, Manager, ServiceManager,
     },
+    logging::tracing_subscriber::util::SubscriberInitExt,
 };
 
+fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+    daemon_slayer::logging::init_local_time();
+    run_async()
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut manager_builder = ServiceManager::builder("platuned")
         .with_description("platune service")
         .with_service_level(Level::User)
@@ -36,6 +42,11 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             GrpcHealthCheckAsync::new("http://[::1]:50051").unwrap(),
         ))
         .build();
+    let (logger, _guard) = cli.configure_logger().build()?;
+    logger.init();
+
+    cli.configure_error_handler().install()?;
+
     cli.handle_input().await?;
     Ok(())
 }

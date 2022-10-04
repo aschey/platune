@@ -5,7 +5,7 @@ use crate::services::management::ManagementImpl;
 use crate::services::player::PlayerImpl;
 #[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
-use color_eyre::eyre::{Context, Result};
+use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use futures::future::try_join_all;
 use libplatune_management::config::FileConfig;
 use libplatune_management::database::Database;

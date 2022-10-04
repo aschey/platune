@@ -7,9 +7,8 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-color-eyre = "0.6.2"
 console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
-daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "e5779c176a639de75dd7b2d3a04dcdb24b2e0c0b", features = ["all-async", "grpc-health-check"]}
+daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "b09932507ff883be9d9c5dac13d38effb75e185b", features = ["all-async", "grpc-health-check"]}
 dotenv = "0.15.0"
 futures = "0.3.24"
 libplatune-management = {path = "../../libplatune/management"}
