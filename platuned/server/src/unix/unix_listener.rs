@@ -1,4 +1,4 @@
-use color_eyre::eyre::{self, Context, Result};
+use daemon_slayer::error_handler::color_eyre::eyre::{self, Context, Result};
 use eyre::eyre;
 use std::{
     io::ErrorKind,
