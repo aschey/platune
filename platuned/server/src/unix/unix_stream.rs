@@ -21,7 +21,7 @@ pub struct UnixStream(pub tokio::net::UnixStream);
 impl UnixStream {
     pub fn get_async_stream(
         path: impl AsRef<Path>,
-    ) -> daemon_slayer::error_handler::olor_eyre::eyre::Result<
+    ) -> daemon_slayer::error_handler::color_eyre::eyre::Result<
         AsyncStream<
             daemon_slayer::error_handler::color_eyre::eyre::Result<UnixStream, std::io::Error>,
             impl futures::Future<Output = ()>,
