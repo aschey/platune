@@ -12,7 +12,7 @@ use daemon_slayer::cli::ServiceCommand;
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
 use daemon_slayer::server::HandlerAsync;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use rpc::*;
 use std::error::Error;
 use tracing::metadata::LevelFilter;

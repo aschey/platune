@@ -28,7 +28,7 @@ async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
         )
         .with_args(["run"]);
 
-    if let Ok(()) = dotenv::from_path("./.env") {
+    if let Ok(()) = dotenvy::from_path("./.env") {
         if let Ok(database_url) = std::env::var("DATABASE_URL") {
             manager_builder = manager_builder.with_env_var("DATABASE_URL", database_url);
         }
