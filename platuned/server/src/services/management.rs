@@ -1,6 +1,8 @@
 use crate::management_server::Management;
 use crate::rpc::*;
 
+use daemon_slayer::server::{BroadcastEventStore, EventStore};
+use daemon_slayer::signals::Signal;
 use futures::StreamExt;
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager;
@@ -9,7 +11,7 @@ use prost_types::Timestamp;
 use std::pin::Pin;
 use std::time::Duration;
 use tokio::sync::broadcast::error::RecvError;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
@@ -17,14 +19,14 @@ use tracing::{error, warn};
 
 pub struct ManagementImpl {
     manager: FileWatchManager,
-    shutdown_tx: broadcast::Sender<()>,
+    shutdown_rx: BroadcastEventStore<Signal>,
 }
 
 impl ManagementImpl {
-    pub(crate) fn new(manager: FileWatchManager, shutdown_tx: broadcast::Sender<()>) -> Self {
+    pub(crate) fn new(manager: FileWatchManager, shutdown_rx: BroadcastEventStore<Signal>) -> Self {
         Self {
             manager,
-            shutdown_tx,
+            shutdown_rx,
         }
     }
 }
@@ -191,7 +193,7 @@ impl Management for ManagementImpl {
 
         let (tx, rx) = mpsc::channel(32);
         // Close stream when shutdown is requested
-        let mut shutdown_rx = self.shutdown_tx.subscribe();
+        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
 
         tokio::spawn(async move {
             while let Some(msg) =

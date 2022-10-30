@@ -1,11 +1,12 @@
 use std::error::Error;
 
 use daemon_slayer::{
-    cli::CliAsync,
-    client::{
-        config::SystemdConfig, health_check::GrpcHealthCheckAsync, Level, Manager, ServiceManager,
-    },
-    logging::tracing_subscriber::util::SubscriberInitExt,
+    cli::Cli,
+    client::{cli::ClientCliProvider, config::SystemdConfig, Level, Manager, ServiceManager},
+    console::{cli::ConsoleCliProvider, Console},
+    error_handler::ErrorHandler,
+    health_check::{cli::HealthCheckCliProvider, GrpcHealthCheck},
+    logging::{tracing_subscriber::util::SubscriberInitExt, LoggerBuilder},
 };
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -15,6 +16,10 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
 #[tokio::main]
 async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
+    let (logger, _guard) = LoggerBuilder::for_client("platuned").build()?;
+    logger.init();
+    ErrorHandler::for_client().install()?;
+
     let mut manager_builder = ServiceManager::builder("platuned")
         .with_description("platune service")
         .with_service_level(Level::User)
@@ -37,16 +42,20 @@ async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
         }
     }
     let manager = manager_builder.build().unwrap();
-    let cli = CliAsync::builder_for_client(manager)
-        .with_health_check(Box::new(
-            GrpcHealthCheckAsync::new("http://[::1]:50051").unwrap(),
-        ))
+
+    let health_check = GrpcHealthCheck::new("http://[::1]:50051").unwrap();
+
+    let mut console = Console::new(manager.clone());
+    console.add_health_check(Box::new(health_check.clone()));
+
+    let (cli, command) = Cli::builder()
+        .with_provider(ClientCliProvider::new(manager.clone()))
+        .with_provider(ConsoleCliProvider::new(console))
+        .with_provider(HealthCheckCliProvider::new(health_check))
         .build();
-    let (logger, _guard) = cli.configure_logger().build()?;
-    logger.init();
 
-    cli.configure_error_handler().install()?;
+    let matches = command.get_matches();
 
-    cli.handle_input().await?;
+    cli.handle_input(&matches).await;
     Ok(())
 }

@@ -3,21 +3,25 @@ use crate::rpc::event_response::*;
 use crate::rpc::*;
 use std::{pin::Pin, sync::Arc, time::Duration};
 
+use daemon_slayer::{
+    server::{BroadcastEventStore, EventStore},
+    signals::Signal,
+};
 use libplatune_player::platune_player::*;
-use tokio::sync::broadcast::{self, error::RecvError};
+use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer>,
-    shutdown_tx: broadcast::Sender<()>,
+    shutdown_rx: BroadcastEventStore<Signal>,
 }
 
 impl PlayerImpl {
-    pub fn new(player: Arc<PlatunePlayer>, shutdown_tx: broadcast::Sender<()>) -> Self {
+    pub fn new(player: Arc<PlatunePlayer>, shutdown_rx: BroadcastEventStore<Signal>) -> Self {
         PlayerImpl {
             player,
-            shutdown_tx,
+            shutdown_rx,
         }
     }
 }
@@ -208,7 +212,7 @@ impl Player for PlayerImpl {
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut ended_rx = self.player.subscribe();
-        let mut shutdown_rx = self.shutdown_tx.subscribe();
+        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
             while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.recv() => Err(RecvError::Closed) }

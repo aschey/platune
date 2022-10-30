@@ -1,36 +1,29 @@
 use std::error::Error;
 
 use crate::server;
-use daemon_slayer::server::{EventHandlerAsync, HandlerAsync};
-use tokio::sync::broadcast;
+use daemon_slayer::{
+    server::{BroadcastEventStore, Handler, ServiceContext},
+    signals::{Signal, SignalHandler, SignalHandlerBuilder, SignalHandlerBuilderTrait},
+};
 use tracing::info;
 
-#[derive(daemon_slayer::server::ServiceAsync)]
+#[derive(daemon_slayer::server::Service)]
 pub struct ServiceHandler {
-    tx: broadcast::Sender<()>,
+    signal_store: BroadcastEventStore<Signal>,
 }
 
-#[daemon_slayer::server::async_trait::async_trait]
-impl HandlerAsync for ServiceHandler {
-    fn new() -> Self {
-        let (tx, _) = broadcast::channel(32);
-        Self { tx }
+#[async_trait::async_trait]
+impl Handler for ServiceHandler {
+    async fn new(context: &mut ServiceContext) -> Self {
+        let (_, signal_store) = context
+            .add_event_service::<SignalHandler>(SignalHandlerBuilder::all())
+            .await;
+
+        Self { signal_store }
     }
 
     fn get_service_name<'a>() -> &'a str {
         "platuned"
-    }
-
-    fn get_event_handler(&mut self) -> EventHandlerAsync {
-        let tx = self.tx.clone();
-        Box::new(move |_| {
-            let tx = tx.clone();
-            Box::pin(async move {
-                info!("stopping");
-                tx.send(()).unwrap_or_default();
-                Ok(())
-            })
-        })
     }
 
     async fn run_service<F: FnOnce() + Send>(
@@ -40,7 +33,7 @@ impl HandlerAsync for ServiceHandler {
         info!("running service");
         on_started();
 
-        server::run_all(self.tx).await?;
+        server::run_all(self.signal_store.clone()).await?;
         Ok(())
     }
 }

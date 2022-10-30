@@ -7,8 +7,9 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "0.1.58"
 console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
-daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "b09932507ff883be9d9c5dac13d38effb75e185b", features = ["all-async", "grpc-health-check"]}
+daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "d2137bc5362665d41e74592230052274dea446bf", features = ["server-base", "client-base", "grpc-health-check", "all-plugins"]}
 dotenvy = "0.15.5"
 futures = "0.3.24"
 libplatune-management = {path = "../../libplatune/management"}
@@ -23,7 +24,7 @@ tonic-reflection = "0.5.0"
 tracing = "0.1.36"
 
 [features]
-console = ["console-subscriber", "tokio/tracing"]
+tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [target.'cfg(unix)'.dependencies]
 async-stream = "0.3.3"

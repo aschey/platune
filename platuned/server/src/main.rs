@@ -6,12 +6,14 @@ mod startup;
 mod unix;
 
 use crate::startup::ServiceHandler;
-use daemon_slayer::cli::CliAsync;
-use daemon_slayer::cli::ServiceCommand;
 #[cfg(feature = "console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
-use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
-use daemon_slayer::server::HandlerAsync;
+use daemon_slayer::{
+    cli::Cli,
+    error_handler::ErrorHandler,
+    logging::{tracing_subscriber::util::SubscriberInitExt, LoggerBuilder},
+    server::cli::ServerCliProvider,
+};
 use dotenvy::dotenv;
 use rpc::*;
 use std::error::Error;
@@ -29,32 +31,30 @@ async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
     } else {
         tracing::Level::INFO
     };
-    let cli = CliAsync::for_server(
-        ServiceHandler::new(),
-        "platune".to_owned(),
-        "Platune".to_owned(),
-        "platune service".to_owned(),
-    );
-    let (logger, _guard) = cli
-        .configure_logger()
+
+    let (logger, _guard) = LoggerBuilder::for_server("platuned")
+        .with_ipc_logger(true)
         .with_default_log_level(default_level)
         .with_level_filter(LevelFilter::INFO)
-        .with_ipc_logger(true)
         .build()?;
 
-    #[cfg(feature = "console")]
+    #[cfg(feature = "tokio-console")]
     let logger = logger.with(console_subscriber::spawn());
 
     logger.init();
+
     // Don't set panic hook until after logging is set up
-    cli.configure_error_handler().install()?;
+    ErrorHandler::for_server().install()?;
 
-    let action = cli.action();
+    let (cli, command) = Cli::builder()
+        .with_provider(ServerCliProvider::<ServiceHandler>::default())
+        .build();
 
-    if action.command == Some(ServiceCommand::Direct) {
+    let matches = command.get_matches();
+    if matches.subcommand().is_none() {
         dotenv().ok();
     }
 
-    cli.handle_input().await?;
+    cli.handle_input(&matches).await;
     Ok(())
 }
