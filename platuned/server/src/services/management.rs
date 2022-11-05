@@ -1,31 +1,40 @@
 use crate::management_server::Management;
 use crate::rpc::*;
-
+use crate::sync_handler_client::SyncHandlerClient;
 use daemon_slayer::server::{BroadcastEventStore, EventStore};
 use daemon_slayer::signals::Signal;
 use futures::StreamExt;
-use libplatune_management::file_watch_manager::FileWatchManager;
-use libplatune_management::manager;
-use libplatune_management::manager::SearchOptions;
+use libplatune_management::file_watcher::file_watch_manager::FileWatchManager;
+use libplatune_management::manager::{self, SearchOptions};
 use prost_types::Timestamp;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::broadcast::error::RecvError;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLock};
+use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 pub struct ManagementImpl {
-    manager: FileWatchManager,
+    manager: Arc<RwLock<FileWatchManager>>,
+    sync_client: SyncHandlerClient,
+    progress_store: BroadcastEventStore<Progress>,
     shutdown_rx: BroadcastEventStore<Signal>,
 }
 
 impl ManagementImpl {
-    pub(crate) fn new(manager: FileWatchManager, shutdown_rx: BroadcastEventStore<Signal>) -> Self {
+    pub(crate) fn new(
+        manager: FileWatchManager,
+        sync_client: SyncHandlerClient,
+        progress_store: BroadcastEventStore<Progress>,
+        shutdown_rx: BroadcastEventStore<Signal>,
+    ) -> Self {
         Self {
-            manager,
+            manager: Arc::new(RwLock::new(manager)),
+            sync_client,
+            progress_store,
             shutdown_rx,
         }
     }
@@ -39,7 +48,7 @@ fn format_error(msg: String) -> Status {
 #[tonic::async_trait]
 impl Management for ManagementImpl {
     async fn start_sync(&self, _: Request<()>) -> Result<Response<()>, Status> {
-        match self.manager.start_sync_all().await {
+        match self.sync_client.start_sync().await {
             Ok(_) => Ok(Response::new(())),
             Err(e) => Err(format_error(e.to_string())),
         }
@@ -51,26 +60,20 @@ impl Management for ManagementImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
-        let mut progress_rx = self.manager.subscribe_progress();
+        let mut progress_rx = self.progress_store.subscribe_events();
+        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = mpsc::channel(32);
+
         tokio::spawn(async move {
-            loop {
-                match progress_rx.recv().await {
-                    Ok(val) => {
-                        tx.send(Ok(Progress {
-                            job: val.job,
-                            percentage: val.percentage,
-                            finished: val.finished,
-                        }))
-                        .await
-                        .unwrap_or_default();
-                    }
-                    Err(RecvError::Lagged(_)) => {}
-                    _ => {
-                        break;
-                    }
+            while let Some(val) =
+                tokio::select! { val = progress_rx.next() => val, _ = shutdown_rx.next() => None }
+            {
+                match val {
+                    Ok(val) => tx.send(Ok(val)).await.unwrap_or_default(),
+                    Err(BroadcastStreamRecvError::Lagged(_)) => continue,
                 }
             }
+            info!("Event stream completed");
         });
 
         Ok(Response::new(Box::pin(
@@ -197,7 +200,7 @@ impl Management for ManagementImpl {
 
         tokio::spawn(async move {
             while let Some(msg) =
-                tokio::select! { val = messages.next() => val, _ = shutdown_rx.recv() => None }
+                tokio::select! { val = messages.next() => val, _ = shutdown_rx.next() => None }
             {
                 let manager = manager.read().await;
                 match msg {

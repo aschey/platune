@@ -8,6 +8,7 @@ use crate::{
     path_util::{clean_file_path, update_path, PathMut},
     sync::progress_stream::ProgressStream,
 };
+use futures::Future;
 use regex::Regex;
 use std::{
     path::{Path, PathBuf},
@@ -97,14 +98,23 @@ impl Manager {
         Ok(self.expand_paths(folders).await)
     }
 
-    pub async fn sync(&mut self, paths: Option<Vec<String>>) -> Result<ProgressStream, DbError> {
+    pub async fn sync<F, Fut>(
+        &mut self,
+        paths: Option<Vec<String>>,
+        on_started: F,
+    ) -> Result<(), DbError>
+    where
+        F: FnOnce(ProgressStream) -> Fut,
+        Fut: Future<Output = ()>,
+    {
         let folders = match paths {
             Some(paths) => paths,
             None => self.get_all_folders().await?,
         };
 
         let mount = self.get_registered_mount().await;
-        Ok(self.db.sync(folders, mount).await)
+        self.db.sync(folders, mount, on_started).await;
+        Ok(())
     }
 
     async fn replace_prefix(&self, paths: Vec<&str>) -> Vec<String> {

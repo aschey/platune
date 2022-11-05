@@ -1,29 +1,26 @@
 use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
-use crate::rpc;
+use crate::rpc::*;
 use crate::services::management::ManagementImpl;
 use crate::services::player::PlayerImpl;
+use crate::sync_handler_client::SyncHandlerClient;
 #[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::server::{BroadcastEventStore, EventStore};
 use daemon_slayer::signals::Signal;
 use futures::future::try_join_all;
-use libplatune_management::config::FileConfig;
-use libplatune_management::database::Database;
-use libplatune_management::file_watch_manager::FileWatchManager;
-use libplatune_management::manager::Manager;
+use futures::StreamExt;
+use libplatune_management::file_watcher::file_watch_manager::FileWatchManager;
 use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(unix)]
 use std::env;
-use std::env::var;
 use std::net::SocketAddr;
 #[cfg(unix)]
 use std::path::Path;
 #[cfg(unix)]
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 #[cfg(unix)]
@@ -35,18 +32,21 @@ enum Transport {
     Uds(PathBuf),
 }
 
-pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
+pub async fn run_all(
+    manager: FileWatchManager,
+    sync_client: SyncHandlerClient,
+    progress_store: BroadcastEventStore<Progress>,
+    shutdown_rx: BroadcastEventStore<Signal>,
+) -> Result<()> {
     let platune_player = Arc::new(PlatunePlayer::new(Default::default()));
-    let manager = init_manager().await?;
-    let manager = FileWatchManager::new(manager, Duration::from_millis(500))
-        .await
-        .wrap_err("error starting file watch manager")?;
 
     let mut servers = Vec::<_>::new();
     let http_server = run_server(
         shutdown_rx.clone(),
         platune_player.clone(),
         manager.clone(),
+        sync_client.clone(),
+        progress_store.clone(),
         Transport::Http("[::1]:50051".parse().unwrap()),
     );
     servers.push(http_server);
@@ -68,6 +68,8 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
             shutdown_rx.clone(),
             platune_player.clone(),
             manager,
+            sync_client,
+            progress_store,
             Transport::Uds(socket_path),
         );
         servers.push(unix_server);
@@ -81,30 +83,22 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     Ok(())
 }
 
-async fn init_manager() -> Result<Manager> {
-    let path = var("DATABASE_URL").wrap_err("DATABASE_URL environment variable not set")?;
-    let db = Database::connect(path, true).await?;
-    db.migrate().await.wrap_err("Error migrating database")?;
-    let config = Arc::new(FileConfig::try_new()?);
-    let manager = Manager::new(&db, config);
-
-    Ok(manager)
-}
-
 async fn run_server(
     shutdown_rx: BroadcastEventStore<Signal>,
     platune_player: Arc<PlatunePlayer>,
     manager: FileWatchManager,
+    sync_client: SyncHandlerClient,
+    progress_store: BroadcastEventStore<Progress>,
     transport: Transport,
 ) -> Result<()> {
     let reflection_service = Builder::configure()
-        .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
+        .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
         .build()
         .wrap_err("Error building tonic server")?;
 
     let player = PlayerImpl::new(platune_player, shutdown_rx.clone());
 
-    let management = ManagementImpl::new(manager, shutdown_rx.clone());
+    let management = ManagementImpl::new(manager, sync_client, progress_store, shutdown_rx.clone());
 
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
 
@@ -125,14 +119,14 @@ async fn run_server(
     let server_result = match transport {
         Transport::Http(addr) => builder
             .serve_with_shutdown(addr, async {
-                shutdown_rx.recv().await;
+                shutdown_rx.next().await;
             })
             .await
             .wrap_err("Error running HTTP server"),
         #[cfg(unix)]
         Transport::Uds(path) => builder
             .serve_with_incoming_shutdown(UnixStream::get_async_stream(&path)?, async {
-                shutdown_rx.recv().await;
+                shutdown_rx.next().await;
             })
             .await
             .wrap_err("Error running UDS server"),

@@ -41,7 +41,7 @@ impl PartialEq for ResultScore {
 impl PartialOrd for ResultScore {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let weighted_ord = self.weighted_score.partial_cmp(&other.weighted_score);
-        if weighted_ord != Some(Ordering::Equal) && weighted_ord != None {
+        if weighted_ord != Some(Ordering::Equal) && weighted_ord.is_some() {
             return weighted_ord;
         }
         let len_ord = self.match_len_score.cmp(&other.match_len_score);

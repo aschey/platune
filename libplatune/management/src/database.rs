@@ -5,6 +5,7 @@ use crate::search::search_result::SearchResult;
 use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
+use futures::Future;
 use log::LevelFilter;
 use sqlx::migrate::Migrator;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
@@ -146,21 +147,22 @@ impl Database {
         self.search_engine.search(query, options).await
     }
 
-    pub(crate) async fn sync(
+    pub(crate) async fn sync<F, Fut>(
         &mut self,
         folders: Vec<String>,
         mount: Option<String>,
-    ) -> ProgressStream {
+        on_started: F,
+    ) where
+        F: FnOnce(ProgressStream) -> Fut,
+        Fut: Future<Output = ()>,
+    {
         let search_engine = self.search_engine.clone();
         self.sync_controller
             .lock()
             .await
-            .sync(
-                folders,
-                mount,
-                Box::new(move || search_engine.clear_cache()),
-            )
-            .await
+            .sync(folders, mount, on_started)
+            .await;
+        search_engine.clear_cache();
     }
 
     pub(crate) async fn rename_path(&mut self, from: String, to: String) -> Result<(), DbError> {

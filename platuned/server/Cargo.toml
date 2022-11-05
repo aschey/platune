@@ -7,15 +7,17 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.66"
 async-trait = "0.1.58"
 console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
-daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "d2137bc5362665d41e74592230052274dea446bf", features = ["server-base", "client-base", "grpc-health-check", "all-plugins"]}
+daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "e8d4c267e9d4cc60f60d883109b454b223ee1a4e", features = ["server-base", "client-base", "grpc-health-check", "all-plugins"]}
 dotenvy = "0.15.5"
 futures = "0.3.24"
 libplatune-management = {path = "../../libplatune/management"}
 libplatune-player = {path = "../../libplatune/player"}
 prost = "0.11.0"
 prost-types = "0.11.1"
+tap = "1.0.1"
 tokio = {version = "1.21.1", features = ["rt-multi-thread", "macros"]}
 tokio-stream = {version = "0.1.10", features = ["net"]}
 tonic = "0.8.1"

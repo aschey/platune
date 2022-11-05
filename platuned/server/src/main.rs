@@ -2,11 +2,15 @@ mod rpc;
 mod server;
 mod services;
 mod startup;
+mod sync_handler;
+mod sync_handler_builder;
+mod sync_handler_client;
+mod sync_processor;
 #[cfg(unix)]
 mod unix;
 
 use crate::startup::ServiceHandler;
-#[cfg(feature = "console")]
+#[cfg(feature = "tokio-console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::{
     cli::Cli,
