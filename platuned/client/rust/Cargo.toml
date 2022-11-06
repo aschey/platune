@@ -10,9 +10,9 @@ name = "platuned_client"
 path = "src/lib.rs"
 
 [dependencies]
-prost = "0.11.0"
-prost-types = "0.11.1"
-tonic = "0.8.1"
+prost = "0.11"
+prost-types = "0.11"
+tonic = "0.8"
 
 [build-dependencies]
-tonic-build = {version = "0.8.0", features = ["prost"]}
+tonic-build = {version = "0.8", features = ["prost"]}
