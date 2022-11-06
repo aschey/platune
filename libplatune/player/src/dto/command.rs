@@ -13,6 +13,5 @@ pub(crate) enum Command {
     Ended,
     Next,
     Previous,
-    Shutdown,
     Reset,
 }

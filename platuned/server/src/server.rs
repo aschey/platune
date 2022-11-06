@@ -7,7 +7,7 @@ use crate::sync_handler_client::SyncHandlerClient;
 #[cfg(unix)]
 use crate::unix::unix_stream::UnixStream;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
-use daemon_slayer::server::{BroadcastEventStore, EventStore};
+use daemon_slayer::server::{BroadcastEventStore, EventStore, SubsystemHandle};
 use daemon_slayer::signals::Signal;
 use futures::future::try_join_all;
 use futures::StreamExt;
@@ -21,8 +21,10 @@ use std::path::Path;
 #[cfg(unix)]
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
+use tracing::info;
 #[cfg(unix)]
 use tracing::warn;
 
@@ -36,13 +38,13 @@ pub async fn run_all(
     manager: FileWatchManager,
     sync_client: SyncHandlerClient,
     progress_store: BroadcastEventStore<Progress>,
-    shutdown_rx: BroadcastEventStore<Signal>,
+    subsys: SubsystemHandle,
 ) -> Result<()> {
-    let platune_player = Arc::new(PlatunePlayer::new(Default::default()));
+    let platune_player = Arc::new(PlatunePlayer::new(Default::default(), subsys.clone()));
 
     let mut servers = Vec::<_>::new();
     let http_server = run_server(
-        shutdown_rx.clone(),
+        subsys.clone(),
         platune_player.clone(),
         manager.clone(),
         sync_client.clone(),
@@ -65,7 +67,7 @@ pub async fn run_all(
         };
         let socket_path = Path::new(&socket_base).join("platuned/platuned.sock");
         let unix_server = run_server(
-            shutdown_rx.clone(),
+            subsys.clone(),
             platune_player.clone(),
             manager,
             sync_client,
@@ -78,13 +80,13 @@ pub async fn run_all(
     try_join_all(servers).await?;
 
     let player_inner = Arc::try_unwrap(platune_player).expect("All servers should've been dropped");
-    player_inner.join().await?;
+    drop(player_inner);
 
     Ok(())
 }
 
 async fn run_server(
-    shutdown_rx: BroadcastEventStore<Signal>,
+    subsys: SubsystemHandle,
     platune_player: Arc<PlatunePlayer>,
     manager: FileWatchManager,
     sync_client: SyncHandlerClient,
@@ -96,9 +98,9 @@ async fn run_server(
         .build()
         .wrap_err("Error building tonic server")?;
 
-    let player = PlayerImpl::new(platune_player, shutdown_rx.clone());
+    let player = PlayerImpl::new(platune_player, subsys.clone());
 
-    let management = ManagementImpl::new(manager, sync_client, progress_store, shutdown_rx.clone());
+    let management = ManagementImpl::new(manager, sync_client, progress_store, subsys.clone());
 
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
 
@@ -115,22 +117,23 @@ async fn run_server(
         .add_service(ManagementServer::new(management))
         .add_service(health_service);
 
-    let mut shutdown_rx = shutdown_rx.subscribe_events();
     let server_result = match transport {
         Transport::Http(addr) => builder
             .serve_with_shutdown(addr, async {
-                shutdown_rx.next().await;
+                subsys.on_shutdown_requested().await;
+                info!("Received shutdown event");
             })
             .await
             .wrap_err("Error running HTTP server"),
         #[cfg(unix)]
         Transport::Uds(path) => builder
             .serve_with_incoming_shutdown(UnixStream::get_async_stream(&path)?, async {
-                shutdown_rx.next().await;
+                subsys.on_shutdown_requested().await;
+                info!("Received shutdown event");
             })
             .await
             .wrap_err("Error running UDS server"),
     };
-
+    info!("Finished running server");
     server_result.wrap_err("Error running server")
 }

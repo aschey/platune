@@ -1,5 +1,5 @@
 use crate::manager::Manager;
-use daemon_slayer_core::server::BackgroundService;
+use daemon_slayer_core::server::{BackgroundService, SubsystemHandle};
 use notify::{
     event::{EventKind, ModifyKind, RenameMode},
     RecommendedWatcher, RecursiveMode, Watcher,
@@ -40,7 +40,7 @@ impl BackgroundService for FileWatchService {
 
     type Client = FileWatchManager;
 
-    async fn run_service(builder: Self::Builder) -> Self {
+    async fn run_service(builder: Self::Builder, subsys: SubsystemHandle) -> Self {
         let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(32);
         let (sync_tx, mut sync_rx) = tokio::sync::mpsc::channel(32);
         let (watch_folder_tx, mut watch_folder_rx) = tokio::sync::mpsc::channel::<PathBuf>(32);

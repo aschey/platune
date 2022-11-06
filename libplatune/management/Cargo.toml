@@ -17,7 +17,7 @@ name = "bench"
 [dependencies]
 async-trait = "0.1.58"
 concread = {version = "0.4.0", default-features = false, features = ["arcache"]}
-daemon-slayer-core = {git = "https://github.com/aschey/daemon-slayer", rev = "e8d4c267e9d4cc60f60d883109b454b223ee1a4e", features = ["server"]}
+daemon-slayer-core = {git = "https://github.com/aschey/daemon-slayer", rev = "84e9c12ba90aaa320d9ca42843e63b60b884d2fa", features = ["server"]}
 directories = "4.0.1"
 eyre = "0.6.8"
 futures = "0.3.24"

@@ -6,7 +6,7 @@ use crate::{
 };
 use daemon_slayer::{
     error_handler::color_eyre::eyre::{self, Context},
-    server::{BroadcastEventStore, Handler, ServiceContext},
+    server::{BroadcastEventStore, Handler, ServiceContext, SubsystemHandle},
     signals::{Signal, SignalHandler, SignalHandlerBuilder, SignalHandlerBuilderTrait},
     task_queue::{TaskQueue, TaskQueueBuilder},
 };
@@ -23,7 +23,7 @@ use tracing::info;
 
 #[derive(daemon_slayer::server::Service)]
 pub struct ServiceHandler {
-    signal_store: BroadcastEventStore<Signal>,
+    subsys: SubsystemHandle,
     progress_store: BroadcastEventStore<Progress>,
     manager: FileWatchManager,
     sync_client: SyncHandlerClient,
@@ -32,7 +32,8 @@ pub struct ServiceHandler {
 #[async_trait::async_trait]
 impl Handler for ServiceHandler {
     async fn new(context: &mut ServiceContext) -> Self {
-        let (_, signal_store) = context
+        let subsys = context.get_subsystem_handle();
+        context
             .add_event_service::<SignalHandler>(SignalHandlerBuilder::all())
             .await;
         let manager = init_manager().await.unwrap();
@@ -59,7 +60,7 @@ impl Handler for ServiceHandler {
             .await;
 
         Self {
-            signal_store,
+            subsys,
             manager: file_watch_manager,
             sync_client,
             progress_store,
@@ -81,7 +82,7 @@ impl Handler for ServiceHandler {
             self.manager,
             self.sync_client,
             self.progress_store,
-            self.signal_store,
+            self.subsys,
         )
         .await?;
         Ok(())

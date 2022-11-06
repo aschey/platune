@@ -222,6 +222,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-recursion"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cda8f4bcc10624c4e85bc66b3f452cca98cfa5ca002dc83a16aad2367641bea"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1009,7 +1020,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -1028,7 +1039,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "clap 4.0.18",
  "daemon-slayer-core",
@@ -1038,27 +1049,27 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
  "directories",
+ "enumflags2",
  "eyre",
  "launchd 0.2.0 (git+https://github.com/aschey/launchd?rev=c4d6ae24de02cfc04097b1de3b33434eeb4a5d5e)",
  "once_cell",
  "regex",
  "registry",
- "strum",
- "strum_macros",
+ "serde",
  "systemd_client",
  "utfx",
- "windows-service",
+ "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=32919aebe4c59f7855a8ebd72fe7d716db6a8f28)",
 ]
 
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "crossterm",
@@ -1073,28 +1084,33 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "clap 4.0.18",
  "futures",
+ "strum",
+ "strum_macros",
  "tokio",
+ "tokio-graceful-shutdown",
  "tokio-stream",
 ]
 
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
+ "async-trait",
  "color-eyre",
+ "daemon-slayer-core",
  "tracing",
 ]
 
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1106,8 +1122,10 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
+ "async-trait",
+ "daemon-slayer-core",
  "once_cell",
  "time 0.3.16",
  "tracing",
@@ -1123,7 +1141,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1134,7 +1152,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-plugin-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1147,7 +1165,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-plugin-ipc-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1160,7 +1178,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-plugin-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1174,7 +1192,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-plugin-task-queue"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "aide-de-camp",
  "aide-de-camp-sqlite",
@@ -1189,7 +1207,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=e8d4c267e9d4cc60f60d883109b454b223ee1a4e#e8d4c267e9d4cc60f60d883109b454b223ee1a4e"
+source = "git+https://github.com/aschey/daemon-slayer?rev=84e9c12ba90aaa320d9ca42843e63b60b884d2fa#84e9c12ba90aaa320d9ca42843e63b60b884d2fa"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1200,12 +1218,10 @@ dependencies = [
  "once_cell",
  "registry",
  "sd-notify",
- "strum",
- "strum_macros",
  "tap",
  "tokio",
  "tracing",
- "windows-service",
+ "windows-service 0.5.0 (git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55)",
 ]
 
 [[package]]
@@ -2109,6 +2125,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "tokio-graceful-shutdown",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -2246,6 +2263,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "miette"
+version = "5.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a24c4b4063c21e037dffb4de388ee85e400bff299803aba9513d9c52de8116b"
+dependencies = [
+ "miette-derive",
+ "once_cell",
+ "thiserror",
+ "unicode-width",
+]
+
+[[package]]
+name = "miette-derive"
+version = "5.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "827d18edee5d43dc309eb0ac565f2b8e2fdc89b986b2d929e924a0f6e7f23835"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -4257,6 +4297,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-graceful-shutdown"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ff81b9e7ba1103cf0bd37dffe8c0e7c243a7944a6d5b7e8de77c8c7a6b71718"
+dependencies = [
+ "async-recursion 1.0.0",
+ "async-trait",
+ "futures",
+ "log",
+ "miette",
+ "pin-project-lite",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "tokio-io-timeout"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5014,6 +5071,17 @@ dependencies = [
 [[package]]
 name = "windows-service"
 version = "0.5.0"
+source = "git+https://github.com/aschey/windows-service-rs?rev=32919aebe4c59f7855a8ebd72fe7d716db6a8f28#32919aebe4c59f7855a8ebd72fe7d716db6a8f28"
+dependencies = [
+ "bitflags",
+ "err-derive",
+ "widestring",
+ "windows-sys 0.36.1",
+]
+
+[[package]]
+name = "windows-service"
+version = "0.5.0"
 source = "git+https://github.com/aschey/windows-service-rs?rev=467408c9aba7d8221e5cf5a9992765ad7abeeb55#467408c9aba7d8221e5cf5a9992765ad7abeeb55"
 dependencies = [
  "bitflags",
@@ -5239,7 +5307,7 @@ dependencies = [
  "async-executor",
  "async-io",
  "async-lock",
- "async-recursion",
+ "async-recursion 0.3.2",
  "async-task",
  "async-trait",
  "byteorder",

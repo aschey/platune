@@ -1,7 +1,7 @@
 use crate::management_server::Management;
 use crate::rpc::*;
 use crate::sync_handler_client::SyncHandlerClient;
-use daemon_slayer::server::{BroadcastEventStore, EventStore};
+use daemon_slayer::server::{BroadcastEventStore, EventStore, FutureExt, SubsystemHandle};
 use daemon_slayer::signals::Signal;
 use futures::StreamExt;
 use libplatune_management::file_watcher::file_watch_manager::FileWatchManager;
@@ -21,7 +21,7 @@ pub struct ManagementImpl {
     manager: Arc<RwLock<FileWatchManager>>,
     sync_client: SyncHandlerClient,
     progress_store: BroadcastEventStore<Progress>,
-    shutdown_rx: BroadcastEventStore<Signal>,
+    subsys: SubsystemHandle,
 }
 
 impl ManagementImpl {
@@ -29,13 +29,13 @@ impl ManagementImpl {
         manager: FileWatchManager,
         sync_client: SyncHandlerClient,
         progress_store: BroadcastEventStore<Progress>,
-        shutdown_rx: BroadcastEventStore<Signal>,
+        subsys: SubsystemHandle,
     ) -> Self {
         Self {
             manager: Arc::new(RwLock::new(manager)),
             sync_client,
             progress_store,
-            shutdown_rx,
+            subsys,
         }
     }
 }
@@ -61,13 +61,12 @@ impl Management for ManagementImpl {
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut progress_rx = self.progress_store.subscribe_events();
-        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
+        let subsys = self.subsys.clone();
         let (tx, rx) = mpsc::channel(32);
 
         tokio::spawn(async move {
-            while let Some(val) =
-                tokio::select! { val = progress_rx.next() => val, _ = shutdown_rx.next() => None }
-            {
+            info!("Starting event stream");
+            while let Ok(Some(val)) = progress_rx.next().cancel_on_shutdown(&subsys).await {
                 match val {
                     Ok(val) => tx.send(Ok(val)).await.unwrap_or_default(),
                     Err(BroadcastStreamRecvError::Lagged(_)) => continue,
@@ -196,12 +195,10 @@ impl Management for ManagementImpl {
 
         let (tx, rx) = mpsc::channel(32);
         // Close stream when shutdown is requested
-        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
+        let subsys = self.subsys.clone();
 
         tokio::spawn(async move {
-            while let Some(msg) =
-                tokio::select! { val = messages.next() => val, _ = shutdown_rx.next() => None }
-            {
+            while let Ok(Some(msg)) = messages.next().cancel_on_shutdown(&subsys).await {
                 let manager = manager.read().await;
                 match msg {
                     Ok(msg) => {

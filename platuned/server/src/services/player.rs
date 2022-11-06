@@ -4,7 +4,7 @@ use crate::rpc::*;
 use std::{pin::Pin, sync::Arc, time::Duration};
 
 use daemon_slayer::{
-    server::{BroadcastEventStore, EventStore},
+    server::{BroadcastEventStore, EventStore, FutureExt, SubsystemHandle},
     signals::Signal,
 };
 use futures::StreamExt;
@@ -15,15 +15,12 @@ use tracing::{error, info};
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer>,
-    shutdown_rx: BroadcastEventStore<Signal>,
+    subsys: SubsystemHandle,
 }
 
 impl PlayerImpl {
-    pub fn new(player: Arc<PlatunePlayer>, shutdown_rx: BroadcastEventStore<Signal>) -> Self {
-        PlayerImpl {
-            player,
-            shutdown_rx,
-        }
+    pub fn new(player: Arc<PlatunePlayer>, subsys: SubsystemHandle) -> Self {
+        PlayerImpl { player, subsys }
     }
 }
 
@@ -213,11 +210,10 @@ impl Player for PlayerImpl {
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut ended_rx = self.player.subscribe();
-        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
+        let subsys = self.subsys.clone();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
-            while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.next() => Err(RecvError::Closed) }
-            {
+            while let Ok(Ok(msg)) = ended_rx.recv().cancel_on_shutdown(&subsys).await {
                 info!("Server received event {:?}", msg);
                 let msg = map_response(msg);
 

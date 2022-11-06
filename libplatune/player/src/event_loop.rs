@@ -18,6 +18,7 @@ use crate::{
 use crate::audio_output::*;
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
+use tokio_graceful_shutdown::{FutureExt, SubsystemHandle};
 use tracing::{error, info};
 
 pub(crate) fn decode_loop(
@@ -118,8 +119,10 @@ pub(crate) fn decode_loop(
 pub(crate) async fn main_loop(
     mut receiver: TwoWayReceiver<Command, PlayerResponse>,
     mut player: Player,
+    subsys: SubsystemHandle,
 ) -> Result<(), String> {
-    while let Ok(next_command) = receiver.recv_async().await {
+    info!("Starting request loop");
+    while let Ok(Ok(next_command)) = receiver.recv_async().cancel_on_shutdown(&subsys).await {
         info!("Got command {:?}", next_command);
         match next_command {
             Command::SetQueue(songs) => {
@@ -161,12 +164,10 @@ pub(crate) async fn main_loop(
             Command::Reset => {
                 player.reset().await?;
             }
-            Command::Shutdown => {
-                return Ok(());
-            }
         }
         info!("Completed command");
     }
+    player.stop().await?;
     info!("Request loop completed");
     Ok(())
 }

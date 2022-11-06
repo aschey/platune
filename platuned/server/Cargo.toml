@@ -10,7 +10,7 @@ version = "0.1.0"
 anyhow = "1.0.66"
 async-trait = "0.1.58"
 console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
-daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "e8d4c267e9d4cc60f60d883109b454b223ee1a4e", features = ["server-base", "client-base", "grpc-health-check", "all-plugins"]}
+daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "84e9c12ba90aaa320d9ca42843e63b60b884d2fa", features = ["server-base", "client-base", "grpc-health-check", "all-plugins"]}
 dotenvy = "0.15.5"
 futures = "0.3.24"
 libplatune-management = {path = "../../libplatune/management"}

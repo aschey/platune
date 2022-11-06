@@ -35,6 +35,7 @@ pub mod platune_player {
     use tap::TapFallible;
     use thiserror::Error;
     use tokio::sync::broadcast;
+    use tokio_graceful_shutdown::SubsystemHandle;
     use tracing::{error, info, warn};
 
     #[derive(Debug, Clone, Error)]
@@ -47,15 +48,14 @@ pub mod platune_player {
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
-        joined: bool,
     }
 
     impl PlatunePlayer {
-        pub fn new(settings: Settings) -> Self {
-            Self::new_with_host(settings, default_host())
+        pub fn new(settings: Settings, subsys: SubsystemHandle) -> Self {
+            Self::new_with_host(settings, default_host(), subsys)
         }
 
-        pub fn new_with_host(settings: Settings, host: Host) -> Self {
+        pub fn new_with_host(settings: Settings, host: Host, subsys: SubsystemHandle) -> Self {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -70,7 +70,7 @@ pub mod platune_player {
 
             let main_loop_fn = async move {
                 let player = Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings);
-                main_loop(cmd_rx, player).await
+                main_loop(cmd_rx, player, subsys).await
             };
 
             let decoder_fn = || {
@@ -85,7 +85,6 @@ pub mod platune_player {
                 event_tx,
                 decoder_tx,
                 decoder_handle,
-                joined: false,
             }
         }
 
@@ -209,39 +208,19 @@ pub mod platune_player {
                 .await
                 .map_err(|e| PlayerError(format!("{:?}", e)))
         }
-
-        pub async fn join(mut self) -> Result<(), PlayerError> {
-            info!("Joining player instance");
-            self.cmd_sender
-                .send_async(Command::Stop)
-                .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))?;
-            info!("Sent stop command");
-            self.cmd_sender
-                .send_async(Command::Shutdown)
-                .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))?;
-            info!("Sent shutdown command");
-            self.joined = true;
-            Ok(())
-        }
     }
 
     impl Drop for PlatunePlayer {
         fn drop(&mut self) {
-            if self.joined {
-                info!("Waiting for decoder thread to terminate");
-                let _ = self
-                    .decoder_handle
-                    .take()
-                    .expect("decoder_handle should not be None")
-                    .join()
-                    .tap_err(|e| warn!("Error terminating decoder thread: {:?}", e));
+            info!("Waiting for decoder thread to terminate");
+            let _ = self
+                .decoder_handle
+                .take()
+                .expect("decoder_handle should not be None")
+                .join()
+                .tap_err(|e| warn!("Error terminating decoder thread: {:?}", e));
 
-                info!("Decoder thread terminated");
-            } else {
-                info!("join() not called, won't wait for decoder thread to terminate");
-            }
+            info!("Decoder thread terminated");
         }
     }
 }

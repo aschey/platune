@@ -4,9 +4,11 @@ use daemon_slayer::{
     cli::Cli,
     client::{cli::ClientCliProvider, config::SystemdConfig, Level, Manager, ServiceManager},
     console::{cli::ConsoleCliProvider, Console},
-    error_handler::ErrorHandler,
+    error_handler::{cli::ErrorHandlerCliProvider, ErrorHandler},
     health_check::{cli::HealthCheckCliProvider, GrpcHealthCheck},
-    logging::{tracing_subscriber::util::SubscriberInitExt, LoggerBuilder},
+    logging::{
+        cli::LoggingCliProvider, tracing_subscriber::util::SubscriberInitExt, LoggerBuilder,
+    },
 };
 
 fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -16,16 +18,12 @@ fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
 #[tokio::main]
 async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
-    let (logger, _guard) = LoggerBuilder::for_client("platuned").build()?;
-    logger.init();
-    ErrorHandler::for_client().install()?;
-
     let mut manager_builder = ServiceManager::builder("platuned")
         .with_description("platune service")
         .with_service_level(Level::User)
         .with_autostart(true)
         .with_systemd_config(
-            SystemdConfig::new()
+            SystemdConfig::default()
                 .with_after_target("network.target")
                 .with_after_target("network-online.target")
                 .with_after_target("NetworkManager.service")
@@ -48,14 +46,21 @@ async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut console = Console::new(manager.clone());
     console.add_health_check(Box::new(health_check.clone()));
 
-    let (cli, command) = Cli::builder()
+    let logger_builder = LoggerBuilder::new("platuned");
+    let logging_provider = LoggingCliProvider::new(logger_builder);
+
+    let cli = Cli::builder()
+        .with_default_client_commands()
         .with_provider(ClientCliProvider::new(manager.clone()))
         .with_provider(ConsoleCliProvider::new(console))
         .with_provider(HealthCheckCliProvider::new(health_check))
-        .build();
+        .with_provider(logging_provider.clone())
+        .with_provider(ErrorHandlerCliProvider::default())
+        .initialize();
 
-    let matches = command.get_matches();
+    let (logger, _guard) = logging_provider.get_logger();
+    logger.init();
 
-    cli.handle_input(&matches).await;
+    cli.handle_input().await;
     Ok(())
 }
