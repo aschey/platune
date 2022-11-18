@@ -2,6 +2,7 @@ pub(crate) struct ChannelBuffer {
     inner: Vec<Vec<f64>>,
     capacity: usize,
     channels: usize,
+    current_chan: usize,
 }
 
 impl ChannelBuffer {
@@ -10,6 +11,7 @@ impl ChannelBuffer {
             inner: vec![Vec::with_capacity(capacity); channels],
             capacity,
             channels,
+            current_chan: 0,
         }
     }
 
@@ -19,6 +21,12 @@ impl ChannelBuffer {
 
     fn last(&self) -> &Vec<f64> {
         self.inner.last().expect("Vec should not be empty")
+    }
+
+    fn next_chan(&mut self) -> &mut Vec<f64> {
+        let chan = &mut self.inner[self.current_chan];
+        self.current_chan = (self.current_chan + 1) % self.channels;
+        chan
     }
 
     pub(crate) fn position(&self) -> usize {
@@ -33,6 +41,7 @@ impl ChannelBuffer {
         for chan in &mut self.inner {
             chan.clear();
         }
+        self.current_chan = 0;
     }
 
     pub(crate) fn inner(&self) -> &[Vec<f64>] {
@@ -41,21 +50,15 @@ impl ChannelBuffer {
 
     pub(crate) fn silence_remainder(&mut self) {
         while self.len() < self.capacity {
-            for chan in &mut self.inner {
-                chan.push(0.0);
-            }
+            self.next_chan().push(0.0);
         }
     }
 
     pub(crate) fn fill_from_slice(&mut self, data: &[f64]) -> usize {
         let mut i = 0;
         while self.len() < self.capacity && i < data.len() {
-            for chan in &mut self.inner {
-                if i < data.len() {
-                    chan.push(data[i]);
-                    i += 1;
-                }
-            }
+            self.next_chan().push(data[i]);
+            i += 1;
         }
         i
     }
