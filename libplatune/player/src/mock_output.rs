@@ -185,7 +185,7 @@ pub struct Device {
 
 impl Device {
     pub fn new(audio_sleep_time: Duration, sample_rate: u32, channels: u16) -> Self {
-        let (data_tx, _) = tokio::sync::broadcast::channel(2048);
+        let (data_tx, _) = tokio::sync::broadcast::channel(10000);
         Self {
             data_tx,
             audio_sleep_time,
