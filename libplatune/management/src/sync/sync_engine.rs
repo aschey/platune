@@ -120,7 +120,7 @@ impl SyncEngine {
         let paths = self.paths.clone();
         spawn_blocking::<_, Result<(), SyncError>>(move || {
             for path in paths {
-                for _ in WalkDir::new(&path).into_iter() {
+                for _ in WalkDir::new(path).into_iter() {
                     dir_tx.blocking_send(DirRead::Found).map_err(|e| {
                         SyncError::ThreadCommError(format!(
                             "Error sending directory found message: {e:?}"

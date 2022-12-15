@@ -42,7 +42,7 @@ impl FileConfig {
                 }
             }
 
-            if let Err(e) = File::create(&config_path_ref) {
+            if let Err(e) = File::create(config_path_ref) {
                 return Err(ConfigError::FileCreationFailed(config_string, e));
             }
         }
