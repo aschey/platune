@@ -22,7 +22,7 @@ symphonia = {version = "0.5.1", features = ["aac", "flac", "mp3", "isomp4", "wav
 tap = "1.0.1"
 tempfile = "3.3.0"
 thiserror = "1.0.35"
-tokio = {version = "1.21.1", features = ["rt-multi-thread", "macros"]}
+tokio = {version = "1.23.1", features = ["rt-multi-thread", "macros"]}
 tracing = "0.1.36"
 
 [dev-dependencies]
