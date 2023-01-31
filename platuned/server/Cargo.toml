@@ -7,21 +7,21 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-trait = "0.1.58"
+async-trait = "0.1.64"
 console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
 daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "d2137bc5362665d41e74592230052274dea446bf", features = ["server-base", "client-base", "grpc-health-check", "all-plugins"]}
-dotenvy = "0.15.5"
-futures = "0.3.24"
+dotenvy = "0.15.6"
+futures = "0.3.26"
 libplatune-management = {path = "../../libplatune/management"}
 libplatune-player = {path = "../../libplatune/player"}
-prost = "0.11.0"
-prost-types = "0.11.1"
-tokio = {version = "1.23.1", features = ["rt-multi-thread", "macros"]}
-tokio-stream = {version = "0.1.10", features = ["net"]}
-tonic = "0.8.1"
-tonic-health = "0.7.1"
-tonic-reflection = "0.5.0"
-tracing = "0.1.36"
+prost = "0.11.6"
+prost-types = "0.11.6"
+tokio = {version = "1.25.0", features = ["rt-multi-thread", "macros"]}
+tokio-stream = {version = "0.1.11", features = ["net"]}
+tonic = "0.8.3"
+tonic-health = "0.8.0"
+tonic-reflection = "0.6.0"
+tracing = "0.1.37"
 
 [features]
 tokio-console = ["console-subscriber", "tokio/tracing"]
@@ -30,4 +30,4 @@ tokio-console = ["console-subscriber", "tokio/tracing"]
 async-stream = "0.3.3"
 
 [build-dependencies]
-tonic-build = {version = "0.8.0", features = ["prost"]}
+tonic-build = {version = "0.8.4", features = ["prost"]}

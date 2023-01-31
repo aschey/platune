@@ -129,6 +129,7 @@ pub trait DeviceTrait {
         config: &StreamConfig,
         data_callback: D,
         error_callback: E,
+        timeout: Option<Duration>,
     ) -> Result<Self::Stream, BuildStreamError>
     where
         T: Sample,
@@ -260,6 +261,7 @@ impl DeviceTrait for Device {
         _config: &StreamConfig,
         mut data_callback: D,
         _error_callback: E,
+        _timeout: Option<Duration>,
     ) -> Result<Self::Stream, BuildStreamError>
     where
         T: Sample,
@@ -287,13 +289,16 @@ impl DeviceTrait for Device {
             let mut shutdown_requested = false;
             loop {
                 data_callback(&mut data, &info);
-                let data_f32: Vec<f32> = data
-                    .iter()
-                    .map(|d| d.to_f32())
-                    // f32::MAX means the sample wasn't written in time, filter these for testing purposes
-                    // Since many tests run in parallel this is likely to happen sometimes
-                    .filter(|d| *d != f32::MAX)
-                    .collect();
+                // f32::MAX means the sample wasn't written in time, filter these for testing purposes
+                // Since many tests run in parallel this is likely to happen sometimes
+                let data_f32: Vec<f32> = unsafe {
+                    std::slice::from_raw_parts(data.as_mut_ptr() as *const f32, BUF_SIZE)
+                }
+                .iter()
+                .filter(|d| **d != f32::MAX)
+                .copied()
+                .collect();
+
                 // Shutdown once no more data is received
                 if shutdown_requested && data_f32.iter().all(|d| *d == 0.0) {
                     break;

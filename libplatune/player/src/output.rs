@@ -2,7 +2,7 @@ use crate::audio_output::*;
 use std::result;
 use std::{fmt::Debug, time::Duration};
 use symphonia::core::audio::RawSample;
-use symphonia::core::conv::ConvertibleSample;
+use symphonia::core::conv::{ConvertibleSample, FromSample};
 use tap::TapFallible;
 use thiserror::Error;
 
@@ -47,11 +47,19 @@ use crate::{
 
 pub(crate) struct CpalAudioOutput;
 
-trait AudioOutputSample: cpal::Sample + ConvertibleSample + RawSample + Send + Debug + 'static {}
+trait AudioOutputSample:
+    cpal::SizedSample + ConvertibleSample + RawSample + Send + Debug + 'static
+{
+}
 
 impl AudioOutputSample for f32 {}
 impl AudioOutputSample for i16 {}
 impl AudioOutputSample for u16 {}
+impl AudioOutputSample for i8 {}
+impl AudioOutputSample for i32 {}
+impl AudioOutputSample for u8 {}
+impl AudioOutputSample for u32 {}
+impl AudioOutputSample for f64 {}
 
 impl CpalAudioOutput {
     pub(crate) fn new_output(
@@ -75,6 +83,26 @@ impl CpalAudioOutput {
             cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(cmd_sender, host)),
             cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(cmd_sender, host)),
             cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(cmd_sender, host)),
+            cpal::SampleFormat::I8 => Box::new(CpalAudioOutputImpl::<i8>::new(cmd_sender, host)),
+            cpal::SampleFormat::I32 => Box::new(CpalAudioOutputImpl::<i32>::new(cmd_sender, host)),
+            cpal::SampleFormat::U8 => Box::new(CpalAudioOutputImpl::<u8>::new(cmd_sender, host)),
+            cpal::SampleFormat::U32 => Box::new(CpalAudioOutputImpl::<u32>::new(cmd_sender, host)),
+            cpal::SampleFormat::F64 => Box::new(CpalAudioOutputImpl::<f64>::new(cmd_sender, host)),
+            cpal::SampleFormat::I64 => {
+                return Err(AudioOutputError::UnsupportedConfiguration(
+                    "Unsupported sample format: i64".to_owned(),
+                ))?
+            }
+            cpal::SampleFormat::U64 => {
+                return Err(AudioOutputError::UnsupportedConfiguration(
+                    "Unsupported sample format: u64".to_owned(),
+                ))?
+            }
+            _ => {
+                return Err(AudioOutputError::UnsupportedConfiguration(
+                    "Unsupported sample format: unknown".to_owned(),
+                ))?
+            }
         })
     }
 }
@@ -122,9 +150,9 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         info!("Output channels = {channels}");
         info!("Output sample rate = {}", sample_rate.0);
 
-        // Use max value for tests to these can be filtered out later
+        // Use max value for tests so these can be filtered out later
         #[cfg(test)]
-        let filler = T::from_sample(f32::MAX);
+        let filler = <T as FromSample<f32>>::from_sample(f32::MAX);
         #[cfg(not(test))]
         let filler = T::MID;
 
@@ -150,6 +178,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
                         .tap_err(|e| error!("Error sending stop command: {e:?}"));
                 }
             },
+            None,
         );
 
         let stream = stream_result.map_err(AudioOutputError::OpenStreamError)?;
@@ -199,7 +228,7 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
                 i = 0;
             }
 
-            self.buf[i] = T::from_sample(*frame);
+            self.buf[i] = <T as FromSample<f64>>::from_sample(*frame);
             i += 1;
         }
 
