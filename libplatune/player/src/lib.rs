@@ -115,21 +115,21 @@ pub mod platune_player {
             self.cmd_sender
                 .send_async(Command::SetQueue(queue))
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::AddToQueue(songs))
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Seek(time))
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
@@ -139,7 +139,7 @@ pub mod platune_player {
                 .await
             {
                 Ok(PlayerResponse::StatusResponse(track_status)) => track_status,
-                Err(e) => return Err(PlayerError(format!("{:?}", e))),
+                Err(e) => return Err(PlayerError(format!("{e:?}"))),
             };
 
             match track_status.status {
@@ -172,42 +172,42 @@ pub mod platune_player {
             self.cmd_sender
                 .send_async(Command::Stop)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn set_volume(&self, volume: f64) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::SetVolume(volume))
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn pause(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Pause)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn resume(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Resume)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn next(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Next)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn previous(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Previous)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub async fn join(mut self) -> Result<(), PlayerError> {
@@ -215,12 +215,12 @@ pub mod platune_player {
             self.cmd_sender
                 .send_async(Command::Stop)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))?;
+                .map_err(|e| PlayerError(format!("{e:?}")))?;
             info!("Sent stop command");
             self.cmd_sender
                 .send_async(Command::Shutdown)
                 .await
-                .map_err(|e| PlayerError(format!("{:?}", e)))?;
+                .map_err(|e| PlayerError(format!("{e:?}")))?;
             info!("Sent shutdown command");
             self.joined = true;
             Ok(())

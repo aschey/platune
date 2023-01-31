@@ -6,6 +6,7 @@ use futures::Future;
 use pretty_assertions::assert_eq;
 use rstest::*;
 use rubato::{FftFixedInOut, Resampler};
+use std::fs::File;
 use std::{env::current_dir, time::Duration};
 use symphonia::core::audio::SampleBuffer;
 use symphonia::core::codecs::DecoderOptions;
@@ -135,7 +136,7 @@ fn decode_sources(
     for (i, path) in paths.into_iter().enumerate() {
         let mut file_samples = vec![];
         let is_last = i == len - 1;
-        let src = std::fs::File::open(&path).expect("failed to open media");
+        let src = File::open(path).expect("failed to open media");
 
         let mss = MediaSourceStream::new(Box::new(src), Default::default());
         let mut hint = Hint::new();

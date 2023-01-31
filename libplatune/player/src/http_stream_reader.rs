@@ -96,7 +96,7 @@ impl HttpStreamReader {
             .head(url)
             .send()
             .await
-            .wrap_err(format!("Error sending HEAD request to url {}", url))?;
+            .wrap_err(format!("Error sending HEAD request to url {url}"))?;
 
         let file_len = res
             .headers()
@@ -111,7 +111,7 @@ impl HttpStreamReader {
             .get(url)
             .send()
             .await
-            .wrap_err(format!("Error fetching url {}", url))?
+            .wrap_err(format!("Error fetching url {url}"))?
             .bytes_stream();
 
         // Pre-buffer 1% of the file

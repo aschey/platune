@@ -93,7 +93,7 @@ impl Management for ManagementImpl {
             )
             .await
         {
-            return Err(format_error(format!("Error adding folders {:?}", e)));
+            return Err(format_error(format!("Error adding folders {e:?}")));
         };
         Ok(Response::new(()))
     }
@@ -102,7 +102,7 @@ impl Management for ManagementImpl {
         let folders = match self.manager.read().await.get_all_folders().await {
             Ok(f) => f,
             Err(e) => {
-                return Err(format_error(format!("Error syncing files {:?}", e)));
+                return Err(format_error(format!("Error syncing files {e:?}")));
             }
         };
         Ok(Response::new(FoldersMessage { folders }))
@@ -120,7 +120,7 @@ impl Management for ManagementImpl {
             .await
         {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(Status::invalid_argument(format!("{}", e))),
+            Err(e) => Err(Status::invalid_argument(format!("{e}"))),
         }
     }
 
@@ -157,8 +157,7 @@ impl Management for ManagementImpl {
             Ok(entries) => entries,
             Err(e) => {
                 return Err(format_error(format!(
-                    "Error sending lookup request {:?}",
-                    e
+                    "Error sending lookup request {e:?}"
                 )));
             }
         };
@@ -220,8 +219,7 @@ impl Management for ManagementImpl {
                     Ok(results) => results,
                     Err(e) => {
                         return Err(format_error(format!(
-                            "Error sending search request {:?}",
-                            e
+                            "Error sending search request {e:?}"
                         )));
                     }
                 };
@@ -249,7 +247,7 @@ impl Management for ManagementImpl {
     async fn get_deleted(&self, _: Request<()>) -> Result<Response<GetDeletedResponse>, Status> {
         let deleted_songs = match self.manager.read().await.get_deleted_songs().await {
             Ok(songs) => songs,
-            Err(e) => return Err(format_error(format!("Error getting deleted songs {:?}", e))),
+            Err(e) => return Err(format_error(format!("Error getting deleted songs {e:?}"))),
         };
         return Ok(Response::new(GetDeletedResponse {
             results: deleted_songs
@@ -267,7 +265,7 @@ impl Management for ManagementImpl {
 
         let manager = self.manager.write().await;
         if let Err(e) = manager.delete_tracks(request.ids).await {
-            return Err(format_error(format!("Error deleting tracks {:?}", e)));
+            return Err(format_error(format!("Error deleting tracks {e:?}")));
         }
 
         Ok(Response::new(()))
@@ -297,7 +295,7 @@ impl Management for ManagementImpl {
                 }),
             })),
             Ok(None) => Ok(Response::new(SongResponse { song: None })),
-            Err(e) => Err(format_error(format!("Error getting track {:?}", e))),
+            Err(e) => Err(format_error(format!("Error getting track {e:?}"))),
         }
     }
 }

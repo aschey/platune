@@ -92,7 +92,7 @@ impl Player for PlayerImpl {
     async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
         match self.player.set_queue(request.into_inner().queue).await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!("Error setting queue: {:?}", e))),
+            Err(e) => Err(format_error(format!("Error setting queue: {e:?}"))),
         }
     }
 
@@ -103,8 +103,7 @@ impl Player for PlayerImpl {
         match self.player.add_to_queue(request.into_inner().songs).await {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!(
-                "Error adding songs to queue: {:?}",
-                e
+                "Error adding songs to queue: {e:?}"
             ))),
         }
     }
@@ -112,21 +111,21 @@ impl Player for PlayerImpl {
     async fn pause(&self, _: Request<()>) -> Result<Response<()>, Status> {
         match self.player.pause().await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!("Error pausing queue: {:?}", e))),
+            Err(e) => Err(format_error(format!("Error pausing queue: {e:?}"))),
         }
     }
 
     async fn stop(&self, _: Request<()>) -> Result<Response<()>, Status> {
         match self.player.stop().await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!("Error stopping queue: {:?}", e))),
+            Err(e) => Err(format_error(format!("Error stopping queue: {e:?}"))),
         }
     }
 
     async fn resume(&self, _: Request<()>) -> Result<Response<()>, Status> {
         match self.player.resume().await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!("Error resuming queue: {:?}", e))),
+            Err(e) => Err(format_error(format!("Error resuming queue: {e:?}"))),
         }
     }
 
@@ -134,8 +133,7 @@ impl Player for PlayerImpl {
         match self.player.next().await {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!(
-                "Error skipping to next song: {:?}",
-                e
+                "Error skipping to next song: {e:?}"
             ))),
         }
     }
@@ -144,8 +142,7 @@ impl Player for PlayerImpl {
         match self.player.previous().await {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!(
-                "Error skipping to previous song: {:?}",
-                e
+                "Error skipping to previous song: {e:?}"
             ))),
         }
     }
@@ -155,14 +152,14 @@ impl Player for PlayerImpl {
         let nanos = time.seconds * 1_000_000_000 + time.nanos as i64;
         match self.player.seek(Duration::from_nanos(nanos as u64)).await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!("Error seeking: {:?}", e))),
+            Err(e) => Err(format_error(format!("Error seeking: {e:?}"))),
         }
     }
 
     async fn set_volume(&self, request: Request<SetVolumeRequest>) -> Result<Response<()>, Status> {
         match self.player.set_volume(request.into_inner().volume).await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!("Error setting volume: {:?}", e))),
+            Err(e) => Err(format_error(format!("Error setting volume: {e:?}"))),
         }
     }
 
