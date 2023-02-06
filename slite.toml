@@ -1,0 +1,4 @@
+extension = ["/home/aschey/code/platune/libplatune/management/assets/linux/spellfix.o"]
+ignore = "(search_spellfix_vocab.*)|(search_index_.*)"
+source = "/home/aschey/code/platune/libplatune/management/schema"
+target = "/home/aschey/windows/shared_files/platune3.db"

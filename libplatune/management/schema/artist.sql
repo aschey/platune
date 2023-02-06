@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS artist (
+    artist_id INTEGER PRIMARY KEY NOT NULL,
+    artist_name TEXT NOT NULL COLLATE NOCASE,
+    created_date INTEGER NOT NULL,
+    UNIQUE (artist_name COLLATE NOCASE)
+)

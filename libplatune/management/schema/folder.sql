@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS folder (
+    folder_id INTEGER PRIMARY KEY NOT NULL,
+    folder_path TEXT NOT NULL COLLATE NOCASE,
+    UNIQUE (folder_path COLLATE NOCASE)
+)
