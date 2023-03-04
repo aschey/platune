@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{env::current_exe, error::Error};
 
 use daemon_slayer::{
     cli::Cli,
@@ -31,6 +31,7 @@ async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
                 .with_after_target("NetworkManager.service")
                 .with_after_target("systemd-resolved.service"),
         )
+        .with_program(current_exe()?.parent().unwrap().join("platuned"))
         .with_args(["run"]);
 
     if let Ok(()) = dotenvy::from_path("./.env") {
