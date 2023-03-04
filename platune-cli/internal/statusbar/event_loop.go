@@ -43,7 +43,10 @@ func (l label) render(iconStyle lipgloss.Style) string {
 	return fmt.Sprintf("%s%s", iconStyle.Render(l.icon), textStyle.Render(" "+l.text))
 }
 
-func (s *StatusBar) eventLoop(eventCh chan *platune.EventResponse, stateCh chan connectivity.State) {
+func (s *StatusBar) eventLoop(
+	eventCh chan *platune.EventResponse,
+	stateCh chan connectivity.State,
+) {
 	s.renderStatusBar(renderParams{connection: textStyle.Render(" Connecting...")})
 	sigCh := getSignalChannel()
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -76,8 +79,14 @@ func (s *StatusBar) eventLoop(eventCh chan *platune.EventResponse, stateCh chan 
 			}
 		case newState := <-stateCh:
 			connectionIcon, connectionIconColor, connectionStatus := s.handleStateChange(newState)
-			connectionIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(connectionIconColor))
-			renderParams.connection = label{icon: connectionIcon, text: connectionStatus}.render(connectionIconStyle)
+			connectionIconStyle := defaultStyle.Copy().
+				Foreground(lipgloss.Color(connectionIconColor))
+			renderParams.connection = label{
+				icon: connectionIcon,
+				text: connectionStatus,
+			}.render(
+				connectionIconStyle,
+			)
 		case <-ticker.C:
 			// Timer tick, don't need to do anything except re-render
 		case <-sigCh:
@@ -87,9 +96,14 @@ func (s *StatusBar) eventLoop(eventCh chan *platune.EventResponse, stateCh chan 
 		if currentSong != nil {
 			renderParams.songInfo = &songInfo{
 				currentSong: currentSong,
-				artist:      label{icon: artistIcon, text: currentSong.Artist}.render(infoIconStyle),
-				album:       label{icon: albumIcon, text: currentSong.Album}.render(infoIconStyle),
-				song:        label{icon: songIcon, text: currentSong.Song}.render(infoIconStyle),
+				artist: label{
+					icon: artistIcon,
+					text: currentSong.Artist,
+				}.render(
+					infoIconStyle,
+				),
+				album: label{icon: albumIcon, text: currentSong.Album}.render(infoIconStyle),
+				song:  label{icon: songIcon, text: currentSong.Song}.render(infoIconStyle),
 			}
 		} else {
 			renderParams.songInfo = nil

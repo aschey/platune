@@ -53,7 +53,10 @@ func equalsSeparator(check byte) bool {
 	return strings.ContainsAny(string(check), "/\\")
 }
 
-func (c *FilePathCompleter) adjustCompletions(completions []prompt.Suggest, sub string) []prompt.Suggest {
+func (c *FilePathCompleter) adjustCompletions(
+	completions []prompt.Suggest,
+	sub string,
+) []prompt.Suggest {
 	tokens := strings.Split(sub, " ")
 	filteredCompletions := prompt.FilterHasPrefix(completions, sub, c.IgnoreCase)
 	if len(tokens) > 1 {
@@ -105,7 +108,10 @@ func (c *FilePathCompleter) Complete(d prompt.Document, skipFirst bool) []prompt
 		if c.Filter != nil && !c.Filter(f) {
 			continue
 		}
-		suggests = append(suggests, prompt.Suggest{Text: f.Name(), Metadata: filepath.Join(filePath, f.Name())})
+		suggests = append(
+			suggests,
+			prompt.Suggest{Text: f.Name(), Metadata: filepath.Join(filePath, f.Name())},
+		)
 	}
 	c.fileListCache[dir] = suggests
 	return c.adjustCompletions(suggests, base)

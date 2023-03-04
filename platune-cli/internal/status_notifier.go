@@ -6,7 +6,10 @@ type StatusNotifier struct {
 }
 
 func NewStatusNotifier() *StatusNotifier {
-	return &StatusNotifier{waitForStatusChangeCh: make(chan struct{}, 1), statusChangedCh: make(chan struct{}, 1)}
+	return &StatusNotifier{
+		waitForStatusChangeCh: make(chan struct{}, 1),
+		statusChangedCh:       make(chan struct{}, 1),
+	}
 }
 
 func (s *StatusNotifier) WaitForStatusChange() {

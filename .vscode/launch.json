@@ -5,6 +5,15 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Connect to go cli",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "${workspaceFolder}",
+      "port": 43000,
+      "host": "127.0.0.1"
+    },
+    {
       "type": "lldb",
       "request": "launch",
       "name": "Debug executable 'platuned'",
@@ -37,7 +46,12 @@
       "request": "launch",
       "name": "Debug unit tests in library 'libplatune_management'",
       "cargo": {
-        "args": ["test", "--no-run", "--lib", "--package=libplatune-management"],
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=libplatune-management"
+        ],
         "filter": {
           "name": "libplatune_management",
           "kind": "lib"
@@ -65,7 +79,12 @@
       "request": "launch",
       "name": "Debug unit tests in executable 'main'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=main", "--package=libplatune-management"],
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=main",
+          "--package=libplatune-management"
+        ],
         "filter": {
           "name": "main",
           "kind": "bin"
@@ -79,7 +98,12 @@
       "request": "launch",
       "name": "Debug integration test 'test'",
       "cargo": {
-        "args": ["test", "--no-run", "--test=test", "--package=libplatune-management"],
+        "args": [
+          "test",
+          "--no-run",
+          "--test=test",
+          "--package=libplatune-management"
+        ],
         "filter": {
           "name": "test",
           "kind": "test"
@@ -93,7 +117,12 @@
       "request": "launch",
       "name": "Debug benchmark 'bench'",
       "cargo": {
-        "args": ["test", "--no-run", "--bench=bench", "--package=libplatune-management"],
+        "args": [
+          "test",
+          "--no-run",
+          "--bench=bench",
+          "--package=libplatune-management"
+        ],
         "filter": {
           "name": "bench",
           "kind": "bench"
@@ -121,7 +150,12 @@
       "request": "launch",
       "name": "Debug integration test 'test'",
       "cargo": {
-        "args": ["test", "--no-run", "--test=test", "--package=libplatune-player"],
+        "args": [
+          "test",
+          "--no-run",
+          "--test=test",
+          "--package=libplatune-player"
+        ],
         "filter": {
           "name": "test",
           "kind": "test"
@@ -163,7 +197,12 @@
       "request": "launch",
       "name": "Debug unit tests in executable 'platune-tui'",
       "cargo": {
-        "args": ["test", "--no-run", "--bin=platune-tui", "--package=platune-tui"],
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=platune-tui",
+          "--package=platune-tui"
+        ],
         "filter": {
           "name": "platune-tui",
           "kind": "bin"

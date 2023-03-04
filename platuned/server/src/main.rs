@@ -1,9 +1,8 @@
+mod ipc_stream;
 mod rpc;
 mod server;
 mod services;
 mod startup;
-#[cfg(unix)]
-mod unix;
 
 use crate::startup::ServiceHandler;
 #[cfg(feature = "console")]

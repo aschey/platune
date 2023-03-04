@@ -102,9 +102,7 @@ impl Player for PlayerImpl {
     ) -> Result<Response<()>, Status> {
         match self.player.add_to_queue(request.into_inner().songs).await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!(
-                "Error adding songs to queue: {e:?}"
-            ))),
+            Err(e) => Err(format_error(format!("Error adding songs to queue: {e:?}"))),
         }
     }
 
@@ -132,9 +130,7 @@ impl Player for PlayerImpl {
     async fn next(&self, _: Request<()>) -> Result<Response<()>, Status> {
         match self.player.next().await {
             Ok(()) => Ok(Response::new(())),
-            Err(e) => Err(format_error(format!(
-                "Error skipping to next song: {e:?}"
-            ))),
+            Err(e) => Err(format_error(format!("Error skipping to next song: {e:?}"))),
         }
     }
 

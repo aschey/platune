@@ -159,3 +159,6 @@ target
 act
 platune-cli/cli
 *.profraw
+
+go.work
+go.work.sum

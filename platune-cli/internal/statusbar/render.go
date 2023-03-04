@@ -40,7 +40,11 @@ func (s *StatusBar) renderStatusBar(params renderParams) {
 		if lipgloss.Width(params.renderStatus) == 0 {
 			z := time.Unix(0, 0).UTC()
 			newTime := z.Add(params.timer.elapsed())
-			newText := fmt.Sprintf("%s/%s", formatTime(newTime), formatTime(params.songInfo.currentSong.Duration.AsTime()))
+			newText := fmt.Sprintf(
+				"%s/%s",
+				formatTime(newTime),
+				formatTime(params.songInfo.currentSong.Duration.AsTime()),
+			)
 			renderStatus = textStyle.Render(newText)
 		}
 

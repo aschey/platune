@@ -218,7 +218,10 @@ func (m model) getSelectedIds() []int64 {
 }
 
 func (m model) viewConfirmDialog() string {
-	text := fmt.Sprintf("Are you sure you want to permanently delete %d song(s)?", m.getNumSelected())
+	text := fmt.Sprintf(
+		"Are you sure you want to permanently delete %d song(s)?",
+		m.getNumSelected(),
+	)
 
 	question := lipgloss.NewStyle().Width(50).Align(lipgloss.Center).Render(text)
 	okButtonStyle := buttonStyle
