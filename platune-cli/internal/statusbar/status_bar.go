@@ -8,7 +8,11 @@ type StatusBar struct {
 	statusNotifier *internal.StatusNotifier
 }
 
-func NewStatusBar(statusChan StatusChan, platuneClient *internal.PlatuneClient, statusNotifier *internal.StatusNotifier) *StatusBar {
+func NewStatusBar(
+	statusChan StatusChan,
+	platuneClient *internal.PlatuneClient,
+	statusNotifier *internal.StatusNotifier,
+) *StatusBar {
 	return &StatusBar{
 		statusChan:     statusChan,
 		platuneClient:  platuneClient,

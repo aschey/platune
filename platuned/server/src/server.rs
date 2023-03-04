@@ -1,10 +1,9 @@
+use crate::ipc_stream::IpcStream;
 use crate::management_server::ManagementServer;
 use crate::player_server::PlayerServer;
 use crate::rpc;
 use crate::services::management::ManagementImpl;
 use crate::services::player::PlayerImpl;
-#[cfg(unix)]
-use crate::unix::unix_stream::UnixStream;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::server::{BroadcastEventStore, EventStore};
 use daemon_slayer::signals::Signal;
@@ -14,25 +13,17 @@ use libplatune_management::database::Database;
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
-#[cfg(unix)]
 use std::env;
-use std::env::var;
 use std::net::SocketAddr;
-#[cfg(unix)]
-use std::path::Path;
-#[cfg(unix)]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
-#[cfg(unix)]
-use tracing::warn;
 
 enum Transport {
     Http(SocketAddr),
-    #[cfg(unix)]
-    Uds(PathBuf),
+    Ipc(PathBuf),
 }
 
 pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
@@ -51,27 +42,23 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     );
     servers.push(http_server);
 
-    #[cfg(unix)]
-    {
+    let socket_path = if cfg!(unix) {
         let socket_base = match env::var("XDG_RUNTIME_DIR") {
             Ok(socket_base) => socket_base,
-            Err(e) => {
-                warn!(
-                    "Unable to get XDG_RUNTIME_DIR. Defaulting to /tmp/platuned: {:?}",
-                    e
-                );
-                "/tmp".to_owned()
-            }
+            Err(_) => "/tmp".to_owned(),
         };
-        let socket_path = Path::new(&socket_base).join("platuned/platuned.sock");
-        let unix_server = run_server(
-            shutdown_rx.clone(),
-            platune_player.clone(),
-            manager,
-            Transport::Uds(socket_path),
-        );
-        servers.push(unix_server);
-    }
+        Path::new(&socket_base).join("platuned/platuned.sock")
+    } else {
+        PathBuf::from(r#"\\.\pipe\platuned"#)
+    };
+
+    let ipc_server = run_server(
+        shutdown_rx.clone(),
+        platune_player.clone(),
+        manager,
+        Transport::Ipc(socket_path),
+    );
+    servers.push(ipc_server);
 
     try_join_all(servers).await?;
 
@@ -82,7 +69,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
 }
 
 async fn init_manager() -> Result<Manager> {
-    let path = var("DATABASE_URL").wrap_err("DATABASE_URL environment variable not set")?;
+    let path = env::var("DATABASE_URL").wrap_err("DATABASE_URL environment variable not set")?;
     let db = Database::connect(path, true).await?;
     db.migrate().await.wrap_err("Error migrating database")?;
     let config = Arc::new(FileConfig::try_new()?);
@@ -129,11 +116,14 @@ async fn run_server(
             })
             .await
             .wrap_err("Error running HTTP server"),
-        #[cfg(unix)]
-        Transport::Uds(path) => builder
-            .serve_with_incoming_shutdown(UnixStream::get_async_stream(&path)?, async {
-                shutdown_rx.recv().await;
-            })
+
+        Transport::Ipc(path) => builder
+            .serve_with_incoming_shutdown(
+                IpcStream::get_async_stream(path.to_string_lossy().to_string())?,
+                async {
+                    shutdown_rx.recv().await;
+                },
+            )
             .await
             .wrap_err("Error running UDS server"),
     };

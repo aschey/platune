@@ -71,7 +71,10 @@ func PrettyPrintList(list []string) string {
 	var formatted = []string{}
 	numberStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("242"))
 	for i := 0; i < len(list); i++ {
-		formatted = append(formatted, fmt.Sprintf("%s %s", numberStyle.Render(strconv.Itoa(i+1)+"."), list[i]))
+		formatted = append(
+			formatted,
+			fmt.Sprintf("%s %s", numberStyle.Render(strconv.Itoa(i+1)+"."), list[i]),
+		)
 	}
 	return strings.Join(formatted, "\n")
 }

@@ -1,3 +1,4 @@
+mod ipc_stream;
 mod rpc;
 mod server;
 mod services;

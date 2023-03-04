@@ -45,7 +45,11 @@ func NewSearch(client *internal.PlatuneClient) *Search {
 	return &Search{client: client}
 }
 
-func (search *Search) ProcessSearchResults(args []string, filesystemCallback func(file string), dbCallback func(entries []*platune.LookupEntry)) {
+func (search *Search) ProcessSearchResults(
+	args []string,
+	filesystemCallback func(file string),
+	dbCallback func(entries []*platune.LookupEntry),
+) {
 	allArgs := strings.Join(args, " ")
 	_, err := os.Stat(allArgs)
 	if err == nil {
@@ -136,7 +140,9 @@ func (m model) View() string {
 	if m.choice.searchResult.Entry != "" {
 		result := m.choice.searchResult
 		if result.Artist != nil {
-			return quitTextStyle.Render(fmt.Sprintf("%s - %s added to queue", result.Entry, *result.Artist))
+			return quitTextStyle.Render(
+				fmt.Sprintf("%s - %s added to queue", result.Entry, *result.Artist),
+			)
 		}
 		return quitTextStyle.Render(fmt.Sprintf("%s added to queue", result.Entry))
 	}
@@ -153,7 +159,10 @@ func getItems(results []*platune.SearchResult) []list.Item {
 	return items
 }
 
-func (search *Search) renderSearchResults(results *platune.SearchResponse, callback func(entries []*platune.LookupEntry)) {
+func (search *Search) renderSearchResults(
+	results *platune.SearchResponse,
+	callback func(entries []*platune.LookupEntry),
+) {
 	const defaultWidth = 20
 	const defaultHeight = 14
 
@@ -164,7 +173,12 @@ func (search *Search) renderSearchResults(results *platune.SearchResponse, callb
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{list: l, client: search.client, callback: callback, choice: item{searchResult: &platune.SearchResult{}}}
+	m := model{
+		list:     l,
+		client:   search.client,
+		callback: callback,
+		choice:   item{searchResult: &platune.SearchResult{}},
+	}
 
 	if err := tea.NewProgram(m).Start(); err != nil {
 		fmt.Println("Error running program:", err)

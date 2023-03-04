@@ -28,9 +28,8 @@ type PlatuneClient struct {
 }
 
 func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
-	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
-	conn, err := grpc.Dial("localhost:50051", opts...)
+
+	conn, err := platune.GetIpcClient()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -56,7 +55,10 @@ func (p *PlatuneClient) GetConnection() *grpc.ClientConn {
 	return p.conn
 }
 
-func NewTestClient(playerClient platune.PlayerClient, managementClient platune.ManagementClient) PlatuneClient {
+func NewTestClient(
+	playerClient platune.PlayerClient,
+	managementClient platune.ManagementClient,
+) PlatuneClient {
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
@@ -259,10 +261,16 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 	return searchClient.Recv()
 }
 
-func (p *PlatuneClient) Lookup(entryType platune.EntryType, correlationIds []int32) *platune.LookupResponse {
+func (p *PlatuneClient) Lookup(
+	entryType platune.EntryType,
+	correlationIds []int32,
+) *platune.LookupResponse {
 	p.retryConnection()
 	ctx := context.Background()
-	response, err := p.managementClient.Lookup(ctx, &platune.LookupRequest{EntryType: entryType, CorrelationIds: correlationIds})
+	response, err := p.managementClient.Lookup(
+		ctx,
+		&platune.LookupRequest{EntryType: entryType, CorrelationIds: correlationIds},
+	)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -284,7 +292,10 @@ func (p *PlatuneClient) GetAllFolders() {
 
 func (p *PlatuneClient) AddFolder(folder string) {
 	p.runCommand("Added", func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.managementClient.AddFolders(ctx, &platune.FoldersMessage{Folders: []string{folder}})
+		return p.managementClient.AddFolders(
+			ctx,
+			&platune.FoldersMessage{Folders: []string{folder}},
+		)
 	})
 }
 
@@ -323,7 +334,10 @@ func (p *PlatuneClient) DeleteTracks(ids []int64) {
 	})
 }
 
-func (p *PlatuneClient) runCommand(successMsg string, cmdFunc func(context.Context) (*emptypb.Empty, error)) {
+func (p *PlatuneClient) runCommand(
+	successMsg string,
+	cmdFunc func(context.Context) (*emptypb.Empty, error),
+) {
 	p.retryConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

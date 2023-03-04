@@ -12,9 +12,17 @@ type playerEvent struct {
 	newSong *platune.LookupEntry
 }
 
-func (s *StatusBar) handlePlayerEvent(timer *timer, msg *platune.EventResponse, currentSong *platune.LookupEntry) playerEvent {
+func (s *StatusBar) handlePlayerEvent(
+	timer *timer,
+	msg *platune.EventResponse,
+	currentSong *platune.LookupEntry,
+) playerEvent {
 	switch msg.Event {
-	case platune.Event_START_QUEUE, platune.Event_QUEUE_UPDATED, platune.Event_ENDED, platune.Event_NEXT, platune.Event_PREVIOUS:
+	case platune.Event_START_QUEUE,
+		platune.Event_QUEUE_UPDATED,
+		platune.Event_ENDED,
+		platune.Event_NEXT,
+		platune.Event_PREVIOUS:
 		state := msg.GetState()
 		res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
 		timer.setTime(0)
