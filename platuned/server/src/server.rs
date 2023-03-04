@@ -20,6 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
+use tracing::info;
 
 enum Transport {
     Http(SocketAddr),
@@ -110,22 +111,28 @@ async fn run_server(
 
     let mut shutdown_rx = shutdown_rx.subscribe_events();
     let server_result = match transport {
-        Transport::Http(addr) => builder
-            .serve_with_shutdown(addr, async {
-                shutdown_rx.recv().await;
-            })
-            .await
-            .wrap_err("Error running HTTP server"),
-
-        Transport::Ipc(path) => builder
-            .serve_with_incoming_shutdown(
-                IpcStream::get_async_stream(path.to_string_lossy().to_string())?,
-                async {
+        Transport::Http(addr) => {
+            info!("Running HTTP server on {addr}");
+            builder
+                .serve_with_shutdown(addr, async {
                     shutdown_rx.recv().await;
-                },
-            )
-            .await
-            .wrap_err("Error running UDS server"),
+                })
+                .await
+                .wrap_err("Error running HTTP server")
+        }
+
+        Transport::Ipc(path) => {
+            info!("Running IPC server on {path:?}");
+            builder
+                .serve_with_incoming_shutdown(
+                    IpcStream::get_async_stream(path.to_string_lossy().to_string())?,
+                    async {
+                        shutdown_rx.recv().await;
+                    },
+                )
+                .await
+                .wrap_err("Error running IPC server")
+        }
     };
 
     server_result.wrap_err("Error running server")
