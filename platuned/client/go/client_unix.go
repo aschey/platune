@@ -17,7 +17,7 @@ func GetIpcClient() (*grpc.ClientConn, error) {
 		socketBaseDir = "/tmp"
 	}
 	return grpc.Dial(
-		path.Join(socketBaseDir, "platuned/platuned.sock"),
+		"unix://"+path.Join(socketBaseDir, "platuned/platuned.sock"),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 }
