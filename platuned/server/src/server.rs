@@ -66,7 +66,8 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     );
     servers.push(http_server);
 
-    let socket_path = if cfg!(unix) {
+    #[cfg(unix)]
+    let socket_path = {
         let socket_base = match env::var("XDG_RUNTIME_DIR") {
             Ok(socket_base) => socket_base,
             Err(_) => "/tmp".to_owned(),
@@ -74,9 +75,9 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
         let path = Path::new(&socket_base).join("platuned/platuned.sock");
         create_socket_path(&path)?;
         path
-    } else {
-        PathBuf::from(r#"\\.\pipe\platuned"#)
     };
+    #[cfg(windows)]
+    let socket_path = PathBuf::from(r#"\\.\pipe\platuned"#);
 
     let ipc_server = run_server(
         shutdown_rx.clone(),
