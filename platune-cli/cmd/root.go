@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	prompt "github.com/aschey/bubbleprompt"
+	cprompt "github.com/aschey/bubbleprompt-cobra"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
 )
@@ -22,21 +25,54 @@ var title = lipgloss.NewStyle().
 	PaddingRight(1).
 	Render(fmt.Sprintf("%s\n%s", title1, title2)) + "\n" + description
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "platune-cli",
-	Short: description,
-	Long:  title,
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	rootCmd := &cobra.Command{
+		Use:   "platune-cli",
+		Short: description,
+		Long:  title,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			interactive, err := cmd.Flags().GetBool("interactive")
+			if err != nil {
+				return err
+			}
+			if interactive {
+				promptModel := cprompt.NewPrompt(cmd)
+				model := model{inner: promptModel}
+				_, err := tea.NewProgram(&model, tea.WithFilter(prompt.MsgFilter)).Run()
+				return err
+			}
+
+			return nil
+		},
+	}
+
+	commands := InitializeCommands()
+
+	rootCmd.AddCommand(commands.pause)
+	rootCmd.AddCommand(commands.resume)
+
+	rootCmd.Flags().BoolP("interactive", "i", false, "Run in interactive mode")
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
-func init() {
+type model struct {
+	inner cprompt.Model
+}
+
+func (m model) Init() tea.Cmd {
+	return m.inner.Init()
+}
+
+func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	model, cmd := m.inner.Update(msg)
+	m.inner = model.(cprompt.Model)
+	return m, cmd
+}
+
+func (m model) View() string {
+	return m.inner.View()
 }

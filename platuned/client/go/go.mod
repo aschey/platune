@@ -1,6 +1,6 @@
-module github.com/aschey/platune/client/v2
+module github.com/aschey/platune/client
 
-go 1.16
+go 1.20
 
 require (
 	github.com/Microsoft/go-winio v0.6.0
