@@ -6,15 +6,20 @@ use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
 use crate::{db_error::DbError, entry_type::EntryType};
 use log::LevelFilter;
-use sqlx::migrate::Migrator;
+use regex::Regex;
+use rust_embed::RustEmbed;
+use slite::{Connection, Migrator};
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{path::Path, time::Duration};
 use tokio::sync::Mutex;
 use tracing::info;
 
-static MIGRATOR: Migrator = sqlx::migrate!();
+#[derive(RustEmbed)]
+#[folder = "db/schema"]
+struct Schema;
 
 #[derive(Clone)]
 pub struct Database {
@@ -121,13 +126,57 @@ impl Database {
         }
     }
 
-    pub async fn migrate(&self) -> Result<(), DbError> {
-        info!("Migrating");
-        MIGRATOR
-            .run(&self.write_pool)
+    pub async fn sync_database(&self) -> Result<(), DbError> {
+        info!("Starting database sync");
+        let mut paths: Vec<_> = Schema::iter()
+            .map(|f| PathBuf::from(f.to_string()))
+            .collect();
+
+        paths.sort_by(|a, b| {
+            let a_seq = slite::get_sequence(a);
+            let b_seq = slite::get_sequence(b);
+            a_seq.cmp(&b_seq)
+        });
+
+        let schemas: Vec<_> = paths
+            .into_iter()
+            .map(|f| {
+                String::from_utf8(Schema::get(&f.to_string_lossy()).unwrap().data.to_vec()).unwrap()
+            })
+            .collect();
+
+        let mut conn = self
+            .write_pool
+            .acquire()
             .await
-            .map_err(|e| DbError::DbError(format!("Error running migrations {e:?}")))?;
-        info!("Finished migrating");
+            .map_err(|e| DbError::MigrateError(e.to_string()))?;
+        let mut handle = conn
+            .lock_handle()
+            .await
+            .map_err(|e| DbError::MigrateError(e.to_string()))?;
+        let conn = unsafe {
+            Connection::from_handle(handle.as_raw_handle().as_ptr())
+                .map_err(|e| DbError::MigrateError(e.to_string()))?
+        };
+
+        let migrator = Migrator::new(
+            &schemas,
+            conn,
+            slite::Config {
+                extensions: vec![PathBuf::from(Self::get_spellfix_lib())],
+                ignore: Some(Regex::new("(search_spellfix_vocab.*)|(search_index_.*)").unwrap()),
+                ..Default::default()
+            },
+            slite::Options {
+                allow_deletions: true,
+                dry_run: false,
+            },
+        )
+        .map_err(|e| DbError::MigrateError(e.to_string()))?;
+        migrator
+            .migrate()
+            .map_err(|e| DbError::MigrateError(e.to_string()))?;
+        info!("Finished database sync");
 
         Ok(())
     }

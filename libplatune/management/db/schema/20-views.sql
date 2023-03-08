@@ -1,0 +1,3 @@
+CREATE VIEW v_songs
+AS
+SELECT * FROM album

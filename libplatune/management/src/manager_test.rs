@@ -80,7 +80,7 @@ pub async fn test_reset_drive_id_if_missing() {
     let sql_path = tempdir.path().join("platune.db");
 
     let db = Database::connect(sql_path, true).await.unwrap();
-    db.migrate().await.unwrap();
+    db.sync_database().await.unwrap();
     let config = Arc::new(MemoryConfig::new_boxed());
     let mut manager = Manager::new(&db, config.clone());
     manager.delim = r"\";
@@ -92,7 +92,7 @@ pub async fn test_reset_drive_id_if_missing() {
     let tempdir2 = TempDir::new().unwrap();
     let sql_path2 = tempdir2.path().join("platune.db");
     let db2 = Database::connect(sql_path2, true).await.unwrap();
-    db2.migrate().await.unwrap();
+    db2.sync_database().await.unwrap();
 
     let mut manager2 = Manager::new(&db2, config);
     manager2.delim = r"\";
@@ -119,7 +119,7 @@ pub async fn test_validate_path() {
 
 async fn setup() -> (Database, Manager) {
     let db = Database::connect_in_memory().await.unwrap();
-    db.migrate().await.unwrap();
+    db.sync_database().await.unwrap();
     let config = Arc::new(MemoryConfig::new_boxed());
     let manager = Manager::new(&db, config);
     (db, manager)

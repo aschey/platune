@@ -98,7 +98,9 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
 async fn init_manager() -> Result<Manager> {
     let path = env::var("DATABASE_URL").wrap_err("DATABASE_URL environment variable not set")?;
     let db = Database::connect(path, true).await?;
-    db.migrate().await.wrap_err("Error migrating database")?;
+    db.sync_database()
+        .await
+        .wrap_err("Error migrating database")?;
     let config = Arc::new(FileConfig::try_new()?);
     let manager = Manager::new(&db, config);
 

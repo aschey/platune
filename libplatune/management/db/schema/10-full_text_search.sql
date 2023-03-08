@@ -26,13 +26,13 @@ UPDATE OF song_title ON song BEGIN
 UPDATE search_index
 SET entry_value = REPLACE(new.song_title, ' & ', ' and ')
 WHERE assoc_id = old.song_id
-    and entry_type = 'song';
+    AND entry_type = 'song';
 END;
 CREATE TRIGGER IF NOT EXISTS after_song_delete
 AFTER DELETE ON song BEGIN
 DELETE FROM search_index
 WHERE assoc_id = old.song_id
-    and entry_type = 'song';
+    AND entry_type = 'song';
 END;
 -- Album
 CREATE TRIGGER IF NOT EXISTS after_album_insert
@@ -54,13 +54,13 @@ UPDATE OF album_name ON album BEGIN
 UPDATE search_index
 SET entry_value = REPLACE(new.album_name, ' & ', ' and ')
 WHERE assoc_id = old.album_id
-    and entry_type = 'album';
+    AND entry_type = 'album';
 END;
 CREATE TRIGGER IF NOT EXISTS after_album_delete
 AFTER DELETE ON album BEGIN
 DELETE FROM search_index
 WHERE assoc_id = old.album_id
-    and entry_type = 'album';
+    AND entry_type = 'album';
 END;
 -- Artist
 CREATE TRIGGER IF NOT EXISTS after_artist_insert
@@ -88,7 +88,7 @@ CREATE TRIGGER IF NOT EXISTS after_artist_delete
 AFTER DELETE ON artist BEGIN
 DELETE FROM search_index
 WHERE assoc_id = old.artist_id
-    and entry_type = 'artist';
+    AND entry_type = 'artist';
 END;
 -- Album Artist
 CREATE TRIGGER IF NOT EXISTS after_album_artist_insert
@@ -110,11 +110,11 @@ UPDATE OF album_artist_name ON album_artist BEGIN
 UPDATE search_index
 SET entry_value = REPLACE(new.album_artist_name, ' & ', ' and ')
 WHERE assoc_id = old.album_artist_id
-    and entry_type = 'album_artist';
+    AND entry_type = 'album_artist';
 END;
 CREATE TRIGGER IF NOT EXISTS after_album_artist_delete
 AFTER DELETE ON album_artist BEGIN
 DELETE FROM search_index
 WHERE assoc_id = old.album_artist_id
-    and entry_type = 'album_artist';
+    AND entry_type = 'album_artist';
 END;

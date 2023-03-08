@@ -304,7 +304,7 @@ fn create_tempdir() -> (TempDir, PathBuf) {
 
 async fn setup() -> (Database, Manager) {
     let db = Database::connect_in_memory().await.unwrap();
-    db.migrate().await.unwrap();
+    db.sync_database().await.unwrap();
     let config = Arc::new(MemoryConfig::new_boxed());
     let manager = Manager::new(&db, config);
 
