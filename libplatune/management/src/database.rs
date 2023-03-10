@@ -41,6 +41,14 @@ pub struct LookupEntry {
 }
 
 #[derive(Debug, sqlx::FromRow)]
+pub struct Album {
+    pub album: String,
+    pub album_id: i64,
+    pub album_artist: String,
+    pub album_artist_id: i64,
+}
+
+#[derive(Debug, sqlx::FromRow)]
 pub struct DeletedEntry {
     pub song_id: i64,
     pub song_path: String,
@@ -231,7 +239,7 @@ impl Database {
 
     pub(crate) async fn lookup(
         &self,
-        correlation_ids: Vec<i32>,
+        correlation_ids: Vec<i64>,
         entry_type: EntryType,
     ) -> Result<Vec<LookupEntry>, DbError> {
         match entry_type {
@@ -265,7 +273,7 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+    async fn all_by_artists(&self, artist_ids: Vec<i64>) -> Result<Vec<LookupEntry>, DbError> {
         sqlx::query_as!(
             LookupEntry,
             "
@@ -287,7 +295,7 @@ impl Database {
 
     async fn all_by_album_artists(
         &self,
-        album_artist_ids: Vec<i32>,
+        album_artist_ids: Vec<i64>,
     ) -> Result<Vec<LookupEntry>, DbError> {
         sqlx::query_as!(
             LookupEntry,
@@ -307,7 +315,7 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+    async fn all_by_albums(&self, album_ids: Vec<i64>) -> Result<Vec<LookupEntry>, DbError> {
         sqlx::query_as!(
             LookupEntry,
             "
@@ -327,7 +335,7 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+    async fn all_by_ids(&self, song_ids: Vec<i64>) -> Result<Vec<LookupEntry>, DbError> {
         sqlx::query_as!(
             LookupEntry,
             "
@@ -341,6 +349,25 @@ impl Database {
             ORDER BY aa.album_artist_id, al.album_id, s.track_number;
             ",
             song_ids[0]
+        )
+        .fetch_all(&self.read_pool)
+        .await
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
+    }
+
+    pub(crate) async fn albums_by_album_artists(
+        &self,
+        album_artist_ids: Vec<i64>,
+    ) -> Result<Vec<Album>, DbError> {
+        sqlx::query_as!(
+            Album,
+            "
+            SELECT al.album_name album, al.album_id, aa.album_artist_name album_artist, aa.album_artist_id
+            FROM album al
+            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            WHERE aa.album_artist_id = ?
+            ",
+            album_artist_ids[0]
         )
         .fetch_all(&self.read_pool)
         .await

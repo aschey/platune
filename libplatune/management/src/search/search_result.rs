@@ -6,5 +6,5 @@ pub struct SearchResult {
     pub entry_type: EntryType,
     pub description: String,
     pub artist: Option<String>,
-    pub correlation_ids: Vec<i32>,
+    pub correlation_ids: Vec<i64>,
 }

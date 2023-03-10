@@ -7,20 +7,33 @@
 package cmd
 
 import (
+	"github.com/aschey/platune/cli/cmd/folder"
+	"github.com/aschey/platune/cli/cmd/queue"
 	"github.com/aschey/platune/cli/internal"
 )
 
 // Injectors from wire.go:
 
-func InitializeCommands() commands {
-	platuneClient := internal.NewPlatuneClient()
-	cmdPauseCmd := newPauseCmd(platuneClient)
-	cmdResumeCmd := newResumeCmd(platuneClient)
+func InitializeCommands() (commands, error) {
+	playerClient, err := internal.NewPlayerClient()
+	if err != nil {
+		return commands{}, err
+	}
+	cmdPauseCmd := newPauseCmd(playerClient)
+	cmdResumeCmd := newResumeCmd(playerClient)
+	managementClient, err := internal.NewManagementClient()
+	if err != nil {
+		return commands{}, err
+	}
+	folderCmd := folder.InitializeFolderCommand(playerClient, managementClient)
+	queueCmd := queue.InitializeQueueCommand(playerClient, managementClient)
 	cmdCommands := commands{
 		pause:  cmdPauseCmd,
 		resume: cmdResumeCmd,
+		folder: folderCmd,
+		queue:  queueCmd,
 	}
-	return cmdCommands
+	return cmdCommands, nil
 }
 
 // wire.go:
@@ -28,4 +41,6 @@ func InitializeCommands() commands {
 type commands struct {
 	pause  pauseCmd
 	resume resumeCmd
+	folder folder.FolderCmd
+	queue  queue.QueueCmd
 }

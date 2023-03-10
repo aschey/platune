@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	client "github.com/aschey/platune/client"
+	platune "github.com/aschey/platune/client"
 	gomock "github.com/golang/mock/gomock"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
@@ -39,7 +39,7 @@ func (m *MockManagementClient) EXPECT() *MockManagementClientMockRecorder {
 }
 
 // AddFolders mocks base method.
-func (m *MockManagementClient) AddFolders(ctx context.Context, in *client.FoldersMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockManagementClient) AddFolders(ctx context.Context, in *platune.FoldersMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
@@ -59,7 +59,7 @@ func (mr *MockManagementClientMockRecorder) AddFolders(ctx, in interface{}, opts
 }
 
 // DeleteTracks mocks base method.
-func (m *MockManagementClient) DeleteTracks(ctx context.Context, in *client.IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockManagementClient) DeleteTracks(ctx context.Context, in *platune.IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
@@ -79,14 +79,14 @@ func (mr *MockManagementClientMockRecorder) DeleteTracks(ctx, in interface{}, op
 }
 
 // GetAllFolders mocks base method.
-func (m *MockManagementClient) GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*client.FoldersMessage, error) {
+func (m *MockManagementClient) GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*platune.FoldersMessage, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetAllFolders", varargs...)
-	ret0, _ := ret[0].(*client.FoldersMessage)
+	ret0, _ := ret[0].(*platune.FoldersMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -99,14 +99,14 @@ func (mr *MockManagementClientMockRecorder) GetAllFolders(ctx, in interface{}, o
 }
 
 // GetDeleted mocks base method.
-func (m *MockManagementClient) GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*client.GetDeletedResponse, error) {
+func (m *MockManagementClient) GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*platune.GetDeletedResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetDeleted", varargs...)
-	ret0, _ := ret[0].(*client.GetDeletedResponse)
+	ret0, _ := ret[0].(*platune.GetDeletedResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -119,14 +119,14 @@ func (mr *MockManagementClientMockRecorder) GetDeleted(ctx, in interface{}, opts
 }
 
 // GetRegisteredMount mocks base method.
-func (m *MockManagementClient) GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*client.RegisteredMountMessage, error) {
+func (m *MockManagementClient) GetRegisteredMount(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*platune.RegisteredMountMessage, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetRegisteredMount", varargs...)
-	ret0, _ := ret[0].(*client.RegisteredMountMessage)
+	ret0, _ := ret[0].(*platune.RegisteredMountMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -139,14 +139,14 @@ func (mr *MockManagementClientMockRecorder) GetRegisteredMount(ctx, in interface
 }
 
 // GetSongByPath mocks base method.
-func (m *MockManagementClient) GetSongByPath(ctx context.Context, in *client.PathMessage, opts ...grpc.CallOption) (*client.SongResponse, error) {
+func (m *MockManagementClient) GetSongByPath(ctx context.Context, in *platune.PathMessage, opts ...grpc.CallOption) (*platune.SongResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetSongByPath", varargs...)
-	ret0, _ := ret[0].(*client.SongResponse)
+	ret0, _ := ret[0].(*platune.SongResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -159,14 +159,14 @@ func (mr *MockManagementClientMockRecorder) GetSongByPath(ctx, in interface{}, o
 }
 
 // Lookup mocks base method.
-func (m *MockManagementClient) Lookup(ctx context.Context, in *client.LookupRequest, opts ...grpc.CallOption) (*client.LookupResponse, error) {
+func (m *MockManagementClient) Lookup(ctx context.Context, in *platune.LookupRequest, opts ...grpc.CallOption) (*platune.LookupResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Lookup", varargs...)
-	ret0, _ := ret[0].(*client.LookupResponse)
+	ret0, _ := ret[0].(*platune.LookupResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -179,7 +179,7 @@ func (mr *MockManagementClientMockRecorder) Lookup(ctx, in interface{}, opts ...
 }
 
 // RegisterMount mocks base method.
-func (m *MockManagementClient) RegisterMount(ctx context.Context, in *client.RegisteredMountMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockManagementClient) RegisterMount(ctx context.Context, in *platune.RegisteredMountMessage, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
@@ -199,14 +199,14 @@ func (mr *MockManagementClientMockRecorder) RegisterMount(ctx, in interface{}, o
 }
 
 // Search mocks base method.
-func (m *MockManagementClient) Search(ctx context.Context, opts ...grpc.CallOption) (client.Management_SearchClient, error) {
+func (m *MockManagementClient) Search(ctx context.Context, opts ...grpc.CallOption) (platune.Management_SearchClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Search", varargs...)
-	ret0, _ := ret[0].(client.Management_SearchClient)
+	ret0, _ := ret[0].(platune.Management_SearchClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -239,14 +239,14 @@ func (mr *MockManagementClientMockRecorder) StartSync(ctx, in interface{}, opts 
 }
 
 // SubscribeEvents mocks base method.
-func (m *MockManagementClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (client.Management_SubscribeEventsClient, error) {
+func (m *MockManagementClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (platune.Management_SubscribeEventsClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "SubscribeEvents", varargs...)
-	ret0, _ := ret[0].(client.Management_SubscribeEventsClient)
+	ret0, _ := ret[0].(platune.Management_SubscribeEventsClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -325,10 +325,10 @@ func (mr *MockManagement_SearchClientMockRecorder) Header() *gomock.Call {
 }
 
 // Recv mocks base method.
-func (m *MockManagement_SearchClient) Recv() (*client.SearchResponse, error) {
+func (m *MockManagement_SearchClient) Recv() (*platune.SearchResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*client.SearchResponse)
+	ret0, _ := ret[0].(*platune.SearchResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -354,7 +354,7 @@ func (mr *MockManagement_SearchClientMockRecorder) RecvMsg(m interface{}) *gomoc
 }
 
 // Send mocks base method.
-func (m *MockManagement_SearchClient) Send(arg0 *client.SearchRequest) error {
+func (m *MockManagement_SearchClient) Send(arg0 *platune.SearchRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -462,10 +462,10 @@ func (mr *MockManagement_SubscribeEventsClientMockRecorder) Header() *gomock.Cal
 }
 
 // Recv mocks base method.
-func (m *MockManagement_SubscribeEventsClient) Recv() (*client.Progress, error) {
+func (m *MockManagement_SubscribeEventsClient) Recv() (*platune.Progress, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*client.Progress)
+	ret0, _ := ret[0].(*platune.Progress)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -542,7 +542,7 @@ func (m *MockManagementServer) EXPECT() *MockManagementServerMockRecorder {
 }
 
 // AddFolders mocks base method.
-func (m *MockManagementServer) AddFolders(arg0 context.Context, arg1 *client.FoldersMessage) (*emptypb.Empty, error) {
+func (m *MockManagementServer) AddFolders(arg0 context.Context, arg1 *platune.FoldersMessage) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddFolders", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
@@ -557,7 +557,7 @@ func (mr *MockManagementServerMockRecorder) AddFolders(arg0, arg1 interface{}) *
 }
 
 // DeleteTracks mocks base method.
-func (m *MockManagementServer) DeleteTracks(arg0 context.Context, arg1 *client.IdMessage) (*emptypb.Empty, error) {
+func (m *MockManagementServer) DeleteTracks(arg0 context.Context, arg1 *platune.IdMessage) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteTracks", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
@@ -572,10 +572,10 @@ func (mr *MockManagementServerMockRecorder) DeleteTracks(arg0, arg1 interface{})
 }
 
 // GetAllFolders mocks base method.
-func (m *MockManagementServer) GetAllFolders(arg0 context.Context, arg1 *emptypb.Empty) (*client.FoldersMessage, error) {
+func (m *MockManagementServer) GetAllFolders(arg0 context.Context, arg1 *emptypb.Empty) (*platune.FoldersMessage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAllFolders", arg0, arg1)
-	ret0, _ := ret[0].(*client.FoldersMessage)
+	ret0, _ := ret[0].(*platune.FoldersMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -587,10 +587,10 @@ func (mr *MockManagementServerMockRecorder) GetAllFolders(arg0, arg1 interface{}
 }
 
 // GetDeleted mocks base method.
-func (m *MockManagementServer) GetDeleted(arg0 context.Context, arg1 *emptypb.Empty) (*client.GetDeletedResponse, error) {
+func (m *MockManagementServer) GetDeleted(arg0 context.Context, arg1 *emptypb.Empty) (*platune.GetDeletedResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetDeleted", arg0, arg1)
-	ret0, _ := ret[0].(*client.GetDeletedResponse)
+	ret0, _ := ret[0].(*platune.GetDeletedResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -602,10 +602,10 @@ func (mr *MockManagementServerMockRecorder) GetDeleted(arg0, arg1 interface{}) *
 }
 
 // GetRegisteredMount mocks base method.
-func (m *MockManagementServer) GetRegisteredMount(arg0 context.Context, arg1 *emptypb.Empty) (*client.RegisteredMountMessage, error) {
+func (m *MockManagementServer) GetRegisteredMount(arg0 context.Context, arg1 *emptypb.Empty) (*platune.RegisteredMountMessage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRegisteredMount", arg0, arg1)
-	ret0, _ := ret[0].(*client.RegisteredMountMessage)
+	ret0, _ := ret[0].(*platune.RegisteredMountMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -617,10 +617,10 @@ func (mr *MockManagementServerMockRecorder) GetRegisteredMount(arg0, arg1 interf
 }
 
 // GetSongByPath mocks base method.
-func (m *MockManagementServer) GetSongByPath(arg0 context.Context, arg1 *client.PathMessage) (*client.SongResponse, error) {
+func (m *MockManagementServer) GetSongByPath(arg0 context.Context, arg1 *platune.PathMessage) (*platune.SongResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSongByPath", arg0, arg1)
-	ret0, _ := ret[0].(*client.SongResponse)
+	ret0, _ := ret[0].(*platune.SongResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -632,10 +632,10 @@ func (mr *MockManagementServerMockRecorder) GetSongByPath(arg0, arg1 interface{}
 }
 
 // Lookup mocks base method.
-func (m *MockManagementServer) Lookup(arg0 context.Context, arg1 *client.LookupRequest) (*client.LookupResponse, error) {
+func (m *MockManagementServer) Lookup(arg0 context.Context, arg1 *platune.LookupRequest) (*platune.LookupResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Lookup", arg0, arg1)
-	ret0, _ := ret[0].(*client.LookupResponse)
+	ret0, _ := ret[0].(*platune.LookupResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -647,7 +647,7 @@ func (mr *MockManagementServerMockRecorder) Lookup(arg0, arg1 interface{}) *gomo
 }
 
 // RegisterMount mocks base method.
-func (m *MockManagementServer) RegisterMount(arg0 context.Context, arg1 *client.RegisteredMountMessage) (*emptypb.Empty, error) {
+func (m *MockManagementServer) RegisterMount(arg0 context.Context, arg1 *platune.RegisteredMountMessage) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterMount", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
@@ -662,7 +662,7 @@ func (mr *MockManagementServerMockRecorder) RegisterMount(arg0, arg1 interface{}
 }
 
 // Search mocks base method.
-func (m *MockManagementServer) Search(arg0 client.Management_SearchServer) error {
+func (m *MockManagementServer) Search(arg0 platune.Management_SearchServer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Search", arg0)
 	ret0, _ := ret[0].(error)
@@ -691,7 +691,7 @@ func (mr *MockManagementServerMockRecorder) StartSync(arg0, arg1 interface{}) *g
 }
 
 // SubscribeEvents mocks base method.
-func (m *MockManagementServer) SubscribeEvents(arg0 *emptypb.Empty, arg1 client.Management_SubscribeEventsServer) error {
+func (m *MockManagementServer) SubscribeEvents(arg0 *emptypb.Empty, arg1 platune.Management_SubscribeEventsServer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubscribeEvents", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -789,10 +789,10 @@ func (mr *MockManagement_SearchServerMockRecorder) Context() *gomock.Call {
 }
 
 // Recv mocks base method.
-func (m *MockManagement_SearchServer) Recv() (*client.SearchRequest, error) {
+func (m *MockManagement_SearchServer) Recv() (*platune.SearchRequest, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*client.SearchRequest)
+	ret0, _ := ret[0].(*platune.SearchRequest)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -818,7 +818,7 @@ func (mr *MockManagement_SearchServerMockRecorder) RecvMsg(m interface{}) *gomoc
 }
 
 // Send mocks base method.
-func (m *MockManagement_SearchServer) Send(arg0 *client.SearchResponse) error {
+func (m *MockManagement_SearchServer) Send(arg0 *platune.SearchResponse) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -937,7 +937,7 @@ func (mr *MockManagement_SubscribeEventsServerMockRecorder) RecvMsg(m interface{
 }
 
 // Send mocks base method.
-func (m *MockManagement_SubscribeEventsServer) Send(arg0 *client.Progress) error {
+func (m *MockManagement_SubscribeEventsServer) Send(arg0 *platune.Progress) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)

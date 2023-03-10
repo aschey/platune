@@ -134,6 +134,31 @@ impl Management for ManagementImpl {
         }))
     }
 
+    async fn get_albums_by_album_artists(
+        &self,
+        request: Request<IdMessage>,
+    ) -> Result<Response<AlbumResponse>, Status> {
+        let request = request.into_inner();
+        let albums = self
+            .manager
+            .read()
+            .await
+            .albums_by_album_artists(request.ids)
+            .await
+            .map_err(|e| format_error(format!("Error getting albums: {e:?}")))?;
+        Ok(Response::new(AlbumResponse {
+            entries: albums
+                .into_iter()
+                .map(|a| AlbumEntry {
+                    album: a.album,
+                    album_id: a.album_id,
+                    album_artist: a.album_artist,
+                    album_artist_id: a.album_artist_id,
+                })
+                .collect(),
+        }))
+    }
+
     async fn lookup(
         &self,
         request: Request<LookupRequest>,
@@ -156,9 +181,7 @@ impl Management for ManagementImpl {
         {
             Ok(entries) => entries,
             Err(e) => {
-                return Err(format_error(format!(
-                    "Error sending lookup request {e:?}"
-                )));
+                return Err(format_error(format!("Error sending lookup request {e:?}")));
             }
         };
         let entries = lookup_result
@@ -218,9 +241,7 @@ impl Management for ManagementImpl {
                 let search_results = match r {
                     Ok(results) => results,
                     Err(e) => {
-                        return Err(format_error(format!(
-                            "Error sending search request {e:?}"
-                        )));
+                        return Err(format_error(format!("Error sending search request {e:?}")));
                     }
                 };
                 let results = search_results

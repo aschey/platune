@@ -2,14 +2,13 @@ package cmd
 
 import (
 	cprompt "github.com/aschey/bubbleprompt-cobra"
-	"github.com/aschey/bubbleprompt/executor"
 	"github.com/aschey/platune/cli/internal"
 	"github.com/spf13/cobra"
 )
 
 type resumeCmd *cobra.Command
 
-func newResumeCmd(client *internal.PlatuneClient) resumeCmd {
+func newResumeCmd(client *internal.PlayerClient) resumeCmd {
 	pauseCmd := &cobra.Command{
 		Use:   "resume",
 		Short: "Resumes the player",
@@ -19,7 +18,7 @@ func newResumeCmd(client *internal.PlatuneClient) resumeCmd {
 			if err := client.Resume(); err != nil {
 				return err
 			}
-			return cprompt.ExecModel(cmd, executor.NewStringModel("Resumed"))
+			return cprompt.ExecModel(cmd, internal.NewInfoModel("Resumed"))
 		},
 	}
 

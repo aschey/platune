@@ -11,7 +11,7 @@ pub(crate) struct SearchEntry {
     pub entry_type: String,
     pub artist: Option<String>,
     pub album: Option<String>,
-    pub correlation_id: i32,
+    pub correlation_id: i64,
     pub(crate) original_query: String,
     pub(crate) start_highlight: String,
     pub(crate) end_highlight: String,

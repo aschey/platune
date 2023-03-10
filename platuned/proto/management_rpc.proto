@@ -19,6 +19,7 @@ service Management {
   rpc Search(stream SearchRequest) returns (stream SearchResponse);
   rpc Lookup(LookupRequest) returns (LookupResponse);
   rpc GetSongByPath(PathMessage) returns (SongResponse);
+  rpc GetAlbumsByAlbumArtists(IdMessage) returns (AlbumResponse);
   rpc GetDeleted(google.protobuf.Empty) returns (GetDeletedResponse);
   rpc DeleteTracks(IdMessage) returns (google.protobuf.Empty);
   rpc SubscribeEvents(google.protobuf.Empty) returns (stream Progress);
@@ -46,10 +47,19 @@ message SearchRequest {
 
 message LookupRequest {
   EntryType entry_type = 1;
-  repeated int32 correlation_ids = 2;
+  repeated int64 correlation_ids = 2;
 }
 
 message SongResponse { optional LookupEntry song = 1; }
+
+message AlbumResponse { repeated AlbumEntry entries = 1; }
+
+message AlbumEntry {
+  string album = 1;
+  int64 album_id = 2;
+  string album_artist = 3;
+  int64 album_artist_id = 4;
+}
 
 message LookupEntry {
   string artist = 1;
@@ -74,7 +84,7 @@ message SearchResult {
   string entry = 1;
   EntryType entry_type = 2;
   optional string artist = 3;
-  repeated int32 correlation_ids = 4;
+  repeated int64 correlation_ids = 4;
   string description = 5;
 }
 

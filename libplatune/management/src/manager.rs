@@ -3,7 +3,7 @@ pub use crate::search::search_options::SearchOptions;
 pub use crate::search::search_result::SearchResult;
 use crate::{
     config::Config,
-    database::{Database, DeletedEntry, LookupEntry},
+    database::{Album, Database, DeletedEntry, LookupEntry},
     db_error::DbError,
     path_util::{clean_file_path, update_path, PathMut},
     sync::progress_stream::ProgressStream,
@@ -140,13 +140,20 @@ impl Manager {
 
     pub async fn lookup(
         &self,
-        correlation_ids: Vec<i32>,
+        correlation_ids: Vec<i64>,
         entry_type: EntryType,
     ) -> Result<Vec<LookupEntry>, DbError> {
         let mut res = self.db.lookup(correlation_ids, entry_type).await?;
         self.update_paths(&mut res).await;
 
         Ok(res)
+    }
+
+    pub async fn albums_by_album_artists(
+        &self,
+        album_artist_ids: Vec<i64>,
+    ) -> Result<Vec<Album>, DbError> {
+        self.db.albums_by_album_artists(album_artist_ids).await
     }
 
     pub async fn rename_path<P>(&mut self, from: P, to: P) -> Result<(), DbError>
