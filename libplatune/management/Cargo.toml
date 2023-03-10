@@ -28,8 +28,8 @@ notify = {version = "5", default-features = false, features = ["macos_fsevent"]}
 num_cpus = "1"
 regex = "1"
 rust-embed = "6.6.0"
-slite = {git = "https://github.com/aschey/slite", rev = "b7cffdaf1a84bb16afbe710c4bcc6c30da0e94eb", default-features = false, features = ["read-files"]}
-sqlx = {version = "0.6", features = ["runtime-tokio-rustls", "sqlite", "offline", "migrate"]}
+slite = {git = "https://github.com/aschey/slite", rev = "03431a4d60cc1b66f531099c2a316c61fab251ef", default-features = false, features = ["read-files"]}
+sqlx = {version = "0.7.0-alpha.1", default-features = false, features = ["sqlite", "any", "macros", "runtime-tokio"]}
 strum = {version = "0.24", features = ["derive"]}
 tap = "1"
 thiserror = "1"

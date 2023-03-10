@@ -78,6 +78,46 @@ func (mr *MockManagementClientMockRecorder) DeleteTracks(ctx, in interface{}, op
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTracks", reflect.TypeOf((*MockManagementClient)(nil).DeleteTracks), varargs...)
 }
 
+// GetAlbumArtistsByNames mocks base method.
+func (m *MockManagementClient) GetAlbumArtistsByNames(ctx context.Context, in *platune.NameMessage, opts ...grpc.CallOption) (*platune.EntitiesMessage, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetAlbumArtistsByNames", varargs...)
+	ret0, _ := ret[0].(*platune.EntitiesMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAlbumArtistsByNames indicates an expected call of GetAlbumArtistsByNames.
+func (mr *MockManagementClientMockRecorder) GetAlbumArtistsByNames(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlbumArtistsByNames", reflect.TypeOf((*MockManagementClient)(nil).GetAlbumArtistsByNames), varargs...)
+}
+
+// GetAlbumsByAlbumArtists mocks base method.
+func (m *MockManagementClient) GetAlbumsByAlbumArtists(ctx context.Context, in *platune.IdMessage, opts ...grpc.CallOption) (*platune.AlbumResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetAlbumsByAlbumArtists", varargs...)
+	ret0, _ := ret[0].(*platune.AlbumResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAlbumsByAlbumArtists indicates an expected call of GetAlbumsByAlbumArtists.
+func (mr *MockManagementClientMockRecorder) GetAlbumsByAlbumArtists(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlbumsByAlbumArtists", reflect.TypeOf((*MockManagementClient)(nil).GetAlbumsByAlbumArtists), varargs...)
+}
+
 // GetAllFolders mocks base method.
 func (m *MockManagementClient) GetAllFolders(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*platune.FoldersMessage, error) {
 	m.ctrl.T.Helper()
@@ -569,6 +609,36 @@ func (m *MockManagementServer) DeleteTracks(arg0 context.Context, arg1 *platune.
 func (mr *MockManagementServerMockRecorder) DeleteTracks(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteTracks", reflect.TypeOf((*MockManagementServer)(nil).DeleteTracks), arg0, arg1)
+}
+
+// GetAlbumArtistsByNames mocks base method.
+func (m *MockManagementServer) GetAlbumArtistsByNames(arg0 context.Context, arg1 *platune.NameMessage) (*platune.EntitiesMessage, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAlbumArtistsByNames", arg0, arg1)
+	ret0, _ := ret[0].(*platune.EntitiesMessage)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAlbumArtistsByNames indicates an expected call of GetAlbumArtistsByNames.
+func (mr *MockManagementServerMockRecorder) GetAlbumArtistsByNames(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlbumArtistsByNames", reflect.TypeOf((*MockManagementServer)(nil).GetAlbumArtistsByNames), arg0, arg1)
+}
+
+// GetAlbumsByAlbumArtists mocks base method.
+func (m *MockManagementServer) GetAlbumsByAlbumArtists(arg0 context.Context, arg1 *platune.IdMessage) (*platune.AlbumResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAlbumsByAlbumArtists", arg0, arg1)
+	ret0, _ := ret[0].(*platune.AlbumResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAlbumsByAlbumArtists indicates an expected call of GetAlbumsByAlbumArtists.
+func (mr *MockManagementServerMockRecorder) GetAlbumsByAlbumArtists(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAlbumsByAlbumArtists", reflect.TypeOf((*MockManagementServer)(nil).GetAlbumsByAlbumArtists), arg0, arg1)
 }
 
 // GetAllFolders mocks base method.

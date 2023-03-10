@@ -7,7 +7,14 @@ import (
 
 	"github.com/aschey/bubbleprompt/executor"
 	platune "github.com/aschey/platune/client"
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
+)
+
+var (
+	paginationStyle = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
+	helpStyle       = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
+	quitTextStyle   = lipgloss.NewStyle().Margin(1, 0, 2, 4)
 )
 
 func NewInfoModel(message string) executor.StringModel {

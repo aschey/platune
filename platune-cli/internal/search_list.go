@@ -8,27 +8,34 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-type item struct {
+type searchItem struct {
 	searchResult *platune.SearchResult
 }
 
-func (i item) FilterValue() string { return i.searchResult.Entry }
+type searchModel struct {
+	list     list.Model
+	choice   searchItem
+	client   *ManagementClient
+	callback func(entries []*platune.LookupEntry)
+}
 
-func (i item) Title() string { return i.searchResult.Entry }
+func (i searchItem) FilterValue() string { return i.searchResult.Entry }
 
-func (i item) Description() string { return i.searchResult.Description }
+func (i searchItem) Title() string { return i.searchResult.Entry }
 
-func newDelegate() list.DefaultDelegate {
+func (i searchItem) Description() string { return i.searchResult.Description }
+
+func newSearchDelegate() list.DefaultDelegate {
 	delegate := list.NewDefaultDelegate()
 
 	return delegate
 }
 
-func (m model) Init() tea.Cmd {
+func (m searchModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m searchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
@@ -38,7 +45,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch keypress := msg.String(); keypress {
 
 		case "enter":
-			i := m.list.SelectedItem().(item)
+			i := m.list.SelectedItem().(searchItem)
 			client := *m.client
 			lookupResults, _ := client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
 			m.callback(lookupResults.Entries)
@@ -57,7 +64,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (m model) View() string {
+func (m searchModel) View() string {
 	if m.choice.searchResult.Entry != "" {
 		result := m.choice.searchResult
 		if result.Artist != nil {
@@ -71,10 +78,10 @@ func (m model) View() string {
 	return "\n" + m.list.View()
 }
 
-func getItems(results []*platune.SearchResult) []list.Item {
+func getSearchItems(results []*platune.SearchResult) []list.Item {
 	items := []list.Item{}
 	for _, result := range results {
-		items = append(items, item{searchResult: result})
+		items = append(items, searchItem{searchResult: result})
 	}
 
 	return items
@@ -87,18 +94,18 @@ func (search *Search) renderSearchResults(
 	const defaultWidth = 20
 	const defaultHeight = 14
 
-	l := list.New(getItems(results.Results), newDelegate(), defaultWidth, defaultHeight)
+	l := list.New(getSearchItems(results.Results), newSearchDelegate(), defaultWidth, defaultHeight)
 	l.SetShowStatusBar(false)
 	l.SetFilteringEnabled(false)
 	l.SetShowTitle(false)
 
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
-	m := model{
+	m := searchModel{
 		list:     l,
 		client:   search.client,
 		callback: callback,
-		choice:   item{searchResult: &platune.SearchResult{}},
+		choice:   searchItem{searchResult: &platune.SearchResult{}},
 	}
 	return m
 }

@@ -20,6 +20,7 @@ service Management {
   rpc Lookup(LookupRequest) returns (LookupResponse);
   rpc GetSongByPath(PathMessage) returns (SongResponse);
   rpc GetAlbumsByAlbumArtists(IdMessage) returns (AlbumResponse);
+  rpc GetAlbumArtistsByNames(NameMessage) returns (EntitiesMessage);
   rpc GetDeleted(google.protobuf.Empty) returns (GetDeletedResponse);
   rpc DeleteTracks(IdMessage) returns (google.protobuf.Empty);
   rpc SubscribeEvents(google.protobuf.Empty) returns (stream Progress);
@@ -32,6 +33,8 @@ message Progress {
 }
 
 message FoldersMessage { repeated string folders = 1; }
+
+message NameMessage { repeated string names = 1; }
 
 message RegisteredMountMessage { string mount = 1; }
 
@@ -69,6 +72,13 @@ message LookupEntry {
   string path = 5;
   int64 track = 6;
   google.protobuf.Timestamp duration = 7;
+}
+
+message EntitiesMessage { repeated EntityMessage entities = 1; }
+
+message EntityMessage {
+  string name = 1;
+  int64 id = 2;
 }
 
 message LookupResponse { repeated LookupEntry entries = 1; }

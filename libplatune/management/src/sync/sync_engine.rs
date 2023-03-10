@@ -233,7 +233,12 @@ impl SyncEngine {
                 let fingerprint = hasher.finish().to_string();
 
                 dal.add_artist(&metadata.artists).await?;
-                dal.add_album_artist(&metadata.album_artists).await?;
+                if metadata.album_artists.is_empty() {
+                    dal.add_album_artist(&metadata.artists).await?;
+                } else {
+                    dal.add_album_artist(&metadata.album_artists).await?;
+                }
+
                 dal.add_album(&metadata.album, &metadata.album_artists)
                     .await?;
 

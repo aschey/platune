@@ -314,6 +314,42 @@
     },
     "query": "INSERT OR IGNORE INTO album_artist(album_artist_name, created_date) values(?, ?);"
   },
+  "988b40d6e0749155195bd6da95593a03cb8d3d77161a44424cde1c0c9e59b397": {
+    "describe": {
+      "columns": [
+        {
+          "name": "album",
+          "ordinal": 0,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "album_artist",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "album_artist_id",
+          "ordinal": 3,
+          "type_info": "Int64"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n            SELECT al.album_name album, al.album_id, aa.album_artist_name album_artist, aa.album_artist_id\n            FROM album al\n            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id\n            WHERE aa.album_artist_id = ?\n            "
+  },
   "a46da2c08a969e2fb83eadd3e286d0947fe9cdfddab52a39ca2e54b4c6fe297d": {
     "describe": {
       "columns": [],

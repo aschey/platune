@@ -90,9 +90,10 @@ func (p *ManagementClient) ResetStreams() {
 }
 
 func (p *ManagementClient) StartSync() error {
-	return p.runCommand(func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.managementClient.StartSync(ctx, &emptypb.Empty{})
-	})
+	ctx, cancel := p.initRequest()
+	defer cancel()
+	_, err := p.managementClient.StartSync(ctx, &emptypb.Empty{})
+	return err
 }
 
 func (p *ManagementClient) Search(req *platune.SearchRequest) (*platune.SearchResponse, error) {
@@ -127,8 +128,7 @@ func (p *ManagementClient) Lookup(
 }
 
 func (p *ManagementClient) GetAllFolders() ([]string, error) {
-	p.retryConnection()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := p.initRequest()
 	defer cancel()
 	allFolders, err := p.managementClient.GetAllFolders(ctx, &emptypb.Empty{})
 	if err != nil {
@@ -139,37 +139,51 @@ func (p *ManagementClient) GetAllFolders() ([]string, error) {
 }
 
 func (p *ManagementClient) AddFolder(folder string) error {
-	return p.runCommand(func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.managementClient.AddFolders(
-			ctx,
-			&platune.FoldersMessage{Folders: []string{folder}},
-		)
-	})
+	ctx, cancel := p.initRequest()
+	defer cancel()
+	_, err := p.managementClient.AddFolders(
+		ctx,
+		&platune.FoldersMessage{Folders: []string{folder}},
+	)
+	return err
 }
 
 func (p *ManagementClient) SetMount(mount string) error {
-	return p.runCommand(func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.managementClient.RegisterMount(ctx, &platune.RegisteredMountMessage{Mount: mount})
-	})
+	ctx, cancel := p.initRequest()
+	defer cancel()
+	_, err := p.managementClient.RegisterMount(ctx, &platune.RegisteredMountMessage{Mount: mount})
+	return err
 }
 
 func (p *ManagementClient) GetSongByPath(path string) (*platune.SongResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := p.initRequest()
 	defer cancel()
 	return p.managementClient.GetSongByPath(ctx, &platune.PathMessage{Path: path})
 }
 
+func (p *ManagementClient) GetAlbumsByAlbumArtists(ids []int64) (*platune.AlbumResponse, error) {
+	ctx, cancel := p.initRequest()
+	defer cancel()
+	return p.managementClient.GetAlbumsByAlbumArtists(ctx, &platune.IdMessage{Ids: ids})
+}
+
+func (p *ManagementClient) GetAlbumArtistsByNames(names []string) (*platune.EntitiesMessage, error) {
+	ctx, cancel := p.initRequest()
+	defer cancel()
+	return p.managementClient.GetAlbumArtistsByNames(ctx, &platune.NameMessage{Names: names})
+}
+
 func (p *ManagementClient) GetDeleted() (*platune.GetDeletedResponse, error) {
-	p.retryConnection()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := p.initRequest()
 	defer cancel()
 	return p.managementClient.GetDeleted(ctx, &emptypb.Empty{})
 }
 
 func (p *ManagementClient) DeleteTracks(ids []int64) error {
-	return p.runCommand(func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.managementClient.DeleteTracks(ctx, &platune.IdMessage{Ids: ids})
-	})
+	ctx, cancel := p.initRequest()
+	defer cancel()
+	_, err := p.managementClient.DeleteTracks(ctx, &platune.IdMessage{Ids: ids})
+	return err
 }
 
 func (p *ManagementClient) initSearchClient() error {
@@ -180,12 +194,7 @@ func (p *ManagementClient) initSearchClient() error {
 	return err
 }
 
-func (p *ManagementClient) runCommand(
-	cmdFunc func(context.Context) (*emptypb.Empty, error),
-) error {
+func (p *ManagementClient) initRequest() (context.Context, context.CancelFunc) {
 	p.retryConnection()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_, err := cmdFunc(ctx)
-	return err
+	return context.WithTimeout(context.Background(), 10*time.Second)
 }

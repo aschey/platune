@@ -48,6 +48,12 @@ pub struct Album {
     pub album_artist_id: i64,
 }
 
+#[derive(Debug)]
+pub struct Entity {
+    pub id: i64,
+    pub name: String,
+}
+
 #[derive(Debug, sqlx::FromRow)]
 pub struct DeletedEntry {
     pub song_id: i64,
@@ -75,7 +81,6 @@ impl Database {
             .read_only(true)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned()
             .extension(Self::get_spellfix_lib());
 
         let writer_opts = SqliteConnectOptions::new()
@@ -83,7 +88,6 @@ impl Database {
             .create_if_missing(create_if_missing)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned()
             .extension(Self::get_spellfix_lib());
 
         let write_pool = sqlx::pool::PoolOptions::new()
@@ -109,7 +113,6 @@ impl Database {
             .unwrap()
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned()
             .extension(Self::get_spellfix_lib());
 
         let pool = SqlitePool::connect_with(opts).await.unwrap();
@@ -355,7 +358,7 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    pub(crate) async fn albums_by_album_artists(
+    pub async fn albums_by_album_artists(
         &self,
         album_artist_ids: Vec<i64>,
     ) -> Result<Vec<Album>, DbError> {
@@ -368,6 +371,24 @@ impl Database {
             WHERE aa.album_artist_id = ?
             ",
             album_artist_ids[0]
+        )
+        .fetch_all(&self.read_pool)
+        .await
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
+    }
+
+    pub async fn album_artists_by_names(
+        &self,
+        album_artist_names: Vec<String>,
+    ) -> Result<Vec<Entity>, DbError> {
+        sqlx::query_as!(
+            Entity,
+            "
+            select album_artist_id as id, album_artist_name as name
+            from album_artist
+            where album_artist_name = ?
+            ",
+            album_artist_names[0]
         )
         .fetch_all(&self.read_pool)
         .await
@@ -395,12 +416,12 @@ impl Database {
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         for id in ids {
             sqlx::query!("DELETE FROM deleted_song WHERE song_id = ?;", id)
-                .execute(&mut tran)
+                .execute(&mut *tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
             sqlx::query!("DELETE FROM song WHERE song_id = ?;", id)
-                .execute(&mut tran)
+                .execute(&mut *tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         }
@@ -418,7 +439,7 @@ impl Database {
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         for path in paths {
             sqlx::query!("INSERT OR IGNORE INTO folder(folder_path) VALUES(?);", path)
-                .execute(&mut tran)
+                .execute(&mut *tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         }

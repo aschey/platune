@@ -3,7 +3,7 @@ pub use crate::search::search_options::SearchOptions;
 pub use crate::search::search_result::SearchResult;
 use crate::{
     config::Config,
-    database::{Album, Database, DeletedEntry, LookupEntry},
+    database::{Database, DeletedEntry, LookupEntry},
     db_error::DbError,
     path_util::{clean_file_path, update_path, PathMut},
     sync::progress_stream::ProgressStream,
@@ -31,6 +31,14 @@ pub struct Manager {
     config: Arc<Box<dyn Config + Send + Sync>>,
     validate_paths: bool,
     delim: &'static str,
+}
+
+impl std::ops::Deref for Manager {
+    type Target = Database;
+
+    fn deref(&self) -> &Self::Target {
+        &self.db
+    }
 }
 
 impl Manager {
@@ -147,13 +155,6 @@ impl Manager {
         self.update_paths(&mut res).await;
 
         Ok(res)
-    }
-
-    pub async fn albums_by_album_artists(
-        &self,
-        album_artist_ids: Vec<i64>,
-    ) -> Result<Vec<Album>, DbError> {
-        self.db.albums_by_album_artists(album_artist_ids).await
     }
 
     pub async fn rename_path<P>(&mut self, from: P, to: P) -> Result<(), DbError>

@@ -159,6 +159,29 @@ impl Management for ManagementImpl {
         }))
     }
 
+    async fn get_album_artists_by_names(
+        &self,
+        request: Request<NameMessage>,
+    ) -> Result<Response<EntitiesMessage>, Status> {
+        let request = request.into_inner();
+        let entities = self
+            .manager
+            .read()
+            .await
+            .album_artists_by_names(request.names)
+            .await
+            .map_err(|e| format_error(format!("Error getting albums: {e:?}")))?;
+        Ok(Response::new(EntitiesMessage {
+            entities: entities
+                .into_iter()
+                .map(|e| EntityMessage {
+                    name: e.name,
+                    id: e.id,
+                })
+                .collect(),
+        }))
+    }
+
     async fn lookup(
         &self,
         request: Request<LookupRequest>,

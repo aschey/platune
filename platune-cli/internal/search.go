@@ -6,25 +6,8 @@ import (
 	"strings"
 
 	platune "github.com/aschey/platune/client"
-	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
-
-var (
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	helpStyle         = list.DefaultStyles().HelpStyle.PaddingLeft(4).PaddingBottom(1)
-	quitTextStyle     = lipgloss.NewStyle().Margin(1, 0, 2, 4)
-)
-
-type model struct {
-	list     list.Model
-	choice   item
-	client   *ManagementClient
-	callback func(entries []*platune.LookupEntry)
-}
 
 var noResultsStr string = "No results"
 
@@ -74,8 +57,24 @@ func (s *Search) ProcessSearchResults(
 
 				dbCallback(lookupResults.Entries)
 				return NewInfoModel("Added " + selected.Entry + " " + selected.Description + " to the queue"), nil
-			} else {
-				return s.renderSearchResults(&platune.SearchResponse{Results: []*platune.SearchResult{selected}}, dbCallback), nil
+			} else if selected.EntryType == platune.EntryType_ARTIST {
+				albumArtistResponse, err := s.client.GetAlbumArtistsByNames([]string{selected.Entry})
+				if err != nil {
+					return nil, err
+				}
+				if len(albumArtistResponse.Entities) == 0 {
+					return NewInfoModel("No albums to show"), nil
+				}
+				albumArtist := albumArtistResponse.Entities[0]
+				albumsResponse, err := s.client.GetAlbumsByAlbumArtists([]int64{albumArtist.Id})
+				if err != nil {
+					return nil, err
+				}
+				items := []displayItem{}
+				for _, album := range albumsResponse.Entries {
+					items = append(items, displayItem{title: album.Album})
+				}
+				return s.renderDisplay("Albums by "+selected.Entry, items, func(di []displayItem) {}), nil
 			}
 		}
 

@@ -20,17 +20,19 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Management_StartSync_FullMethodName          = "/management_rpc.Management/StartSync"
-	Management_AddFolders_FullMethodName         = "/management_rpc.Management/AddFolders"
-	Management_GetAllFolders_FullMethodName      = "/management_rpc.Management/GetAllFolders"
-	Management_RegisterMount_FullMethodName      = "/management_rpc.Management/RegisterMount"
-	Management_GetRegisteredMount_FullMethodName = "/management_rpc.Management/GetRegisteredMount"
-	Management_Search_FullMethodName             = "/management_rpc.Management/Search"
-	Management_Lookup_FullMethodName             = "/management_rpc.Management/Lookup"
-	Management_GetSongByPath_FullMethodName      = "/management_rpc.Management/GetSongByPath"
-	Management_GetDeleted_FullMethodName         = "/management_rpc.Management/GetDeleted"
-	Management_DeleteTracks_FullMethodName       = "/management_rpc.Management/DeleteTracks"
-	Management_SubscribeEvents_FullMethodName    = "/management_rpc.Management/SubscribeEvents"
+	Management_StartSync_FullMethodName               = "/management_rpc.Management/StartSync"
+	Management_AddFolders_FullMethodName              = "/management_rpc.Management/AddFolders"
+	Management_GetAllFolders_FullMethodName           = "/management_rpc.Management/GetAllFolders"
+	Management_RegisterMount_FullMethodName           = "/management_rpc.Management/RegisterMount"
+	Management_GetRegisteredMount_FullMethodName      = "/management_rpc.Management/GetRegisteredMount"
+	Management_Search_FullMethodName                  = "/management_rpc.Management/Search"
+	Management_Lookup_FullMethodName                  = "/management_rpc.Management/Lookup"
+	Management_GetSongByPath_FullMethodName           = "/management_rpc.Management/GetSongByPath"
+	Management_GetAlbumsByAlbumArtists_FullMethodName = "/management_rpc.Management/GetAlbumsByAlbumArtists"
+	Management_GetAlbumArtistsByNames_FullMethodName  = "/management_rpc.Management/GetAlbumArtistsByNames"
+	Management_GetDeleted_FullMethodName              = "/management_rpc.Management/GetDeleted"
+	Management_DeleteTracks_FullMethodName            = "/management_rpc.Management/DeleteTracks"
+	Management_SubscribeEvents_FullMethodName         = "/management_rpc.Management/SubscribeEvents"
 )
 
 // ManagementClient is the client API for Management service.
@@ -45,6 +47,8 @@ type ManagementClient interface {
 	Search(ctx context.Context, opts ...grpc.CallOption) (Management_SearchClient, error)
 	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*LookupResponse, error)
 	GetSongByPath(ctx context.Context, in *PathMessage, opts ...grpc.CallOption) (*SongResponse, error)
+	GetAlbumsByAlbumArtists(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*AlbumResponse, error)
+	GetAlbumArtistsByNames(ctx context.Context, in *NameMessage, opts ...grpc.CallOption) (*EntitiesMessage, error)
 	GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error)
 	DeleteTracks(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Management_SubscribeEventsClient, error)
@@ -152,6 +156,24 @@ func (c *managementClient) GetSongByPath(ctx context.Context, in *PathMessage, o
 	return out, nil
 }
 
+func (c *managementClient) GetAlbumsByAlbumArtists(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*AlbumResponse, error) {
+	out := new(AlbumResponse)
+	err := c.cc.Invoke(ctx, Management_GetAlbumsByAlbumArtists_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *managementClient) GetAlbumArtistsByNames(ctx context.Context, in *NameMessage, opts ...grpc.CallOption) (*EntitiesMessage, error) {
+	out := new(EntitiesMessage)
+	err := c.cc.Invoke(ctx, Management_GetAlbumArtistsByNames_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *managementClient) GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error) {
 	out := new(GetDeletedResponse)
 	err := c.cc.Invoke(ctx, Management_GetDeleted_FullMethodName, in, out, opts...)
@@ -214,6 +236,8 @@ type ManagementServer interface {
 	Search(Management_SearchServer) error
 	Lookup(context.Context, *LookupRequest) (*LookupResponse, error)
 	GetSongByPath(context.Context, *PathMessage) (*SongResponse, error)
+	GetAlbumsByAlbumArtists(context.Context, *IdMessage) (*AlbumResponse, error)
+	GetAlbumArtistsByNames(context.Context, *NameMessage) (*EntitiesMessage, error)
 	GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error)
 	DeleteTracks(context.Context, *IdMessage) (*emptypb.Empty, error)
 	SubscribeEvents(*emptypb.Empty, Management_SubscribeEventsServer) error
@@ -247,6 +271,12 @@ func (UnimplementedManagementServer) Lookup(context.Context, *LookupRequest) (*L
 }
 func (UnimplementedManagementServer) GetSongByPath(context.Context, *PathMessage) (*SongResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSongByPath not implemented")
+}
+func (UnimplementedManagementServer) GetAlbumsByAlbumArtists(context.Context, *IdMessage) (*AlbumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAlbumsByAlbumArtists not implemented")
+}
+func (UnimplementedManagementServer) GetAlbumArtistsByNames(context.Context, *NameMessage) (*EntitiesMessage, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAlbumArtistsByNames not implemented")
 }
 func (UnimplementedManagementServer) GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDeleted not implemented")
@@ -422,6 +452,42 @@ func _Management_GetSongByPath_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Management_GetAlbumsByAlbumArtists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IdMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).GetAlbumsByAlbumArtists(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Management_GetAlbumsByAlbumArtists_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).GetAlbumsByAlbumArtists(ctx, req.(*IdMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Management_GetAlbumArtistsByNames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NameMessage)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ManagementServer).GetAlbumArtistsByNames(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Management_GetAlbumArtistsByNames_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ManagementServer).GetAlbumArtistsByNames(ctx, req.(*NameMessage))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Management_GetDeleted_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(emptypb.Empty)
 	if err := dec(in); err != nil {
@@ -513,6 +579,14 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSongByPath",
 			Handler:    _Management_GetSongByPath_Handler,
+		},
+		{
+			MethodName: "GetAlbumsByAlbumArtists",
+			Handler:    _Management_GetAlbumsByAlbumArtists_Handler,
+		},
+		{
+			MethodName: "GetAlbumArtistsByNames",
+			Handler:    _Management_GetAlbumArtistsByNames_Handler,
 		},
 		{
 			MethodName: "GetDeleted",

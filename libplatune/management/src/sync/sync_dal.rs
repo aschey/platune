@@ -33,7 +33,7 @@ impl<'a> SyncDAL<'a> {
             artist,
             self.timestamp
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -47,7 +47,7 @@ impl<'a> SyncDAL<'a> {
             album_artist,
             self.timestamp
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -65,7 +65,7 @@ impl<'a> SyncDAL<'a> {
             album_artist,
             self.timestamp
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -96,7 +96,7 @@ impl<'a> SyncDAL<'a> {
             self.timestamp,
             path
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -109,7 +109,7 @@ impl<'a> SyncDAL<'a> {
             ",
             self.timestamp
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -128,7 +128,7 @@ impl<'a> SyncDAL<'a> {
             );
             ",
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -141,7 +141,7 @@ impl<'a> SyncDAL<'a> {
             );
             ",
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -158,7 +158,7 @@ impl<'a> SyncDAL<'a> {
             "#,
             MIN_LEN as i32
         )
-        .fetch_all(&mut self.tran)
+        .fetch_all(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?
         .into_iter()
@@ -184,7 +184,7 @@ impl<'a> SyncDAL<'a> {
         )
         .bind(entry_value)
         .bind(acronym)
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
@@ -219,7 +219,7 @@ impl<'a> SyncDAL<'a> {
         )
         .bind(entry_value)
         .bind(acronym)
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -289,7 +289,7 @@ impl<'a> SyncDAL<'a> {
             fingerprint,
             self.timestamp
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
@@ -341,7 +341,7 @@ impl<'a> SyncDAL<'a> {
             "",
             fingerprint
         )
-        .execute(&mut self.tran)
+        .execute(&mut *self.tran)
         .await
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
