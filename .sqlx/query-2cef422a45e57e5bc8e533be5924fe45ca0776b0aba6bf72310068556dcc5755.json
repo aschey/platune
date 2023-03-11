@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE OR IGNORE song\n            set song_path = REPLACE(song_path, ?, ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "2cef422a45e57e5bc8e533be5924fe45ca0776b0aba6bf72310068556dcc5755"
+}

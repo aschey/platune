@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            DELETE FROM deleted_song as ds\n            WHERE EXISTS(SELECT 1 FROM song s WHERE s.song_id = ds.song_id AND s.last_scanned_date = ?)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "a46da2c08a969e2fb83eadd3e286d0947fe9cdfddab52a39ca2e54b4c6fe297d"
+}

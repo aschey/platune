@@ -64,15 +64,8 @@ func (s *Search) handleSearchResult(searchResult *platune.SearchResult, dbCallba
 
 		dbCallback(lookupResults.Entries)
 		return NewInfoModel("Added " + searchResult.Entry + " " + searchResult.Description + " to the queue"), nil
-	case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
+	case platune.EntryType_ARTIST:
 		albumArtistIds := searchResult.CorrelationIds
-		if searchResult.EntryType == platune.EntryType_ARTIST {
-			albumArtistResponse, err := s.client.GetAlbumArtistsByNames([]string{searchResult.Entry})
-			if err != nil {
-				return nil, err
-			}
-			albumArtistIds = []int64{albumArtistResponse.Entities[0].Id}
-		}
 		albumsResponse, err := s.client.GetAlbumsByAlbumArtists(albumArtistIds)
 		if err != nil {
 			return nil, err

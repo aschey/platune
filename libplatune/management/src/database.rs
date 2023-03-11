@@ -249,7 +249,6 @@ impl Database {
             EntryType::Album => self.all_by_albums(correlation_ids).await,
             EntryType::Song => self.all_by_ids(correlation_ids).await,
             EntryType::Artist => self.all_by_artists(correlation_ids).await,
-            EntryType::AlbumArtist => self.all_by_album_artists(correlation_ids).await,
         }
     }
 
@@ -261,13 +260,13 @@ impl Database {
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE s.song_path = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             path
         )
@@ -281,37 +280,15 @@ impl Database {
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM artist ar
             INNER JOIN song s ON s.artist_id = ar.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
-            WHERE ar.artist_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
+            WHERE ar.artist_id = $1 OR aa.artist_id = $1
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             artist_ids[0]
-        )
-        .fetch_all(&self.read_pool)
-        .await
-        .map_err(|e| DbError::DbError(format!("{e:?}")))
-    }
-
-    async fn all_by_album_artists(
-        &self,
-        album_artist_ids: Vec<i64>,
-    ) -> Result<Vec<LookupEntry>, DbError> {
-        sqlx::query_as!(
-            LookupEntry,
-            "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
-            FROM album_artist aa
-            INNER JOIN album al ON al.album_artist_id = aa.album_artist_id
-            INNER JOIN song s ON s.album_id = al.album_id
-            INNER JOIN artist ar ON ar.artist_id = s.artist_id
-            WHERE aa.album_artist_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;",
-            album_artist_ids[0]
         )
         .fetch_all(&self.read_pool)
         .await
@@ -323,13 +300,13 @@ impl Database {
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track 
+            al.album_name album, aa.artist_name album_artist, s.track_number track 
             FROM album al
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
             INNER JOIN song s ON s.album_id = al.album_id
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             WHERE al.album_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             album_ids[0]
         )
@@ -343,13 +320,13 @@ impl Database {
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE s.song_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             song_ids[0]
         )
@@ -360,35 +337,17 @@ impl Database {
 
     pub async fn albums_by_album_artists(
         &self,
-        album_artist_ids: Vec<i64>,
+        artist_ids: Vec<i64>,
     ) -> Result<Vec<Album>, DbError> {
         sqlx::query_as!(
             Album,
             "
-            SELECT al.album_name album, al.album_id, aa.album_artist_name album_artist, aa.album_artist_id
+            SELECT al.album_name album, al.album_id, aa.artist_name album_artist, aa.artist_id album_artist_id
             FROM album al
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
-            WHERE aa.album_artist_id = ?
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
+            WHERE aa.artist_id = ?
             ",
-            album_artist_ids[0]
-        )
-        .fetch_all(&self.read_pool)
-        .await
-        .map_err(|e| DbError::DbError(format!("{e:?}")))
-    }
-
-    pub async fn album_artists_by_names(
-        &self,
-        album_artist_names: Vec<String>,
-    ) -> Result<Vec<Entity>, DbError> {
-        sqlx::query_as!(
-            Entity,
-            "
-            select album_artist_id as id, album_artist_name as name
-            from album_artist
-            where album_artist_name = ?
-            ",
-            album_artist_names[0]
+            artist_ids[0]
         )
         .fetch_all(&self.read_pool)
         .await

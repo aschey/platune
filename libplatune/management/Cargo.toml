@@ -22,14 +22,15 @@ futures = "0.3"
 ignore = "0.4"
 itertools = "0.10"
 lazy_static = "1"
-lofty = {version = "0.8", git = "https://github.com/aschey/lofty-rs", rev = "d7877f0a489f66edad47df627d2bed74098f6b11"}
+lofty = {path = "../../../lofty-rs"}
 log = "0.4"
 notify = {version = "5", default-features = false, features = ["macos_fsevent"]}
 num_cpus = "1"
 regex = "1"
 rust-embed = "6.6.0"
 slite = {git = "https://github.com/aschey/slite", rev = "03431a4d60cc1b66f531099c2a316c61fab251ef", default-features = false, features = ["read-files"]}
-sqlx = {git = "https://github.com/launchbadge/sqlx", rev = "aff632a9ec6ef04186b2cb96dbec8e7e665c1e01", default-features = false, features = ["sqlite", "any", "macros", "runtime-tokio"]}
+sqlx = {path = "../../../sqlx", default-features = false, features = ["sqlite", "any", "macros", "runtime-tokio"]}
+#{git = "https://github.com/launchbadge/sqlx", rev = "aff632a9ec6ef04186b2cb96dbec8e7e665c1e01", default-features = false, features = ["sqlite", "any", "macros", "runtime-tokio"]}
 strum = {version = "0.24", features = ["derive"]}
 tap = "1"
 thiserror = "1"

@@ -233,10 +233,8 @@ impl SyncEngine {
                 let fingerprint = hasher.finish().to_string();
 
                 dal.add_artist(&metadata.artists).await?;
-                if metadata.album_artists.is_empty() {
-                    dal.add_album_artist(&metadata.artists).await?;
-                } else {
-                    dal.add_album_artist(&metadata.album_artists).await?;
+                if metadata.album_artists != metadata.artists {
+                    dal.add_artist(&metadata.album_artists).await?;
                 }
 
                 dal.add_album(&metadata.album, &metadata.album_artists)
@@ -310,7 +308,7 @@ impl SyncEngine {
                     .map_err(|e| {
                         SyncError::TagReadError(format!("Error opening file {file_path:?}: {e:?}"))
                     })?
-                    .read(true)
+                    .read()
                     .map_err(|e| {
                         SyncError::TagReadError(format!(
                             "Error reading tag from file {file_path:?}: {e:?}"

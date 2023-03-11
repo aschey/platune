@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO deleted_song(song_id)\n            SELECT song_id FROM song WHERE last_scanned_date < ?\n            AND song_path like ?\n            ON CONFLICT DO NOTHING;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "6ba24af8370d3b84314555d9c24a5f2a91dcadf26a958b48ac30bbb58db0eaa0"
+}

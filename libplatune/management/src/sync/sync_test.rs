@@ -1,7 +1,7 @@
 use crate::{config::MemoryConfig, database::Database, manager::Manager};
 use futures::StreamExt;
 use itertools::Itertools;
-use lofty::{Accessor, ItemKey, Probe, TagExt};
+use lofty::{Accessor, ItemKey, Probe, TagExt, TaggedFileExt};
 use pretty_assertions::assert_eq;
 use rstest::*;
 use std::{
@@ -247,7 +247,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
     fs::copy("../test_assets/test.mp3", &song1_path).unwrap();
     fs::copy("../test_assets/test2.mp3", &song2_path).unwrap();
     {
-        let mut track1 = Probe::open(&song1_path).unwrap().read(false).unwrap();
+        let mut track1 = Probe::open(&song1_path).unwrap().read().unwrap();
         let tag1 = track1.primary_tag_mut().unwrap();
         tag1.set_album("album".to_owned());
         tag1.insert_text(ItemKey::AlbumArtist, "artist1".to_owned());
@@ -256,7 +256,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
     }
 
     {
-        let mut track2 = Probe::open(&song2_path).unwrap().read(false).unwrap();
+        let mut track2 = Probe::open(&song2_path).unwrap().read().unwrap();
         let tag2 = track2.primary_tag_mut().unwrap();
         tag2.set_album("album".to_owned());
         if do_update {
@@ -279,7 +279,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
 
     if do_update {
         {
-            let mut track2 = Probe::open(&song2_path).unwrap().read(false).unwrap();
+            let mut track2 = Probe::open(&song2_path).unwrap().read().unwrap();
             let tag2 = track2.primary_tag_mut().unwrap();
             tag2.insert_text(ItemKey::AlbumArtist, "artist2".to_owned());
             tag2.save_to_path(&song2_path).unwrap();

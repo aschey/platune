@@ -2122,14 +2122,13 @@ dependencies = [
 
 [[package]]
 name = "lofty"
-version = "0.8.0"
-source = "git+https://github.com/aschey/lofty-rs?rev=d7877f0a489f66edad47df627d2bed74098f6b11#d7877f0a489f66edad47df627d2bed74098f6b11"
+version = "0.11.0"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.21.0",
  "byteorder",
- "cfg-if",
  "flate2",
  "lofty_attr",
+ "log",
  "ogg_pager",
  "once_cell",
  "paste",
@@ -2137,9 +2136,9 @@ dependencies = [
 
 [[package]]
 name = "lofty_attr"
-version = "0.3.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d906642cda9ed88dfb98ece66d113c5dd73c490da5d11ba4554bf75d78383f8"
+checksum = "336dfabb2fdfd932cebfcaa5d0fc57abac0d49f6ae9ddaa7c47a51bf9f74f966"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2520,9 +2519,9 @@ dependencies = [
 
 [[package]]
 name = "ogg_pager"
-version = "0.3.2"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a846c4c0578b95d4568e6f48210dd6045e7a9572af2b020062d06b6dea049f4"
+checksum = "0d218a406e5de88e1c492d0162d569916f7436efe851ba5cc40a4bf4fa97cb40"
 dependencies = [
  "byteorder",
 ]
@@ -3714,7 +3713,6 @@ dependencies = [
 [[package]]
 name = "sqlx"
 version = "0.7.0-alpha.1"
-source = "git+https://github.com/launchbadge/sqlx?rev=aff632a9ec6ef04186b2cb96dbec8e7e665c1e01#aff632a9ec6ef04186b2cb96dbec8e7e665c1e01"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -3726,7 +3724,6 @@ dependencies = [
 [[package]]
 name = "sqlx-core"
 version = "0.7.0-alpha.1"
-source = "git+https://github.com/launchbadge/sqlx?rev=aff632a9ec6ef04186b2cb96dbec8e7e665c1e01#aff632a9ec6ef04186b2cb96dbec8e7e665c1e01"
 dependencies = [
  "ahash",
  "atoi",
@@ -3766,7 +3763,6 @@ dependencies = [
 [[package]]
 name = "sqlx-macros"
 version = "0.7.0-alpha.1"
-source = "git+https://github.com/launchbadge/sqlx?rev=aff632a9ec6ef04186b2cb96dbec8e7e665c1e01#aff632a9ec6ef04186b2cb96dbec8e7e665c1e01"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3778,7 +3774,6 @@ dependencies = [
 [[package]]
 name = "sqlx-macros-core"
 version = "0.7.0-alpha.1"
-source = "git+https://github.com/launchbadge/sqlx?rev=aff632a9ec6ef04186b2cb96dbec8e7e665c1e01#aff632a9ec6ef04186b2cb96dbec8e7e665c1e01"
 dependencies = [
  "dotenvy",
  "either",
@@ -3801,7 +3796,6 @@ dependencies = [
 [[package]]
 name = "sqlx-mysql"
 version = "0.7.0-alpha.1"
-source = "git+https://github.com/launchbadge/sqlx?rev=aff632a9ec6ef04186b2cb96dbec8e7e665c1e01#aff632a9ec6ef04186b2cb96dbec8e7e665c1e01"
 dependencies = [
  "atoi",
  "base64 0.21.0",
@@ -3842,7 +3836,6 @@ dependencies = [
 [[package]]
 name = "sqlx-postgres"
 version = "0.7.0-alpha.1"
-source = "git+https://github.com/launchbadge/sqlx?rev=aff632a9ec6ef04186b2cb96dbec8e7e665c1e01#aff632a9ec6ef04186b2cb96dbec8e7e665c1e01"
 dependencies = [
  "atoi",
  "base64 0.21.0",
@@ -3879,7 +3872,6 @@ dependencies = [
 [[package]]
 name = "sqlx-sqlite"
 version = "0.7.0-alpha.1"
-source = "git+https://github.com/launchbadge/sqlx?rev=aff632a9ec6ef04186b2cb96dbec8e7e665c1e01#aff632a9ec6ef04186b2cb96dbec8e7e665c1e01"
 dependencies = [
  "atoi",
  "flume",

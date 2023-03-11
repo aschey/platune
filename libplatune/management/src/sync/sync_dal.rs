@@ -38,20 +38,6 @@ impl<'a> SyncDAL<'a> {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    pub(crate) async fn add_album_artist(
-        &mut self,
-        album_artist: &str,
-    ) -> Result<SqliteQueryResult, DbError> {
-        sqlx::query!(
-            "INSERT OR IGNORE INTO album_artist(album_artist_name, created_date) values(?, ?);",
-            album_artist,
-            self.timestamp
-        )
-        .execute(&mut *self.tran)
-        .await
-        .map_err(|e| DbError::DbError(format!("{e:?}")))
-    }
-
     pub(crate) async fn add_album(
         &mut self,
         album: &str,
@@ -59,8 +45,8 @@ impl<'a> SyncDAL<'a> {
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
             "
-        INSERT OR IGNORE INTO album(album_name, album_artist_id, created_date) 
-        values(?, (SELECT album_artist_id FROM album_artist WHERE album_artist_name = ?), ?);",
+        INSERT OR IGNORE INTO album(album_name, artist_id, created_date) 
+        values(?, (SELECT artist_id FROM artist WHERE artist_name = ?), ?);",
             album,
             album_artist,
             self.timestamp
@@ -259,9 +245,9 @@ impl<'a> SyncDAL<'a> {
                 (SELECT artist_id FROM artist WHERE artist_name = ?), 
                 ?, 
                 (
-                    SELECT album_id FROM album a
-                    INNER JOIN album_artist aa ON a.album_artist_id = aa.album_artist_id
-                    WHERE a.album_name = ? AND aa.album_artist_name = ?
+                    SELECT album_id FROM album al
+                    INNER JOIN artist ar ON ar.artist_id = al.artist_id
+                    WHERE al.album_name = ? AND ar.artist_name = ?
                 ), 
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
@@ -308,8 +294,8 @@ impl<'a> SyncDAL<'a> {
             artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),
             song_title = $4,
             album_id = (SELECT album_id FROM album a
-                        INNER JOIN album_artist aa ON a.album_artist_id = aa.album_artist_id
-                        WHERE a.album_name = $5 AND aa.album_artist_name = $6),
+                        INNER JOIN artist aa ON a.artist_id = aa.artist_id
+                        WHERE a.album_name = $5 AND aa.artist_name = $6),
             track_number = $7,
             disc_number = $8,
             song_year = $9,

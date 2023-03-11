@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT ds.song_id, song_path FROM deleted_song ds\n            INNER JOIN song s ON s.song_id = ds.song_id;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "song_id",
+        "ordinal": 0,
+        "type_info": "Int64"
+      },
+      {
+        "name": "song_path",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "fbca921460d753f0db8b88bf572337bff9f50a34689cf7828fdc53c5b818dde6"
+}

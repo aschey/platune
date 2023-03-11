@@ -167,12 +167,6 @@ func (p *ManagementClient) GetAlbumsByAlbumArtists(ids []int64) (*platune.AlbumR
 	return p.managementClient.GetAlbumsByAlbumArtists(ctx, &platune.IdMessage{Ids: ids})
 }
 
-func (p *ManagementClient) GetAlbumArtistsByNames(names []string) (*platune.EntitiesMessage, error) {
-	ctx, cancel := p.initRequest()
-	defer cancel()
-	return p.managementClient.GetAlbumArtistsByNames(ctx, &platune.NameMessage{Names: names})
-}
-
 func (p *ManagementClient) GetDeleted() (*platune.GetDeletedResponse, error) {
 	ctx, cancel := p.initRequest()
 	defer cancel()

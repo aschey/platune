@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT al.album_name album, al.album_id, aa.artist_name album_artist, aa.artist_id album_artist_id\n            FROM album al\n            INNER JOIN artist aa ON aa.artist_id = al.artist_id\n            WHERE aa.artist_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "album",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_id",
+        "ordinal": 1,
+        "type_info": "Int64"
+      },
+      {
+        "name": "album_artist",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_artist_id",
+        "ordinal": 3,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "be7160600c3b80cf37658a608bc3a8ba7519a765d5c6b2bdd039caa52c912ca6"
+}
