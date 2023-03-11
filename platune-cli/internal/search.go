@@ -46,38 +46,49 @@ func (s *Search) ProcessSearchResults(
 				return NewInfoModel(noResultsStr), nil
 			} else if len(results.Results) == 1 {
 				selected = results.Results[0]
+				return s.handleSearchResult(selected, dbCallback)
 			} else {
 				return s.renderSearchResults(results, dbCallback), nil
 			}
+		} else {
+			return s.handleSearchResult(selected, dbCallback)
 		}
+	}
+	return nil, nil
+}
 
-		if selected != nil {
-			if selected.EntryType == platune.EntryType_SONG {
-				lookupResults, _ := s.client.Lookup(selected.EntryType, selected.CorrelationIds)
+func (s *Search) handleSearchResult(searchResult *platune.SearchResult, dbCallback func(entries []*platune.LookupEntry)) (tea.Model, error) {
+	switch searchResult.EntryType {
+	case platune.EntryType_SONG:
+		lookupResults, _ := s.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 
-				dbCallback(lookupResults.Entries)
-				return NewInfoModel("Added " + selected.Entry + " " + selected.Description + " to the queue"), nil
-			} else if selected.EntryType == platune.EntryType_ARTIST {
-				albumArtistResponse, err := s.client.GetAlbumArtistsByNames([]string{selected.Entry})
-				if err != nil {
-					return nil, err
-				}
-				if len(albumArtistResponse.Entities) == 0 {
-					return NewInfoModel("No albums to show"), nil
-				}
-				albumArtist := albumArtistResponse.Entities[0]
-				albumsResponse, err := s.client.GetAlbumsByAlbumArtists([]int64{albumArtist.Id})
-				if err != nil {
-					return nil, err
-				}
-				items := []displayItem{}
-				for _, album := range albumsResponse.Entries {
-					items = append(items, displayItem{title: album.Album})
-				}
-				return s.renderDisplay("Albums by "+selected.Entry, items, func(di []displayItem) {}), nil
+		dbCallback(lookupResults.Entries)
+		return NewInfoModel("Added " + searchResult.Entry + " " + searchResult.Description + " to the queue"), nil
+	case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
+		albumArtistIds := searchResult.CorrelationIds
+		if searchResult.EntryType == platune.EntryType_ARTIST {
+			albumArtistResponse, err := s.client.GetAlbumArtistsByNames([]string{searchResult.Entry})
+			if err != nil {
+				return nil, err
 			}
+			albumArtistIds = []int64{albumArtistResponse.Entities[0].Id}
 		}
-
+		albumsResponse, err := s.client.GetAlbumsByAlbumArtists(albumArtistIds)
+		if err != nil {
+			return nil, err
+		}
+		items := []displayItem{}
+		for _, album := range albumsResponse.Entries {
+			items = append(items, displayItem{title: album.Album})
+		}
+		return s.renderDisplay("Albums by "+searchResult.Entry, items, func(di []displayItem) {}), nil
+	case platune.EntryType_ALBUM:
+		lookupResults, _ := s.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
+		items := []displayItem{}
+		for _, song := range lookupResults.Entries {
+			items = append(items, displayItem{title: song.Song})
+		}
+		return s.renderDisplay(searchResult.Entry, items, func(di []displayItem) {}), nil
 	}
 	return nil, nil
 }
