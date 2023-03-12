@@ -21,9 +21,3 @@ func InitializeQueueCommand(playerClient *internal.PlayerClient, managementClien
 	queueCmd := newQueueCmd(queueCommands)
 	return queueCmd
 }
-
-// wire.go:
-
-type commands struct {
-	add addQueueCmd
-}

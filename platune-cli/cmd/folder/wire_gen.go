@@ -22,10 +22,3 @@ func InitializeFolderCommand(playerClient *internal.PlayerClient, managementClie
 	folderCmd := newFolderCmd(folderCommands)
 	return folderCmd
 }
-
-// wire.go:
-
-type commands struct {
-	add  addFolderCmd
-	list listFoldersCmd
-}

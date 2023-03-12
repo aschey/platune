@@ -6,6 +6,8 @@ dependencies = ["install-hooks"]
 script = '''
 # DB cli
 cargo install sqlx-cli --no-default-features --features sqlite,rustls
+# dependency injection for cli
+go install github.com/google/wire/cmd/wire@latest
 # mocking for cli
 go install github.com/golang/mock/mockgen@latest
 # cli grpc generation
