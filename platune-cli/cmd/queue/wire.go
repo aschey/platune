@@ -9,11 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type commands struct {
-	add addQueueCmd
-}
-
-func InitializeQueueCommand(playerClient *internal.PlayerClient, managementClient *internal.ManagementClient) QueueCmd {
+func InitializeQueueCommand(
+	playerClient *internal.PlayerClient,
+	managementClient *internal.ManagementClient,
+) QueueCmd {
 	wire.Build(newAddQueueCmd, newQueueCmd, internal.NewSearch, wire.Struct(new(commands), "*"))
 	return &cobra.Command{}
 }

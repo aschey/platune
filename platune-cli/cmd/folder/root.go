@@ -4,6 +4,11 @@ import "github.com/spf13/cobra"
 
 type FolderCmd *cobra.Command
 
+type commands struct {
+	add  addFolderCmd
+	list listFoldersCmd
+}
+
 func newFolderCmd(subcommands commands) FolderCmd {
 	rootCmd := &cobra.Command{
 		Use:   "folder <command>",

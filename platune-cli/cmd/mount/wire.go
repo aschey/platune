@@ -1,7 +1,7 @@
 //go:build wireinject
 // +build wireinject
 
-package folder
+package mount
 
 import (
 	"github.com/aschey/platune/cli/internal"
@@ -9,10 +9,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func InitializeFolderCommand(
-	playerClient *internal.PlayerClient,
+func InitializeMountCommand(
 	managementClient *internal.ManagementClient,
-) FolderCmd {
-	wire.Build(newAddFolderCmd, newFolderCmd, newListFoldersCmd, wire.Struct(new(commands), "*"))
+) MountCmd {
+	wire.Build(newMountCmd, newSetMountCmd, newGetMountCmd, wire.Struct(new(commands), "*"))
 	return &cobra.Command{}
 }

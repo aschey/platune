@@ -4,6 +4,10 @@ import "github.com/spf13/cobra"
 
 type QueueCmd *cobra.Command
 
+type commands struct {
+	add addQueueCmd
+}
+
 func newQueueCmd(subcommands commands) QueueCmd {
 	rootCmd := &cobra.Command{
 		Use:   "queue <command>",

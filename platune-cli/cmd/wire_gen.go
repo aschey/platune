@@ -8,6 +8,7 @@ package cmd
 
 import (
 	"github.com/aschey/platune/cli/cmd/folder"
+	"github.com/aschey/platune/cli/cmd/mount"
 	"github.com/aschey/platune/cli/cmd/queue"
 	"github.com/aschey/platune/cli/internal"
 )
@@ -27,20 +28,13 @@ func InitializeCommands() (commands, error) {
 	}
 	folderCmd := folder.InitializeFolderCommand(playerClient, managementClient)
 	queueCmd := queue.InitializeQueueCommand(playerClient, managementClient)
+	mountCmd := mount.InitializeMountCommand(managementClient)
 	cmdCommands := commands{
 		pause:  cmdPauseCmd,
 		resume: cmdResumeCmd,
 		folder: folderCmd,
 		queue:  queueCmd,
+		mount:  mountCmd,
 	}
 	return cmdCommands, nil
-}
-
-// wire.go:
-
-type commands struct {
-	pause  pauseCmd
-	resume resumeCmd
-	folder folder.FolderCmd
-	queue  queue.QueueCmd
 }

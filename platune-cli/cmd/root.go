@@ -8,6 +8,9 @@ import (
 	cprompt "github.com/aschey/bubbleprompt-cobra"
 	"github.com/aschey/bubbleprompt/formatter"
 	"github.com/aschey/bubbleprompt/input/commandinput"
+	"github.com/aschey/platune/cli/cmd/folder"
+	"github.com/aschey/platune/cli/cmd/mount"
+	"github.com/aschey/platune/cli/cmd/queue"
 	"github.com/aschey/platune/cli/internal"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -29,6 +32,14 @@ var title = lipgloss.NewStyle().
 	PaddingRight(1).
 	Render(fmt.Sprintf("%s\n%s", title1, title2)) + "\n" + description
 
+type commands struct {
+	pause  pauseCmd
+	resume resumeCmd
+	folder folder.FolderCmd
+	queue  queue.QueueCmd
+	mount  mount.MountCmd
+}
+
 func Execute() {
 	rootCmd := &cobra.Command{
 		Use:   "platune-cli",
@@ -40,7 +51,14 @@ func Execute() {
 				return err
 			}
 			if interactive {
-				promptModel := cprompt.NewPrompt(cmd, cprompt.WithPromptOptions(prompt.WithFormatters[commandinput.CommandMetadata[internal.SearchMetadata]](formatter.DefaultFormatters())))
+				promptModel := cprompt.NewPrompt(
+					cmd,
+					cprompt.WithPromptOptions(
+						prompt.WithFormatters[commandinput.CommandMetadata[internal.SearchMetadata]](
+							formatter.DefaultFormatters(),
+						),
+					),
+				)
 				model := model{inner: promptModel}
 				_, err := tea.NewProgram(&model, tea.WithFilter(prompt.MsgFilter)).Run()
 				return err
@@ -60,6 +78,7 @@ func Execute() {
 	rootCmd.AddCommand(commands.resume)
 	rootCmd.AddCommand(commands.folder)
 	rootCmd.AddCommand(commands.queue)
+	rootCmd.AddCommand(commands.mount)
 
 	rootCmd.Flags().BoolP("interactive", "i", false, "Run in interactive mode")
 

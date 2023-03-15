@@ -13,7 +13,11 @@ import (
 
 type addQueueCmd *cobra.Command
 
-func newAddQueueCmd(playerclient *internal.PlayerClient, managementClient *internal.ManagementClient, search *internal.Search) addQueueCmd {
+func newAddQueueCmd(
+	playerclient *internal.PlayerClient,
+	managementClient *internal.ManagementClient,
+	search *internal.Search,
+) addQueueCmd {
 	addQueueCmd := &cobra.Command{
 		Use:   "add <song, artist, album, file path, or url>",
 		Short: "Adds a song to the end of the queue",
@@ -24,17 +28,23 @@ func newAddQueueCmd(playerclient *internal.PlayerClient, managementClient *inter
 				searchResult = selected.Metadata.Extra.Result
 			}
 			// println(selected.Metadata.Extra.Result.Entry)
-			results, err := search.ProcessSearchResults(args, searchResult,
+			results, err := search.ProcessSearchResults(
+				args,
+				searchResult,
 				func(file string) { playerclient.AddToQueue([]string{file}) },
-				func(entries []*platune.LookupEntry) { playerclient.AddSearchResultsToQueue(entries) })
+				func(entries []*platune.LookupEntry) { playerclient.AddSearchResultsToQueue(entries) },
+			)
 			if err != nil {
 				return err
 			}
 			return cprompt.ExecModel(cmd, results)
 		},
 	}
-	cprompt.Completer(addQueueCmd, func(cmd *cobra.Command, args []string, toComplete string) ([]suggestion.Suggestion[commandinput.CommandMetadata[internal.SearchMetadata]], error) {
-		searchResults, err := managementClient.Search(&platune.SearchRequest{Query: strings.Join(append(args, toComplete), " ")})
+	cprompt.Completer(addQueueCmd, func(cmd *cobra.Command, args []string, toComplete string) (
+		[]suggestion.Suggestion[commandinput.CommandMetadata[internal.SearchMetadata]], error) {
+		searchResults, err := managementClient.Search(
+			&platune.SearchRequest{Query: strings.Join(append(args, toComplete), " ")},
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -44,16 +54,19 @@ func newAddQueueCmd(playerclient *internal.PlayerClient, managementClient *inter
 			if len(strings.SplitN(result.Entry, " ", 2)) > 1 {
 				text = `"` + text + `"`
 			}
-			suggestions = append(suggestions, suggestion.Suggestion[commandinput.CommandMetadata[internal.SearchMetadata]]{
-				SuggestionText: result.Entry,
-				Text:           text,
-				Description:    result.Description,
-				Metadata: commandinput.CommandMetadata[internal.SearchMetadata]{
-					Extra: internal.SearchMetadata{
-						Result: result,
+			suggestions = append(
+				suggestions,
+				suggestion.Suggestion[commandinput.CommandMetadata[internal.SearchMetadata]]{
+					SuggestionText: result.Entry,
+					Text:           text,
+					Description:    result.Description,
+					Metadata: commandinput.CommandMetadata[internal.SearchMetadata]{
+						Extra: internal.SearchMetadata{
+							Result: result,
+						},
 					},
 				},
-			})
+			)
 		}
 		return suggestions, nil
 	})

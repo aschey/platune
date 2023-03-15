@@ -155,6 +155,12 @@ func (p *ManagementClient) SetMount(mount string) error {
 	return err
 }
 
+func (p *ManagementClient) GetRegisteredMount() (*platune.RegisteredMountMessage, error) {
+	ctx, cancel := p.initRequest()
+	defer cancel()
+	return p.managementClient.GetRegisteredMount(ctx, &emptypb.Empty{})
+}
+
 func (p *ManagementClient) GetSongByPath(path string) (*platune.SongResponse, error) {
 	ctx, cancel := p.initRequest()
 	defer cancel()
