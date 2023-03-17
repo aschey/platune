@@ -169,14 +169,14 @@ impl SyncEngine {
                             if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path)
                                 .tap_err(|e| error!("Error parsing tag metadata: {e:?}"))
                             {
-                                let file_path_str = clean_file_path(&file_path, &mount);
-
-                                if tags_tx
-                                    .blocking_send((metadata, file_path_str, file_path))
-                                    .tap_err(|e| error!("Error sending tag: {e:?}"))
-                                    .is_err()
-                                {
-                                    return WalkState::Quit;
+                                if let Ok(file_path_str) = clean_file_path(&file_path, &mount) {
+                                    if tags_tx
+                                        .blocking_send((metadata, file_path_str, file_path))
+                                        .tap_err(|e| error!("Error sending tag: {e:?}"))
+                                        .is_err()
+                                    {
+                                        return WalkState::Quit;
+                                    }
                                 }
                             }
                         }
@@ -245,7 +245,9 @@ impl SyncEngine {
             }
 
             for path in cleaned_paths {
-                dal.update_missing_songs(path).await?;
+                if let Ok(path) = path.tap_err(|e| error!("Error cleaning path: {e:?}")) {
+                    dal.update_missing_songs(path).await?;
+                }
             }
 
             dal.sync_spellfix().await?;

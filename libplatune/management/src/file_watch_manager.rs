@@ -1,6 +1,6 @@
-use crate::db_error::DbError;
 use crate::manager::Manager;
 use crate::sync::progress_stream::ProgressStream;
+use crate::{db_error::DbError, manager::ManagerError};
 use futures::StreamExt;
 use notify::{
     event::{EventKind, ModifyKind, RenameMode},
@@ -35,6 +35,8 @@ pub enum FileWatchError {
     WatchError(#[from] notify::Error),
     #[error(transparent)]
     DbError(#[from] DbError),
+    #[error(transparent)]
+    ManagerError(#[from] ManagerError),
     #[error("Thread communication error: {0}")]
     ThreadCommError(String),
 }

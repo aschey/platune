@@ -1,9 +1,10 @@
 use super::Config;
 use eyre::Result;
 use std::{cell::RefCell, sync::Mutex};
+use uuid::Uuid;
 
 pub struct MemoryConfig {
-    drive_id: Mutex<RefCell<Option<i64>>>,
+    drive_id: Mutex<RefCell<Option<Uuid>>>,
 }
 
 impl MemoryConfig {
@@ -15,11 +16,11 @@ impl MemoryConfig {
 }
 
 impl Config for MemoryConfig {
-    fn get_drive_id(&self) -> Option<i64> {
+    fn get_drive_id(&self) -> Option<Uuid> {
         *self.drive_id.lock().unwrap().borrow()
     }
 
-    fn set_drive_id(&self, id: i64) -> Result<()> {
+    fn set_drive_id(&self, id: Uuid) -> Result<()> {
         *self.drive_id.lock().unwrap().borrow_mut() = Some(id);
         Ok(())
     }

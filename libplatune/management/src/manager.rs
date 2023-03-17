@@ -8,7 +8,7 @@ use crate::{
     path_util::{clean_file_path, update_path, PathMut},
     sync::progress_stream::ProgressStream,
 };
-use regex::Regex;
+use normpath::PathExt;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
@@ -29,7 +29,6 @@ pub enum ManagerError {
 pub struct Manager {
     db: Database,
     config: Arc<Box<dyn Config + Send + Sync>>,
-    validate_paths: bool,
     delim: &'static str,
 }
 
@@ -46,18 +45,19 @@ impl Manager {
         Self {
             db: db.clone(),
             config,
-            validate_paths: true,
             delim: if cfg!(windows) { r"\" } else { "/" },
         }
     }
 
     pub async fn register_drive<P: AsRef<Path>>(&self, path: P) -> Result<(), ManagerError> {
         let path = path.as_ref();
-        if self.validate_paths && !path.exists() {
+        if !path.exists() {
             return Err(ManagerError::InvalidPath(path.to_owned()));
         }
 
-        let path = self.clean_path(&path.to_string_lossy());
+        let path = self
+            .clean_path(&*path.to_string_lossy())
+            .map_err(|_| ManagerError::InvalidPath(path.to_path_buf()))?;
 
         match self.config.get_drive_id() {
             Some(drive_id) => {
@@ -80,10 +80,19 @@ impl Manager {
             .get_all_folders()
             .await
             .map_err(ManagerError::DbError)?;
+
         for folder in folders {
             let new_folder = folder.replacen(&path, "", 1);
             self.db
-                .update_folder(folder, new_folder)
+                .update_folder(&folder, &new_folder)
+                .await
+                .map_err(ManagerError::DbError)?;
+
+            let mut folder = folder.clone();
+            self.update_path(&mut folder).await;
+            // Update song paths to remove drive prefix
+            self.db
+                .rename_path(&folder, &new_folder)
                 .await
                 .map_err(ManagerError::DbError)?;
         }
@@ -91,13 +100,16 @@ impl Manager {
         Ok(())
     }
 
-    pub async fn add_folder(&self, path: &str) -> Result<(), DbError> {
+    pub async fn add_folder(&self, path: &str) -> Result<(), ManagerError> {
         self.add_folders(vec![path]).await
     }
 
-    pub async fn add_folders(&self, paths: Vec<&str>) -> Result<(), DbError> {
-        let new_paths = self.replace_prefix(paths).await;
-        self.db.add_folders(new_paths).await
+    pub async fn add_folders(&self, paths: Vec<&str>) -> Result<(), ManagerError> {
+        let new_paths = self.replace_prefix(paths).await?;
+        self.db
+            .add_folders(new_paths)
+            .await
+            .map_err(ManagerError::DbError)
     }
 
     pub async fn get_all_folders(&self) -> Result<Vec<String>, DbError> {
@@ -115,18 +127,23 @@ impl Manager {
         Ok(self.db.sync(folders, mount).await)
     }
 
-    async fn replace_prefix(&self, paths: Vec<&str>) -> Vec<String> {
-        let paths = paths.into_iter().map(|new_path| self.clean_path(new_path));
+    async fn replace_prefix(&self, paths: Vec<&str>) -> Result<Vec<String>, ManagerError> {
+        let paths: Result<Vec<String>, ManagerError> = paths
+            .into_iter()
+            .map(|new_path| self.clean_path(new_path))
+            .collect();
+        let paths = paths?;
 
-        match self.get_registered_mount().await {
+        Ok(match self.get_registered_mount().await {
             Some(mount) => paths
+                .iter()
                 .map(|path| match path.find(&mount[..]) {
                     Some(0) => path.replacen(&mount[..], "", 1),
                     _ => path.to_owned(),
                 })
                 .collect::<Vec<_>>(),
-            None => paths.collect(),
-        }
+            None => paths,
+        })
     }
 
     pub async fn expand_paths(&self, folders: Vec<String>) -> Vec<String> {
@@ -162,9 +179,9 @@ impl Manager {
         P: AsRef<Path>,
     {
         let mount = self.get_registered_mount().await;
-        let from = clean_file_path(&from, &mount);
-        let to = clean_file_path(&to, &mount);
-        self.db.rename_path(from, to).await?;
+        let from = clean_file_path(&from, &mount).map_err(|e| DbError::DbError(e.to_string()))?;
+        let to = clean_file_path(&to, &mount).map_err(|e| DbError::DbError(e.to_string()))?;
+        self.db.rename_path(&from, &to).await?;
         Ok(())
     }
 
@@ -173,7 +190,7 @@ impl Manager {
         P: AsRef<Path>,
     {
         let mount = self.get_registered_mount().await;
-        let path = clean_file_path(&path, &mount);
+        let path = clean_file_path(&path, &mount).map_err(|e| DbError::DbError(e.to_string()))?;
 
         let res = self.db.get_song_by_path(path).await?;
         match res {
@@ -223,14 +240,20 @@ impl Manager {
         self.db.delete_tracks(ids).await
     }
 
-    fn clean_path(&self, path: &str) -> String {
+    fn clean_path(&self, path: impl AsRef<Path>) -> Result<String, ManagerError> {
+        let path = path
+            .as_ref()
+            .normalize()
+            .map_err(|_| ManagerError::InvalidPath(path.as_ref().to_path_buf()))?
+            .into_os_string()
+            .to_string_lossy()
+            .to_string();
+
         let mut path = path.replace(self.delim, "/");
-        let re = Regex::new(r"/+").unwrap();
-        path = re.replace_all(&path, "/").to_string();
         if !path.ends_with('/') {
             path += "/";
         }
-        path
+        Ok(path)
     }
 
     async fn set_drive(&self, path: &str) -> Result<(), ManagerError> {

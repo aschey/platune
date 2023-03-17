@@ -1,6 +1,7 @@
-use std::path::Path;
+use std::{io, path::Path};
 
 use crate::database::LookupEntry;
+use normpath::PathExt;
 
 pub(crate) trait PathMut {
     fn get_path(&self) -> String;
@@ -26,12 +27,17 @@ impl PathMut for String {
     }
 }
 
-pub(crate) fn clean_file_path<P>(file_path: &P, mount: &Option<String>) -> String
+pub(crate) fn clean_file_path<P>(file_path: &P, mount: &Option<String>) -> io::Result<String>
 where
     P: AsRef<Path>,
 {
-    let file_path = file_path.as_ref();
-    let mut file_path_str = file_path.to_string_lossy().to_string();
+    let file_path = file_path.as_ref().normalize().map_err(|e| {
+        io::Error::new(
+            e.kind(),
+            format!("Error normalizing path {:?}", file_path.as_ref()),
+        )
+    })?;
+    let mut file_path_str = file_path.into_os_string().to_string_lossy().to_string();
     if cfg!(windows) {
         file_path_str = file_path_str.replace('\\', "/");
     }
@@ -42,7 +48,7 @@ where
         }
     }
 
-    file_path_str
+    Ok(file_path_str)
 }
 
 pub(crate) fn update_path<T, P>(entry: &mut T, mount: &P)

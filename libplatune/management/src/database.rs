@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::{path::Path, time::Duration};
 use tokio::sync::Mutex;
 use tracing::info;
+use uuid::Uuid;
 
 #[derive(RustEmbed)]
 #[folder = "db/schema"]
@@ -223,7 +224,7 @@ impl Database {
             .await
     }
 
-    pub(crate) async fn rename_path(&mut self, from: String, to: String) -> Result<(), DbError> {
+    pub(crate) async fn rename_path(&self, from: &str, to: &str) -> Result<(), DbError> {
         // Update could cause duplicate paths so just ignore if that happens
         sqlx::query!(
             "
@@ -409,8 +410,8 @@ impl Database {
 
     pub(crate) async fn update_folder(
         &self,
-        old_path: String,
-        new_path: String,
+        old_path: &str,
+        new_path: &str,
     ) -> Result<(), DbError> {
         sqlx::query!(
             "UPDATE folder SET folder_path = ? WHERE folder_path = ?;",
@@ -434,35 +435,45 @@ impl Database {
             .collect())
     }
 
-    pub(crate) async fn get_mount(&self, mount_id: i64) -> Option<String> {
-        match sqlx::query!("SELECT mount_path FROM mount WHERE mount_id = ?;", mount_id)
-            .fetch_one(&self.read_pool)
-            .await
+    pub(crate) async fn get_mount(&self, mount_uuid: Uuid) -> Option<String> {
+        let mount_uuid = mount_uuid.to_string();
+        match sqlx::query!(
+            "SELECT mount_path FROM mount WHERE mount_uuid = ?;",
+            mount_uuid
+        )
+        .fetch_one(&self.read_pool)
+        .await
         {
             Ok(res) => Some(res.mount_path),
             Err(_) => None,
         }
     }
 
-    pub(crate) async fn add_mount(&self, path: &str) -> Result<i64, DbError> {
-        sqlx::query!(r"INSERT OR IGNORE INTO mount(mount_path) VALUES(?);", path)
-            .execute(&self.write_pool)
-            .await
-            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
+    pub(crate) async fn add_mount(&self, path: &str) -> Result<Uuid, DbError> {
+        let new_id = Uuid::new_v4().to_string();
+        sqlx::query!(
+            r"INSERT OR IGNORE INTO mount(mount_uuid, mount_path) VALUES(?, ?);",
+            new_id,
+            path
+        )
+        .execute(&self.write_pool)
+        .await
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
-        let res = sqlx::query!(r"SELECT mount_id FROM mount WHERE mount_path = ?;", path)
+        let res = sqlx::query!(r"SELECT mount_uuid FROM mount WHERE mount_path = ?;", path)
             .fetch_one(&self.read_pool)
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
-        Ok(res.mount_id)
+        Ok(Uuid::from_str(&res.mount_uuid).unwrap())
     }
 
-    pub(crate) async fn update_mount(&self, mount_id: i64, path: &str) -> Result<u64, DbError> {
+    pub(crate) async fn update_mount(&self, mount_uuid: Uuid, path: &str) -> Result<u64, DbError> {
+        let mount_uuid = mount_uuid.to_string();
         let res = sqlx::query!(
-            "UPDATE mount SET mount_path = ? WHERE mount_id = ?;",
+            "UPDATE mount SET mount_path = ? WHERE mount_uuid = ?;",
             path,
-            mount_id
+            mount_uuid
         )
         .execute(&self.write_pool)
         .await

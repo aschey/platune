@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO mount(mount_uuid, mount_path) VALUES(?, ?);",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "e3f8788d97e1fcbb96ab82c438590b2f79546bc008a6c680b2aa725f9a51611d"
+}
