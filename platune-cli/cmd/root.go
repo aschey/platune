@@ -6,8 +6,6 @@ import (
 
 	prompt "github.com/aschey/bubbleprompt"
 	cprompt "github.com/aschey/bubbleprompt-cobra"
-	"github.com/aschey/bubbleprompt/formatter"
-	"github.com/aschey/bubbleprompt/input/commandinput"
 	"github.com/aschey/platune/cli/cmd/folder"
 	"github.com/aschey/platune/cli/cmd/mount"
 	"github.com/aschey/platune/cli/cmd/queue"
@@ -51,14 +49,7 @@ func Execute() {
 				return err
 			}
 			if interactive {
-				promptModel := cprompt.NewPrompt(
-					cmd,
-					cprompt.WithPromptOptions(
-						prompt.WithFormatters[commandinput.CommandMetadata[internal.SearchMetadata]](
-							formatter.DefaultFormatters(),
-						),
-					),
-				)
+				promptModel := cprompt.NewPrompt[internal.SearchMetadata](cmd)
 				model := model{inner: promptModel}
 				_, err := tea.NewProgram(&model, tea.WithFilter(prompt.MsgFilter)).Run()
 				return err

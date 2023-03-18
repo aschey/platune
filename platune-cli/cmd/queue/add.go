@@ -19,7 +19,7 @@ func newAddQueueCmd(
 	search *internal.Search,
 ) addQueueCmd {
 	addQueueCmd := &cobra.Command{
-		Use:   "add <song, artist, album, file path, or url>",
+		Use:   "add <library entry, file path, or url>",
 		Short: "Adds a song to the end of the queue",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			selected := cprompt.GetSelectedSuggestion[internal.SearchMetadata](cmd)
@@ -41,7 +41,8 @@ func newAddQueueCmd(
 		},
 	}
 	cprompt.Completer(addQueueCmd, func(cmd *cobra.Command, args []string, toComplete string) (
-		[]suggestion.Suggestion[commandinput.CommandMetadata[internal.SearchMetadata]], error) {
+		[]suggestion.Suggestion[commandinput.CommandMetadata[internal.SearchMetadata]], error,
+	) {
 		searchResults, err := managementClient.Search(
 			&platune.SearchRequest{Query: strings.Join(append(args, toComplete), " ")},
 		)
