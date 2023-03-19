@@ -27,12 +27,12 @@ func newAddQueueCmd(
 			if selected != nil {
 				searchResult = selected.Metadata.Extra.Result
 			}
-			// println(selected.Metadata.Extra.Result.Entry)
+
 			results, err := search.ProcessSearchResults(
 				args,
 				searchResult,
 				func(file string) { playerclient.AddToQueue([]string{file}) },
-				func(entries []*platune.LookupEntry) { playerclient.AddSearchResultsToQueue(entries) },
+				func(entries []string) { playerclient.AddToQueue(entries) },
 			)
 			if err != nil {
 				return err

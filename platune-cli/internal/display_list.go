@@ -8,13 +8,14 @@ import (
 type displayItem struct {
 	title       string
 	description string
+	path        string
 }
 
 type displayModel struct {
 	list     list.Model
 	choice   displayItem
 	client   *ManagementClient
-	callback func(entries []displayItem)
+	callback func(entries []string)
 }
 
 func (i displayItem) FilterValue() string { return i.title }
@@ -41,11 +42,17 @@ func (m displayModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-
+		case "a":
+			items := []string{}
+			for _, item := range m.list.Items() {
+				items = append(items, item.(displayItem).path)
+			}
+			m.callback(items)
+			return m, tea.Quit
 		case "enter":
 			i := m.list.SelectedItem().(displayItem)
 
-			m.callback([]displayItem{i})
+			m.callback([]string{i.path})
 			m.choice = i
 
 			return m, tea.Quit
@@ -77,7 +84,7 @@ func (m displayModel) View() string {
 func (search *Search) renderDisplay(
 	title string,
 	items []displayItem,
-	callback func([]displayItem),
+	callback func([]string),
 ) tea.Model {
 	const defaultWidth = 20
 	const defaultHeight = 14

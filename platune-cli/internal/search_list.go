@@ -16,7 +16,7 @@ type searchModel struct {
 	list     list.Model
 	choice   searchItem
 	client   *ManagementClient
-	callback func(entries []*platune.LookupEntry)
+	callback func(entries []string)
 }
 
 func (i searchItem) FilterValue() string { return i.searchResult.Entry }
@@ -48,7 +48,11 @@ func (m searchModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			i := m.list.SelectedItem().(searchItem)
 			client := *m.client
 			lookupResults, _ := client.Lookup(i.searchResult.EntryType, i.searchResult.CorrelationIds)
-			m.callback(lookupResults.Entries)
+			paths := []string{}
+			for _, entry := range lookupResults.Entries {
+				paths = append(paths, entry.Path)
+			}
+			m.callback(paths)
 			m.choice = i
 
 			return m, tea.Quit
@@ -89,7 +93,7 @@ func getSearchItems(results []*platune.SearchResult) []list.Item {
 
 func (search *Search) renderSearchResults(
 	results *platune.SearchResponse,
-	callback func(entries []*platune.LookupEntry),
+	callback func(entries []string),
 ) tea.Model {
 	const defaultWidth = 20
 	const defaultHeight = 14

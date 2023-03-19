@@ -170,7 +170,11 @@ async fn run_file_service(
 
 #[cfg(feature = "management")]
 async fn init_manager() -> Result<Manager> {
-    let path = env::var("DATABASE_URL").wrap_err("DATABASE_URL environment variable not set")?;
+    let path = env::var("DATABASE_URL")
+        .wrap_err("DATABASE_URL environment variable not set")?
+        .replace("sqlite://", "");
+
+    info!("Connecting to database {path:?}");
     let db = Database::connect(path, true).await?;
     db.sync_database()
         .await

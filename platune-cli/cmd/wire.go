@@ -17,6 +17,7 @@ func InitializeCommands() (commands, error) {
 		internal.NewManagementClient,
 		newPauseCmd,
 		newResumeCmd,
+		newStopCmd,
 		folder.InitializeFolderCommand,
 		queue.InitializeQueueCommand,
 		mount.InitializeMountCommand,

@@ -23,7 +23,7 @@ func (s *Search) ProcessSearchResults(
 	args []string,
 	selected *platune.SearchResult,
 	filesystemCallback func(file string),
-	dbCallback func(entries []*platune.LookupEntry),
+	dbCallback func(entries []string),
 ) (tea.Model, error) {
 	allArgs := strings.Join(args, " ")
 	_, err := os.Stat(allArgs)
@@ -57,12 +57,12 @@ func (s *Search) ProcessSearchResults(
 	return nil, nil
 }
 
-func (s *Search) handleSearchResult(searchResult *platune.SearchResult, dbCallback func(entries []*platune.LookupEntry)) (tea.Model, error) {
+func (s *Search) handleSearchResult(searchResult *platune.SearchResult, dbCallback func(entries []string)) (tea.Model, error) {
 	switch searchResult.EntryType {
 	case platune.EntryType_SONG:
 		lookupResults, _ := s.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 
-		dbCallback(lookupResults.Entries)
+		dbCallback([]string{lookupResults.Entries[0].Path})
 		return NewInfoModel("Added " + searchResult.Entry + " " + searchResult.Description + " to the queue"), nil
 	case platune.EntryType_ARTIST:
 		albumArtistIds := searchResult.CorrelationIds
@@ -74,14 +74,14 @@ func (s *Search) handleSearchResult(searchResult *platune.SearchResult, dbCallba
 		for _, album := range albumsResponse.Entries {
 			items = append(items, displayItem{title: album.Album})
 		}
-		return s.renderDisplay("Albums by "+searchResult.Entry, items, func(di []displayItem) {}), nil
+		return s.renderDisplay("Albums by "+searchResult.Entry, items, func(di []string) {}), nil
 	case platune.EntryType_ALBUM:
 		lookupResults, _ := s.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 		items := []displayItem{}
 		for _, song := range lookupResults.Entries {
-			items = append(items, displayItem{title: song.Song})
+			items = append(items, displayItem{title: song.Song, path: song.Path})
 		}
-		return s.renderDisplay(searchResult.Entry, items, func(di []displayItem) {}), nil
+		return s.renderDisplay(searchResult.Entry, items, dbCallback), nil
 	}
 	return nil, nil
 }

@@ -22,6 +22,7 @@ func InitializeCommands() (commands, error) {
 	}
 	cmdPauseCmd := newPauseCmd(playerClient)
 	cmdResumeCmd := newResumeCmd(playerClient)
+	cmdStopCmd := newStopCmd(playerClient)
 	managementClient, err := internal.NewManagementClient()
 	if err != nil {
 		return commands{}, err
@@ -32,6 +33,7 @@ func InitializeCommands() (commands, error) {
 	cmdCommands := commands{
 		pause:  cmdPauseCmd,
 		resume: cmdResumeCmd,
+		stop:   cmdStopCmd,
 		folder: folderCmd,
 		queue:  queueCmd,
 		mount:  mountCmd,

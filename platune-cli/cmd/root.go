@@ -33,6 +33,7 @@ var title = lipgloss.NewStyle().
 type commands struct {
 	pause  pauseCmd
 	resume resumeCmd
+	stop   stopCmd
 	folder folder.FolderCmd
 	queue  queue.QueueCmd
 	mount  mount.MountCmd
@@ -67,6 +68,7 @@ func Execute() {
 
 	rootCmd.AddCommand(commands.pause)
 	rootCmd.AddCommand(commands.resume)
+	rootCmd.AddCommand(commands.stop)
 	rootCmd.AddCommand(commands.folder)
 	rootCmd.AddCommand(commands.queue)
 	rootCmd.AddCommand(commands.mount)
