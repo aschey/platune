@@ -62,6 +62,7 @@ func newAddQueueCmd(
 					Text:           text,
 					Description:    result.Description,
 					Metadata: commandinput.CommandMetadata[internal.SearchMetadata]{
+						Variadic: true,
 						Extra: internal.SearchMetadata{
 							Result: result,
 						},
