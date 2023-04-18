@@ -39,12 +39,12 @@ pub async fn test_add_folders() {
         .unwrap();
     let folders = manager.get_all_folders().await.unwrap();
 
-    assert_eq!(
-        normalize_all(vec![
+    assert_normalized(
+        vec![
             format!(r"{temp_str}{MAIN_SEPARATOR}test1{MAIN_SEPARATOR}"),
-            format!(r"{temp_str}{MAIN_SEPARATOR}test2{MAIN_SEPARATOR}")
-        ]),
-        normalize_all(folders)
+            format!(r"{temp_str}{MAIN_SEPARATOR}test2{MAIN_SEPARATOR}"),
+        ],
+        folders,
     );
 }
 
@@ -75,17 +75,13 @@ pub async fn test_change_mount() {
     manager.register_drive(&temp_str2).await.unwrap();
     let folders2 = manager.get_all_folders().await.unwrap();
 
-    assert_eq!(
-        normalize_all(vec![format!(
-            r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
-        )]),
-        normalize_all(folders1)
+    assert_normalized(
+        vec![format!(r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
+        folders1,
     );
-    assert_eq!(
-        normalize_all(vec![format!(
-            r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
-        )]),
-        normalize_all(folders2)
+    assert_normalized(
+        vec![format!(r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
+        folders2,
     );
 }
 
@@ -116,17 +112,13 @@ pub async fn test_change_mount_after() {
     manager.register_drive(&temp_str2).await.unwrap();
     let folders2 = manager.get_all_folders().await.unwrap();
 
-    assert_eq!(
-        normalize_all(vec![format!(
-            r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
-        )]),
-        normalize_all(folders1)
+    assert_normalized(
+        vec![format!(r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
+        folders1,
     );
-    assert_eq!(
-        normalize_all(vec![format!(
-            r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
-        )]),
-        normalize_all(folders2)
+    assert_normalized(
+        vec![format!(r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
+        folders2,
     );
 }
 
@@ -160,13 +152,13 @@ pub async fn test_multiple_mounts() {
     manager2.register_drive(&temp_str2).await.unwrap();
     let folders2 = manager2.get_all_folders().await.unwrap();
 
-    assert_eq!(
+    assert_normalized(
         vec![format!(r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
-        folders1
+        folders1,
     );
-    assert_eq!(
+    assert_normalized(
         vec![format!(r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
-        folders2
+        folders2,
     );
 }
 
@@ -205,9 +197,9 @@ pub async fn test_reset_drive_id_if_missing() {
 
     let folders = manager2.get_all_folders().await.unwrap();
 
-    assert_eq!(
+    assert_normalized(
         vec![format!(r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
-        folders
+        folders,
     );
 }
 
@@ -239,4 +231,8 @@ fn normalize(s: &String) -> String {
 
 fn normalize_all(strs: Vec<String>) -> Vec<String> {
     strs.iter().map(normalize).collect()
+}
+
+fn assert_normalized(left: Vec<String>, right: Vec<String>) {
+    assert_eq!(normalize_all(left), normalize_all(right));
 }
