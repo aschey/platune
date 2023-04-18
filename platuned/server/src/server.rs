@@ -9,8 +9,7 @@ use crate::services::management::ManagementImpl;
 #[cfg(feature = "player")]
 use crate::services::player::PlayerImpl;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
-use daemon_slayer::server::{BroadcastEventStore, EventStore};
-use daemon_slayer::signals::Signal;
+use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 #[cfg(feature = "management")]
@@ -147,7 +146,7 @@ async fn run_file_service(
             let server = hyper::Server::bind(&addr)
                 .serve(tower::make::Shared::new(service))
                 .with_graceful_shutdown(async {
-                    shutdown_rx.recv().await;
+                    shutdown_rx.next().await;
                 });
             server.await.wrap_err("Error running file server")?;
         }
@@ -159,7 +158,7 @@ async fn run_file_service(
             let server = hyper::Server::bind(&addr)
                 .serve(tower::make::Shared::new(service))
                 .with_graceful_shutdown(async {
-                    shutdown_rx.recv().await;
+                    shutdown_rx.next().await;
                 });
             server.await.wrap_err("Error running file server")?;
         }
@@ -227,7 +226,7 @@ async fn run_server(
             info!("Running HTTP server on {addr}");
             builder
                 .serve_with_shutdown(addr, async {
-                    shutdown_rx.recv().await;
+                    shutdown_rx.next().await;
                 })
                 .await
                 .wrap_err("Error running HTTP server")
@@ -239,7 +238,7 @@ async fn run_server(
                 .serve_with_incoming_shutdown(
                     IpcStream::get_async_stream(path.to_string_lossy().to_string())?,
                     async {
-                        shutdown_rx.recv().await;
+                        shutdown_rx.next().await;
                     },
                 )
                 .await

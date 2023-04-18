@@ -1,26 +1,34 @@
 package cmd
 
 import (
-	cprompt "github.com/aschey/bubbleprompt-cobra"
-	"github.com/aschey/platune/cli/internal"
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
-type pauseCmd *cobra.Command
+const pauseDescription = "Pauses the queue"
+const pauseCmdText = "pause"
 
-func newPauseCmd(client *internal.PlayerClient) pauseCmd {
+func newPauseCmd() *cobra.Command {
 	pauseCmd := &cobra.Command{
-		Use:   "pause",
-		Short: "Pauses the player",
-		Args:  cobra.NoArgs,
+		Use:   pauseCmdText,
+		Short: pauseDescription,
+		Long:  pauseDescription,
 
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := client.Pause(); err != nil {
-				return err
-			}
-			return cprompt.ExecModel(cmd, internal.NewInfoModel("Paused"))
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.Pause()
 		},
 	}
+
+	usageFunc := pauseCmd.UsageFunc()
+	pauseCmd.SetUsageFunc(func(c *cobra.Command) error {
+		internal.FormatUsage(c, usageFunc, "")
+		return nil
+	})
+	pauseCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
+		internal.FormatHelp(c)
+	})
 
 	return pauseCmd
 }

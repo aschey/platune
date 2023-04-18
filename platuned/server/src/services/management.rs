@@ -1,8 +1,8 @@
 use crate::management_server::Management;
 use crate::rpc::*;
 
+use daemon_slayer::server::Signal;
 use daemon_slayer::server::{BroadcastEventStore, EventStore};
-use daemon_slayer::signals::Signal;
 use futures::StreamExt;
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager;
@@ -218,7 +218,7 @@ impl Management for ManagementImpl {
 
         tokio::spawn(async move {
             while let Some(msg) =
-                tokio::select! { val = messages.next() => val, _ = shutdown_rx.recv() => None }
+                tokio::select! { val = messages.next() => val, _ = shutdown_rx.next() => None }
             {
                 let manager = manager.read().await;
                 match msg {

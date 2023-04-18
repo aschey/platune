@@ -47,7 +47,6 @@ type ManagementClient interface {
 	Lookup(ctx context.Context, in *LookupRequest, opts ...grpc.CallOption) (*LookupResponse, error)
 	GetSongByPath(ctx context.Context, in *PathMessage, opts ...grpc.CallOption) (*SongResponse, error)
 	GetAlbumsByAlbumArtists(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*AlbumResponse, error)
-	// rpc GetAlbumArtistsByNames(NameMessage) returns (EntitiesMessage);
 	GetDeleted(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDeletedResponse, error)
 	DeleteTracks(ctx context.Context, in *IdMessage, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (Management_SubscribeEventsClient, error)
@@ -227,7 +226,6 @@ type ManagementServer interface {
 	Lookup(context.Context, *LookupRequest) (*LookupResponse, error)
 	GetSongByPath(context.Context, *PathMessage) (*SongResponse, error)
 	GetAlbumsByAlbumArtists(context.Context, *IdMessage) (*AlbumResponse, error)
-	// rpc GetAlbumArtistsByNames(NameMessage) returns (EntitiesMessage);
 	GetDeleted(context.Context, *emptypb.Empty) (*GetDeletedResponse, error)
 	DeleteTracks(context.Context, *IdMessage) (*emptypb.Empty, error)
 	SubscribeEvents(*emptypb.Empty, Management_SubscribeEventsServer) error

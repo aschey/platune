@@ -1,26 +1,34 @@
 package cmd
 
 import (
-	cprompt "github.com/aschey/bubbleprompt-cobra"
-	"github.com/aschey/platune/cli/internal"
+	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/spf13/cobra"
 )
 
-type resumeCmd *cobra.Command
+const resumeDescription = "Resumes the queue. No effect if already playing."
+const resumeCmdText = "resume"
 
-func newResumeCmd(client *internal.PlayerClient) resumeCmd {
-	pauseCmd := &cobra.Command{
-		Use:   "resume",
-		Short: "Resumes the player",
-		Args:  cobra.NoArgs,
+func newResumeCmd() *cobra.Command {
+	resumeCmd := &cobra.Command{
+		Use:   resumeCmdText,
+		Short: resumeDescription,
+		Long:  resumeDescription,
 
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := client.Resume(); err != nil {
-				return err
-			}
-			return cprompt.ExecModel(cmd, internal.NewInfoModel("Resumed"))
+		Args: cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			client := GetClient(cmd)
+			client.Resume()
 		},
 	}
 
-	return pauseCmd
+	usageFunc := resumeCmd.UsageFunc()
+	resumeCmd.SetUsageFunc(func(c *cobra.Command) error {
+		internal.FormatUsage(c, usageFunc, "")
+		return nil
+	})
+	resumeCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
+		internal.FormatHelp(c)
+	})
+
+	return resumeCmd
 }

@@ -1,26 +1,27 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 
-	prompt "github.com/aschey/bubbleprompt"
-	cprompt "github.com/aschey/bubbleprompt-cobra"
-	"github.com/aschey/platune/cli/cmd/folder"
-	"github.com/aschey/platune/cli/cmd/mount"
-	"github.com/aschey/platune/cli/cmd/queue"
-	"github.com/aschey/platune/cli/internal"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/aschey/platune/cli/v2/internal"
+	"github.com/aschey/platune/cli/v2/internal/deleted"
+	"github.com/aschey/platune/cli/v2/internal/search"
+	"github.com/aschey/platune/cli/v2/internal/statusbar"
 	"github.com/charmbracelet/lipgloss"
-	cc "github.com/ivanpirog/coloredcobra"
 	"github.com/spf13/cobra"
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-var (
-	title1      = "█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █"
-	title2      = "█▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █"
-	description = " CLI for the Platune audio server"
-)
+var title1 = "█▀█ █░░ ▄▀█ ▀█▀ █░█ █▄░█ █▀▀   █▀▀ █░░ █"
+var title2 = "█▀▀ █▄▄ █▀█ ░█░ █▄█ █░▀█ ██▄   █▄▄ █▄▄ █"
 
 var title = lipgloss.NewStyle().
 	Foreground(lipgloss.Color("9")).
@@ -28,83 +29,138 @@ var title = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("6")).
 	PaddingLeft(1).
 	PaddingRight(1).
-	Render(fmt.Sprintf("%s\n%s", title1, title2)) + "\n" + description
+	Render(title1 + "\n" + title2)
 
-type commands struct {
-	pause  pauseCmd
-	resume resumeCmd
-	stop   stopCmd
-	folder folder.FolderCmd
-	queue  queue.QueueCmd
-	mount  mount.MountCmd
-}
-
-func Execute() {
+func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "platune-cli",
-		Short: description,
-		Long:  title,
+		Use:  "platune-cli",
+		Long: title,
+
 		RunE: func(cmd *cobra.Command, args []string) error {
+			state := GetState(cmd)
 			interactive, err := cmd.Flags().GetBool("interactive")
 			if err != nil {
 				return err
 			}
+
 			if interactive {
-				promptModel := cprompt.NewPrompt[internal.SearchMetadata](cmd)
-				model := model{inner: promptModel}
-				_, err := tea.NewProgram(&model, tea.WithFilter(prompt.MsgFilter)).Run()
-				return err
-			} else {
-				return cmd.Help()
+				exitCode := state.RunInteractive()
+				if exitCode != 0 {
+					return fmt.Errorf("Prompt exited with code %d", exitCode)
+				} else {
+					return nil
+				}
 			}
+
+			return cmd.Help()
 		},
 	}
 
-	commands, err := InitializeCommands()
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
+	usageFunc := rootCmd.UsageFunc()
+	rootCmd.SetUsageFunc(func(c *cobra.Command) error {
+		internal.FormatUsage(c, usageFunc, "")
+		return nil
+	})
 
-	rootCmd.AddCommand(commands.pause)
-	rootCmd.AddCommand(commands.resume)
-	rootCmd.AddCommand(commands.stop)
-	rootCmd.AddCommand(commands.folder)
-	rootCmd.AddCommand(commands.queue)
-	rootCmd.AddCommand(commands.mount)
+	rootCmd.SetHelpFunc(func(c *cobra.Command, a []string) {
+		internal.FormatHelp(c)
+	})
 
 	rootCmd.Flags().BoolP("interactive", "i", false, "Run in interactive mode")
 
-	cc.Init(&cc.Config{
-		RootCmd:  rootCmd,
-		Headings: cc.HiCyan + cc.Bold + cc.Underline,
-		Commands: cc.HiGreen + cc.Bold,
-		Example:  cc.Italic,
-		ExecName: cc.Bold,
-		Flags:    cc.Bold,
-	})
+	rootCmd.AddCommand(newAddFolderCmd())
+	rootCmd.AddCommand(newAddQueueCmd())
+	rootCmd.AddCommand(newGetAllFoldersCmd())
+	rootCmd.AddCommand(newNextCmd())
+	rootCmd.AddCommand(newPauseCmd())
+	rootCmd.AddCommand(newPreviousCmd())
+	rootCmd.AddCommand(newResumeCmd())
+	rootCmd.AddCommand(newSeekCmd())
+	rootCmd.AddCommand(newSetMountCmd())
+	rootCmd.AddCommand(newSetQueueCmd())
+	rootCmd.AddCommand(newSetVolumeCmd())
+	rootCmd.AddCommand(newStopCmd())
+	rootCmd.AddCommand(newSyncCmd())
 
-	err = rootCmd.Execute()
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	return rootCmd
+}
+
+func handleExit() error {
+	if runtime.GOOS == "windows" {
+		return nil
 	}
+	rawModeOff := exec.Command("/bin/stty", "-raw", "echo")
+	rawModeOff.Stdin = os.Stdin
+	err := rawModeOff.Run()
+	return err
 }
 
-type model struct {
-	inner cprompt.Model[internal.SearchMetadata]
+func start(rootCmd *cobra.Command, ctx context.Context, client *internal.PlatuneClient,
+	state *cmdState, deleted *deleted.Deleted, search *search.Search) error {
+	ctx = RegisterClient(ctx, client)
+	ctx = RegisterState(ctx, state)
+	ctx = RegisterDeleted(ctx, deleted)
+	ctx = RegisterSearch(ctx, search)
+
+	return rootCmd.ExecuteContext(ctx)
 }
 
-func (m model) Init() tea.Cmd {
-	return m.inner.Init()
+func register(lifecycle fx.Lifecycle, client *internal.PlatuneClient,
+	state *cmdState, deleted *deleted.Deleted, search *search.Search) {
+	lifecycle.Append(
+		fx.Hook{
+			OnStart: func(ctx context.Context) error {
+				rootCmd := newRootCmd()
+				return start(rootCmd, ctx, client, state, deleted, search)
+			},
+			OnStop: func(context.Context) error {
+				return handleExit()
+			},
+		},
+	)
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	model, cmd := m.inner.Update(msg)
-	m.inner = model.(cprompt.Model[internal.SearchMetadata])
-	return m, cmd
+func NewLogger() (*zap.Logger, error) {
+	dir, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+
+	fullpath := filepath.Join(filepath.Dir(dir), "platune-cli.log")
+
+	// Workaround for Windows support
+	// see https://github.com/uber-go/zap/issues/994
+	// TODO: update this when Windows support is fixed
+	enc := zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig())
+	ws, err := os.OpenFile(fullpath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, err
+	}
+
+	core := zapcore.NewCore(enc, ws, zapcore.InfoLevel)
+	logger := zap.New(core)
+
+	return logger, nil
 }
 
-func (m model) View() string {
-	return m.inner.View()
+func Execute() {
+	app := fx.New(fx.Invoke(register),
+		fx.Provide(NewLogger),
+		fx.Provide(NewState),
+		fx.Provide(internal.NewPlatuneClient),
+		fx.Provide(search.NewSearch),
+		fx.Provide(deleted.NewDeleted),
+		fx.Provide(statusbar.NewStatusChan),
+		fx.Provide(statusbar.NewStatusBar),
+		fx.Provide(internal.NewStatusNotifier),
+		fx.WithLogger(func(logger *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: logger}
+		}),
+	)
+
+	ctx := context.Background()
+
+	cobra.CheckErr(app.Start(ctx))
+	cobra.CheckErr(app.Stop(ctx))
+
 }
