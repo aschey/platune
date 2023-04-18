@@ -9,11 +9,11 @@ version = "0.0.0"
 cargo-fuzz = true
 
 [dependencies]
-arbitrary = {version = "1.2.3", features = ["derive"]}
-ctor = "0.1.26"
+arbitrary = {version = "1.3.0", features = ["derive"]}
+ctor = "0.2.0"
 libfuzzer-sys = "0.4.6"
 once_cell = "1.17.1"
-tokio = {version = "1.26.0", features = ["rt-multi-thread", "macros"]}
+tokio = {version = "1.27.0", features = ["rt-multi-thread", "macros"]}
 tracing-subscriber = "0.3.16"
 
 [dependencies.libplatune-player]
