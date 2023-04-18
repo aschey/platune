@@ -1,7 +1,12 @@
 use super::Manager;
 use crate::{config::MemoryConfig, database::Database};
+use normpath::PathExt;
 use pretty_assertions::assert_eq;
-use std::{fs, path::MAIN_SEPARATOR, sync::Arc};
+use std::{
+    fs,
+    path::{PathBuf, MAIN_SEPARATOR},
+    sync::Arc,
+};
 use tempfile::{tempdir, TempDir};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
@@ -35,11 +40,11 @@ pub async fn test_add_folders() {
     let folders = manager.get_all_folders().await.unwrap();
 
     assert_eq!(
-        vec![
+        normalize_all(vec![
             format!(r"{temp_str}{MAIN_SEPARATOR}test1{MAIN_SEPARATOR}"),
             format!(r"{temp_str}{MAIN_SEPARATOR}test2{MAIN_SEPARATOR}")
-        ],
-        folders
+        ]),
+        normalize_all(folders)
     );
 }
 
@@ -64,18 +69,23 @@ pub async fn test_change_mount() {
     let folders1 = manager.get_all_folders().await.unwrap();
 
     let temp2 = tempdir().unwrap();
+    fs::create_dir_all(temp2.path().join("test")).unwrap();
     let temp_str2 = temp2.path().to_string_lossy().to_string();
 
     manager.register_drive(&temp_str2).await.unwrap();
     let folders2 = manager.get_all_folders().await.unwrap();
 
     assert_eq!(
-        vec![format!(r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
-        folders1
+        normalize_all(vec![format!(
+            r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
+        )]),
+        normalize_all(folders1)
     );
     assert_eq!(
-        vec![format!(r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
-        folders2
+        normalize_all(vec![format!(
+            r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
+        )]),
+        normalize_all(folders2)
     );
 }
 
@@ -100,18 +110,23 @@ pub async fn test_change_mount_after() {
     let folders1 = manager.get_all_folders().await.unwrap();
 
     let temp2 = tempdir().unwrap();
+    fs::create_dir_all(temp2.path().join("test")).unwrap();
     let temp_str2 = temp2.path().to_string_lossy().to_string();
 
     manager.register_drive(&temp_str2).await.unwrap();
     let folders2 = manager.get_all_folders().await.unwrap();
 
     assert_eq!(
-        vec![format!(r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
-        folders1
+        normalize_all(vec![format!(
+            r"{temp_str}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
+        )]),
+        normalize_all(folders1)
     );
     assert_eq!(
-        vec![format!(r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}")],
-        folders2
+        normalize_all(vec![format!(
+            r"{temp_str2}{MAIN_SEPARATOR}test{MAIN_SEPARATOR}"
+        )]),
+        normalize_all(folders2)
     );
 }
 
@@ -211,4 +226,17 @@ async fn setup() -> (Database, Manager) {
     let config = Arc::new(MemoryConfig::new_boxed());
     let manager = Manager::new(&db, config);
     (db, manager)
+}
+
+fn normalize(s: &String) -> String {
+    PathBuf::from(s)
+        .normalize()
+        .unwrap()
+        .into_os_string()
+        .to_string_lossy()
+        .to_string()
+}
+
+fn normalize_all(strs: Vec<String>) -> Vec<String> {
+    strs.iter().map(normalize).collect()
 }
