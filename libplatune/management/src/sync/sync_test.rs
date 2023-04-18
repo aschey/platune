@@ -2,11 +2,12 @@ use crate::{config::MemoryConfig, database::Database, manager::Manager};
 use futures::StreamExt;
 use itertools::Itertools;
 use lofty::{Accessor, ItemKey, Probe, TagExt, TaggedFileExt};
+use normpath::PathExt;
 use pretty_assertions::assert_eq;
 use rstest::*;
 use std::{
-    fs::{self, create_dir, create_dir_all},
-    path::Path,
+    fs::{self, create_dir, create_dir_all, File},
+    path::{Path, PathBuf},
     sync::Arc,
     time::Duration,
 };
@@ -192,11 +193,14 @@ pub async fn test_sync_delete() {
     let deleted2 = manager.get_deleted_songs().await.unwrap();
 
     let last_song = inner_dir.join("test3.mp3");
+    // Recreate deleted file before normalizing
+    create_dir_all(inner_dir).unwrap();
+    File::create(&last_song).unwrap();
 
     assert_eq!(1, deleted.len());
-    assert_eq!(
-        deleted[0].song_path,
-        last_song.to_string_lossy().to_string().replace('\\', "/")
+    assert_normalized(
+        deleted[0].song_path.clone(),
+        last_song.to_string_lossy().to_string(),
     );
 
     // TODO: add test to check if number of songs decreased once we have an endpoint to get all songs
@@ -224,9 +228,9 @@ pub async fn test_sync_delete_and_readd() {
     let deleted2 = manager.get_deleted_songs().await.unwrap();
 
     assert_eq!(1, deleted.len());
-    assert_eq!(
-        deleted[0].song_path,
-        last_song.to_string_lossy().to_string().replace('\\', "/")
+    assert_normalized(
+        deleted[0].song_path.clone(),
+        last_song.to_string_lossy().to_string(),
     );
 
     // TODO: add test to check if number of songs decreased once we have an endpoint to get all songs
@@ -314,4 +318,17 @@ async fn setup() -> (Database, Manager) {
     let config = Arc::new(MemoryConfig::new_boxed());
     let manager = Manager::new(&db, config.clone());
     (db, manager)
+}
+
+fn normalize(s: &String) -> String {
+    PathBuf::from(s)
+        .normalize()
+        .unwrap()
+        .into_os_string()
+        .to_string_lossy()
+        .to_string()
+}
+
+fn assert_normalized(left: String, right: String) {
+    assert_eq!(normalize(&left), normalize(&right));
 }
