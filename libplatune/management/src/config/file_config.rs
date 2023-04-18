@@ -4,6 +4,7 @@ use std::{
     io::{Read, Write},
     path::Path,
 };
+use uuid::Uuid;
 
 use super::{config_error::ConfigError, Config};
 
@@ -53,15 +54,15 @@ impl FileConfig {
 }
 
 impl Config for FileConfig {
-    fn get_drive_id(&self) -> Option<i64> {
+    fn get_drive_id(&self) -> Option<Uuid> {
         let mut file = File::open(&self.config_path).ok()?;
         let mut contents = String::new();
         file.read_to_string(&mut contents).ok()?;
 
-        contents.parse::<i64>().ok()
+        contents.parse::<Uuid>().ok()
     }
 
-    fn set_drive_id(&self, id: i64) -> Result<()> {
+    fn set_drive_id(&self, id: Uuid) -> Result<()> {
         let mut file =
             File::create(&self.config_path).wrap_err("Error opening file for writing")?;
 

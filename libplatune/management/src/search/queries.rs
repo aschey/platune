@@ -12,7 +12,7 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
     let num_base_args = 5;
     let num_artists = artist_filter.len();
     let artist_select =
-        "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.album_artist_name ELSE NULL END";
+        "CASE entry_type WHEN 'song' THEN ar.artist_name WHEN 'album' THEN aa.artist_name ELSE NULL END";
 
     let artist_filter_clause = if artist_filter.is_empty() {
         "".to_owned()
@@ -47,16 +47,15 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
             entry_value, 
             {artist_select}, 
             CASE entry_type WHEN 'song' THEN 1 WHEN 'album' THEN 2 WHEN 'tag' THEN 3 ELSE 4 END,
-            CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name WHEN 'album_artist' THEN aa2.album_artist_name END
+            CASE entry_type WHEN 'song' THEN s.song_title + s.album_id WHEN 'album' THEN al.album_name WHEN 'artist' THEN ar2.artist_name END
             ORDER BY entry_type DESC) row_num
         FROM (SELECT entry_type, assoc_id, entry_value, highlight(search_index, 0, '{START_MATCH_TEXT}', '{END_MATCH_TEXT}') entry, rank FROM search_index WHERE entry_value match $3 {type_filter}) search_query
         LEFT OUTER JOIN song s on s.song_id = assoc_id
         LEFT OUTER JOIN artist ar on ar.artist_id = s.artist_id
         LEFT OUTER JOIN album al on al.album_id = assoc_id
         LEFT OUTER JOIN album al2 on al2.album_id = s.album_id
-        LEFT OUTER JOIN album_artist aa on aa.album_artist_id = al.album_artist_id
+        LEFT OUTER JOIN artist aa on aa.artist_id = al.artist_id
         LEFT OUTER JOIN artist ar2 on ar2.artist_id = assoc_id
-        LEFT OUTER JOIN album_artist aa2 on aa2.album_artist_id = assoc_id
         {artist_filter_clause}
         ORDER BY rank
         LIMIT $4

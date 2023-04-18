@@ -1,62 +1,87 @@
-use std::{env::current_exe, error::Error};
-
 use daemon_slayer::{
     cli::Cli,
-    client::{cli::ClientCliProvider, config::SystemdConfig, Level, Manager, ServiceManager},
+    client::{
+        self,
+        cli::ClientCliProvider,
+        config::{
+            systemd::SystemdConfig,
+            windows::{ServiceAccess, Trustee, WindowsConfig},
+            Level,
+        },
+    },
     console::{cli::ConsoleCliProvider, Console},
-    error_handler::ErrorHandler,
+    core::BoxedError,
+    error_handler::{cli::ErrorHandlerCliProvider, ErrorSink},
     health_check::{cli::HealthCheckCliProvider, GrpcHealthCheck},
-    logging::{tracing_subscriber::util::SubscriberInitExt, LoggerBuilder},
+    logging::{
+        cli::LoggingCliProvider, tracing_subscriber::util::SubscriberInitExt, LoggerBuilder,
+    },
+    process::cli::ProcessCliProvider,
 };
-
-fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
-    daemon_slayer::logging::init_local_time();
-    run_async()
-}
+use std::env::current_exe;
 
 #[tokio::main]
-async fn run_async() -> Result<(), Box<dyn Error + Send + Sync>> {
-    let (logger, _guard) = LoggerBuilder::for_client("platuned").build()?;
-    logger.init();
-    ErrorHandler::for_client().install()?;
+async fn main() -> Result<(), ErrorSink> {
+    let guard = daemon_slayer::logging::init();
+    let result = run().await.map_err(ErrorSink::from_error);
+    drop(guard);
+    result
+}
 
-    let mut manager_builder = ServiceManager::builder("platuned")
-        .with_description("platune service")
-        .with_service_level(Level::User)
-        .with_autostart(true)
-        .with_systemd_config(
-            SystemdConfig::new()
-                .with_after_target("network.target")
-                .with_after_target("network-online.target")
-                .with_after_target("NetworkManager.service")
-                .with_after_target("systemd-resolved.service"),
-        )
-        .with_program(current_exe()?.parent().unwrap().join("platuned"))
-        .with_args(["run"]);
+async fn run() -> Result<(), BoxedError> {
+    let mut manager_builder = client::builder(
+        "platuned".parse()?,
+        current_exe()?
+            .parent()
+            .unwrap()
+            .join("platuned")
+            .try_into()?,
+    )
+    .with_description("platune service")
+    .with_service_level(Level::User)
+    .with_autostart(true)
+    .with_windows_config(WindowsConfig::default().with_additional_access(
+        Trustee::CurrentUser,
+        ServiceAccess::Start | ServiceAccess::Stop | ServiceAccess::ChangeConfig,
+    ))
+    .with_systemd_config(
+        SystemdConfig::default()
+            .with_after_target("network.target")
+            .with_after_target("network-online.target")
+            .with_after_target("NetworkManager.service")
+            .with_after_target("systemd-resolved.service"),
+    )
+    .with_arg(&"run".parse()?);
 
     if let Ok(()) = dotenvy::from_path("./.env") {
         if let Ok(database_url) = std::env::var("DATABASE_URL") {
-            manager_builder = manager_builder.with_env_var("DATABASE_URL", database_url);
+            manager_builder =
+                manager_builder.with_environment_variable("DATABASE_URL", database_url);
         }
         if let Ok(spellfix_lib) = std::env::var("SPELLFIX_LIB") {
-            manager_builder = manager_builder.with_env_var("SPELLFIX_LIB", spellfix_lib);
+            manager_builder =
+                manager_builder.with_environment_variable("SPELLFIX_LIB", spellfix_lib);
         }
     }
     let manager = manager_builder.build().unwrap();
+    let logger_builder = LoggerBuilder::new("platuned".parse()?);
 
     let health_check = GrpcHealthCheck::new("http://[::1]:50051").unwrap();
 
-    let mut console = Console::new(manager.clone());
-    console.add_health_check(Box::new(health_check.clone()));
+    let console = Console::new(manager.clone()).with_health_check(Box::new(health_check.clone()));
 
-    let (cli, command) = Cli::builder()
+    let mut cli = Cli::builder()
         .with_provider(ClientCliProvider::new(manager.clone()))
+        .with_provider(ProcessCliProvider::new(manager.info()?.pid))
         .with_provider(ConsoleCliProvider::new(console))
+        .with_provider(LoggingCliProvider::new(logger_builder))
+        .with_provider(ErrorHandlerCliProvider::default())
         .with_provider(HealthCheckCliProvider::new(health_check))
-        .build();
+        .initialize()?;
 
-    let matches = command.get_matches();
+    let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;
+    logger.init();
 
-    cli.handle_input(&matches).await;
+    cli.handle_input().await?;
     Ok(())
 }

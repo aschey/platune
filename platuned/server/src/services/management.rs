@@ -1,8 +1,8 @@
 use crate::management_server::Management;
 use crate::rpc::*;
 
+use daemon_slayer::server::Signal;
 use daemon_slayer::server::{BroadcastEventStore, EventStore};
-use daemon_slayer::signals::Signal;
 use futures::StreamExt;
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager;
@@ -134,6 +134,31 @@ impl Management for ManagementImpl {
         }))
     }
 
+    async fn get_albums_by_album_artists(
+        &self,
+        request: Request<IdMessage>,
+    ) -> Result<Response<AlbumResponse>, Status> {
+        let request = request.into_inner();
+        let albums = self
+            .manager
+            .read()
+            .await
+            .albums_by_album_artists(request.ids)
+            .await
+            .map_err(|e| format_error(format!("Error getting albums: {e:?}")))?;
+        Ok(Response::new(AlbumResponse {
+            entries: albums
+                .into_iter()
+                .map(|a| AlbumEntry {
+                    album: a.album,
+                    album_id: a.album_id,
+                    album_artist: a.album_artist,
+                    album_artist_id: a.album_artist_id,
+                })
+                .collect(),
+        }))
+    }
+
     async fn lookup(
         &self,
         request: Request<LookupRequest>,
@@ -148,7 +173,6 @@ impl Management for ManagementImpl {
                 match EntryType::from_i32(request.entry_type).unwrap() {
                     EntryType::Song => manager::EntryType::Song,
                     EntryType::Album => manager::EntryType::Album,
-                    EntryType::AlbumArtist => manager::EntryType::AlbumArtist,
                     EntryType::Artist => manager::EntryType::Artist,
                 },
             )
@@ -156,9 +180,7 @@ impl Management for ManagementImpl {
         {
             Ok(entries) => entries,
             Err(e) => {
-                return Err(format_error(format!(
-                    "Error sending lookup request {e:?}"
-                )));
+                return Err(format_error(format!("Error sending lookup request {e:?}")));
             }
         };
         let entries = lookup_result
@@ -196,7 +218,7 @@ impl Management for ManagementImpl {
 
         tokio::spawn(async move {
             while let Some(msg) =
-                tokio::select! { val = messages.next() => val, _ = shutdown_rx.recv() => None }
+                tokio::select! { val = messages.next() => val, _ = shutdown_rx.next() => None }
             {
                 let manager = manager.read().await;
                 match msg {
@@ -218,9 +240,7 @@ impl Management for ManagementImpl {
                 let search_results = match r {
                     Ok(results) => results,
                     Err(e) => {
-                        return Err(format_error(format!(
-                            "Error sending search request {e:?}"
-                        )));
+                        return Err(format_error(format!("Error sending search request {e:?}")));
                     }
                 };
                 let results = search_results
@@ -231,7 +251,6 @@ impl Management for ManagementImpl {
                         entry_type: (match res.entry_type {
                             manager::EntryType::Song => EntryType::Song,
                             manager::EntryType::Artist => EntryType::Artist,
-                            manager::EntryType::AlbumArtist => EntryType::AlbumArtist,
                             manager::EntryType::Album => EntryType::Album,
                         })
                         .into(),

@@ -2,3 +2,4 @@
 *.pb.go
 ui-old
 api-old
+cli-old

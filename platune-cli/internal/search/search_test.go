@@ -22,13 +22,13 @@ func testRenderItem(t *testing.T, index int, expected string) {
 			Entry:          "test entry1",
 			Description:    "test description1",
 			EntryType:      platune.EntryType_SONG,
-			CorrelationIds: []int32{1},
+			CorrelationIds: []int64{1},
 		},
 		{
 			Entry:          "test entry2",
 			Description:    "test description2",
 			EntryType:      platune.EntryType_SONG,
-			CorrelationIds: []int32{1},
+			CorrelationIds: []int64{1},
 		},
 	}
 	items := getItems(results)
@@ -59,13 +59,13 @@ func TestSelectOneItem(t *testing.T) {
 			Entry:          "test entry1",
 			Description:    "test description1",
 			EntryType:      platune.EntryType_SONG,
-			CorrelationIds: []int32{1},
+			CorrelationIds: []int64{1},
 		},
 		{
 			Entry:          "test entry2",
 			Description:    "test description2",
 			EntryType:      platune.EntryType_SONG,
-			CorrelationIds: []int32{1},
+			CorrelationIds: []int64{1},
 		},
 	}
 	items := getItems(results)
@@ -75,7 +75,7 @@ func TestSelectOneItem(t *testing.T) {
 	mock := test.NewMockManagementClient(ctrl)
 	lookupRequest := &platune.LookupRequest{
 		EntryType:      platune.EntryType_SONG,
-		CorrelationIds: []int32{1},
+		CorrelationIds: []int64{1},
 	}
 	lookupEntries := []*platune.LookupEntry{
 		{
@@ -125,7 +125,7 @@ func TestOneSearchResult(t *testing.T) {
 		Entry:          song,
 		EntryType:      platune.EntryType_SONG,
 		Description:    "test description",
-		CorrelationIds: []int32{1},
+		CorrelationIds: []int64{1},
 	}
 	stream.EXPECT().
 		Recv().
@@ -133,7 +133,7 @@ func TestOneSearchResult(t *testing.T) {
 	mock := test.NewMockManagementClient(ctrl)
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	mock.EXPECT().
-		Lookup(gomock.Any(), &platune.LookupRequest{EntryType: platune.EntryType_SONG, CorrelationIds: []int32{1}}).
+		Lookup(gomock.Any(), &platune.LookupRequest{EntryType: platune.EntryType_SONG, CorrelationIds: []int64{1}}).
 		Return(&platune.LookupResponse{Entries: []*platune.LookupEntry{{Song: song}}}, nil)
 
 	client := internal.NewTestClient(nil, mock)

@@ -81,8 +81,8 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 	if index == m.Index() {
-		fn = func(s string) string {
-			return selectedItemStyle.Render("▶ " + s)
+		fn = func(strs ...string) string {
+			return selectedItemStyle.Render("▶ " + strs[0])
 		}
 	}
 

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO folder(folder_path) VALUES(?);",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "eaf104b3af1fff251dcbafc8c7fe8580b8f4de8981bfa31ba5bdf9d7dcf2df8e"
+}

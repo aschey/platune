@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE mount SET mount_path = ? WHERE mount_uuid = ?;",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c54344e9dde0490dc73daf2a8792223adc6a323152cefcea7d837e340618be44"
+}

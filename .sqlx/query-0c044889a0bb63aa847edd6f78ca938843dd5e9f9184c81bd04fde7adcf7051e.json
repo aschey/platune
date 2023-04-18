@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,\n            al.album_name album, aa.artist_name album_artist, s.track_number track\n            FROM song s\n            INNER JOIN artist ar ON ar.artist_id = s.artist_id\n            INNER JOIN album al ON al.album_id = s.album_id\n            INNER JOIN artist aa ON aa.artist_id = al.artist_id\n            WHERE s.song_path = ?\n            ORDER BY aa.artist_id, al.album_id, s.track_number;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "artist",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "song",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "path",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "duration_millis",
+        "ordinal": 3,
+        "type_info": "Int64"
+      },
+      {
+        "name": "album",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "album_artist",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "track",
+        "ordinal": 6,
+        "type_info": "Int64"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0c044889a0bb63aa847edd6f78ca938843dd5e9f9184c81bd04fde7adcf7051e"
+}

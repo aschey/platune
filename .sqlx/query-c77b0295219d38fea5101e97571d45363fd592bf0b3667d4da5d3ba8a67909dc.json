@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT mount_path FROM mount WHERE mount_uuid = ?;",
+  "describe": {
+    "columns": [
+      {
+        "name": "mount_path",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c77b0295219d38fea5101e97571d45363fd592bf0b3667d4da5d3ba8a67909dc"
+}

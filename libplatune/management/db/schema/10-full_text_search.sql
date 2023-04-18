@@ -90,31 +90,3 @@ DELETE FROM search_index
 WHERE assoc_id = old.artist_id
     AND entry_type = 'artist';
 END;
--- Album Artist
-CREATE TRIGGER IF NOT EXISTS after_album_artist_insert
-AFTER
-INSERT ON album_artist BEGIN
-INSERT INTO search_index (
-        assoc_id,
-        entry_value,
-        entry_type
-    )
-VALUES(
-        new.album_artist_id,
-        REPLACE(new.album_artist_name, ' & ', ' and '),
-        'album_artist'
-    );
-END;
-CREATE TRIGGER IF NOT EXISTS after_album_artist_update
-UPDATE OF album_artist_name ON album_artist BEGIN
-UPDATE search_index
-SET entry_value = REPLACE(new.album_artist_name, ' & ', ' and ')
-WHERE assoc_id = old.album_artist_id
-    AND entry_type = 'album_artist';
-END;
-CREATE TRIGGER IF NOT EXISTS after_album_artist_delete
-AFTER DELETE ON album_artist BEGIN
-DELETE FROM search_index
-WHERE assoc_id = old.album_artist_id
-    AND entry_type = 'album_artist';
-END;

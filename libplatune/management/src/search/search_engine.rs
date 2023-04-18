@@ -133,7 +133,7 @@ impl SearchEngine {
             corrected = corrected.bind(term);
         }
         let mut spellfix_results = corrected
-            .fetch_all(conn)
+            .fetch_all(&mut **conn)
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         if let Some(last) = terms.last() {
@@ -262,7 +262,7 @@ impl SearchEngine {
         }
 
         sql_query
-            .map(|row| SearchEntry {
+            .map(|row: <sqlx::Sqlite as sqlx::Database>::Row| SearchEntry {
                 entry: row.try_get("entry").unwrap_or_default(),
                 entry_type: row.try_get("entry_type").unwrap_or_default(),
                 artist: row.try_get("artist").unwrap_or_default(),
@@ -273,7 +273,7 @@ impl SearchEngine {
                 end_highlight: row.try_get("end_highlight").unwrap_or_default(),
                 weights: weights.clone(),
             })
-            .fetch_all(con)
+            .fetch_all(&mut **con)
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))
     }

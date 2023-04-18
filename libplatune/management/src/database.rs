@@ -16,6 +16,7 @@ use std::sync::Arc;
 use std::{path::Path, time::Duration};
 use tokio::sync::Mutex;
 use tracing::info;
+use uuid::Uuid;
 
 #[derive(RustEmbed)]
 #[folder = "db/schema"]
@@ -38,6 +39,20 @@ pub struct LookupEntry {
     pub path: String,
     pub track: i64,
     pub duration_millis: i64,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+pub struct Album {
+    pub album: String,
+    pub album_id: i64,
+    pub album_artist: String,
+    pub album_artist_id: i64,
+}
+
+#[derive(Debug)]
+pub struct Entity {
+    pub id: i64,
+    pub name: String,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -67,7 +82,6 @@ impl Database {
             .read_only(true)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned()
             .extension(Self::get_spellfix_lib());
 
         let writer_opts = SqliteConnectOptions::new()
@@ -75,7 +89,6 @@ impl Database {
             .create_if_missing(create_if_missing)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned()
             .extension(Self::get_spellfix_lib());
 
         let write_pool = sqlx::pool::PoolOptions::new()
@@ -101,7 +114,6 @@ impl Database {
             .unwrap()
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .to_owned()
             .extension(Self::get_spellfix_lib());
 
         let pool = SqlitePool::connect_with(opts).await.unwrap();
@@ -212,7 +224,7 @@ impl Database {
             .await
     }
 
-    pub(crate) async fn rename_path(&mut self, from: String, to: String) -> Result<(), DbError> {
+    pub(crate) async fn rename_path(&self, from: &str, to: &str) -> Result<(), DbError> {
         // Update could cause duplicate paths so just ignore if that happens
         sqlx::query!(
             "
@@ -231,14 +243,13 @@ impl Database {
 
     pub(crate) async fn lookup(
         &self,
-        correlation_ids: Vec<i32>,
+        correlation_ids: Vec<i64>,
         entry_type: EntryType,
     ) -> Result<Vec<LookupEntry>, DbError> {
         match entry_type {
             EntryType::Album => self.all_by_albums(correlation_ids).await,
             EntryType::Song => self.all_by_ids(correlation_ids).await,
             EntryType::Artist => self.all_by_artists(correlation_ids).await,
-            EntryType::AlbumArtist => self.all_by_album_artists(correlation_ids).await,
         }
     }
 
@@ -250,13 +261,13 @@ impl Database {
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE s.song_path = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             path
         )
@@ -265,18 +276,18 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    async fn all_by_artists(&self, artist_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+    async fn all_by_artists(&self, artist_ids: Vec<i64>) -> Result<Vec<LookupEntry>, DbError> {
         sqlx::query_as!(
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM artist ar
             INNER JOIN song s ON s.artist_id = ar.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
-            WHERE ar.artist_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
+            WHERE ar.artist_id = $1 OR aa.artist_id = $1
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             artist_ids[0]
         )
@@ -285,40 +296,18 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    async fn all_by_album_artists(
-        &self,
-        album_artist_ids: Vec<i32>,
-    ) -> Result<Vec<LookupEntry>, DbError> {
+    async fn all_by_albums(&self, album_ids: Vec<i64>) -> Result<Vec<LookupEntry>, DbError> {
         sqlx::query_as!(
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
-            FROM album_artist aa
-            INNER JOIN album al ON al.album_artist_id = aa.album_artist_id
-            INNER JOIN song s ON s.album_id = al.album_id
-            INNER JOIN artist ar ON ar.artist_id = s.artist_id
-            WHERE aa.album_artist_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;",
-            album_artist_ids[0]
-        )
-        .fetch_all(&self.read_pool)
-        .await
-        .map_err(|e| DbError::DbError(format!("{e:?}")))
-    }
-
-    async fn all_by_albums(&self, album_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
-        sqlx::query_as!(
-            LookupEntry,
-            "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track 
+            al.album_name album, aa.artist_name album_artist, s.track_number track 
             FROM album al
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
             INNER JOIN song s ON s.album_id = al.album_id
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             WHERE al.album_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             album_ids[0]
         )
@@ -327,20 +316,39 @@ impl Database {
         .map_err(|e| DbError::DbError(format!("{e:?}")))
     }
 
-    async fn all_by_ids(&self, song_ids: Vec<i32>) -> Result<Vec<LookupEntry>, DbError> {
+    async fn all_by_ids(&self, song_ids: Vec<i64>) -> Result<Vec<LookupEntry>, DbError> {
         sqlx::query_as!(
             LookupEntry,
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.album_artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
-            INNER JOIN album_artist aa ON aa.album_artist_id = al.album_artist_id
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE s.song_id = ?
-            ORDER BY aa.album_artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.track_number;
             ",
             song_ids[0]
+        )
+        .fetch_all(&self.read_pool)
+        .await
+        .map_err(|e| DbError::DbError(format!("{e:?}")))
+    }
+
+    pub async fn albums_by_album_artists(
+        &self,
+        artist_ids: Vec<i64>,
+    ) -> Result<Vec<Album>, DbError> {
+        sqlx::query_as!(
+            Album,
+            "
+            SELECT al.album_name album, al.album_id, aa.artist_name album_artist, aa.artist_id album_artist_id
+            FROM album al
+            INNER JOIN artist aa ON aa.artist_id = al.artist_id
+            WHERE aa.artist_id = ?
+            ",
+            artist_ids[0]
         )
         .fetch_all(&self.read_pool)
         .await
@@ -368,12 +376,12 @@ impl Database {
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         for id in ids {
             sqlx::query!("DELETE FROM deleted_song WHERE song_id = ?;", id)
-                .execute(&mut tran)
+                .execute(&mut *tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
             sqlx::query!("DELETE FROM song WHERE song_id = ?;", id)
-                .execute(&mut tran)
+                .execute(&mut *tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         }
@@ -391,7 +399,7 @@ impl Database {
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         for path in paths {
             sqlx::query!("INSERT OR IGNORE INTO folder(folder_path) VALUES(?);", path)
-                .execute(&mut tran)
+                .execute(&mut *tran)
                 .await
                 .map_err(|e| DbError::DbError(format!("{e:?}")))?;
         }
@@ -402,8 +410,8 @@ impl Database {
 
     pub(crate) async fn update_folder(
         &self,
-        old_path: String,
-        new_path: String,
+        old_path: &str,
+        new_path: &str,
     ) -> Result<(), DbError> {
         sqlx::query!(
             "UPDATE folder SET folder_path = ? WHERE folder_path = ?;",
@@ -427,35 +435,45 @@ impl Database {
             .collect())
     }
 
-    pub(crate) async fn get_mount(&self, mount_id: i64) -> Option<String> {
-        match sqlx::query!("SELECT mount_path FROM mount WHERE mount_id = ?;", mount_id)
-            .fetch_one(&self.read_pool)
-            .await
+    pub(crate) async fn get_mount(&self, mount_uuid: Uuid) -> Option<String> {
+        let mount_uuid = mount_uuid.to_string();
+        match sqlx::query!(
+            "SELECT mount_path FROM mount WHERE mount_uuid = ?;",
+            mount_uuid
+        )
+        .fetch_one(&self.read_pool)
+        .await
         {
             Ok(res) => Some(res.mount_path),
             Err(_) => None,
         }
     }
 
-    pub(crate) async fn add_mount(&self, path: &str) -> Result<i64, DbError> {
-        sqlx::query!(r"INSERT OR IGNORE INTO mount(mount_path) VALUES(?);", path)
-            .execute(&self.write_pool)
-            .await
-            .map_err(|e| DbError::DbError(format!("{e:?}")))?;
+    pub(crate) async fn add_mount(&self, path: &str) -> Result<Uuid, DbError> {
+        let new_id = Uuid::new_v4().to_string();
+        sqlx::query!(
+            r"INSERT OR IGNORE INTO mount(mount_uuid, mount_path) VALUES(?, ?);",
+            new_id,
+            path
+        )
+        .execute(&self.write_pool)
+        .await
+        .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
-        let res = sqlx::query!(r"SELECT mount_id FROM mount WHERE mount_path = ?;", path)
+        let res = sqlx::query!(r"SELECT mount_uuid FROM mount WHERE mount_path = ?;", path)
             .fetch_one(&self.read_pool)
             .await
             .map_err(|e| DbError::DbError(format!("{e:?}")))?;
 
-        Ok(res.mount_id)
+        Ok(Uuid::from_str(&res.mount_uuid).unwrap())
     }
 
-    pub(crate) async fn update_mount(&self, mount_id: i64, path: &str) -> Result<u64, DbError> {
+    pub(crate) async fn update_mount(&self, mount_uuid: Uuid, path: &str) -> Result<u64, DbError> {
+        let mount_uuid = mount_uuid.to_string();
         let res = sqlx::query!(
-            "UPDATE mount SET mount_path = ? WHERE mount_id = ?;",
+            "UPDATE mount SET mount_path = ? WHERE mount_uuid = ?;",
             path,
-            mount_id
+            mount_uuid
         )
         .execute(&self.write_pool)
         .await

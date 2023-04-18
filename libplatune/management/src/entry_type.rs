@@ -5,7 +5,5 @@ use strum::EnumString;
 pub enum EntryType {
     Song,
     Artist,
-    #[strum(serialize = "album_artist")]
-    AlbumArtist,
     Album,
 }

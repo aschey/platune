@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE song\n            SET modified_date = $2,\n            artist_id = (SELECT artist_id FROM artist WHERE artist_name = $3),\n            song_title = $4,\n            album_id = (SELECT album_id FROM album a\n                        INNER JOIN artist aa ON a.artist_id = aa.artist_id\n                        WHERE a.album_name = $5 AND aa.artist_name = $6),\n            track_number = $7,\n            disc_number = $8,\n            song_year = $9,\n            song_month = $10,\n            song_day = $11,\n            duration = $12,\n            sample_rate = $13,\n            bit_rate = $14,\n            file_size = $15,\n            album_art_path = $16,\n            fingerprint = $17\n        WHERE song_path = $1 AND fingerprint != $17;\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 17
+    },
+    "nullable": []
+  },
+  "hash": "1f8c4980c99779f561b9483af3b4ee599a37adeea12aa5f297818aa0a0dddc2d"
+}

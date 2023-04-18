@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use lofty::{Accessor, AudioFile, ItemKey, TaggedFile};
+use lofty::{Accessor, AudioFile, ItemKey, TaggedFile, TaggedFileExt};
 
 #[derive(Debug, Hash, Default)]
 pub(crate) struct Tag {
@@ -26,18 +26,25 @@ impl From<TaggedFile> for Tag {
         };
         let props = tagged_file.properties();
         match tag {
-            Some(tag) => Tag {
-                title: tag.title().unwrap_or("").to_owned(),
-                artists: tag.get_strings(&ItemKey::TrackArtist).join("/"),
-                album: tag.album().unwrap_or("").to_owned(),
-                track_number: tag.track().unwrap_or(1),
-                disc_number: tag.disk().unwrap_or(1),
-                year: tag.year().unwrap_or(0),
-                duration: props.duration().as_millis() as i64,
-                sample_rate: props.sample_rate().unwrap_or(0),
-                bitrate: props.audio_bitrate().unwrap_or(0),
-                album_artists: tag.get_strings(&ItemKey::AlbumArtist).join("/"),
-            },
+            Some(tag) => {
+                let artists = tag.get_strings(&ItemKey::TrackArtist).join("/");
+                let mut album_artists = tag.get_strings(&ItemKey::AlbumArtist).join("/");
+                if album_artists.is_empty() {
+                    album_artists = artists.clone();
+                }
+                Tag {
+                    title: tag.title().unwrap_or_default().into_owned(),
+                    artists,
+                    album: tag.album().unwrap_or_default().into_owned(),
+                    track_number: tag.track().unwrap_or(1),
+                    disc_number: tag.disk().unwrap_or(1),
+                    year: tag.year().unwrap_or(0),
+                    duration: props.duration().as_millis() as i64,
+                    sample_rate: props.sample_rate().unwrap_or(0),
+                    bitrate: props.audio_bitrate().unwrap_or(0),
+                    album_artists,
+                }
+            }
             None => Default::default(),
         }
     }

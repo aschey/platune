@@ -1,30 +1,65 @@
 use crate::ipc_stream::IpcStream;
+#[cfg(feature = "management")]
 use crate::management_server::ManagementServer;
+#[cfg(feature = "player")]
 use crate::player_server::PlayerServer;
 use crate::rpc;
+#[cfg(feature = "management")]
 use crate::services::management::ManagementImpl;
+#[cfg(feature = "player")]
 use crate::services::player::PlayerImpl;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
-use daemon_slayer::server::{BroadcastEventStore, EventStore};
-use daemon_slayer::signals::Signal;
-use futures::future::try_join_all;
+use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
+#[cfg(feature = "management")]
 use libplatune_management::config::FileConfig;
+#[cfg(feature = "management")]
 use libplatune_management::database::Database;
+#[cfg(feature = "management")]
 use libplatune_management::file_watch_manager::FileWatchManager;
+#[cfg(feature = "management")]
 use libplatune_management::manager::Manager;
+#[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
 use std::env;
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+#[cfg(feature = "management")]
 use std::time::Duration;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
+#[cfg(feature = "management")]
+use tower_http::services::ServeDir;
 use tracing::info;
 
 enum Transport {
     Http(SocketAddr),
     Ipc(PathBuf),
+}
+
+#[derive(Clone)]
+struct Services {
+    #[cfg(feature = "player")]
+    player: Arc<PlatunePlayer>,
+    #[cfg(feature = "management")]
+    manager: FileWatchManager,
+}
+
+impl Services {
+    async fn new() -> Result<Self> {
+        #[cfg(feature = "management")]
+        let manager = init_manager().await?;
+        Ok(Self {
+            #[cfg(feature = "player")]
+            player: Arc::new(PlatunePlayer::new(Default::default())),
+            #[cfg(feature = "management")]
+            manager: FileWatchManager::new(manager, Duration::from_millis(500))
+                .await
+                .wrap_err("error starting file watch manager")?,
+        })
+    }
 }
 
 #[cfg(unix)]
@@ -51,20 +86,14 @@ fn create_socket_path(path: &Path) -> Result<()> {
 }
 
 pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
-    let platune_player = Arc::new(PlatunePlayer::new(Default::default()));
-    let manager = init_manager().await?;
-    let manager = FileWatchManager::new(manager, Duration::from_millis(500))
-        .await
-        .wrap_err("error starting file watch manager")?;
-
-    let mut servers = Vec::<_>::new();
+    let services = Services::new().await?;
+    let servers = FuturesUnordered::new();
     let http_server = run_server(
         shutdown_rx.clone(),
-        platune_player.clone(),
-        manager.clone(),
+        services.clone(),
         Transport::Http("[::1]:50051".parse().unwrap()),
     );
-    servers.push(http_server);
+    servers.push(tokio::spawn(http_server));
 
     #[cfg(unix)]
     let socket_path = {
@@ -81,22 +110,70 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
 
     let ipc_server = run_server(
         shutdown_rx.clone(),
-        platune_player.clone(),
-        manager,
+        services.clone(),
         Transport::Ipc(socket_path),
     );
-    servers.push(ipc_server);
+    servers.push(tokio::spawn(ipc_server));
+    #[cfg(feature = "management")]
+    {
+        let folders = services.manager.read().await.get_all_folders().await?;
+        servers.push(tokio::spawn(run_file_service(folders, shutdown_rx)));
+    }
 
-    try_join_all(servers).await?;
+    let _: Vec<_> = servers.collect().await;
 
-    let player_inner = Arc::try_unwrap(platune_player).expect("All servers should've been dropped");
-    player_inner.join().await?;
+    #[cfg(feature = "player")]
+    {
+        let player_inner =
+            Arc::try_unwrap(services.player).expect("All servers should've been dropped");
+        player_inner.join().await?;
+    }
 
     Ok(())
 }
 
+#[cfg(feature = "management")]
+async fn run_file_service(
+    folders: Vec<String>,
+    shutdown_rx: BroadcastEventStore<Signal>,
+) -> Result<()> {
+    let addr = "[::1]:50050".parse().unwrap();
+    info!("Running file server on {addr}");
+    let mut shutdown_rx = shutdown_rx.subscribe_events();
+    match folders.as_slice() {
+        [folder] => {
+            let service = ServeDir::new(folder);
+            let server = hyper::Server::bind(&addr)
+                .serve(tower::make::Shared::new(service))
+                .with_graceful_shutdown(async {
+                    shutdown_rx.next().await;
+                });
+            server.await.wrap_err("Error running file server")?;
+        }
+        [first, second, rest @ ..] => {
+            let mut service = ServeDir::new(first).fallback(ServeDir::new(second));
+            for folder in rest {
+                service = service.fallback(ServeDir::new(folder));
+            }
+            let server = hyper::Server::bind(&addr)
+                .serve(tower::make::Shared::new(service))
+                .with_graceful_shutdown(async {
+                    shutdown_rx.next().await;
+                });
+            server.await.wrap_err("Error running file server")?;
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+#[cfg(feature = "management")]
 async fn init_manager() -> Result<Manager> {
-    let path = env::var("DATABASE_URL").wrap_err("DATABASE_URL environment variable not set")?;
+    let path = env::var("DATABASE_URL")
+        .wrap_err("DATABASE_URL environment variable not set")?
+        .replace("sqlite://", "");
+
+    info!("Connecting to database {path:?}");
     let db = Database::connect(path, true).await?;
     db.sync_database()
         .await
@@ -109,8 +186,7 @@ async fn init_manager() -> Result<Manager> {
 
 async fn run_server(
     shutdown_rx: BroadcastEventStore<Signal>,
-    platune_player: Arc<PlatunePlayer>,
-    manager: FileWatchManager,
+    services: Services,
     transport: Transport,
 ) -> Result<()> {
     let reflection_service = Builder::configure()
@@ -118,24 +194,31 @@ async fn run_server(
         .build()
         .wrap_err("Error building tonic server")?;
 
-    let player = PlayerImpl::new(platune_player, shutdown_rx.clone());
-
-    let management = ManagementImpl::new(manager, shutdown_rx.clone());
-
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
 
+    #[cfg(feature = "player")]
     health_reporter
         .set_serving::<PlayerServer<PlayerImpl>>()
         .await;
+
+    #[cfg(feature = "management")]
     health_reporter
         .set_serving::<ManagementServer<ManagementImpl>>()
         .await;
 
     let builder = Server::builder()
         .add_service(reflection_service)
-        .add_service(PlayerServer::new(player))
-        .add_service(ManagementServer::new(management))
         .add_service(health_service);
+    #[cfg(feature = "player")]
+    let builder = builder.add_service(PlayerServer::new(PlayerImpl::new(
+        services.player,
+        shutdown_rx.clone(),
+    )));
+    #[cfg(feature = "management")]
+    let builder = builder.add_service(ManagementServer::new(ManagementImpl::new(
+        services.manager,
+        shutdown_rx.clone(),
+    )));
 
     let mut shutdown_rx = shutdown_rx.subscribe_events();
     let server_result = match transport {
@@ -143,7 +226,7 @@ async fn run_server(
             info!("Running HTTP server on {addr}");
             builder
                 .serve_with_shutdown(addr, async {
-                    shutdown_rx.recv().await;
+                    shutdown_rx.next().await;
                 })
                 .await
                 .wrap_err("Error running HTTP server")
@@ -155,7 +238,7 @@ async fn run_server(
                 .serve_with_incoming_shutdown(
                     IpcStream::get_async_stream(path.to_string_lossy().to_string())?,
                     async {
-                        shutdown_rx.recv().await;
+                        shutdown_rx.next().await;
                     },
                 )
                 .await

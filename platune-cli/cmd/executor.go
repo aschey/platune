@@ -49,7 +49,6 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest, suggestions
 			state.client.AddSearchResultsToQueue(state.currentQueue, true)
 			state.currentQueue = []*platune.LookupEntry{}
 		}
-
 	}
 }
 
@@ -183,7 +182,7 @@ func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode mo
 	if valid {
 		lookupResult := state.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 		switch searchResult.EntryType {
-		case platune.EntryType_ARTIST, platune.EntryType_ALBUM_ARTIST:
+		case platune.EntryType_ARTIST:
 			state.mode.Set(mode.AlbumMode)
 			state.lookupResult = lookupResult.Entries
 		case platune.EntryType_ALBUM:
@@ -197,12 +196,10 @@ func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode mo
 		path := selected.Metadata.(string)
 		state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: path})
 	}
-
 }
 
 func expandPath(song string) (string, fs.FileInfo, error) {
 	dir, base, err := internal.CleanFilePath(song)
-
 	if err != nil {
 		return "", nil, err
 	}

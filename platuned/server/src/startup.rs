@@ -2,36 +2,43 @@ use std::error::Error;
 
 use crate::server;
 use daemon_slayer::{
-    server::{BroadcastEventStore, Handler, ServiceContext},
-    signals::{Signal, SignalHandler, SignalHandlerBuilder, SignalHandlerBuilderTrait},
+    core::{BoxedError, Label},
+    server::{BroadcastEventStore, Handler, Service, ServiceContext, Signal, SignalHandler},
+    signals::SignalListener,
 };
 use tracing::info;
 
-#[derive(daemon_slayer::server::Service)]
+#[derive(Service)]
 pub struct ServiceHandler {
     signal_store: BroadcastEventStore<Signal>,
 }
 
 #[async_trait::async_trait]
 impl Handler for ServiceHandler {
-    async fn new(context: &mut ServiceContext) -> Self {
-        let (_, signal_store) = context
-            .add_event_service::<SignalHandler>(SignalHandlerBuilder::all())
-            .await;
+    type Error = BoxedError;
+    type InputData = ();
 
-        Self { signal_store }
+    async fn new(
+        mut context: ServiceContext,
+        _: Option<Self::InputData>,
+    ) -> Result<Self, Self::Error> {
+        let signal_listener = SignalListener::all();
+        let signal_store = signal_listener.get_event_store();
+        context.add_service(signal_listener).await?;
+
+        Ok(Self { signal_store })
     }
 
-    fn get_service_name<'a>() -> &'a str {
-        "platuned"
+    fn label() -> Label {
+        "platuned".parse().expect("failed to parse label")
     }
 
     async fn run_service<F: FnOnce() + Send>(
         mut self,
-        on_started: F,
+        notify_ready: F,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         info!("running service");
-        on_started();
+        notify_ready();
 
         server::run_all(self.signal_store.clone()).await?;
         Ok(())

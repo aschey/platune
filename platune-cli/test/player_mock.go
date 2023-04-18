@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	v2 "github.com/aschey/platune/client"
+	platune "github.com/aschey/platune/client"
 	gomock "github.com/golang/mock/gomock"
 	grpc "google.golang.org/grpc"
 	metadata "google.golang.org/grpc/metadata"
@@ -39,7 +39,7 @@ func (m *MockPlayerClient) EXPECT() *MockPlayerClientMockRecorder {
 }
 
 // AddToQueue mocks base method.
-func (m *MockPlayerClient) AddToQueue(ctx context.Context, in *v2.AddToQueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockPlayerClient) AddToQueue(ctx context.Context, in *platune.AddToQueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
@@ -59,14 +59,14 @@ func (mr *MockPlayerClientMockRecorder) AddToQueue(ctx, in interface{}, opts ...
 }
 
 // GetCurrentStatus mocks base method.
-func (m *MockPlayerClient) GetCurrentStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*v2.StatusResponse, error) {
+func (m *MockPlayerClient) GetCurrentStatus(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*platune.StatusResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "GetCurrentStatus", varargs...)
-	ret0, _ := ret[0].(*v2.StatusResponse)
+	ret0, _ := ret[0].(*platune.StatusResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -159,7 +159,7 @@ func (mr *MockPlayerClientMockRecorder) Resume(ctx, in interface{}, opts ...inte
 }
 
 // Seek mocks base method.
-func (m *MockPlayerClient) Seek(ctx context.Context, in *v2.SeekRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockPlayerClient) Seek(ctx context.Context, in *platune.SeekRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
@@ -179,7 +179,7 @@ func (mr *MockPlayerClientMockRecorder) Seek(ctx, in interface{}, opts ...interf
 }
 
 // SetQueue mocks base method.
-func (m *MockPlayerClient) SetQueue(ctx context.Context, in *v2.QueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockPlayerClient) SetQueue(ctx context.Context, in *platune.QueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
@@ -199,7 +199,7 @@ func (mr *MockPlayerClientMockRecorder) SetQueue(ctx, in interface{}, opts ...in
 }
 
 // SetVolume mocks base method.
-func (m *MockPlayerClient) SetVolume(ctx context.Context, in *v2.SetVolumeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockPlayerClient) SetVolume(ctx context.Context, in *platune.SetVolumeRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
@@ -239,14 +239,14 @@ func (mr *MockPlayerClientMockRecorder) Stop(ctx, in interface{}, opts ...interf
 }
 
 // SubscribeEvents mocks base method.
-func (m *MockPlayerClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (v2.Player_SubscribeEventsClient, error) {
+func (m *MockPlayerClient) SubscribeEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (platune.Player_SubscribeEventsClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "SubscribeEvents", varargs...)
-	ret0, _ := ret[0].(v2.Player_SubscribeEventsClient)
+	ret0, _ := ret[0].(platune.Player_SubscribeEventsClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -325,10 +325,10 @@ func (mr *MockPlayer_SubscribeEventsClientMockRecorder) Header() *gomock.Call {
 }
 
 // Recv mocks base method.
-func (m *MockPlayer_SubscribeEventsClient) Recv() (*v2.EventResponse, error) {
+func (m *MockPlayer_SubscribeEventsClient) Recv() (*platune.EventResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
-	ret0, _ := ret[0].(*v2.EventResponse)
+	ret0, _ := ret[0].(*platune.EventResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -405,7 +405,7 @@ func (m *MockPlayerServer) EXPECT() *MockPlayerServerMockRecorder {
 }
 
 // AddToQueue mocks base method.
-func (m *MockPlayerServer) AddToQueue(arg0 context.Context, arg1 *v2.AddToQueueRequest) (*emptypb.Empty, error) {
+func (m *MockPlayerServer) AddToQueue(arg0 context.Context, arg1 *platune.AddToQueueRequest) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddToQueue", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
@@ -420,10 +420,10 @@ func (mr *MockPlayerServerMockRecorder) AddToQueue(arg0, arg1 interface{}) *gomo
 }
 
 // GetCurrentStatus mocks base method.
-func (m *MockPlayerServer) GetCurrentStatus(arg0 context.Context, arg1 *emptypb.Empty) (*v2.StatusResponse, error) {
+func (m *MockPlayerServer) GetCurrentStatus(arg0 context.Context, arg1 *emptypb.Empty) (*platune.StatusResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCurrentStatus", arg0, arg1)
-	ret0, _ := ret[0].(*v2.StatusResponse)
+	ret0, _ := ret[0].(*platune.StatusResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -495,7 +495,7 @@ func (mr *MockPlayerServerMockRecorder) Resume(arg0, arg1 interface{}) *gomock.C
 }
 
 // Seek mocks base method.
-func (m *MockPlayerServer) Seek(arg0 context.Context, arg1 *v2.SeekRequest) (*emptypb.Empty, error) {
+func (m *MockPlayerServer) Seek(arg0 context.Context, arg1 *platune.SeekRequest) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Seek", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
@@ -510,7 +510,7 @@ func (mr *MockPlayerServerMockRecorder) Seek(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // SetQueue mocks base method.
-func (m *MockPlayerServer) SetQueue(arg0 context.Context, arg1 *v2.QueueRequest) (*emptypb.Empty, error) {
+func (m *MockPlayerServer) SetQueue(arg0 context.Context, arg1 *platune.QueueRequest) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetQueue", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
@@ -525,7 +525,7 @@ func (mr *MockPlayerServerMockRecorder) SetQueue(arg0, arg1 interface{}) *gomock
 }
 
 // SetVolume mocks base method.
-func (m *MockPlayerServer) SetVolume(arg0 context.Context, arg1 *v2.SetVolumeRequest) (*emptypb.Empty, error) {
+func (m *MockPlayerServer) SetVolume(arg0 context.Context, arg1 *platune.SetVolumeRequest) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetVolume", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)
@@ -555,7 +555,7 @@ func (mr *MockPlayerServerMockRecorder) Stop(arg0, arg1 interface{}) *gomock.Cal
 }
 
 // SubscribeEvents mocks base method.
-func (m *MockPlayerServer) SubscribeEvents(arg0 *emptypb.Empty, arg1 v2.Player_SubscribeEventsServer) error {
+func (m *MockPlayerServer) SubscribeEvents(arg0 *emptypb.Empty, arg1 platune.Player_SubscribeEventsServer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubscribeEvents", arg0, arg1)
 	ret0, _ := ret[0].(error)
@@ -667,7 +667,7 @@ func (mr *MockPlayer_SubscribeEventsServerMockRecorder) RecvMsg(m interface{}) *
 }
 
 // Send mocks base method.
-func (m *MockPlayer_SubscribeEventsServer) Send(arg0 *v2.EventResponse) error {
+func (m *MockPlayer_SubscribeEventsServer) Send(arg0 *platune.EventResponse) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)

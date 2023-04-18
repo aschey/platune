@@ -28,7 +28,6 @@ type PlatuneClient struct {
 }
 
 func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
-
 	conn, err := platune.GetIpcClient()
 	if err != nil {
 		fmt.Println(err)
@@ -263,7 +262,7 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 
 func (p *PlatuneClient) Lookup(
 	entryType platune.EntryType,
-	correlationIds []int32,
+	correlationIds []int64,
 ) *platune.LookupResponse {
 	p.retryConnection()
 	ctx := context.Background()

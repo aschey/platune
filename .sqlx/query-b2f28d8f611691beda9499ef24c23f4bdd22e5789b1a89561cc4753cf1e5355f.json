@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT entry_value as \"entry_value: String\"\n            FROM search_index\n            WHERE length(entry_value) >= $1\n            and entry_type != 'song';\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "entry_value: String",
+        "ordinal": 0,
+        "type_info": "Null"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "b2f28d8f611691beda9499ef24c23f4bdd22e5789b1a89561cc4753cf1e5355f"
+}

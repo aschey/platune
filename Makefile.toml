@@ -6,13 +6,15 @@ dependencies = ["install-hooks"]
 script = '''
 # DB cli
 cargo install sqlx-cli --no-default-features --features sqlite,rustls
+# dependency injection for cli
+go install github.com/google/wire/cmd/wire@latest
 # mocking for cli
-go install github.com/golang/mock/mockgen@v1.6.0
+go install github.com/golang/mock/mockgen@latest
 # cli grpc generation
-go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
-go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 # go linting
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v1.50.0
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin"
 '''
 script_runner = "@shell"
 
@@ -63,8 +65,6 @@ echo "regenerated go client"
 cd ../../../platune-cli
 mockgen -package=test -source="./../platuned/client/go/player_rpc_grpc.pb.go" > "./test/player_mock.go"
 mockgen -package=test -source="./../platuned/client/go/management_rpc_grpc.pb.go" > "./test/management_mock.go"
-sed -i 's_client/v2_client_g' "./test/player_mock.go"
-sed -i 's_client/v2_client_g' "./test/management_mock.go"
 echo "regenerated mocks"
 '''
 
@@ -108,6 +108,20 @@ script = '''
 cd libplatune/player/fuzz
 makers fuzz
 '''
+
+[tasks.build-release]
+args = [
+  "+nightly",
+  "build",
+  "-Z",
+  "build-std=std,panic_abort",
+  "-Z",
+  "build-std-features=panic_immediate_abort",
+  "--target",
+  "x86_64-unknown-linux-gnu",
+  "--release",
+]
+command = "cargo"
 
 [tasks.gen-coverage]
 args = ["nextest", "run", "--locked"]

@@ -6,8 +6,9 @@ pub use file_config::*;
 pub use memory_config::*;
 
 use eyre::Result;
+use uuid::Uuid;
 
 pub trait Config {
-    fn get_drive_id(&self) -> Option<i64>;
-    fn set_drive_id(&self, id: i64) -> Result<()>;
+    fn get_drive_id(&self) -> Option<Uuid>;
+    fn set_drive_id(&self, id: Uuid) -> Result<()>;
 }

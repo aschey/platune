@@ -1,6 +1,6 @@
 use crate::{config::MemoryConfig, database::Database, manager::Manager};
 use futures::StreamExt;
-use lofty::{Accessor, ItemKey, Probe, TagExt};
+use lofty::{Accessor, ItemKey, Probe, TagExt, TaggedFileExt};
 use pretty_assertions::assert_eq;
 use rstest::*;
 use std::{
@@ -521,7 +521,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
     for (i, song) in songs.iter().enumerate() {
         let song_path = inner_dir.join(format!("test{i}.mp3"));
         fs::copy("../test_assets/test.mp3", song_path.clone()).unwrap();
-        let mut t = Probe::open(&song_path).unwrap().read(false).unwrap();
+        let mut t = Probe::open(&song_path).unwrap().read().unwrap();
         let tag = t.primary_tag_mut().unwrap();
         if let Some(title) = song.title {
             tag.set_title(title.to_owned());
