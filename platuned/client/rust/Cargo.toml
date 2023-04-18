@@ -13,8 +13,8 @@ path = "src/lib.rs"
 parity-tokio-ipc = "0.9.0"
 prost = "0.11"
 prost-types = "0.11"
-tonic = "0.8"
+tonic = "0.9"
 tower = "0.4.13"
 
 [build-dependencies]
-tonic-build = {version = "0.8", features = ["prost"]}
+tonic-build = {version = "0.9", features = ["prost"]}
