@@ -89,7 +89,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     let http_server = run_server(
         shutdown_rx.clone(),
         services.clone(),
-        Transport::Http("[::1]:50051".parse().unwrap()),
+        Transport::Http("0.0.0.0:50051".parse().unwrap()),
     );
     servers.push(tokio::spawn(http_server));
 
@@ -135,7 +135,7 @@ async fn run_file_service(
     folders: Vec<String>,
     shutdown_rx: BroadcastEventStore<Signal>,
 ) -> Result<()> {
-    let addr = "[::1]:50050".parse().unwrap();
+    let addr = "0.0.0.0:50050".parse().unwrap();
     info!("Running file server on {addr}");
     let mut shutdown_rx = shutdown_rx.subscribe_events();
     match folders.as_slice() {

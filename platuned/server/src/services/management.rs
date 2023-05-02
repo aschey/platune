@@ -163,11 +163,33 @@ impl Management for ManagementImpl {
         &self,
         request: Request<LookupRequest>,
     ) -> Result<Response<LookupResponse>, Status> {
+        let is_remote = if let Some(addr) = request.remote_addr() {
+            !addr.ip().is_loopback()
+        } else {
+            false
+        };
+
+        let mut folders = vec![];
+        let mut local_addr = "".to_owned();
+        let manager = self.manager.read().await;
+
+        if is_remote {
+            folders = manager
+                .get_all_folders()
+                .await
+                .map_err(|e| format_error(format!("Error getting folders: {e:?}")))?;
+
+            local_addr = match request
+                .local_addr()
+                .ok_or_else(|| format_error("Local address missing".to_string()))?
+            {
+                std::net::SocketAddr::V4(addr) => addr.ip().to_string(),
+                std::net::SocketAddr::V6(addr) => format!("[{}]", addr.ip()),
+            };
+        }
+
         let request = request.into_inner();
-        let lookup_result = match self
-            .manager
-            .read()
-            .await
+        let lookup_result = match manager
             .lookup(
                 request.correlation_ids,
                 match EntryType::from_i32(request.entry_type).unwrap() {
@@ -183,22 +205,38 @@ impl Management for ManagementImpl {
                 return Err(format_error(format!("Error sending lookup request {e:?}")));
             }
         };
-        let entries = lookup_result
+        let entries: Result<Vec<_>, _> = lookup_result
             .into_iter()
-            .map(|e| LookupEntry {
-                artist: e.artist,
-                album_artist: e.album_artist,
-                album: e.album,
-                song: e.song,
-                path: e.path,
-                track: e.track,
-                duration: Some(Timestamp {
-                    seconds: Duration::from_millis(e.duration_millis as u64).as_secs() as i64,
-                    nanos: Duration::from_millis(e.duration_millis as u64).subsec_nanos() as i32,
-                }),
+            .map(|e| {
+                let mut path = e.path;
+                if is_remote {
+                    let folder = match folders.iter().find(|f| path.starts_with(*f)) {
+                        Some(folder) => folder,
+                        None => {
+                            return Err(format_error(format!(
+                                "Unable to find folder for path {path}"
+                            )))
+                        }
+                    };
+                    path = path.replacen(folder, &format!("http://{local_addr}:50050/"), 1);
+                }
+                Ok(LookupEntry {
+                    artist: e.artist,
+                    album_artist: e.album_artist,
+                    album: e.album,
+                    song: e.song,
+                    path,
+                    track: e.track,
+                    duration: Some(Timestamp {
+                        seconds: Duration::from_millis(e.duration_millis as u64).as_secs() as i64,
+                        nanos: Duration::from_millis(e.duration_millis as u64).subsec_nanos()
+                            as i32,
+                    }),
+                })
             })
             .collect();
-        Ok(Response::new(LookupResponse { entries }))
+
+        Ok(Response::new(LookupResponse { entries: entries? }))
     }
 
     type SearchStream = Pin<
