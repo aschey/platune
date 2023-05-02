@@ -1,3 +1,0 @@
-DATABASE_URL=/home/aschey/windows/shared_files/platune2.db
-SPELLFIX_LIB=/home/aschey/code/platune/libplatune/management/assets/linux/spellfix.o
-XDG_RUNTIME_DIR=/run/user/1000
