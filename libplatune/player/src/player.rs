@@ -208,11 +208,12 @@ impl Player {
     }
 
     fn is_empty(&self) -> bool {
-        self.state.queue.is_empty()
+        self.queued_count == 0
     }
 
     pub(crate) async fn play(&mut self) -> Result<(), String> {
         if self.is_empty() {
+            info!("Play called on empty queue, ignoring");
             return Ok(());
         }
 
@@ -231,6 +232,7 @@ impl Player {
 
     pub(crate) async fn pause(&mut self) -> Result<(), String> {
         if self.is_empty() {
+            info!("Pause called on empty queue, ignoring");
             return Ok(());
         }
 
@@ -265,6 +267,7 @@ impl Player {
 
     pub(crate) async fn seek(&mut self, time: Duration) {
         if self.is_empty() {
+            info!("Seek called on empty queue, ignoring");
             return;
         }
 

@@ -151,7 +151,10 @@ impl<'a> AudioProcessor<'a> {
             }
             Err(TryRecvError::Empty) => {
                 let position = self.decoder.current_position();
-                if position.position - self.last_send_time >= Duration::from_secs(10) {
+                // if position.postition < last_send_time, we just seeked backwards
+                if position.position < self.last_send_time
+                    || position.position - self.last_send_time >= Duration::from_secs(10)
+                {
                     self.event_tx
                         .send(PlayerEvent::Position(position.clone()))
                         .unwrap_or_default();
