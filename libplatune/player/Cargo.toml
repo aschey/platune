@@ -17,6 +17,7 @@ futures-util = "0.3"
 rb = "0.4"
 reqwest = {version = "0.11", features = ["stream"]}
 rubato = "0.12"
+stream-download = {git = "https://github.com/aschey/stream-download-rs", rev = "02fbcb589e8fcf690299bfcfd9b5015440a4ae68"}
 strum = {version = "0.24", features = ["derive"]}
 symphonia = {version = "0.5", features = ["aac", "flac", "mp3", "isomp4", "wav", "ogg", "vorbis"]}
 tap = "1"

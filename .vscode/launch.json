@@ -30,6 +30,20 @@
     {
       "type": "lldb",
       "request": "launch",
+      "name": "Debug executable 'platunectl'",
+      "cargo": {
+        "args": ["build", "--bin=platunectl", "--package=platuned"],
+        "filter": {
+          "name": "platunectl",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
       "name": "Debug unit tests in executable 'platuned'",
       "cargo": {
         "args": ["test", "--no-run", "--bin=platuned", "--package=platuned"],

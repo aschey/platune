@@ -24,7 +24,6 @@ impl<T: Read + Seek + Send> ReadSeekSource<T> {
         ReadSeekSource {
             inner,
             len,
-
             extension,
         }
     }
@@ -32,7 +31,7 @@ impl<T: Read + Seek + Send> ReadSeekSource<T> {
 
 impl<T: Read + Seek + Send + Sync> MediaSource for ReadSeekSource<T> {
     fn is_seekable(&self) -> bool {
-        true
+        self.len.is_some()
     }
 
     fn byte_len(&self) -> Option<u64> {
