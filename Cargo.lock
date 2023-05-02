@@ -1206,7 +1206,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -1224,7 +1224,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "clap 4.2.2",
  "daemon-slayer-core",
@@ -1234,7 +1234,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1262,7 +1262,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-config"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1281,7 +1281,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "confique",
  "crossterm",
@@ -1297,7 +1297,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1325,7 +1325,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "color-eyre",
  "daemon-slayer-core",
@@ -1338,7 +1338,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1352,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "daemon-slayer-core",
  "tokio",
@@ -1363,7 +1363,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "confique",
  "ctor 0.2.0",
@@ -1386,7 +1386,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1397,7 +1397,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-process"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "bytesize",
  "chrono",
@@ -1413,7 +1413,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "daemon-slayer-core",
  "daemon-slayer-macros",
@@ -1432,7 +1432,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
+source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
 dependencies = [
  "daemon-slayer-core",
  "futures",
