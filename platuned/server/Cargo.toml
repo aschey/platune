@@ -9,7 +9,8 @@ version = "0.1.0"
 [dependencies]
 async-trait = "0.1.68"
 console-subscriber = {version = "0.1.8", features = ["parking_lot"], optional = true}
-daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "9eab19e75a0b4c157517d667f3b77038b795b29d", features = ["client-standard", "server-standard", "grpc-health-check"]}
+daemon-slayer = {git = "https://github.com/aschey/daemon-slayer", rev = "24fe5680435d73165d943dfe67301957dbfb6ce7", features = ["client-standard", "server-standard", "grpc-health-check"]}
+daemon-slayer-logging = {git = "https://github.com/aschey/daemon-slayer", rev = "24fe5680435d73165d943dfe67301957dbfb6ce7", features = ["system", "ipc"]}
 dotenvy = "0.15.7"
 futures = "0.3.28"
 hyper = {version = "0.14.26", optional = true}

@@ -8,7 +8,7 @@ use crate::rpc;
 use crate::services::management::ManagementImpl;
 #[cfg(feature = "player")]
 use crate::services::player::PlayerImpl;
-use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
+use daemon_slayer::error_handler::color_eyre::eyre::{eyre, Context, Result};
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
@@ -65,11 +65,9 @@ impl Services {
 #[cfg(unix)]
 fn create_socket_path(path: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
-    let parent_dir = path.parent().ok_or_else(|| {
-        daemon_slayer::error_handler::color_eyre::eyre::eyre!(
-            "Socket path should have a parent directory"
-        )
-    })?;
+    let parent_dir = path
+        .parent()
+        .ok_or_else(|| eyre!("Socket path should have a parent directory"))?;
     if let Err(e) = std::fs::remove_file(path) {
         if e.kind() != std::io::ErrorKind::NotFound {
             return Err(e).wrap_err("Unable to delete old Unix socket");

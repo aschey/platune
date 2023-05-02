@@ -410,6 +410,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "background-service"
+version = "0.1.0"
+source = "git+https://github.com/aschey/background-service-rs?rev=0d0fc38608bf0443dd9d1ff162f97431248018e3#0d0fc38608bf0443dd9d1ff162f97431248018e3"
+dependencies = [
+ "async-trait",
+ "futures",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "backtrace"
 version = "0.3.67"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1024,6 +1037,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2801af0d36612ae591caa9568261fddce32ce6e08a7275ea334a06a4ad021a2c"
+dependencies = [
+ "cfg-if",
+ "crossbeam-channel",
+ "crossbeam-deque",
+ "crossbeam-epoch",
+ "crossbeam-queue",
+ "crossbeam-utils",
+]
+
+[[package]]
 name = "crossbeam-channel"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1179,7 +1206,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -1197,7 +1224,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "clap 4.2.2",
  "daemon-slayer-core",
@@ -1207,7 +1234,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1235,7 +1262,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-config"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1254,7 +1281,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "confique",
  "crossterm",
@@ -1270,10 +1297,11 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "arc-swap",
  "async-trait",
+ "background-service",
  "clap 4.2.2",
  "daemon-slayer-macros",
  "derivative",
@@ -1297,7 +1325,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "color-eyre",
  "daemon-slayer-core",
@@ -1310,7 +1338,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1324,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "daemon-slayer-core",
  "tokio",
@@ -1335,7 +1363,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "confique",
  "ctor 0.2.0",
@@ -1349,6 +1377,7 @@ dependencies = [
  "tracing-appender",
  "tracing-error",
  "tracing-eventlog",
+ "tracing-ipc",
  "tracing-journald",
  "tracing-oslog",
  "tracing-subscriber",
@@ -1357,7 +1386,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1368,7 +1397,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-process"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "bytesize",
  "chrono",
@@ -1384,7 +1413,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "daemon-slayer-core",
  "daemon-slayer-macros",
@@ -1403,7 +1432,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=9eab19e75a0b4c157517d667f3b77038b795b29d#9eab19e75a0b4c157517d667f3b77038b795b29d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=24fe5680435d73165d943dfe67301957dbfb6ce7#24fe5680435d73165d943dfe67301957dbfb6ce7"
 dependencies = [
  "daemon-slayer-core",
  "futures",
@@ -1809,6 +1838,16 @@ dependencies = [
  "futures-sink",
  "futures-task",
  "futures-util",
+]
+
+[[package]]
+name = "futures-cancel"
+version = "0.1.0"
+source = "git+https://github.com/aschey/futures-cancel?rev=563f413a206c50c7cc1a003cf6a9d3b227b0b04d#563f413a206c50c7cc1a003cf6a9d3b227b0b04d"
+dependencies = [
+ "futures",
+ "pin-project-lite",
+ "tokio-util",
 ]
 
 [[package]]
@@ -3377,6 +3416,7 @@ dependencies = [
  "async-trait",
  "console-subscriber",
  "daemon-slayer",
+ "daemon-slayer-logging",
  "dotenvy",
  "futures",
  "hyper",
@@ -5147,6 +5187,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-tower"
+version = "0.7.0-rc4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f12b938b4d7a43038af6ee647ab8e9c2e423c2a3d169a2854b474425b5ef488"
+dependencies = [
+ "crossbeam",
+ "futures-core",
+ "futures-sink",
+ "futures-util",
+ "pin-project",
+ "tokio",
+ "tower",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
 name = "tokio-util"
 version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5340,6 +5397,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c20c8dbed6283a09604c3e69b4b7eeb54e298b8a600d4d5ecb5ad39de609f1d0"
 
 [[package]]
+name = "tower-rpc"
+version = "0.1.0"
+source = "git+https://github.com/aschey/tower-rpc?rev=9f911cd53809a044cd275b879e76149d83ece2f0#9f911cd53809a044cd275b879e76149d83ece2f0"
+dependencies = [
+ "async-trait",
+ "background-service",
+ "bytes",
+ "futures",
+ "futures-cancel",
+ "parity-tokio-ipc",
+ "pin-project",
+ "thiserror",
+ "tokio",
+ "tokio-stream",
+ "tokio-tower",
+ "tokio-util",
+ "tower",
+ "tracing",
+]
+
+[[package]]
 name = "tower-service"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5432,12 +5510,19 @@ dependencies = [
 [[package]]
 name = "tracing-ipc"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tracing-ipc?rev=936431c1ec358d8cf9099708599c65edf8753782#936431c1ec358d8cf9099708599c65edf8753782"
+source = "git+https://github.com/aschey/tracing-ipc?rev=2eaab76b62330415b2c98c8e51799997fa165264#2eaab76b62330415b2c98c8e51799997fa165264"
 dependencies = [
+ "async-trait",
+ "background-service",
+ "bytes",
  "futures",
+ "futures-cancel",
  "once_cell",
  "parity-tokio-ipc",
  "tokio",
+ "tokio-util",
+ "tower",
+ "tower-rpc",
  "tracing",
  "tracing-subscriber",
 ]
@@ -5445,7 +5530,7 @@ dependencies = [
 [[package]]
 name = "tracing-ipc-widget"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tracing-ipc?rev=936431c1ec358d8cf9099708599c65edf8753782#936431c1ec358d8cf9099708599c65edf8753782"
+source = "git+https://github.com/aschey/tracing-ipc?rev=2eaab76b62330415b2c98c8e51799997fa165264#2eaab76b62330415b2c98c8e51799997fa165264"
 dependencies = [
  "ansi-to-tui",
  "crossterm",
