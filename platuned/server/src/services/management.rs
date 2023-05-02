@@ -5,13 +5,13 @@ use daemon_slayer::server::Signal;
 use daemon_slayer::server::{BroadcastEventStore, EventStore};
 use futures::StreamExt;
 use libplatune_management::file_watch_manager::FileWatchManager;
-use libplatune_management::manager;
-use libplatune_management::manager::SearchOptions;
+use libplatune_management::manager::{Manager, SearchOptions};
+use libplatune_management::{database, manager};
 use prost_types::Timestamp;
 use std::pin::Pin;
 use std::time::Duration;
 use tokio::sync::broadcast::error::RecvError;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, RwLockReadGuard};
 use tonic::Request;
 use tonic::Streaming;
 use tonic::{Response, Status};
@@ -34,6 +34,83 @@ impl ManagementImpl {
 fn format_error(msg: String) -> Status {
     error!("{:?}", msg);
     Status::internal(msg)
+}
+
+enum ConnectionType {
+    Local,
+    Remote {
+        folders: Vec<String>,
+        local_addr: String,
+    },
+}
+
+fn map_lookup_entry(
+    entry: database::LookupEntry,
+    connection_type: &ConnectionType,
+) -> Result<LookupEntry, Status> {
+    let path = match connection_type {
+        ConnectionType::Local => entry.path.clone(),
+        ConnectionType::Remote {
+            folders,
+            local_addr,
+        } => {
+            let folder = match folders.iter().find(|f| entry.path.starts_with(*f)) {
+                Some(folder) => folder,
+                None => {
+                    return Err(format_error(format!(
+                        "Unable to find folder for path {}",
+                        entry.path
+                    )))
+                }
+            };
+            entry.path.replacen(folder, local_addr, 1)
+        }
+    };
+
+    Ok(LookupEntry {
+        artist: entry.artist,
+        album_artist: entry.album_artist,
+        album: entry.album,
+        song: entry.song,
+        path,
+        track: entry.track,
+        duration: Some(Timestamp {
+            seconds: Duration::from_millis(entry.duration_millis as u64).as_secs() as i64,
+            nanos: Duration::from_millis(entry.duration_millis as u64).subsec_nanos() as i32,
+        }),
+    })
+}
+
+async fn get_connection_type<T>(
+    request: &Request<T>,
+    manager: &RwLockReadGuard<'_, Manager>,
+) -> Result<ConnectionType, Status> {
+    let is_remote = if let Some(addr) = request.remote_addr() {
+        !addr.ip().is_loopback()
+    } else {
+        false
+    };
+
+    if is_remote {
+        let folders = manager
+            .get_all_folders()
+            .await
+            .map_err(|e| format_error(format!("Error getting folders: {e:?}")))?;
+
+        let local_addr = match request
+            .local_addr()
+            .ok_or_else(|| format_error("Local address missing".to_string()))?
+        {
+            std::net::SocketAddr::V4(addr) => addr.ip().to_string(),
+            std::net::SocketAddr::V6(addr) => format!("[{}]", addr.ip()),
+        };
+        Ok(ConnectionType::Remote {
+            folders,
+            local_addr: format!("http://{local_addr}:50050/"),
+        })
+    } else {
+        Ok(ConnectionType::Local)
+    }
 }
 
 #[tonic::async_trait]
@@ -163,31 +240,8 @@ impl Management for ManagementImpl {
         &self,
         request: Request<LookupRequest>,
     ) -> Result<Response<LookupResponse>, Status> {
-        let is_remote = if let Some(addr) = request.remote_addr() {
-            !addr.ip().is_loopback()
-        } else {
-            false
-        };
-
-        let mut folders = vec![];
-        let mut local_addr = "".to_owned();
         let manager = self.manager.read().await;
-
-        if is_remote {
-            folders = manager
-                .get_all_folders()
-                .await
-                .map_err(|e| format_error(format!("Error getting folders: {e:?}")))?;
-
-            local_addr = match request
-                .local_addr()
-                .ok_or_else(|| format_error("Local address missing".to_string()))?
-            {
-                std::net::SocketAddr::V4(addr) => addr.ip().to_string(),
-                std::net::SocketAddr::V6(addr) => format!("[{}]", addr.ip()),
-            };
-        }
-
+        let connection_type = get_connection_type(&request, &manager).await?;
         let request = request.into_inner();
         let lookup_result = match manager
             .lookup(
@@ -205,35 +259,10 @@ impl Management for ManagementImpl {
                 return Err(format_error(format!("Error sending lookup request {e:?}")));
             }
         };
+
         let entries: Result<Vec<_>, _> = lookup_result
             .into_iter()
-            .map(|e| {
-                let mut path = e.path;
-                if is_remote {
-                    let folder = match folders.iter().find(|f| path.starts_with(*f)) {
-                        Some(folder) => folder,
-                        None => {
-                            return Err(format_error(format!(
-                                "Unable to find folder for path {path}"
-                            )))
-                        }
-                    };
-                    path = path.replacen(folder, &format!("http://{local_addr}:50050/"), 1);
-                }
-                Ok(LookupEntry {
-                    artist: e.artist,
-                    album_artist: e.album_artist,
-                    album: e.album,
-                    song: e.song,
-                    path,
-                    track: e.track,
-                    duration: Some(Timestamp {
-                        seconds: Duration::from_millis(e.duration_millis as u64).as_secs() as i64,
-                        nanos: Duration::from_millis(e.duration_millis as u64).subsec_nanos()
-                            as i32,
-                    }),
-                })
-            })
+            .map(|e| map_lookup_entry(e, &connection_type))
             .collect();
 
         Ok(Response::new(LookupResponse { entries: entries? }))
@@ -332,27 +361,38 @@ impl Management for ManagementImpl {
         &self,
         request: Request<PathMessage>,
     ) -> Result<Response<SongResponse>, Status> {
+        let manager = self.manager.read().await;
+        let connection_type = get_connection_type(&request, &manager).await?;
         let request = request.into_inner();
 
-        let manager = self.manager.read().await;
-        match manager.get_song_by_path(request.path).await {
-            Ok(Some(e)) => Ok(Response::new(SongResponse {
-                song: Some(LookupEntry {
-                    artist: e.artist,
-                    album_artist: e.album_artist,
-                    album: e.album,
-                    song: e.song,
-                    path: e.path,
-                    track: e.track,
-                    duration: Some(Timestamp {
-                        seconds: Duration::from_millis(e.duration_millis as u64).as_secs() as i64,
-                        nanos: Duration::from_millis(e.duration_millis as u64).subsec_nanos()
-                            as i32,
-                    }),
-                }),
-            })),
-            Ok(None) => Ok(Response::new(SongResponse { song: None })),
-            Err(e) => Err(format_error(format!("Error getting track {e:?}"))),
+        match &connection_type {
+            ConnectionType::Local => match manager.get_song_by_path(request.path).await {
+                Ok(Some(e)) => Ok(Response::new(SongResponse {
+                    song: Some(map_lookup_entry(e, &connection_type)?),
+                })),
+                Ok(None) => Ok(Response::new(SongResponse { song: None })),
+                Err(e) => Err(format_error(format!("Error getting track {e:?}"))),
+            },
+            ConnectionType::Remote {
+                folders,
+                local_addr,
+            } => {
+                for folder in folders {
+                    match manager
+                        .get_song_by_path(request.path.replace(local_addr, folder))
+                        .await
+                    {
+                        Ok(Some(e)) => {
+                            return Ok(Response::new(SongResponse {
+                                song: Some(map_lookup_entry(e, &connection_type)?),
+                            }))
+                        }
+                        Err(e) => return Err(format_error(format!("Error getting track {e:?}"))),
+                        _ => {}
+                    }
+                }
+                Ok(Response::new(SongResponse { song: None }))
+            }
         }
     }
 }

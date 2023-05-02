@@ -89,7 +89,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     let http_server = run_server(
         shutdown_rx.clone(),
         services.clone(),
-        Transport::Http("0.0.0.0:50051".parse().unwrap()),
+        Transport::Http("0.0.0.0:50051".parse().expect("failed to parse address")),
     );
     servers.push(tokio::spawn(http_server));
 
@@ -135,13 +135,14 @@ async fn run_file_service(
     folders: Vec<String>,
     shutdown_rx: BroadcastEventStore<Signal>,
 ) -> Result<()> {
-    let addr = "0.0.0.0:50050".parse().unwrap();
+    let addr = "0.0.0.0:50050".parse().expect("failed to parse address");
     info!("Running file server on {addr}");
     let mut shutdown_rx = shutdown_rx.subscribe_events();
     match folders.as_slice() {
         [folder] => {
             let service = ServeDir::new(folder);
-            let server = hyper::Server::bind(&addr)
+            let server = hyper::Server::try_bind(&addr)
+                .wrap_err(format!("Failed to bind to {addr}"))?
                 .serve(tower::make::Shared::new(service))
                 .with_graceful_shutdown(async {
                     shutdown_rx.next().await;
@@ -153,7 +154,8 @@ async fn run_file_service(
             for folder in rest {
                 service = service.fallback(ServeDir::new(folder));
             }
-            let server = hyper::Server::bind(&addr)
+            let server = hyper::Server::try_bind(&addr)
+                .wrap_err(format!("Failed to bind to {addr}"))?
                 .serve(tower::make::Shared::new(service))
                 .with_graceful_shutdown(async {
                     shutdown_rx.next().await;
