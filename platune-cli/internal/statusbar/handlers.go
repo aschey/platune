@@ -32,7 +32,7 @@ func (s *StatusBar) handlePlayerEvent(
 			newSong: res.Song,
 		}
 	case platune.Event_SEEK:
-		timer.setTime(int64(*&msg.GetSeekData().SeekMillis))
+		timer.setTime(int64(msg.GetSeekData().SeekMillis))
 		return playerEvent{
 			icon:    "",
 			color:   "14",
@@ -117,22 +117,23 @@ func (s *StatusBar) handlePlayerStatus(timer *timer, status *platune.StatusRespo
 	}
 }
 
-func (s *StatusBar) handleStateChange(newState connectivity.State) (string, string, string) {
-	if newState == connectivity.Ready {
+func (s *StatusBar) handleStateChange(playerState connectivity.State, managementState connectivity.State) (string, string, string) {
+	if playerState == connectivity.Ready || managementState == connectivity.Ready {
 		s.platuneClient.ResetStreams()
 	}
 
-	switch newState {
-	case connectivity.Connecting:
+	switch {
+	case playerState == connectivity.Connecting || managementState == connectivity.Connecting:
 		return "", "0", "Connecting..."
-	case connectivity.Idle:
+	case playerState == connectivity.Idle || managementState == connectivity.Idle:
 		return "", "0", "Idle"
-	case connectivity.Ready:
-		s.statusNotifier.NotifyStatusChanged()
-		return "", "10", "Connected"
-	case connectivity.Shutdown, connectivity.TransientFailure:
+
+	case playerState == connectivity.Shutdown || playerState == connectivity.TransientFailure || managementState == connectivity.Shutdown || managementState == connectivity.TransientFailure:
 		s.statusNotifier.NotifyStatusChanged()
 		return "", "9", "Disconnected"
+	case playerState == connectivity.Ready && managementState == connectivity.Ready:
+		s.statusNotifier.NotifyStatusChanged()
+		return "", "10", "Connected"
 	default:
 		return "", "0", ""
 	}

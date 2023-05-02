@@ -7,6 +7,7 @@ import (
 
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/lipgloss"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
 
@@ -32,11 +33,13 @@ func (s *StatusBar) StartEventLoop() {
 	eventCh := make(chan *platune.EventResponse, 1)
 	go s.platuneClient.SubscribePlayerEvents(eventCh)
 
-	connCh := make(chan connectivity.State, 1)
+	playerConnCh := make(chan connectivity.State, 1)
+	managementConnCh := make(chan connectivity.State, 1)
 	ctx := context.Background()
-	go s.monitorConnectionState(connCh, ctx)
+	go s.monitorConnectionState(s.platuneClient.GetPlayerConnection(), playerConnCh, ctx)
+	go s.monitorConnectionState(s.platuneClient.GetManagementConnection(), managementConnCh, ctx)
 
-	go s.eventLoop(eventCh, connCh)
+	go s.eventLoop(eventCh, playerConnCh, managementConnCh)
 }
 
 func (l label) render(iconStyle lipgloss.Style) string {
@@ -45,7 +48,8 @@ func (l label) render(iconStyle lipgloss.Style) string {
 
 func (s *StatusBar) eventLoop(
 	eventCh chan *platune.EventResponse,
-	stateCh chan connectivity.State,
+	playerStateCh chan connectivity.State,
+	managementStateCh chan connectivity.State,
 ) {
 	s.renderStatusBar(renderParams{connection: textStyle.Render(" Connecting...")})
 	sigCh := getSignalChannel()
@@ -65,7 +69,8 @@ func (s *StatusBar) eventLoop(
 		renderStatus: textStyle.Render(event.status),
 	}
 	s.renderStatusBar(renderParams)
-
+	var playerState connectivity.State
+	var managementState connectivity.State
 	for {
 		select {
 		case msg := <-eventCh:
@@ -77,8 +82,20 @@ func (s *StatusBar) eventLoop(
 				renderParams.renderStatus = textStyle.Render(event.status)
 				renderParams.playingIcon = playingIconStyle.Render(event.icon + " ")
 			}
-		case newState := <-stateCh:
-			connectionIcon, connectionIconColor, connectionStatus := s.handleStateChange(newState)
+		case newState := <-playerStateCh:
+			playerState = newState
+			connectionIcon, connectionIconColor, connectionStatus := s.handleStateChange(playerState, managementState)
+			connectionIconStyle := defaultStyle.Copy().
+				Foreground(lipgloss.Color(connectionIconColor))
+			renderParams.connection = label{
+				icon: connectionIcon,
+				text: connectionStatus,
+			}.render(
+				connectionIconStyle,
+			)
+		case newState := <-managementStateCh:
+			managementState = newState
+			connectionIcon, connectionIconColor, connectionStatus := s.handleStateChange(playerState, managementState)
 			connectionIconStyle := defaultStyle.Copy().
 				Foreground(lipgloss.Color(connectionIconColor))
 			renderParams.connection = label{
@@ -112,8 +129,7 @@ func (s *StatusBar) eventLoop(
 	}
 }
 
-func (s *StatusBar) monitorConnectionState(connCh chan connectivity.State, ctx context.Context) {
-	conn := s.platuneClient.GetConnection()
+func (s *StatusBar) monitorConnectionState(conn *grpc.ClientConn, connCh chan connectivity.State, ctx context.Context) {
 	for {
 		state := conn.GetState()
 		conn.Connect()
