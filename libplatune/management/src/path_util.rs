@@ -31,12 +31,15 @@ pub(crate) fn clean_file_path<P>(file_path: &P, mount: &Option<String>) -> io::R
 where
     P: AsRef<Path>,
 {
-    let file_path = file_path.as_ref().normalize().map_err(|e| {
-        io::Error::new(
-            e.kind(),
-            format!("Error normalizing path {:?}", file_path.as_ref()),
-        )
-    })?;
+    let file_path = file_path.as_ref();
+    if file_path.starts_with("http://") {
+        // No need to normalize http urls
+        return Ok(file_path.to_string_lossy().to_string());
+    }
+
+    let file_path = file_path
+        .normalize()
+        .map_err(|e| io::Error::new(e.kind(), format!("Error normalizing path {:?}", file_path)))?;
     let mut file_path_str = file_path.into_os_string().to_string_lossy().to_string();
     if cfg!(windows) {
         file_path_str = file_path_str.replace('\\', "/");
