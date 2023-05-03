@@ -34,10 +34,16 @@ func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	managementConn, err := platune.GetHttpClient("192.168.10.6:50051")
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	var managementConn *grpc.ClientConn
+	managementUrl := os.Getenv("PLATUNE_MANAGEMENT_URL")
+	if managementUrl != "" {
+		managementConn, err = platune.GetHttpClient(managementUrl)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	} else {
+		managementConn = playerConn
 	}
 
 	playerClient := platune.NewPlayerClient(playerConn)
