@@ -47,7 +47,7 @@ jobs:
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-${{ matrix.protoc-target }}.zip
           unzip protoc-3.19.4-${{ matrix.protoc-target }}.zip -d "${{ github.workspace }}/protoc"
           # TODO: re-enable for every crate once tonic fixes clippy warnings
-          cargo clippy -p libplatune-management -p libplatune-player -- -D warnings
+          cargo clippy -- -D warnings
       - name: Test
         run: |
           # Install precompiled binaries to improve build time
@@ -55,7 +55,7 @@ jobs:
           ${{ matrix.binstall-extract }} cargo-binstall-${{ matrix.binstall-target }}
           ./cargo-binstall cargo-nextest --no-confirm --force
           rustup component add llvm-tools-preview 
-          cargo nextest run --locked
+          cargo nextest run --locked --no-fail-fast
       - name: Generate coverage
         if: matrix.os == 'ubuntu-latest'
         run: |

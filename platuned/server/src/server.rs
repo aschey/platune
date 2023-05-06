@@ -8,7 +8,9 @@ use crate::rpc;
 use crate::services::management::ManagementImpl;
 #[cfg(feature = "player")]
 use crate::services::player::PlayerImpl;
-use daemon_slayer::error_handler::color_eyre::eyre::{eyre, Context, Result};
+#[cfg(unix)]
+use daemon_slayer::error_handler::color_eyre::eyre::eyre;
+use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
@@ -24,7 +26,7 @@ use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
 use std::env;
 use std::net::SocketAddr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(feature = "management")]
 use std::time::Duration;
@@ -99,7 +101,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
             Ok(socket_base) => socket_base,
             Err(_) => "/tmp".to_owned(),
         };
-        let path = Path::new(&socket_base).join("platuned/platuned.sock");
+        let path = std::path::Path::new(&socket_base).join("platuned/platuned.sock");
         create_socket_path(&path)?;
         path
     };

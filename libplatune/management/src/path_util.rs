@@ -37,9 +37,19 @@ where
         return Ok(file_path.to_string_lossy().to_string());
     }
 
-    let file_path = file_path
-        .normalize()
-        .map_err(|e| io::Error::new(e.kind(), format!("Error normalizing path {:?}", file_path)))?;
+    let file_path = if file_path.exists() {
+        file_path
+            .normalize()
+            .map_err(|e| {
+                io::Error::new(e.kind(), format!("Error normalizing path {:?}", file_path))
+            })?
+            .as_path()
+            .to_path_buf()
+    } else {
+        // Normalize call fails if the path doesn't exist so just leave it alone
+        file_path.to_path_buf()
+    };
+
     let mut file_path_str = file_path.into_os_string().to_string_lossy().to_string();
     if cfg!(windows) {
         file_path_str = file_path_str.replace('\\', "/");

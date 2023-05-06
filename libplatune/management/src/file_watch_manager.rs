@@ -9,11 +9,11 @@ use notify::{
 use std::ops::Deref;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{path::PathBuf, sync::Arc, thread, time::Duration};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 use tap::TapFallible;
 use thiserror::Error;
 use tokio::sync::{broadcast, mpsc, Mutex, RwLock};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub(crate) enum SyncMessage {
@@ -59,14 +59,22 @@ impl Deref for FileWatchManager {
 
 impl FileWatchManager {
     pub async fn new(manager: Manager, debounce_delay: Duration) -> Result<Self, FileWatchError> {
-        let (event_tx, event_rx) = std::sync::mpsc::channel();
+        let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(32);
         let (sync_tx, mut sync_rx) = tokio::sync::mpsc::channel(32);
         let sync_tx_ = sync_tx.clone();
         let (progress_tx, _) = broadcast::channel(32);
         let progress_tx_ = progress_tx.clone();
 
-        let mut watcher = RecommendedWatcher::new(event_tx, notify::Config::default())
-            .map_err(FileWatchError::WatchError)?;
+        let mut watcher = RecommendedWatcher::new(
+            move |event| {
+                event_tx
+                    .blocking_send(event)
+                    .tap_err(|e| error!("Failed to send watcher event: {e:?}"))
+                    .ok();
+            },
+            notify::Config::default(),
+        )
+        .map_err(FileWatchError::WatchError)?;
 
         let paths = manager
             .get_all_folders()
@@ -81,8 +89,9 @@ impl FileWatchManager {
         }
 
         // TODO: add a way to terminate these child tasks
-        thread::spawn(move || {
-            while let Ok(event) = event_rx.recv() {
+        tokio::spawn(async move {
+            let mut from_path: Option<PathBuf> = None;
+            while let Some(event) = event_rx.recv().await {
                 if let Ok(event) =
                     event.tap_err(|e| error!("Error received from file watcher: {e:?}"))
                 {
@@ -90,16 +99,38 @@ impl FileWatchManager {
                     match event.kind {
                         EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
                             let _ = sync_tx_
-                                .blocking_send(SyncMessage::Rename(
+                                .send(SyncMessage::Rename(
                                     event.paths[0].clone(),
                                     event.paths[1].clone(),
                                 ))
+                                .await
                                 .tap_err(|e| error!("Error sending rename message: {e:?}"));
+                        }
+                        EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
+                            // Store the from path so we can match it up with the to path
+                            from_path = Some(event.paths[0].clone());
+                        }
+                        EventKind::Modify(ModifyKind::Name(RenameMode::To)) => {
+                            if let Some(from_path) = from_path.take() {
+                                let _ = sync_tx_
+                                    .send(SyncMessage::Rename(from_path, event.paths[0].clone()))
+                                    .await
+                                    .tap_err(|e| error!("Error sending rename message: {e:?}"));
+                            } else {
+                                warn!("Got a rename::to message without a rename::from");
+                                for path in event.paths {
+                                    let _ = sync_tx_
+                                        .send(SyncMessage::Path(path))
+                                        .await
+                                        .tap_err(|e| error!("Error sending path message: {e:?}"));
+                                }
+                            }
                         }
                         EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
                             for path in event.paths {
                                 let _ = sync_tx_
-                                    .blocking_send(SyncMessage::Path(path))
+                                    .send(SyncMessage::Path(path))
+                                    .await
                                     .tap_err(|e| error!("Error sending path message: {e:?}"));
                             }
                         }

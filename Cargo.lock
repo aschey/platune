@@ -1206,7 +1206,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -1224,7 +1224,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "clap 4.2.2",
  "daemon-slayer-core",
@@ -1234,7 +1234,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1262,7 +1262,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-config"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1281,7 +1281,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "confique",
  "crossterm",
@@ -1289,15 +1289,15 @@ dependencies = [
  "daemon-slayer-core",
  "futures",
  "serde",
+ "tilia-widget",
  "tokio",
- "tracing-ipc-widget",
  "tui",
 ]
 
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1325,7 +1325,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "color-eyre",
  "daemon-slayer-core",
@@ -1338,7 +1338,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1352,7 +1352,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "daemon-slayer-core",
  "tokio",
@@ -1363,7 +1363,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "confique",
  "ctor 0.2.0",
@@ -1372,12 +1372,12 @@ dependencies = [
  "serde",
  "tap",
  "thiserror",
+ "tilia",
  "time 0.3.20",
  "tracing",
  "tracing-appender",
  "tracing-error",
  "tracing-eventlog",
- "tracing-ipc",
  "tracing-journald",
  "tracing-oslog",
  "tracing-subscriber",
@@ -1386,7 +1386,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1397,7 +1397,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-process"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "bytesize",
  "chrono",
@@ -1413,7 +1413,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "daemon-slayer-core",
  "daemon-slayer-macros",
@@ -1432,7 +1432,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=d940e7e16347d8e84bf59f33bf552894c60a41c5#d940e7e16347d8e84bf59f33bf552894c60a41c5"
+source = "git+https://github.com/aschey/daemon-slayer?rev=ee8c5009648a0ab541b026962839733fe376fa99#ee8c5009648a0ab541b026962839733fe376fa99"
 dependencies = [
  "daemon-slayer-core",
  "futures",
@@ -5050,6 +5050,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "tilia"
+version = "0.1.0"
+source = "git+https://github.com/aschey/tilia?rev=f62f771e44cb043b57e430bc1e113dbc543ad939#f62f771e44cb043b57e430bc1e113dbc543ad939"
+dependencies = [
+ "async-trait",
+ "background-service",
+ "bytes",
+ "futures",
+ "futures-cancel",
+ "once_cell",
+ "parity-tokio-ipc",
+ "tokio",
+ "tokio-util",
+ "tower",
+ "tower-rpc",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "tilia-widget"
+version = "0.1.0"
+source = "git+https://github.com/aschey/tilia?rev=f62f771e44cb043b57e430bc1e113dbc543ad939#f62f771e44cb043b57e430bc1e113dbc543ad939"
+dependencies = [
+ "ansi-to-tui",
+ "crossterm",
+ "tilia",
+ "tokio",
+ "tui",
+]
+
+[[package]]
 name = "time"
 version = "0.1.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5505,38 +5537,6 @@ checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
 dependencies = [
  "pin-project",
  "tracing",
-]
-
-[[package]]
-name = "tracing-ipc"
-version = "0.1.0"
-source = "git+https://github.com/aschey/tracing-ipc?rev=2eaab76b62330415b2c98c8e51799997fa165264#2eaab76b62330415b2c98c8e51799997fa165264"
-dependencies = [
- "async-trait",
- "background-service",
- "bytes",
- "futures",
- "futures-cancel",
- "once_cell",
- "parity-tokio-ipc",
- "tokio",
- "tokio-util",
- "tower",
- "tower-rpc",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "tracing-ipc-widget"
-version = "0.1.0"
-source = "git+https://github.com/aschey/tracing-ipc?rev=2eaab76b62330415b2c98c8e51799997fa165264#2eaab76b62330415b2c98c8e51799997fa165264"
-dependencies = [
- "ansi-to-tui",
- "crossterm",
- "tokio",
- "tracing-ipc",
- "tui",
 ]
 
 [[package]]
