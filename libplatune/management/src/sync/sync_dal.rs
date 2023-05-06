@@ -71,7 +71,14 @@ impl<'a> SyncDAL<'a> {
 
     pub(crate) async fn update_missing_songs(&mut self, path: String) -> Result<(), DbError> {
         // Add songs not found in the last scan attempt to the list of deleted songs
-        let path = path + "%";
+        let mut path = path.clone();
+        if !path.ends_with('/') {
+            // Make sure we add a trailing slash so we don't get false matches off of word prefixes
+            // i.e. /folder/app and /folder/apple
+            path += "/";
+        }
+        path += "%";
+
         sqlx::query!(
             "
             INSERT INTO deleted_song(song_id)
