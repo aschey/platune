@@ -107,6 +107,7 @@ impl FileWatchManager {
                                 .tap_err(|e| error!("Error sending rename message: {e:?}"));
                         }
                         EventKind::Modify(ModifyKind::Name(RenameMode::From)) => {
+                            info!("Got rename::from event, waiting for rename::to");
                             // Store the from path so we can match it up with the to path
                             from_path = Some(event.paths[0].clone());
                         }

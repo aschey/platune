@@ -65,7 +65,7 @@ impl Services {
 }
 
 #[cfg(unix)]
-fn create_socket_path(path: &Path) -> Result<()> {
+fn create_socket_path(path: &std::path::Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
     let parent_dir = path
         .parent()
