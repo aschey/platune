@@ -40,6 +40,12 @@ func (s *StatusBar) renderStatusBar(params renderParams) {
 		if lipgloss.Width(params.renderStatus) == 0 {
 			z := time.Unix(0, 0).UTC()
 			newTime := z.Add(params.timer.elapsed())
+			songTime := params.songInfo.currentSong.Duration.AsTime()
+			// If the current time > the song time, we're probably just waiting for the server to tell us
+			// that the song completed. Cap the display time here so we don't show that it's past the end of the song.
+			if newTime.Compare(songTime) == 1 {
+				newTime = songTime
+			}
 			newText := fmt.Sprintf(
 				"%s/%s",
 				formatTime(newTime),
