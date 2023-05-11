@@ -83,14 +83,14 @@ cargo run ${@}
 script_runner = "@shell"
 
 [tasks.win-srv]
-condition = {platforms = ["windows"]}
+condition = { platforms = ["windows"] }
 script = '''
 cd ./platuned/server  
 cargo run --release -- -i
 '''
 
 [tasks.systemd]
-condition = {platforms = ["linux"]}
+condition = { platforms = ["linux"] }
 script = '''
 cp ./platuned/linux/platuned.service /etc/systemd/system/platuned.service
 systemctl daemon-reload
@@ -98,12 +98,21 @@ systemctl restart platuned
 '''
 
 [tasks.verify-features]
-args = ["hack", "--feature-powerset", "--exclude-no-default-features", "clippy", "--locked", "--", "-D", "warnings"]
+args = [
+  "hack",
+  "--feature-powerset",
+  "--exclude-no-default-features",
+  "clippy",
+  "--locked",
+  "--",
+  "-D",
+  "warnings",
+]
 command = "cargo"
 install_crate = "cargo-hack"
 
 [tasks.fuzz]
-condition = {platforms = ["linux"]}
+condition = { platforms = ["linux"] }
 script = '''
 cd libplatune/player/fuzz
 makers fuzz
@@ -126,7 +135,7 @@ command = "cargo"
 [tasks.gen-coverage]
 args = ["nextest", "run", "--locked"]
 command = "cargo"
-env = {RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw"}
+env = { RUSTFLAGS = "-Cinstrument-coverage", LLVM_PROFILE_FILE = "platune-%p-%m.profraw" }
 install_crate = "cargo-nextest"
 
 [tasks.gen-coverage-report]
@@ -149,7 +158,7 @@ args = [
 ]
 command = "grcov"
 dependencies = ["gen-coverage"]
-install_crate = {rustup_component_name = "llvm-tools-preview", crate_name = "grcov"}
+install_crate = { rustup_component_name = "llvm-tools-preview", crate_name = "grcov" }
 
 [tasks.cleanup-coverage]
 clear = true

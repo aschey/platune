@@ -1,5 +1,10 @@
 [workspace]
-members = ["platuned/server", "platuned/client/rust", "libplatune/player", "libplatune/management"]
+members = [
+    "platuned/server",
+    "platuned/client/rust",
+    "libplatune/player",
+    "libplatune/management",
+]
 resolver = "2"
 
 [profile.release]
