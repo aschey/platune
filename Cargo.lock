@@ -4664,7 +4664,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "stream-download"
 version = "0.1.0"
-source = "git+https://github.com/aschey/stream-download-rs?rev=02fbcb589e8fcf690299bfcfd9b5015440a4ae68#02fbcb589e8fcf690299bfcfd9b5015440a4ae68"
+source = "git+https://github.com/aschey/stream-download-rs?rev=f453f227d81ebee2c19001c32e8ee505dd354131#f453f227d81ebee2c19001c32e8ee505dd354131"
 dependencies = [
  "async-trait",
  "bytes",

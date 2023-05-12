@@ -3,6 +3,7 @@ pub struct Settings {
     pub enable_resampling: bool,
     pub resample_chunk_size: usize,
 }
+
 impl Default for Settings {
     fn default() -> Self {
         // WASAPI does not resample so it must be done here
