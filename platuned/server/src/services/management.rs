@@ -7,7 +7,7 @@ use futures::StreamExt;
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use libplatune_management::{database, manager};
-use prost_types::Timestamp;
+use pbjson_types::{Empty, Timestamp};
 use std::pin::Pin;
 use std::time::Duration;
 use tokio::sync::broadcast::error::RecvError;
@@ -115,18 +115,19 @@ async fn get_connection_type<T>(
 
 #[tonic::async_trait]
 impl Management for ManagementImpl {
-    async fn start_sync(&self, _: Request<()>) -> Result<Response<()>, Status> {
+    async fn start_sync(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
         match self.manager.start_sync_all().await {
-            Ok(_) => Ok(Response::new(())),
+            Ok(_) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(e.to_string())),
         }
     }
 
     type SubscribeEventsStream =
         Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
+
     async fn subscribe_events(
         &self,
-        _: Request<()>,
+        _: Request<Empty>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut progress_rx = self.manager.subscribe_progress();
         let (tx, rx) = mpsc::channel(32);
@@ -155,7 +156,10 @@ impl Management for ManagementImpl {
         )))
     }
 
-    async fn add_folders(&self, request: Request<FoldersMessage>) -> Result<Response<()>, Status> {
+    async fn add_folders(
+        &self,
+        request: Request<FoldersMessage>,
+    ) -> Result<Response<Empty>, Status> {
         if let Err(e) = self
             .manager
             .write()
@@ -172,10 +176,10 @@ impl Management for ManagementImpl {
         {
             return Err(format_error(format!("Error adding folders {e:?}")));
         };
-        Ok(Response::new(()))
+        Ok(Response::new(Empty {}))
     }
 
-    async fn get_all_folders(&self, _: Request<()>) -> Result<Response<FoldersMessage>, Status> {
+    async fn get_all_folders(&self, _: Request<Empty>) -> Result<Response<FoldersMessage>, Status> {
         let folders = match self.manager.read().await.get_all_folders().await {
             Ok(f) => f,
             Err(e) => {
@@ -188,7 +192,7 @@ impl Management for ManagementImpl {
     async fn register_mount(
         &self,
         request: Request<RegisteredMountMessage>,
-    ) -> Result<Response<()>, Status> {
+    ) -> Result<Response<Empty>, Status> {
         match self
             .manager
             .write()
@@ -196,14 +200,14 @@ impl Management for ManagementImpl {
             .register_drive(&request.into_inner().mount)
             .await
         {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(Status::invalid_argument(format!("{e}"))),
         }
     }
 
     async fn get_registered_mount(
         &self,
-        _: Request<()>,
+        _: Request<Empty>,
     ) -> Result<Response<RegisteredMountMessage>, Status> {
         let mount = self.manager.read().await.get_registered_mount().await;
         Ok(Response::new(RegisteredMountMessage {
@@ -330,7 +334,7 @@ impl Management for ManagementImpl {
         })))
     }
 
-    async fn get_deleted(&self, _: Request<()>) -> Result<Response<GetDeletedResponse>, Status> {
+    async fn get_deleted(&self, _: Request<Empty>) -> Result<Response<GetDeletedResponse>, Status> {
         let deleted_songs = match self.manager.read().await.get_deleted_songs().await {
             Ok(songs) => songs,
             Err(e) => return Err(format_error(format!("Error getting deleted songs {e:?}"))),
@@ -346,7 +350,7 @@ impl Management for ManagementImpl {
         }));
     }
 
-    async fn delete_tracks(&self, request: Request<IdMessage>) -> Result<Response<()>, Status> {
+    async fn delete_tracks(&self, request: Request<IdMessage>) -> Result<Response<Empty>, Status> {
         let request = request.into_inner();
 
         let manager = self.manager.write().await;
@@ -354,7 +358,7 @@ impl Management for ManagementImpl {
             return Err(format_error(format!("Error deleting tracks {e:?}")));
         }
 
-        Ok(Response::new(()))
+        Ok(Response::new(Empty {}))
     }
 
     async fn get_song_by_path(

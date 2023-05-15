@@ -6,6 +6,7 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
 use libplatune_player::platune_player::*;
+use pbjson_types::Empty;
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
@@ -87,9 +88,9 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
 
 #[tonic::async_trait]
 impl Player for PlayerImpl {
-    async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
+    async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<Empty>, Status> {
         match self.player.set_queue(request.into_inner().queue).await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error setting queue: {e:?}"))),
         }
     }
@@ -97,67 +98,73 @@ impl Player for PlayerImpl {
     async fn add_to_queue(
         &self,
         request: Request<AddToQueueRequest>,
-    ) -> Result<Response<()>, Status> {
+    ) -> Result<Response<Empty>, Status> {
         match self.player.add_to_queue(request.into_inner().songs).await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error adding songs to queue: {e:?}"))),
         }
     }
 
-    async fn pause(&self, _: Request<()>) -> Result<Response<()>, Status> {
+    async fn pause(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
         match self.player.pause().await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error pausing queue: {e:?}"))),
         }
     }
 
-    async fn stop(&self, _: Request<()>) -> Result<Response<()>, Status> {
+    async fn stop(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
         match self.player.stop().await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error stopping queue: {e:?}"))),
         }
     }
 
-    async fn resume(&self, _: Request<()>) -> Result<Response<()>, Status> {
+    async fn resume(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
         match self.player.resume().await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error resuming queue: {e:?}"))),
         }
     }
 
-    async fn next(&self, _: Request<()>) -> Result<Response<()>, Status> {
+    async fn next(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
         match self.player.next().await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error skipping to next song: {e:?}"))),
         }
     }
 
-    async fn previous(&self, _: Request<()>) -> Result<Response<()>, Status> {
+    async fn previous(&self, _: Request<Empty>) -> Result<Response<Empty>, Status> {
         match self.player.previous().await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!(
                 "Error skipping to previous song: {e:?}"
             ))),
         }
     }
 
-    async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<()>, Status> {
+    async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<Empty>, Status> {
         let time = request.into_inner().time.unwrap();
         let nanos = time.seconds * 1_000_000_000 + time.nanos as i64;
         match self.player.seek(Duration::from_nanos(nanos as u64)).await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error seeking: {e:?}"))),
         }
     }
 
-    async fn set_volume(&self, request: Request<SetVolumeRequest>) -> Result<Response<()>, Status> {
+    async fn set_volume(
+        &self,
+        request: Request<SetVolumeRequest>,
+    ) -> Result<Response<Empty>, Status> {
         match self.player.set_volume(request.into_inner().volume).await {
-            Ok(()) => Ok(Response::new(())),
+            Ok(()) => Ok(Response::new(Empty {})),
             Err(e) => Err(format_error(format!("Error setting volume: {e:?}"))),
         }
     }
 
-    async fn get_current_status(&self, _: Request<()>) -> Result<Response<StatusResponse>, Status> {
+    async fn get_current_status(
+        &self,
+        _: Request<Empty>,
+    ) -> Result<Response<StatusResponse>, Status> {
         let status = self
             .player
             .get_current_status()
@@ -200,7 +207,7 @@ impl Player for PlayerImpl {
 
     async fn subscribe_events(
         &self,
-        _: Request<()>,
+        _: Request<Empty>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut ended_rx = self.player.subscribe();
         let mut shutdown_rx = self.shutdown_rx.subscribe_events();
