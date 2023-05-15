@@ -2,7 +2,10 @@ use crate::{
     dto::{current_position::CurrentPosition, decoder_error::DecoderError},
     source::Source,
 };
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    io,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 use symphonia::core::{
     audio::{Channels, SampleBuffer, SignalSpec},
     codecs::{Decoder as SymphoniaDecoder, DecoderOptions},
@@ -253,18 +256,15 @@ impl Decoder {
     }
 
     fn process_output(&mut self, packet: &Packet) -> Result<(), DecoderError> {
-        let decoded = loop {
-            match self.decoder.decode(packet) {
-                Ok(decoded) => break decoded,
-                Err(Error::IoError(e)) => {
-                    warn!("IO error during decoding {e:?}");
-                }
-                Err(Error::DecodeError(e)) => {
-                    warn!("Invalid data found during decoding {e:?}");
-                }
-                Err(e) => {
-                    return Err(DecoderError::DecodeError(e));
-                }
+        let decoded = match self.decoder.decode(packet) {
+            Ok(decoded) => decoded,
+            Err(Error::DecodeError(e)) => {
+                warn!("Invalid data found during decoding {e:?}. Skipping packet.");
+                // Decoder errors are recoverable, try the next packet
+                return Err(DecoderError::Recoverable(e));
+            }
+            Err(e) => {
+                return Err(DecoderError::DecodeError(e));
             }
         };
 
@@ -328,20 +328,40 @@ impl Decoder {
         if self.paused {
             self.buf.fill(0.0);
         } else {
-            let packet = loop {
-                match self.reader.next_packet() {
-                    Ok(packet) => {
-                        if packet.track_id() == self.track_id {
-                            break packet;
+            loop {
+                let packet = loop {
+                    match self.reader.next_packet() {
+                        Ok(packet) => {
+                            if packet.track_id() == self.track_id {
+                                break packet;
+                            }
                         }
-                    }
-                    Err(_) => {
-                        return Ok(None);
-                    }
+                        Err(Error::IoError(err))
+                            if err.kind() == io::ErrorKind::UnexpectedEof
+                                && err.to_string() == "end of stream" =>
+                        {
+                            // Do not treat "end of stream" as a fatal error. It's the currently only way a
+                            // format reader can indicate the media is complete.
+                            return Ok(None);
+                        }
+                        Err(e) => {
+                            error!("Error reading next packet: {e:?}");
+                            return Err(DecoderError::DecodeError(e));
+                        }
+                    };
                 };
-            };
-            self.timestamp = packet.ts();
-            self.process_output(&packet)?;
+                self.timestamp = packet.ts();
+                match self.process_output(&packet) {
+                    Ok(()) => break,
+                    Err(DecoderError::Recoverable(_)) => {
+                        // Just read the next packet on a recoverable error
+                    }
+                    Err(e) => {
+                        error!("Error processing output: {e:?}");
+                        return Err(e);
+                    }
+                }
+            }
         }
         Ok(Some(self.current()))
     }

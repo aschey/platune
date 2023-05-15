@@ -12,4 +12,6 @@ pub(crate) enum DecoderError {
     UnsupportedFormat(String),
     #[error("Error occurred during decoding: {0}")]
     DecodeError(symphonia::core::errors::Error),
+    #[error("Recoverable error: {0}")]
+    Recoverable(&'static str),
 }
