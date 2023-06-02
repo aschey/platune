@@ -3,7 +3,7 @@ use crate::rpc::*;
 
 use daemon_slayer::server::Signal;
 use daemon_slayer::server::{BroadcastEventStore, EventStore};
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use libplatune_management::{database, manager};
@@ -123,7 +123,8 @@ impl Management for ManagementImpl {
     }
 
     type SubscribeEventsStream =
-        Pin<Box<dyn futures::Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
+        Pin<Box<dyn Stream<Item = Result<Progress, Status>> + Send + Sync + 'static>>;
+
     async fn subscribe_events(
         &self,
         _: Request<()>,

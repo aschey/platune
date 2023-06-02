@@ -9,8 +9,8 @@ use daemon_slayer::{
             Level,
         },
     },
-    console::{cli::ConsoleCliProvider, Console},
-    core::BoxedError,
+    console::{cli::ConsoleCliProvider, Console, LogSource},
+    core::{BoxedError, Label},
     error_handler::{cli::ErrorHandlerCliProvider, ErrorSink},
     health_check::{cli::HealthCheckCliProvider, GrpcHealthCheck},
     logging::{
@@ -29,8 +29,9 @@ async fn main() -> Result<(), ErrorSink> {
 }
 
 async fn run() -> Result<(), BoxedError> {
+    let label: Label = "platuned".parse()?;
     let mut manager_builder = client::builder(
-        "platuned".parse()?,
+        label.clone(),
         current_exe()?
             .parent()
             .unwrap()
@@ -63,19 +64,21 @@ async fn run() -> Result<(), BoxedError> {
                 manager_builder.with_environment_variable("SPELLFIX_LIB", spellfix_lib);
         }
     }
-    let manager = manager_builder.build().unwrap();
-    let logger_builder = LoggerBuilder::new("platuned".parse()?);
+    let manager = manager_builder.build().await.unwrap();
+    let logger_builder = LoggerBuilder::new(label.clone());
 
     let health_check = GrpcHealthCheck::new("http://[::1]:50051").unwrap();
 
-    let console = Console::new(manager.clone()).with_health_check(Box::new(health_check.clone()));
+    let console = Console::new(manager.clone(), LogSource::Ipc)
+        .await
+        .with_health_check(Box::new(health_check.clone()));
 
     let mut cli = Cli::builder()
         .with_provider(ClientCliProvider::new(manager.clone()))
-        .with_provider(ProcessCliProvider::new(manager.info()?.pid))
+        .with_provider(ProcessCliProvider::new(manager.info().await?.pid))
         .with_provider(ConsoleCliProvider::new(console))
         .with_provider(LoggingCliProvider::new(logger_builder))
-        .with_provider(ErrorHandlerCliProvider::default())
+        .with_provider(ErrorHandlerCliProvider::new(label))
         .with_provider(HealthCheckCliProvider::new(health_check))
         .initialize()?;
 

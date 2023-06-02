@@ -5,8 +5,8 @@ read -p "Are you sure you want to overwrite the contents of the Windows VM with 
 [[ ! $REPLY =~ ^[Yy]$ ]] && exit 1
 echo
 sshpass -p "${QUICKEMU_WINDOWS_PASSWORD}" ssh -p 22220 Quickemu@localhost << EOF
-if not exist "C:\Users\Quickemu\daemon-slayer" (
-    mkdir "C:\Users\Quickemu\daemon-slayer"
+if not exist "C:\Users\Quickemu\platune" (
+    mkdir "C:\Users\Quickemu\platune"
 )
 EOF
 echo

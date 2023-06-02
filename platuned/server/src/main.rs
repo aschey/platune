@@ -45,7 +45,7 @@ async fn run() -> Result<(), BoxedError> {
             &"run".parse().unwrap(),
         ))
         .with_provider(LoggingCliProvider::new(logger_builder))
-        .with_provider(ErrorHandlerCliProvider::default())
+        .with_provider(ErrorHandlerCliProvider::new(ServiceHandler::label()))
         .initialize()?;
 
     let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;

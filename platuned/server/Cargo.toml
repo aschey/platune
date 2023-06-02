@@ -11,12 +11,12 @@ async-trait = "0.1.68"
 console-subscriber = { version = "0.1.8", features = [
     "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "097ba07b7c602bcc2927cb8e7bf686d1e68dcd0e", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "fb95160ebca81437bf4711b4934ca1497d54c49c", features = [
     "client-standard",
     "server-standard",
     "grpc-health-check",
 ] }
-daemon-slayer-logging = { git = "https://github.com/aschey/daemon-slayer", rev = "097ba07b7c602bcc2927cb8e7bf686d1e68dcd0e", features = [
+daemon-slayer-logging = { git = "https://github.com/aschey/daemon-slayer", rev = "fb95160ebca81437bf4711b4934ca1497d54c49c", features = [
     "system",
     "ipc",
 ] }
