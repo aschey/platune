@@ -193,7 +193,7 @@ command = "cargo"
 install_crate = "cargo-edit"
 
 [tasks.upgrade]
-args = ["upgrade"]
+args = ["upgrade", "--incompatible"]
 command = "cargo"
 install_crate = "cargo-edit"
 

@@ -2,6 +2,7 @@ use super::{
     progress_stream::ProgressStream,
     sync_engine::{SyncEngine, SyncError},
 };
+use daemon_slayer::core::notify::Notification;
 use sqlx::{Pool, Sqlite};
 use tap::TapFallible;
 use tokio::sync::{broadcast, oneshot};
@@ -62,6 +63,12 @@ impl SyncController {
                 let _ = tx
                     .send(None)
                     .tap_err(|e| warn!("Error sending final sync message to clients {e:?}"));
+
+                let _ = Notification::new("platuned".parse().unwrap())
+                    .summary("Sync completed")
+                    .show()
+                    .await
+                    .tap_err(|e| warn!("Error sending notification: {e:?}"));
             });
         } else {
             info!("No folders to sync");
