@@ -40,7 +40,7 @@ sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "15458fa9d6f46a3c55f
     "macros",
     "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "3257f6f5e685d9296971a12e93ea9f66bcb66137", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "ccae5a18710172f3fa1d2c04e744f75d6de96a6a", features = [
     "notify",
 ] }
 strum = { version = "0.24", features = ["derive"] }
