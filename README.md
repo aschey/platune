@@ -1,6 +1,6 @@
 ![Platune](res/platune-title.png)
 
-[![license](https://img.shields.io/github/license/aschey/platune)](https://github.com/aschey/platune/blob/main/LICENSE)
+![license](https://img.shields.io/badge/License-MIT%20or%20Apache%202-green.svg)
 [![CI](https://github.com/aschey/Platune/actions/workflows/test.yml/badge.svg)](https://github.com/aschey/Platune/actions/workflows/test.yml)
 ![codecov](https://codecov.io/gh/aschey/platune/branch/main/graph/badge.svg?token=NWS6Q3W4FP)
 ![GitHub repo size](https://img.shields.io/github/repo-size/aschey/platune)

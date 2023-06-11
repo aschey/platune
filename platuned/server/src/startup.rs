@@ -24,7 +24,7 @@ impl Handler for ServiceHandler {
     ) -> Result<Self, Self::Error> {
         let signal_listener = SignalListener::all();
         let signal_store = signal_listener.get_event_store();
-        context.add_service(signal_listener).await?;
+        context.add_service(signal_listener);
 
         Ok(Self { signal_store })
     }

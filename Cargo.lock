@@ -193,12 +193,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bddcadddf5e9015d310179a59bb28c4d4b9920ad0f11e8e14dbadf654890c9a6"
 
 [[package]]
-name = "arraydeque"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
-
-[[package]]
 name = "arrayvec"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -455,9 +449,10 @@ dependencies = [
 [[package]]
 name = "background-service"
 version = "0.1.0"
-source = "git+https://github.com/aschey/background-service-rs?rev=0d0fc38608bf0443dd9d1ff162f97431248018e3#0d0fc38608bf0443dd9d1ff162f97431248018e3"
+source = "git+https://github.com/aschey/background-service-rs?rev=639911fe9bfee863c35dbab967185dae6a4a395f#639911fe9bfee863c35dbab967185dae6a4a395f"
 dependencies = [
  "async-trait",
+ "crossbeam",
  "futures",
  "thiserror",
  "tokio",
@@ -1219,7 +1214,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "daemon-slayer-cli",
  "daemon-slayer-client",
@@ -1238,7 +1233,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "clap 4.3.0",
  "daemon-slayer-core",
@@ -1248,7 +1243,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "arc-swap",
  "bollard",
@@ -1278,7 +1273,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-config"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1297,7 +1292,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "confique",
  "crossterm",
@@ -1308,13 +1303,13 @@ dependencies = [
  "serde",
  "tilia-widget",
  "tokio",
- "tower-rpc 0.1.0 (git+https://github.com/aschey/tower-rpc?rev=72f2d60708dc57d91e8330f7efbec77744f763c3)",
+ "tower-rpc",
 ]
 
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1325,7 +1320,7 @@ dependencies = [
  "downcast-rs",
  "dyn-clonable",
  "futures",
- "notify-rust",
+ "futures-cancel",
  "owo-colors",
  "pin-project-lite",
  "regex",
@@ -1347,7 +1342,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "color-eyre",
  "daemon-slayer-core",
@@ -1360,11 +1355,11 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
- "notify 5.2.0",
+ "notify",
  "notify-debouncer-mini",
  "tap",
  "tokio",
@@ -1374,7 +1369,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "daemon-slayer-core",
  "tokio",
@@ -1385,7 +1380,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "confique",
  "ctor 0.2.2",
@@ -1396,7 +1391,7 @@ dependencies = [
  "thiserror",
  "tilia",
  "time 0.3.21",
- "tower-rpc 0.1.0 (git+https://github.com/aschey/tower-rpc?rev=72f2d60708dc57d91e8330f7efbec77744f763c3)",
+ "tower-rpc",
  "tracing",
  "tracing-appender",
  "tracing-error",
@@ -1409,7 +1404,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1420,9 +1415,11 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-notify"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "daemon-slayer-core",
+ "notify-rust",
+ "tap",
  "tokio",
  "tracing",
 ]
@@ -1430,7 +1427,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-process"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "bytesize",
  "chrono",
@@ -1446,7 +1443,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "daemon-slayer-core",
  "daemon-slayer-macros",
@@ -1464,7 +1461,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=ccae5a18710172f3fa1d2c04e744f75d6de96a6a#ccae5a18710172f3fa1d2c04e744f75d6de96a6a"
+source = "git+https://github.com/aschey/daemon-slayer?rev=bbd268ea3caa603d9ad9d4c39027cebc5cba0a24#bbd268ea3caa603d9ad9d4c39027cebc5cba0a24"
 dependencies = [
  "daemon-slayer-core",
  "futures",
@@ -2614,7 +2611,7 @@ dependencies = [
  "lofty",
  "log",
  "normpath",
- "notify 6.0.0",
+ "notify",
  "num_cpus",
  "pretty_assertions",
  "regex",
@@ -2979,9 +2976,9 @@ dependencies = [
 
 [[package]]
 name = "notify"
-version = "5.2.0"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "729f63e1ca555a43fe3efa4f3efdf4801c479da85b432242a7b726f353c88486"
+checksum = "4d9ba6c734de18ca27c8cef5cd7058aa4ac9f63596131e4c7e41e579319032a2"
 dependencies = [
  "bitflags",
  "crossbeam-channel",
@@ -2996,29 +2993,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "notify"
-version = "6.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d9ba6c734de18ca27c8cef5cd7058aa4ac9f63596131e4c7e41e579319032a2"
-dependencies = [
- "bitflags",
- "filetime",
- "fsevent-sys",
- "inotify",
- "kqueue",
- "libc",
- "mio",
- "walkdir",
- "windows-sys 0.45.0",
-]
-
-[[package]]
 name = "notify-debouncer-mini"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e23e9fa24f094b143c1eb61f90ac6457de87be6987bc70746e0179f7dbc9007b"
+checksum = "e55ee272914f4563a2f8b8553eb6811f3c0caea81c756346bad15b7e3ef969f0"
 dependencies = [
- "notify 5.2.0",
+ "notify",
 ]
 
 [[package]]
@@ -3572,7 +3552,6 @@ dependencies = [
  "async-trait",
  "console-subscriber",
  "daemon-slayer",
- "daemon-slayer-logging",
  "dotenvy",
  "futures",
  "hyper",
@@ -5271,9 +5250,8 @@ dependencies = [
 [[package]]
 name = "tilia"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tilia?rev=9c64d54cfe1e403727816790cb08b650b0dcf8bf#9c64d54cfe1e403727816790cb08b650b0dcf8bf"
+source = "git+https://github.com/aschey/tilia?rev=98208bff3c4b27b2a978592db5837cfe5dfa4e3c#98208bff3c4b27b2a978592db5837cfe5dfa4e3c"
 dependencies = [
- "arraydeque",
  "async-trait",
  "background-service",
  "bollard",
@@ -5286,7 +5264,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tower",
- "tower-rpc 0.1.0 (git+https://github.com/aschey/tower-rpc?rev=23909ff92d442e8dcc3b486a0d87c8f51a412c07)",
+ "tower-rpc",
  "tracing",
  "tracing-subscriber",
 ]
@@ -5294,7 +5272,7 @@ dependencies = [
 [[package]]
 name = "tilia-widget"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tilia?rev=9c64d54cfe1e403727816790cb08b650b0dcf8bf#9c64d54cfe1e403727816790cb08b650b0dcf8bf"
+source = "git+https://github.com/aschey/tilia?rev=98208bff3c4b27b2a978592db5837cfe5dfa4e3c#98208bff3c4b27b2a978592db5837cfe5dfa4e3c"
 dependencies = [
  "ansi-to-tui 3.0.0",
  "crossterm",
@@ -5622,29 +5600,7 @@ checksum = "c20c8dbed6283a09604c3e69b4b7eeb54e298b8a600d4d5ecb5ad39de609f1d0"
 [[package]]
 name = "tower-rpc"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tower-rpc?rev=23909ff92d442e8dcc3b486a0d87c8f51a412c07#23909ff92d442e8dcc3b486a0d87c8f51a412c07"
-dependencies = [
- "async-trait",
- "background-service",
- "bytes",
- "eyre",
- "futures",
- "futures-cancel",
- "parity-tokio-ipc",
- "pin-project",
- "thiserror",
- "tokio",
- "tokio-stream",
- "tokio-tower",
- "tokio-util",
- "tower",
- "tracing",
-]
-
-[[package]]
-name = "tower-rpc"
-version = "0.1.0"
-source = "git+https://github.com/aschey/tower-rpc?rev=72f2d60708dc57d91e8330f7efbec77744f763c3#72f2d60708dc57d91e8330f7efbec77744f763c3"
+source = "git+https://github.com/aschey/tower-rpc?rev=7cc9de34f32e9cb5d6bc9e22ba0508011fd7d580#7cc9de34f32e9cb5d6bc9e22ba0508011fd7d580"
 dependencies = [
  "async-trait",
  "background-service",

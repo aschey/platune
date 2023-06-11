@@ -11,7 +11,7 @@ use daemon_slayer::{
     },
     console::{cli::ConsoleCliProvider, Console, LogSource},
     core::{BoxedError, Label},
-    error_handler::{cli::ErrorHandlerCliProvider, ErrorSink},
+    error_handler::{cli::ErrorHandlerCliProvider, color_eyre::eyre, ErrorSink},
     health_check::{cli::HealthCheckCliProvider, GrpcHealthCheck},
     logging::{
         cli::LoggingCliProvider, tracing_subscriber::util::SubscriberInitExt, LoggerBuilder,
@@ -23,7 +23,7 @@ use std::env::current_exe;
 #[tokio::main]
 async fn main() -> Result<(), ErrorSink> {
     let guard = daemon_slayer::logging::init();
-    let result = run().await.map_err(ErrorSink::from_error);
+    let result = run().await.map_err(|e| ErrorSink::new(eyre::eyre!(e)));
     drop(guard);
     result
 }
@@ -78,7 +78,7 @@ async fn run() -> Result<(), BoxedError> {
         .with_provider(ProcessCliProvider::new(manager.info().await?.pid))
         .with_provider(ConsoleCliProvider::new(console))
         .with_provider(LoggingCliProvider::new(logger_builder))
-        .with_provider(ErrorHandlerCliProvider::new(label))
+        .with_provider(ErrorHandlerCliProvider::default())
         .with_provider(HealthCheckCliProvider::new(health_check))
         .initialize()?;
 

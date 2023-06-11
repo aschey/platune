@@ -10,11 +10,12 @@ use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::{
     cli::Cli,
     core::BoxedError,
-    error_handler::{cli::ErrorHandlerCliProvider, ErrorSink},
+    error_handler::{cli::ErrorHandlerCliProvider, color_eyre::eyre, ErrorSink},
     logging::{
         self, cli::LoggingCliProvider, tracing_subscriber::util::SubscriberInitExt, LogLevel,
         LoggerBuilder,
     },
+    notify::notification::Notification,
     server::{cli::ServerCliProvider, Handler},
 };
 use dotenvy::dotenv;
@@ -23,7 +24,7 @@ use rpc::*;
 #[tokio::main]
 async fn main() -> Result<(), ErrorSink> {
     let guard = daemon_slayer::logging::init();
-    let result = run().await.map_err(ErrorSink::from_error);
+    let result = run().await.map_err(|e| ErrorSink::new(eyre::eyre!(e)));
     drop(guard);
     result
 }
@@ -45,7 +46,12 @@ async fn run() -> Result<(), BoxedError> {
             &"run".parse().unwrap(),
         ))
         .with_provider(LoggingCliProvider::new(logger_builder))
-        .with_provider(ErrorHandlerCliProvider::new(ServiceHandler::label()))
+        .with_provider(
+            ErrorHandlerCliProvider::default().with_notification(
+                Notification::new(ServiceHandler::label())
+                    .summary("The platune service encountered a fatal error"),
+            ),
+        )
         .initialize()?;
 
     let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;
