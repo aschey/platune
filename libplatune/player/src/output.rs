@@ -70,13 +70,14 @@ impl CpalAudioOutput {
         let device = host
             .default_output_device()
             .ok_or(AudioOutputError::NoDefaultDevice)?;
-
+        info!("Using device: {:?}", device.name());
         let config = match device.default_output_config() {
             Ok(config) => config,
             Err(e) => {
                 return Err(AudioOutputError::OutputDeviceConfigError(e));
             }
         };
+        info!("Device config: {config:?}");
 
         // Select proper playback routine based on sample format.
         Ok(match config.sample_format() {

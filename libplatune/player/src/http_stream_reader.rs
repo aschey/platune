@@ -1,5 +1,5 @@
 use crate::source::{ReadSeekSource, Source};
-use eyre::Result;
+use eyre::{Context, Result};
 use tracing::info;
 
 use stream_download::{http::HttpStream, source::SourceStream, StreamDownload};
@@ -13,11 +13,14 @@ pub(crate) struct HttpStreamReader {
 
 impl HttpStreamReader {
     pub async fn new(url: String) -> Result<Self> {
-        let stream = HttpStream::create(url.parse()?).await;
+        let stream = HttpStream::create(url.parse()?)
+            .await
+            .wrap_err_with(|| "Error creating http stream")?;
         let file_len = stream.content_length().await;
         Ok(Self {
             url: url.clone(),
-            downloader: StreamDownload::from_stream(stream),
+            downloader: StreamDownload::from_stream(stream)
+                .wrap_err_with(|| "Error creating stream downloader")?,
             file_len,
         })
     }

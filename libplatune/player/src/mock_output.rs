@@ -35,6 +35,7 @@ pub struct OutputStreamTimestamp {
     pub playback: StreamInstant,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SupportedStreamConfig {
     channels: ChannelCount,
     sample_rate: SampleRate,

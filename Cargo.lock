@@ -4830,7 +4830,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "stream-download"
 version = "0.1.0"
-source = "git+https://github.com/aschey/stream-download-rs?rev=f453f227d81ebee2c19001c32e8ee505dd354131#f453f227d81ebee2c19001c32e8ee505dd354131"
+source = "git+https://github.com/aschey/stream-download-rs?rev=66c3cf79ac5f6b528bd24b0da064b8b8c2e43a54#66c3cf79ac5f6b528bd24b0da064b8b8c2e43a54"
 dependencies = [
  "async-trait",
  "bytes",
@@ -4839,6 +4839,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "rangemap",
  "reqwest",
+ "tap",
  "tempfile",
  "tokio",
  "tracing",
