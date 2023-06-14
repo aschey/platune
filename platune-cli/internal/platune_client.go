@@ -40,7 +40,9 @@ func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
 		numUrls := len(managementUrls)
 		for i, managementUrl := range strings.Split(managementUrls, ",") {
 			managementConn, err = platune.GetHttpClient(managementUrl)
-			if err != nil && i == numUrls-1 {
+			if err == nil {
+				break
+			} else if i == numUrls-1 {
 				fmt.Println(err)
 				os.Exit(1)
 			}
