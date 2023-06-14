@@ -95,7 +95,16 @@ async fn get_connection_type<T>(
         let folders = manager
             .get_all_folders()
             .await
-            .map_err(|e| format_error(format!("Error getting folders: {e:?}")))?;
+            .map_err(|e| format_error(format!("Error getting folders: {e:?}")))?
+            .into_iter()
+            .map(|f| {
+                if cfg!(windows) {
+                    f.replace('\\', "/")
+                } else {
+                    f
+                }
+            })
+            .collect();
 
         let local_addr = match request
             .local_addr()
