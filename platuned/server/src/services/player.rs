@@ -195,6 +195,29 @@ impl Player for PlayerImpl {
         }))
     }
 
+    async fn list_output_devices(
+        &self,
+        _: Request<()>,
+    ) -> Result<Response<DevicesResponse>, Status> {
+        let devices = self
+            .player
+            .output_devices()
+            .map_err(|e| format_error(format!("Error getting output devices: {e:?}")))?;
+        Ok(Response::new(DevicesResponse { devices }))
+    }
+
+    async fn set_output_device(
+        &self,
+        request: Request<SetOutputDeviceRequest>,
+    ) -> Result<Response<()>, Status> {
+        let request = request.into_inner();
+        self.player
+            .set_output_device(request.device)
+            .await
+            .map_err(|e| format_error(format!("Error setting output device: {e:?}")))?;
+        Ok(Response::new(()))
+    }
+
     type SubscribeEventsStream =
         Pin<Box<dyn futures::Stream<Item = Result<EventResponse, Status>> + Send + Sync + 'static>>;
 

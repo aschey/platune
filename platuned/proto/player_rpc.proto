@@ -21,6 +21,8 @@ service Player {
   rpc Previous(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc GetCurrentStatus(google.protobuf.Empty) returns (StatusResponse);
   rpc SubscribeEvents(google.protobuf.Empty) returns (stream EventResponse);
+  rpc ListOutputDevices(google.protobuf.Empty) returns (DevicesResponse);
+  rpc SetOutputDevice(SetOutputDeviceRequest) returns (google.protobuf.Empty);
 }
 
 enum Event {
@@ -81,4 +83,12 @@ message StatusResponse {
   PlayerStatus status = 1;
   optional PositionResponse progress = 2;
   optional string current_song = 3;
+}
+
+message DevicesResponse {
+  repeated string devices = 1;
+}
+
+message SetOutputDeviceRequest {
+  optional string device = 1;
 }

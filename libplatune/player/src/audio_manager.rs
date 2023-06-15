@@ -67,6 +67,10 @@ impl AudioManager {
         self.out_buf = Vec::with_capacity(n_frames * channels);
     }
 
+    pub(crate) fn set_device_name(&mut self, device_name: Option<String>) {
+        self.output.set_device_name(device_name);
+    }
+
     pub(crate) fn reset(&mut self, resample_chunk_size: usize) -> Result<(), AudioOutputError> {
         self.output.start()?;
         self.set_resampler(resample_chunk_size);

@@ -28,7 +28,7 @@ pub(crate) fn decode_loop(
     event_tx: tokio::sync::broadcast::Sender<PlayerEvent>,
     host: Arc<Host>,
 ) {
-    let output = match CpalAudioOutput::new_output(host, player_cmd_tx.clone()) {
+    let output = match CpalAudioOutput::new_output(host, player_cmd_tx.clone(), None) {
         Ok(output) => output,
         Err(e) => {
             error!("Error opening audio output: {e:?}");
@@ -42,11 +42,13 @@ pub(crate) fn decode_loop(
         match queue_rx.try_recv() {
             Ok(queue_source) => {
                 info!("try_recv got source {queue_source:?}");
-                match queue_source.queue_start_mode {
-                    QueueStartMode::ForceRestart => {
+                let start_mode = queue_source.queue_start_mode.clone();
+                match start_mode {
+                    QueueStartMode::ForceRestart { device_name } => {
                         if let Ok(pos) = handle_force_restart(
                             queue_source,
                             &mut audio_manager,
+                            device_name,
                             prev_stop_position,
                             &mut cmd_rx,
                             &player_cmd_tx,
@@ -84,11 +86,13 @@ pub(crate) fn decode_loop(
                 match queue_rx.recv() {
                     Ok(queue_source) => {
                         info!("recv got source {queue_source:?}");
-                        match queue_source.queue_start_mode {
-                            QueueStartMode::ForceRestart => {
+                        let start_mode = queue_source.queue_start_mode.clone();
+                        match start_mode {
+                            QueueStartMode::ForceRestart { device_name } => {
                                 if let Ok(pos) = handle_force_restart(
                                     queue_source,
                                     &mut audio_manager,
+                                    device_name,
                                     prev_stop_position,
                                     &mut cmd_rx,
                                     &player_cmd_tx,
@@ -132,6 +136,7 @@ pub(crate) fn decode_loop(
 fn handle_force_restart(
     queue_source: QueueSource,
     audio_manager: &mut AudioManager,
+    device_name: Option<String>,
     prev_stop_position: Duration,
     cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
@@ -139,6 +144,7 @@ fn handle_force_restart(
 ) -> Result<Duration, AudioOutputError> {
     info!("Restarting output stream");
     audio_manager.stop();
+    audio_manager.set_device_name(device_name);
     audio_manager
         .reset(queue_source.settings.resample_chunk_size)
         .tap_err(|e| error!("Error resetting output stream: {e:?}"))?;
@@ -147,7 +153,7 @@ fn handle_force_restart(
         queue_source,
         cmd_rx,
         player_cmd_tx,
-        &event_tx,
+        event_tx,
         Some(prev_stop_position),
     ))
 }
@@ -194,6 +200,9 @@ pub(crate) async fn main_loop(
                 if let Err(e) = receiver.respond(PlayerResponse::StatusResponse(current_status)) {
                     error!("Error sending player status: {e:?}");
                 }
+            }
+            Command::SetDeviceName(name) => {
+                player.set_device_name(name).await?;
             }
             Command::Reset => {
                 player.reset().await?;

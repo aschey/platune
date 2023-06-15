@@ -74,7 +74,8 @@ pub mod platune_player {
             let decoder_tx_ = decoder_tx.clone();
 
             let main_loop_fn = async move {
-                let player = Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings);
+                let player =
+                    Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings, None);
                 main_loop(cmd_rx, player).await
             };
             let host = Arc::new(host);
@@ -120,7 +121,17 @@ pub mod platune_player {
                 .output_devices()
                 .map_err(|e| PlayerError(format!("{e:?}")))?;
 
-            Ok(devices.into_iter().filter_map(|d| d.name().ok()).collect())
+            Ok(devices
+                .into_iter()
+                .filter_map(|d| d.name().map(|n| n.trim_end().to_owned()).ok())
+                .collect())
+        }
+
+        pub async fn set_output_device(&self, device: Option<String>) -> Result<(), PlayerError> {
+            self.cmd_sender
+                .send_async(Command::SetDeviceName(device))
+                .await
+                .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
         pub fn subscribe(&self) -> broadcast::Receiver<PlayerEvent> {

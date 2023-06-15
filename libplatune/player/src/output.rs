@@ -13,6 +13,7 @@ pub(crate) trait AudioOutput {
     fn start(&mut self) -> Result<()>;
     fn sample_rate(&self) -> usize;
     fn channels(&self) -> usize;
+    fn set_device_name(&mut self, name: Option<String>);
 }
 
 #[derive(Debug, Error)]
@@ -70,6 +71,7 @@ impl CpalAudioOutput {
     pub(crate) fn new_output(
         host: Arc<Host>,
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
+        device_name: Option<String>,
     ) -> Result<Box<dyn AudioOutput>> {
         // Get the default audio output device.
         let device = host
@@ -86,14 +88,46 @@ impl CpalAudioOutput {
 
         // Select proper playback routine based on sample format.
         Ok(match config.sample_format() {
-            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(cmd_sender, host)),
-            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(cmd_sender, host)),
-            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(cmd_sender, host)),
-            cpal::SampleFormat::I8 => Box::new(CpalAudioOutputImpl::<i8>::new(cmd_sender, host)),
-            cpal::SampleFormat::I32 => Box::new(CpalAudioOutputImpl::<i32>::new(cmd_sender, host)),
-            cpal::SampleFormat::U8 => Box::new(CpalAudioOutputImpl::<u8>::new(cmd_sender, host)),
-            cpal::SampleFormat::U32 => Box::new(CpalAudioOutputImpl::<u32>::new(cmd_sender, host)),
-            cpal::SampleFormat::F64 => Box::new(CpalAudioOutputImpl::<f64>::new(cmd_sender, host)),
+            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
+            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
+            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
+            cpal::SampleFormat::I8 => Box::new(CpalAudioOutputImpl::<i8>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
+            cpal::SampleFormat::I32 => Box::new(CpalAudioOutputImpl::<i32>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
+            cpal::SampleFormat::U8 => Box::new(CpalAudioOutputImpl::<u8>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
+            cpal::SampleFormat::U32 => Box::new(CpalAudioOutputImpl::<u32>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
+            cpal::SampleFormat::F64 => Box::new(CpalAudioOutputImpl::<f64>::new(
+                cmd_sender,
+                host,
+                device_name,
+            )),
             cpal::SampleFormat::I64 => {
                 return Err(AudioOutputError::UnsupportedConfiguration(
                     "Unsupported sample format: i64".to_owned(),
@@ -124,10 +158,15 @@ where
     buf: Vec<T>,
     cmd_sender: TwoWaySender<Command, PlayerResponse>,
     host: Arc<Host>,
+    device_name: Option<String>,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn new(cmd_sender: TwoWaySender<Command, PlayerResponse>, host: Arc<Host>) -> Self {
+    pub fn new(
+        cmd_sender: TwoWaySender<Command, PlayerResponse>,
+        host: Arc<Host>,
+        device_name: Option<String>,
+    ) -> Self {
         Self {
             ring_buf_producer: None,
             stream: None,
@@ -136,6 +175,7 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             buf: vec![T::MID; 2048],
             cmd_sender,
             host,
+            device_name,
         }
     }
 
@@ -249,26 +289,43 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.stream = None;
     }
 
+    fn set_device_name(&mut self, name: Option<String>) {
+        self.device_name = name;
+    }
+
     fn start(&mut self) -> Result<()> {
         if self.stream.is_some() {
             return Ok(());
         }
 
-        // Get the default audio output device.
         let default_device = self
             .host
             .default_output_device()
             .ok_or(AudioOutputError::NoDefaultDevice)?;
-        let default_device_name = default_device
-            .name()
-            .map_err(|e| AudioOutputError::InvalidDefaultDeviceName(e))?;
+
+        // Get the default audio output device.
+        let chosen_device_name = match &self.device_name {
+            Some(name) => name.to_owned(),
+            None => default_device
+                .name()
+                .map_err(AudioOutputError::InvalidDefaultDeviceName)?,
+        };
+
+        // We explicitly need to select a device here rather than using the default.
+        // This is because on Mac if we use the default device, we won't receive a disconnect error and the device will change automatically.
+        // This is sometimes fine except when the sample rate on the new device is different, we need to restart the stream to resample correctly.
+        // More info here: https://github.com/RustAudio/cpal/pull/707#issuecomment-1275609798
         let device = self
             .host
             .devices()
-            .map_err(|e| AudioOutputError::LoadDevicesError(e))?
-            .into_iter()
-            .find(|d| d.name().map(|n| n == default_device_name).unwrap_or(false))
-            .unwrap();
+            .map_err(AudioOutputError::LoadDevicesError)?
+            .find(|d| {
+                d.name()
+                    .map(|n| n.trim() == chosen_device_name.trim())
+                    .unwrap_or(false)
+            })
+            // Fall back to default device if chosen device was not found
+            .unwrap_or(default_device);
 
         let config = device
             .default_output_config()

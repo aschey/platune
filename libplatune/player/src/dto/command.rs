@@ -6,6 +6,7 @@ pub(crate) enum Command {
     AddToQueue(Vec<String>),
     Seek(Duration),
     SetVolume(f64),
+    SetDeviceName(Option<String>),
     Pause,
     Resume,
     GetCurrentStatus,

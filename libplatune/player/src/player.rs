@@ -36,6 +36,7 @@ pub(crate) struct Player {
     audio_status: AudioStatus,
     settings: Settings,
     pending_volume: Option<f64>,
+    device_name: Option<String>,
 }
 
 impl Player {
@@ -45,6 +46,7 @@ impl Player {
         queue_rx: Receiver<QueueSource>,
         cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
         settings: Settings,
+        device_name: Option<String>,
     ) -> Self {
         Self {
             event_tx,
@@ -60,6 +62,7 @@ impl Player {
             audio_status: AudioStatus::Stopped,
             settings,
             pending_volume: None,
+            device_name,
         }
     }
 
@@ -138,7 +141,10 @@ impl Player {
         while success.is_err() {
             match self.get_current() {
                 Some(path) => {
-                    match self.append_file(path.clone(), queue_start_mode).await {
+                    match self
+                        .append_file(path.clone(), queue_start_mode.clone())
+                        .await
+                    {
                         Ok(_) => {
                             success = Ok(());
                         }
@@ -147,19 +153,15 @@ impl Player {
                     }
 
                     if let Some(path) = self.get_next() {
-                        match self
-                            .append_file(
-                                path,
-                                if queue_start_mode == QueueStartMode::ForceRestart
-                                    && success.is_err()
-                                {
-                                    QueueStartMode::ForceRestart
-                                } else {
-                                    QueueStartMode::Normal
-                                },
-                            )
-                            .await
-                        {
+                        let start_mode = match (&queue_start_mode, &success) {
+                            (QueueStartMode::ForceRestart { device_name }, Err(_)) => {
+                                QueueStartMode::ForceRestart {
+                                    device_name: device_name.to_owned(),
+                                }
+                            }
+                            _ => QueueStartMode::Normal,
+                        };
+                        match self.append_file(path, start_mode).await {
                             Ok(_) => {
                                 success = Ok(());
                             }
@@ -356,11 +358,25 @@ impl Player {
         }
     }
 
+    pub(crate) async fn set_device_name(
+        &mut self,
+        device_name: Option<String>,
+    ) -> Result<(), String> {
+        self.device_name = device_name;
+        self.reset().await
+    }
+
     pub(crate) async fn reset(&mut self) -> Result<(), String> {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
-        self.set_queue_internal(queue, queue_position, QueueStartMode::ForceRestart)
-            .await?;
+        self.set_queue_internal(
+            queue,
+            queue_position,
+            QueueStartMode::ForceRestart {
+                device_name: self.device_name.clone(),
+            },
+        )
+        .await?;
 
         Ok(())
     }

@@ -8,8 +8,8 @@ pub(crate) struct QueueSource {
     pub(crate) queue_start_mode: QueueStartMode,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum QueueStartMode {
-    ForceRestart,
+    ForceRestart { device_name: Option<String> },
     Normal,
 }
