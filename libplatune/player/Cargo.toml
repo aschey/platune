@@ -11,6 +11,7 @@ path = "src/lib.rs"
 
 [dependencies]
 cpal = "0.15"
+derivative = "2"
 eyre = "0.6"
 flume = "0.10"
 futures-util = "0.3"

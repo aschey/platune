@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use crate::{
     audio_manager::AudioManager,
@@ -26,7 +26,7 @@ pub(crate) fn decode_loop(
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
     event_tx: tokio::sync::broadcast::Sender<PlayerEvent>,
-    host: Host,
+    host: Arc<Host>,
 ) {
     let output = match CpalAudioOutput::new_output(host, player_cmd_tx.clone()) {
         Ok(output) => output,
@@ -42,7 +42,7 @@ pub(crate) fn decode_loop(
             Ok(queue_source) => {
                 info!("try_recv got source {queue_source:?}");
                 match queue_source.queue_start_mode {
-                    QueueStartMode::ForceRestart => {
+                    QueueStartMode::ForceRestart { start_time } => {
                         info!("Restarting output stream");
                         audio_manager.stop();
                         if audio_manager
@@ -58,7 +58,7 @@ pub(crate) fn decode_loop(
                             &mut cmd_rx,
                             &player_cmd_tx,
                             &event_tx,
-                            Some(prev_stop_position),
+                            start_time.or(Some(prev_stop_position)),
                         );
                     }
                     QueueStartMode::Normal => {
@@ -88,19 +88,42 @@ pub(crate) fn decode_loop(
                 match queue_rx.recv() {
                     Ok(queue_source) => {
                         info!("recv got source {queue_source:?}");
-                        if let Err(e) =
-                            audio_manager.reset(queue_source.settings.resample_chunk_size)
-                        {
-                            error!("Error resetting output stream: {e:?}");
-                            return;
+                        match queue_source.queue_start_mode {
+                            QueueStartMode::ForceRestart { start_time } => {
+                                info!("Restarting output stream");
+                                audio_manager.stop();
+                                if audio_manager
+                                    .reset(queue_source.settings.resample_chunk_size)
+                                    .tap_err(|e| error!("Error resetting output stream: {e:?}"))
+                                    .is_err()
+                                {
+                                    return;
+                                }
+
+                                prev_stop_position = audio_manager.decode_source(
+                                    queue_source,
+                                    &mut cmd_rx,
+                                    &player_cmd_tx,
+                                    &event_tx,
+                                    start_time.or(Some(prev_stop_position)),
+                                );
+                            }
+                            QueueStartMode::Normal => {
+                                if let Err(e) =
+                                    audio_manager.reset(queue_source.settings.resample_chunk_size)
+                                {
+                                    error!("Error resetting output stream: {e:?}");
+                                    return;
+                                }
+                                prev_stop_position = audio_manager.decode_source(
+                                    queue_source,
+                                    &mut cmd_rx,
+                                    &player_cmd_tx,
+                                    &event_tx,
+                                    None,
+                                );
+                            }
                         }
-                        prev_stop_position = audio_manager.decode_source(
-                            queue_source,
-                            &mut cmd_rx,
-                            &player_cmd_tx,
-                            &event_tx,
-                            None,
-                        );
                     }
                     Err(_) => {
                         info!("Queue receiver disconnected");

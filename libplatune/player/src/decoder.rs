@@ -19,6 +19,7 @@ use symphonia::core::{
 use tap::TapFallible;
 use tracing::{error, info, warn};
 
+#[derive(Debug)]
 pub(crate) struct DecoderParams {
     pub(crate) source: Box<dyn Source>,
     pub(crate) volume: f64,
@@ -51,15 +52,14 @@ pub(crate) struct Decoder {
 }
 
 impl Decoder {
-    pub(crate) fn new(
-        DecoderParams {
+    pub(crate) fn new(params: DecoderParams) -> Result<Self, DecoderError> {
+        info!("Start decoding {params:?}");
+        let DecoderParams {
             source,
             volume,
             output_channels,
             start_position,
-        }: DecoderParams,
-    ) -> Result<Self, DecoderError> {
-        info!("Start decoding {source:?}");
+        } = params;
         let mut hint = Hint::new();
         if let Some(extension) = source.get_file_ext() {
             hint.with_extension(&extension);
@@ -119,6 +119,7 @@ impl Decoder {
             sample_rate: 0,
         };
         if let Some(start_position) = start_position {
+            info!("Decoder seeking to {start_position:?}");
             // Stream may not be seekable
             let _ = decoder
                 .seek(start_position)

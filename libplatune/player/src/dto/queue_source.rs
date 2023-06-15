@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::{settings::Settings, source::Source};
 
 #[derive(Debug)]
@@ -10,6 +12,6 @@ pub(crate) struct QueueSource {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) enum QueueStartMode {
-    ForceRestart,
+    ForceRestart { start_time: Option<Duration> },
     Normal,
 }

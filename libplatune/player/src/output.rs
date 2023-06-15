@@ -1,5 +1,6 @@
 use crate::audio_output::*;
 use std::result;
+use std::sync::Arc;
 use std::{fmt::Debug, time::Duration};
 use symphonia::core::audio::RawSample;
 use symphonia::core::conv::{ConvertibleSample, FromSample};
@@ -63,7 +64,7 @@ impl AudioOutputSample for f64 {}
 
 impl CpalAudioOutput {
     pub(crate) fn new_output(
-        host: Host,
+        host: Arc<Host>,
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
     ) -> Result<Box<dyn AudioOutput>> {
         // Get the default audio output device.
@@ -118,11 +119,11 @@ where
     channels: usize,
     buf: Vec<T>,
     cmd_sender: TwoWaySender<Command, PlayerResponse>,
-    host: Host,
+    host: Arc<Host>,
 }
 
 impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
-    pub fn new(cmd_sender: TwoWaySender<Command, PlayerResponse>, host: Host) -> Self {
+    pub fn new(cmd_sender: TwoWaySender<Command, PlayerResponse>, host: Arc<Host>) -> Self {
         Self {
             ring_buf_producer: None,
             stream: None,

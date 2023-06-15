@@ -2639,6 +2639,7 @@ dependencies = [
  "async-trait",
  "cpal",
  "ctor 0.2.2",
+ "derivative",
  "eyre",
  "flume",
  "futures",
