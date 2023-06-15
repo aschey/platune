@@ -9,7 +9,7 @@ use crate::{
         player_response::PlayerResponse,
         queue_source::{QueueSource, QueueStartMode},
     },
-    output::CpalAudioOutput,
+    output::{AudioOutputError, CpalAudioOutput},
     platune_player::PlayerEvent,
     player::Player,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
@@ -37,29 +37,25 @@ pub(crate) fn decode_loop(
     };
     let mut audio_manager = AudioManager::new(output, volume);
     let mut prev_stop_position = Duration::default();
+
     loop {
         match queue_rx.try_recv() {
             Ok(queue_source) => {
                 info!("try_recv got source {queue_source:?}");
                 match queue_source.queue_start_mode {
-                    QueueStartMode::ForceRestart { start_time } => {
-                        info!("Restarting output stream");
-                        audio_manager.stop();
-                        if audio_manager
-                            .reset(queue_source.settings.resample_chunk_size)
-                            .tap_err(|e| error!("Error resetting output stream: {e:?}"))
-                            .is_err()
-                        {
-                            return;
-                        }
-
-                        prev_stop_position = audio_manager.decode_source(
+                    QueueStartMode::ForceRestart => {
+                        if let Ok(pos) = handle_force_restart(
                             queue_source,
+                            &mut audio_manager,
+                            prev_stop_position,
                             &mut cmd_rx,
                             &player_cmd_tx,
                             &event_tx,
-                            start_time.or(Some(prev_stop_position)),
-                        );
+                        ) {
+                            prev_stop_position = pos;
+                        } else {
+                            return;
+                        }
                     }
                     QueueStartMode::Normal => {
                         if audio_manager
@@ -89,24 +85,19 @@ pub(crate) fn decode_loop(
                     Ok(queue_source) => {
                         info!("recv got source {queue_source:?}");
                         match queue_source.queue_start_mode {
-                            QueueStartMode::ForceRestart { start_time } => {
-                                info!("Restarting output stream");
-                                audio_manager.stop();
-                                if audio_manager
-                                    .reset(queue_source.settings.resample_chunk_size)
-                                    .tap_err(|e| error!("Error resetting output stream: {e:?}"))
-                                    .is_err()
-                                {
-                                    return;
-                                }
-
-                                prev_stop_position = audio_manager.decode_source(
+                            QueueStartMode::ForceRestart => {
+                                if let Ok(pos) = handle_force_restart(
                                     queue_source,
+                                    &mut audio_manager,
+                                    prev_stop_position,
                                     &mut cmd_rx,
                                     &player_cmd_tx,
                                     &event_tx,
-                                    start_time.or(Some(prev_stop_position)),
-                                );
+                                ) {
+                                    prev_stop_position = pos;
+                                } else {
+                                    return;
+                                }
                             }
                             QueueStartMode::Normal => {
                                 if let Err(e) =
@@ -136,6 +127,29 @@ pub(crate) fn decode_loop(
             }
         }
     }
+}
+
+fn handle_force_restart(
+    queue_source: QueueSource,
+    audio_manager: &mut AudioManager,
+    prev_stop_position: Duration,
+    cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
+    player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
+    event_tx: &tokio::sync::broadcast::Sender<PlayerEvent>,
+) -> Result<Duration, AudioOutputError> {
+    info!("Restarting output stream");
+    audio_manager.stop();
+    audio_manager
+        .reset(queue_source.settings.resample_chunk_size)
+        .tap_err(|e| error!("Error resetting output stream: {e:?}"))?;
+
+    Ok(audio_manager.decode_source(
+        queue_source,
+        cmd_rx,
+        player_cmd_tx,
+        &event_tx,
+        Some(prev_stop_position),
+    ))
 }
 
 pub(crate) async fn main_loop(

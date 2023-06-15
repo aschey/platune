@@ -6,11 +6,8 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        // WASAPI does not resample so it must be done here
-        // Otherwise we can leave it to the OS to perform resampling
-        let enable_resampling = cfg!(windows);
         Self {
-            enable_resampling,
+            enable_resampling: true,
             resample_chunk_size: 1024,
         }
     }

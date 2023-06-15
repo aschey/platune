@@ -19,6 +19,8 @@ pub(crate) trait AudioOutput {
 pub enum AudioOutputError {
     #[error("No default device found")]
     NoDefaultDevice,
+    #[error("Error getting default device name: {0}")]
+    InvalidDefaultDeviceName(DeviceNameError),
     #[error("Error getting default device config: {0}")]
     OutputDeviceConfigError(DefaultStreamConfigError),
     #[error("Error opening output stream: {0}")]
@@ -27,6 +29,8 @@ pub enum AudioOutputError {
     StartStreamError(PlayStreamError),
     #[error("Unsupported device configuration: {0}")]
     UnsupportedConfiguration(String),
+    #[error("Error loading devices: {0}")]
+    LoadDevicesError(DevicesError),
 }
 
 pub type Result<T> = result::Result<T, AudioOutputError>;
@@ -251,10 +255,20 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         }
 
         // Get the default audio output device.
-        let device = self
+        let default_device = self
             .host
             .default_output_device()
             .ok_or(AudioOutputError::NoDefaultDevice)?;
+        let default_device_name = default_device
+            .name()
+            .map_err(|e| AudioOutputError::InvalidDefaultDeviceName(e))?;
+        let device = self
+            .host
+            .devices()
+            .map_err(|e| AudioOutputError::LoadDevicesError(e))?
+            .into_iter()
+            .find(|d| d.name().map(|n| n == default_device_name).unwrap_or(false))
+            .unwrap();
 
         let config = device
             .default_output_config()

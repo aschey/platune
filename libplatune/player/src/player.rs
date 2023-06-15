@@ -147,13 +147,19 @@ impl Player {
                     }
 
                     if let Some(path) = self.get_next() {
-                        let start_mode = match (queue_start_mode, &success) {
-                            (QueueStartMode::ForceRestart { start_time }, Err(_)) => {
-                                QueueStartMode::ForceRestart { start_time }
-                            }
-                            _ => QueueStartMode::Normal,
-                        };
-                        match self.append_file(path, start_mode).await {
+                        match self
+                            .append_file(
+                                path,
+                                if queue_start_mode == QueueStartMode::ForceRestart
+                                    && success.is_err()
+                                {
+                                    QueueStartMode::ForceRestart
+                                } else {
+                                    QueueStartMode::Normal
+                                },
+                            )
+                            .await
+                        {
                             Ok(_) => {
                                 success = Ok(());
                             }
@@ -353,24 +359,8 @@ impl Player {
     pub(crate) async fn reset(&mut self) -> Result<(), String> {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
-        match self
-            .cmd_sender
-            .get_response(DecoderCommand::GetCurrentPosition)
-            .await?
-        {
-            DecoderResponse::CurrentPositionResponse(position) => {
-                info!("Resetting stream at {:?}", position.position);
-                self.set_queue_internal(
-                    queue,
-                    queue_position,
-                    QueueStartMode::ForceRestart {
-                        start_time: Some(position.position),
-                    },
-                )
-                .await?;
-            }
-            _ => unreachable!(),
-        }
+        self.set_queue_internal(queue, queue_position, QueueStartMode::ForceRestart)
+            .await?;
 
         Ok(())
     }
