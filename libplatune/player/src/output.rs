@@ -1,5 +1,4 @@
 use crate::audio_output::*;
-use cpal::{ChannelCount, SampleFormat, SupportedStreamConfigsError};
 use rb::{RbConsumer, RbProducer, SpscRb, RB};
 use std::sync::{Arc, RwLock};
 use std::{fmt::Debug, time::Duration};

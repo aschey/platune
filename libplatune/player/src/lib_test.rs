@@ -120,7 +120,7 @@ fn decode_sources(
 ) -> Vec<f32> {
     let mut all_samples = vec![];
     let mut cur_sample_rate = 44_100;
-    let mut resampler = FftFixedInOut::<f64>::new(
+    let mut resampler = FftFixedInOut::<f32>::new(
         cur_sample_rate,
         sample_rate_out,
         resample_chunk_size,
@@ -169,7 +169,7 @@ fn decode_sources(
             match decoder.decode(&packet) {
                 Ok(decoded) => {
                     let mut sample_buf =
-                        SampleBuffer::<f64>::new(decoded.capacity() as u64, *decoded.spec());
+                        SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
 
                     sample_buf.copy_interleaved_ref(decoded);
 
@@ -220,7 +220,7 @@ fn decode_sources(
             }
 
             cur_sample_rate = sample_rate;
-            resampler = FftFixedInOut::<f64>::new(
+            resampler = FftFixedInOut::<f32>::new(
                 cur_sample_rate,
                 sample_rate_out,
                 resample_chunk_size,
@@ -233,7 +233,7 @@ fn decode_sources(
         }
 
         if sample_rate == sample_rate_out {
-            let trimmed: Vec<f64> = trimmed.collect();
+            let trimmed: Vec<f32> = trimmed.collect();
             all_samples.extend_from_slice(&trimmed);
             continue;
         }
@@ -444,7 +444,6 @@ async fn test_decode_all_data(
 
     let player = PlatunePlayer::new_with_host(
         Settings {
-            enable_resampling: true,
             resample_chunk_size,
         },
         host,

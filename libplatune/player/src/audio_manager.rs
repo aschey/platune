@@ -1,5 +1,6 @@
 use crate::output::OutputBuilder;
 use crate::{
+    audio_output::SupportedStreamConfig,
     audio_processor::AudioProcessor,
     channel_buffer::ChannelBuffer,
     decoder::DecoderParams,
@@ -13,7 +14,6 @@ use crate::{
     two_way_channel::{TwoWayReceiver, TwoWaySender},
     vec_ext::VecExt,
 };
-use cpal::SupportedStreamConfig;
 use rubato::{FftFixedInOut, Resampler};
 use std::time::Duration;
 use tracing::{error, info};

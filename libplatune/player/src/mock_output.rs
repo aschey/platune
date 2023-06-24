@@ -4,8 +4,8 @@ use std::time::Duration;
 use cpal::{traits::StreamTrait, ChannelCount, Sample};
 use cpal::{
     BuildStreamError, DefaultStreamConfigError, DeviceNameError, DevicesError, InputCallbackInfo,
-    PauseStreamError, PlayStreamError, SampleFormat, SampleRate, StreamConfig, StreamError,
-    SupportedStreamConfigRange, SupportedStreamConfigsError,
+    OutputDevices, PauseStreamError, PlayStreamError, SampleFormat, SampleRate, StreamConfig,
+    StreamError, SupportedBufferSize, SupportedStreamConfigsError,
 };
 use flume::Sender;
 use spin_sleep::SpinSleeper;
@@ -56,6 +56,46 @@ impl SupportedStreamConfig {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SupportedStreamConfigRange {
+    pub(crate) channels: ChannelCount,
+    /// Minimum value for the samples rate of the supported formats.
+    pub(crate) min_sample_rate: SampleRate,
+    /// Maximum value for the samples rate of the supported formats.
+    pub(crate) max_sample_rate: SampleRate,
+    /// Buffersize ranges supported by the device
+    pub(crate) buffer_size: SupportedBufferSize,
+    /// Type of data expected by the device.
+    pub(crate) sample_format: SampleFormat,
+}
+
+impl SupportedStreamConfigRange {
+    pub fn channels(&self) -> ChannelCount {
+        self.channels
+    }
+
+    pub fn min_sample_rate(&self) -> SampleRate {
+        self.min_sample_rate
+    }
+
+    pub fn max_sample_rate(&self) -> SampleRate {
+        self.max_sample_rate
+    }
+
+    pub fn sample_format(&self) -> SampleFormat {
+        self.sample_format
+    }
+
+    pub fn with_sample_rate(self, sample_rate: SampleRate) -> SupportedStreamConfig {
+        assert!(self.min_sample_rate <= sample_rate && sample_rate <= self.max_sample_rate);
+        SupportedStreamConfig {
+            channels: self.channels,
+            sample_rate,
+            sample_format: self.sample_format,
+        }
+    }
+}
+
 pub trait HostTrait {
     /// The type used for enumerating available devices by the host.
     type Devices: Iterator<Item = Self::Device>;
@@ -79,6 +119,10 @@ pub trait HostTrait {
     ///
     /// Returns `None` if no output device is available.
     fn default_output_device(&self) -> Option<Self::Device>;
+
+    fn output_devices(&self) -> Result<OutputDevices<Self::Devices>, DevicesError> {
+        Ok(self.devices()?.filter(|_| true))
+    }
 }
 
 pub trait DeviceTrait {
