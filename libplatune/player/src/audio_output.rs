@@ -12,6 +12,6 @@ pub(crate) use cpal::{
 // };
 
 pub(crate) use cpal::{
-    traits::StreamTrait, BuildStreamError, DefaultStreamConfigError, DeviceNameError, DevicesError,
-    PlayStreamError, SampleRate, StreamConfig, StreamError,
+    traits::StreamTrait, BuildStreamError, DefaultStreamConfigError, DevicesError, PlayStreamError,
+    SampleRate, StreamConfig, StreamError,
 };

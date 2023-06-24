@@ -202,7 +202,7 @@ pub mod platune_player {
                 .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
-        pub async fn set_volume(&self, volume: f64) -> Result<(), PlayerError> {
+        pub async fn set_volume(&self, volume: f32) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::SetVolume(volume))
                 .await

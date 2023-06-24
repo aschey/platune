@@ -198,6 +198,26 @@ func (mr *MockPlayerClientMockRecorder) Seek(ctx, in interface{}, opts ...interf
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Seek", reflect.TypeOf((*MockPlayerClient)(nil).Seek), varargs...)
 }
 
+// SetOutputDevice mocks base method.
+func (m *MockPlayerClient) SetOutputDevice(ctx context.Context, in *platune.SetOutputDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SetOutputDevice", varargs...)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetOutputDevice indicates an expected call of SetOutputDevice.
+func (mr *MockPlayerClientMockRecorder) SetOutputDevice(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOutputDevice", reflect.TypeOf((*MockPlayerClient)(nil).SetOutputDevice), varargs...)
+}
+
 // SetQueue mocks base method.
 func (m *MockPlayerClient) SetQueue(ctx context.Context, in *platune.QueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
@@ -542,6 +562,21 @@ func (m *MockPlayerServer) Seek(arg0 context.Context, arg1 *platune.SeekRequest)
 func (mr *MockPlayerServerMockRecorder) Seek(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Seek", reflect.TypeOf((*MockPlayerServer)(nil).Seek), arg0, arg1)
+}
+
+// SetOutputDevice mocks base method.
+func (m *MockPlayerServer) SetOutputDevice(arg0 context.Context, arg1 *platune.SetOutputDeviceRequest) (*emptypb.Empty, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetOutputDevice", arg0, arg1)
+	ret0, _ := ret[0].(*emptypb.Empty)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetOutputDevice indicates an expected call of SetOutputDevice.
+func (mr *MockPlayerServerMockRecorder) SetOutputDevice(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOutputDevice", reflect.TypeOf((*MockPlayerServer)(nil).SetOutputDevice), arg0, arg1)
 }
 
 // SetQueue mocks base method.

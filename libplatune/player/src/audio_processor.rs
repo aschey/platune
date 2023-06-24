@@ -4,6 +4,7 @@ use crate::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
         player_response::PlayerResponse, processor_error::ProcessorError,
     },
+    output::OutputConfig,
     platune_player::PlayerEvent,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
@@ -74,7 +75,11 @@ impl<'a> AudioProcessor<'a> {
         self.decoder.sample_rate()
     }
 
-    pub(crate) fn volume(&self) -> f64 {
+    pub(crate) fn output_config(&self) -> OutputConfig {
+        self.decoder.output_config()
+    }
+
+    pub(crate) fn volume(&self) -> f32 {
         self.decoder.volume()
     }
 
@@ -170,11 +175,11 @@ impl<'a> AudioProcessor<'a> {
         Ok(InputResult::Continue)
     }
 
-    pub(crate) fn current(&self) -> &[f64] {
+    pub(crate) fn current(&self) -> &[f32] {
         self.decoder.current()
     }
 
-    pub(crate) fn next(&mut self) -> Result<Option<&[f64]>, ProcessorError> {
+    pub(crate) fn next(&mut self) -> Result<Option<&[f32]>, ProcessorError> {
         match self.process_input() {
             Ok(InputResult::Continue) => {}
             Ok(InputResult::Stop) => return Ok(None),

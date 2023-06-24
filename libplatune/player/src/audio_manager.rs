@@ -1,79 +1,102 @@
+use crate::output::OutputBuilder;
 use crate::{
     audio_processor::AudioProcessor,
     channel_buffer::ChannelBuffer,
     decoder::DecoderParams,
     dto::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
-        player_response::PlayerResponse, queue_source::QueueSource,
+        player_response::PlayerResponse, processor_error::ProcessorError,
     },
-    output::{AudioOutput, AudioOutputError},
-    platune_player::PlayerEvent,
+    output::{AudioOutput, AudioOutputError, OutputConfig},
+    platune_player::{PlayerEvent, Settings},
+    source::Source,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
     vec_ext::VecExt,
 };
+use cpal::SupportedStreamConfig;
 use rubato::{FftFixedInOut, Resampler};
 use std::time::Duration;
 use tracing::{error, info};
 
 pub(crate) struct AudioManager {
     in_buf: ChannelBuffer,
-    out_buf: Vec<f64>,
+    out_buf: Vec<f32>,
     input_sample_rate: usize,
-    output: Box<dyn AudioOutput>,
-    resampler: FftFixedInOut<f64>,
-    resampler_buf: Vec<Vec<f64>>,
-    volume: f64,
+    output_builder: OutputBuilder,
+    device_name: Option<String>,
+    output: AudioOutput,
+    resampler: FftFixedInOut<f32>,
+    resampler_buf: Vec<Vec<f32>>,
+    volume: f32,
+    output_config: SupportedStreamConfig,
 }
 
 impl AudioManager {
-    pub(crate) fn new(output: Box<dyn AudioOutput>, volume: f64) -> Self {
-        let default_sample_rate = 44_100;
-        let default_channels = 2;
-        let resampler = FftFixedInOut::<f64>::new(
-            default_sample_rate,
-            default_sample_rate,
+    pub(crate) fn new(cpal_output: OutputBuilder, volume: f32) -> Result<Self, AudioOutputError> {
+        let output_config = cpal_output.default_output_config()?;
+        let sample_rate = output_config.sample_rate().0 as usize;
+        let channels = output_config.channels() as usize;
+
+        let resampler = FftFixedInOut::<f32>::new(
+            sample_rate,
+            sample_rate,
             1024,
-            default_channels,
+            output_config.channels() as usize,
         )
         .expect("failed to create resampler");
 
         let resampler_buf = resampler.input_buffer_allocate();
         let n_frames = resampler.input_frames_next();
+        let output = cpal_output.new_output(None, output_config.clone())?;
 
-        Self {
-            in_buf: ChannelBuffer::new(n_frames, default_channels),
-            out_buf: Vec::with_capacity(n_frames * default_channels),
-            input_sample_rate: default_sample_rate,
+        Ok(Self {
+            output_builder: cpal_output,
+            in_buf: ChannelBuffer::new(n_frames, channels),
+            out_buf: Vec::with_capacity(n_frames * channels),
+            input_sample_rate: sample_rate,
             resampler,
             resampler_buf,
             output,
             volume,
-        }
+            output_config,
+            device_name: None,
+        })
     }
 
     fn set_resampler(&mut self, resample_chunk_size: usize) {
-        self.resampler = FftFixedInOut::<f64>::new(
+        self.resampler = FftFixedInOut::<f32>::new(
             self.input_sample_rate,
-            self.output.sample_rate(),
+            self.output_config.sample_rate().0 as usize, // self.output.sample_rate(),
             resample_chunk_size,
-            self.output.channels(),
+            self.output_config.channels() as usize,
         )
         .expect("failed to create resampler");
         let n_frames = self.resampler.input_frames_next();
         self.resampler_buf = self.resampler.input_buffer_allocate();
 
-        let channels = self.output.channels();
+        let channels = self.output_config.channels() as usize;
         self.in_buf = ChannelBuffer::new(n_frames, channels);
         self.out_buf = Vec::with_capacity(n_frames * channels);
     }
 
     pub(crate) fn set_device_name(&mut self, device_name: Option<String>) {
-        self.output.set_device_name(device_name);
+        self.device_name = device_name;
     }
 
-    pub(crate) fn reset(&mut self, resample_chunk_size: usize) -> Result<(), AudioOutputError> {
-        self.output.start()?;
+    pub(crate) fn reset(
+        &mut self,
+        output_config: OutputConfig,
+        resample_chunk_size: usize,
+    ) -> Result<(), AudioOutputError> {
+        self.output_config = self
+            .output_builder
+            .find_closest_config(None, output_config)?;
+        self.output = self
+            .output_builder
+            .new_output(None, self.output_config.clone())?;
         self.set_resampler(resample_chunk_size);
+        self.start()?;
+
         Ok(())
     }
 
@@ -104,37 +127,34 @@ impl AudioManager {
         self.output.write(&self.out_buf);
     }
 
-    pub(crate) fn decode_source(
+    pub(crate) fn initialize_processor<'a>(
         &mut self,
-        queue_source: QueueSource,
-        cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-        player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
-        event_tx: &tokio::sync::broadcast::Sender<PlayerEvent>,
+        source: Box<dyn Source>,
+        volume: Option<f32>,
+        cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
+        player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
+        event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
         start_position: Option<Duration>,
-    ) -> Duration {
-        let source_name = format!("{queue_source:?}");
-        let settings = queue_source.settings.clone();
-        // Set volume if volume was changed while the queue was stopped
-        if let Some(volume) = queue_source.volume {
-            self.volume = volume;
-        }
-        let mut processor = match AudioProcessor::new(
+    ) -> Result<AudioProcessor<'a>, ProcessorError> {
+        AudioProcessor::new(
             DecoderParams {
-                source: queue_source.source,
-                volume: self.volume,
-                output_channels: self.output.channels(),
+                source,
+                volume: volume.unwrap_or(self.volume),
+                output_channels: self.output_config.channels() as usize,
                 start_position,
             },
             cmd_rx,
             player_cmd_tx,
             event_tx,
-        ) {
-            Ok(processor) => processor,
-            Err(e) => {
-                error!("Error creating decoder: {e:?}");
-                return Duration::default();
-            }
-        };
+        )
+    }
+
+    pub(crate) fn decode_source(
+        &mut self,
+        processor: &mut AudioProcessor<'_>,
+        settings: &Settings,
+    ) -> Duration {
+        self.volume = processor.volume();
 
         let input_sample_rate = processor.sample_rate();
         if input_sample_rate != self.input_sample_rate {
@@ -143,15 +163,15 @@ impl AudioManager {
             self.set_resampler(settings.resample_chunk_size);
         }
 
-        if settings.enable_resampling && processor.sample_rate() != self.output.sample_rate() {
+        if processor.sample_rate() != self.output_config.sample_rate().0 as usize {
             info!("Resampling source");
-            self.decode_resample(&mut processor);
+            self.decode_resample(processor);
         } else {
             info!("Not resampling source");
-            self.decode_no_resample(&mut processor);
+            self.decode_no_resample(processor);
         }
         self.volume = processor.volume();
-        info!("Finished decoding {source_name}");
+        info!("Finished decoding");
         let stop_position = processor.current_position();
         info!("Stopped decoding at {stop_position:?}");
 

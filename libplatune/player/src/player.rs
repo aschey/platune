@@ -35,7 +35,7 @@ pub(crate) struct Player {
     cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     audio_status: AudioStatus,
     settings: Settings,
-    pending_volume: Option<f64>,
+    pending_volume: Option<f32>,
     device_name: Option<String>,
 }
 
@@ -251,7 +251,7 @@ impl Player {
         Ok(())
     }
 
-    pub(crate) async fn set_volume(&mut self, volume: f64) -> Result<(), String> {
+    pub(crate) async fn set_volume(&mut self, volume: f32) -> Result<(), String> {
         if self.audio_status == AudioStatus::Stopped {
             // Decoder isn't running so we can't set the volume yet
             // This will get sent with the next source

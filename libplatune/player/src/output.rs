@@ -1,27 +1,22 @@
 use crate::audio_output::*;
-use std::result;
-use std::sync::Arc;
+use cpal::{ChannelCount, SampleFormat, SupportedStreamConfigsError};
+use rb::{RbConsumer, RbProducer, SpscRb, RB};
+use std::sync::{Arc, RwLock};
 use std::{fmt::Debug, time::Duration};
-use symphonia::core::audio::RawSample;
-use symphonia::core::conv::{ConvertibleSample, FromSample};
+use std::{result, thread};
 use tap::TapFallible;
 use thiserror::Error;
 
-pub(crate) trait AudioOutput {
-    fn write(&mut self, sample_iter: &[f64]);
-    fn stop(&mut self);
-    fn start(&mut self) -> Result<()>;
-    fn sample_rate(&self) -> usize;
-    fn channels(&self) -> usize;
-    fn set_device_name(&mut self, name: Option<String>);
+pub(crate) struct OutputConfig {
+    pub(crate) sample_rate: Option<SampleRate>,
+    pub(crate) channels: Option<ChannelCount>,
+    pub(crate) sample_format: Option<SampleFormat>,
 }
 
 #[derive(Debug, Error)]
 pub enum AudioOutputError {
     #[error("No default device found")]
     NoDefaultDevice,
-    #[error("Error getting default device name: {0}")]
-    InvalidDefaultDeviceName(DeviceNameError),
     #[error("Error getting default device config: {0}")]
     OutputDeviceConfigError(DefaultStreamConfigError),
     #[error("Error opening output stream: {0}")]
@@ -32,183 +27,210 @@ pub enum AudioOutputError {
     UnsupportedConfiguration(String),
     #[error("Error loading devices: {0}")]
     LoadDevicesError(DevicesError),
+    #[error("Error loading config: {0}")]
+    LoadConfigsError(SupportedStreamConfigsError),
 }
 
 pub type Result<T> = result::Result<T, AudioOutputError>;
 
-#[derive(PartialEq, Eq)]
-enum WriteBufResult {
-    Stop,
-    Continue,
-}
-
-use rb::*;
-
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     dto::{command::Command, player_response::PlayerResponse},
     two_way_channel::TwoWaySender,
 };
 
-pub(crate) struct CpalAudioOutput;
-
-trait AudioOutputSample:
-    cpal::SizedSample + ConvertibleSample + RawSample + Send + Debug + 'static
-{
+pub(crate) struct OutputBuilder {
+    host: Arc<Host>,
+    cmd_sender: TwoWaySender<Command, PlayerResponse>,
+    current_device: Arc<RwLock<Option<String>>>,
 }
 
-impl AudioOutputSample for f32 {}
-impl AudioOutputSample for i16 {}
-impl AudioOutputSample for u16 {}
-impl AudioOutputSample for i8 {}
-impl AudioOutputSample for i32 {}
-impl AudioOutputSample for u8 {}
-impl AudioOutputSample for u32 {}
-impl AudioOutputSample for f64 {}
+impl OutputBuilder {
+    pub(crate) fn new(host: Arc<Host>, cmd_sender: TwoWaySender<Command, PlayerResponse>) -> Self {
+        let current_device: Arc<RwLock<Option<_>>> = Default::default();
+        #[cfg(windows)]
+        {
+            let current_device_ = current_device.clone();
+            let cmd_sender_ = cmd_sender.clone();
+            let host_ = host.clone();
+            thread::spawn(move || {
+                let mut current_default_device = host_
+                    .default_output_device()
+                    .map(|d| d.name().unwrap_or_default())
+                    .unwrap_or_default();
+                loop {
+                    if current_device_.read().expect("lock poisioned").is_none() {
+                        let default_device = host_
+                            .default_output_device()
+                            .map(|d| d.name().unwrap_or_default())
+                            .unwrap_or_default();
+                        if default_device != current_default_device {
+                            cmd_sender_
+                                .send(Command::Reset)
+                                .tap_err(|e| error!("Error sending reset command: {e:?}"))
+                                .ok();
+                            current_default_device = default_device;
+                        }
+                    }
 
-impl CpalAudioOutput {
-    pub(crate) fn new_output(
-        host: Arc<Host>,
-        cmd_sender: TwoWaySender<Command, PlayerResponse>,
-        device_name: Option<String>,
-    ) -> Result<Box<dyn AudioOutput>> {
-        // Get the default audio output device.
-        let device = host
+                    thread::sleep(Duration::from_secs(1));
+                }
+            });
+        }
+
+        Self {
+            host,
+            cmd_sender,
+            current_device,
+        }
+    }
+
+    pub(crate) fn default_output_config(&self) -> Result<SupportedStreamConfig> {
+        let device = self
+            .host
             .default_output_device()
             .ok_or(AudioOutputError::NoDefaultDevice)?;
-        info!("Using device: {:?}", device.name());
-        let config = match device.default_output_config() {
-            Ok(config) => config,
-            Err(e) => {
-                return Err(AudioOutputError::OutputDeviceConfigError(e));
-            }
+        device
+            .default_output_config()
+            .map_err(AudioOutputError::OutputDeviceConfigError)
+    }
+
+    pub(crate) fn find_closest_config(
+        &self,
+        device_name: Option<String>,
+        config: OutputConfig,
+    ) -> Result<SupportedStreamConfig> {
+        let default_device = self
+            .host
+            .default_output_device()
+            .ok_or(AudioOutputError::NoDefaultDevice)?;
+        let device = match &device_name {
+            Some(device_name) => self
+                .host
+                .devices()
+                .map_err(AudioOutputError::LoadDevicesError)?
+                .find(|d| {
+                    d.name()
+                        .map(|n| n.trim() == device_name.trim())
+                        .unwrap_or(false)
+                })
+                .unwrap_or(default_device),
+            None => default_device,
         };
+        let default_config = device
+            .default_output_config()
+            .map_err(AudioOutputError::OutputDeviceConfigError)?;
+
+        let channels = config.channels.unwrap_or(default_config.channels());
+        let sample_rate = config.sample_rate.unwrap_or(default_config.sample_rate());
+        let sample_format = config
+            .sample_format
+            .unwrap_or(default_config.sample_format());
+
+        if default_config.channels() == channels
+            && default_config.sample_rate() == sample_rate
+            && default_config.sample_format() == sample_format
+        {
+            return Ok(default_config);
+        }
+
+        if let Some(matched_config) = device
+            .supported_output_configs()
+            .map_err(AudioOutputError::LoadConfigsError)?
+            .find(|c| {
+                c.channels() == channels
+                    && c.sample_format() == sample_format
+                    && c.min_sample_rate() <= sample_rate
+                    && c.max_sample_rate() >= sample_rate
+            })
+        {
+            return Ok(matched_config.with_sample_rate(sample_rate));
+        }
+
+        Ok(default_config)
+    }
+
+    pub(crate) fn new_output(
+        &self,
+        device_name: Option<String>,
+        config: SupportedStreamConfig,
+    ) -> Result<AudioOutput> {
+        *self.current_device.write().expect("lock poisoned") = device_name.clone();
+        let default_device = self
+            .host
+            .default_output_device()
+            .ok_or(AudioOutputError::NoDefaultDevice)?;
+        let device = match &device_name {
+            Some(device_name) => self
+                .host
+                .devices()
+                .map_err(AudioOutputError::LoadDevicesError)?
+                .find(|d| {
+                    d.name()
+                        .map(|n| n.trim() == device_name.trim())
+                        .unwrap_or(false)
+                })
+                .unwrap_or(default_device),
+            None => default_device,
+        };
+        info!("Using device: {:?}", device.name());
         info!("Device config: {config:?}");
 
-        // Select proper playback routine based on sample format.
-        Ok(match config.sample_format() {
-            cpal::SampleFormat::F32 => Box::new(CpalAudioOutputImpl::<f32>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::I16 => Box::new(CpalAudioOutputImpl::<i16>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::U16 => Box::new(CpalAudioOutputImpl::<u16>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::I8 => Box::new(CpalAudioOutputImpl::<i8>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::I32 => Box::new(CpalAudioOutputImpl::<i32>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::U8 => Box::new(CpalAudioOutputImpl::<u8>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::U32 => Box::new(CpalAudioOutputImpl::<u32>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::F64 => Box::new(CpalAudioOutputImpl::<f64>::new(
-                cmd_sender,
-                host,
-                device_name,
-            )),
-            cpal::SampleFormat::I64 => {
-                return Err(AudioOutputError::UnsupportedConfiguration(
-                    "Unsupported sample format: i64".to_owned(),
-                ))?
-            }
-            cpal::SampleFormat::U64 => {
-                return Err(AudioOutputError::UnsupportedConfiguration(
-                    "Unsupported sample format: u64".to_owned(),
-                ))?
-            }
-            _ => {
-                return Err(AudioOutputError::UnsupportedConfiguration(
-                    "Unsupported sample format: unknown".to_owned(),
-                ))?
-            }
-        })
+        Ok(AudioOutput::new(self.cmd_sender.clone(), device, config))
     }
 }
 
-struct CpalAudioOutputImpl<T: AudioOutputSample>
-where
-    T: AudioOutputSample,
-{
-    ring_buf_producer: Option<rb::Producer<T>>,
+pub(crate) struct AudioOutput {
+    ring_buf_producer: Option<rb::Producer<f32>>,
     stream: Option<Stream>,
-    sample_rate: usize,
-    channels: usize,
-    buf: Vec<T>,
     cmd_sender: TwoWaySender<Command, PlayerResponse>,
-    host: Arc<Host>,
-    device_name: Option<String>,
+    device: Device,
+    config: SupportedStreamConfig,
 }
 
-impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
+impl AudioOutput {
     pub fn new(
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
-        host: Arc<Host>,
-        device_name: Option<String>,
+        device: Device,
+        config: SupportedStreamConfig,
     ) -> Self {
         Self {
             ring_buf_producer: None,
             stream: None,
-            sample_rate: 0,
-            channels: 0,
-            buf: vec![T::MID; 2048],
             cmd_sender,
-            host,
-            device_name,
+            device,
+            config,
         }
     }
 
-    fn create_stream(
-        device: &Device,
-        supported_config: SupportedStreamConfig,
-        sample_rate: SampleRate,
-        ring_buf_consumer: Consumer<T>,
-        cmd_sender: TwoWaySender<Command, PlayerResponse>,
-    ) -> Result<Stream> {
-        // Output audio stream config.
-        let channels = supported_config.channels();
+    fn create_stream(&self, ring_buf_consumer: rb::Consumer<f32>) -> Result<Stream> {
+        let channels = self.config.channels();
         let config = StreamConfig {
-            channels: supported_config.channels(),
-            sample_rate,
+            channels: self.config.channels(),
+            sample_rate: self.config.sample_rate(),
             buffer_size: cpal::BufferSize::Default,
         };
         info!("Output channels = {channels}");
-        info!("Output sample rate = {}", sample_rate.0);
+        info!("Output sample rate = {}", self.config.sample_rate().0);
 
         // Use max value for tests so these can be filtered out later
         #[cfg(test)]
-        let filler = <T as FromSample<f32>>::from_sample(f32::MAX);
-        #[cfg(not(test))]
-        let filler = T::MID;
+        let filler = f32::MAX;
 
-        let stream_result = device.build_output_stream(
+        #[cfg(not(test))]
+        let filler = 0.0;
+        let cmd_sender = self.cmd_sender.clone();
+        let stream_result = self.device.build_output_stream(
             &config,
-            move |data: &mut [T], _: &OutputCallbackInfo| {
+            move |data: &mut [f32], _: &OutputCallbackInfo| {
                 // Write out as many samples as possible from the ring buffer to the audio output.
                 let written = ring_buf_consumer.read(data).unwrap_or(0);
                 // Mute any remaining samples.
-                data[written..].iter_mut().for_each(|s| *s = filler);
+                if data.len() > written {
+                    warn!("Output buffer not full, muting remaining");
+                    data[written..].iter_mut().for_each(|s| *s = filler);
+                }
             },
             move |err| match err {
                 StreamError::DeviceNotAvailable => {
@@ -235,15 +257,10 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
         Ok(stream)
     }
 
-    fn write_buf(&mut self, end_index: Option<usize>) -> WriteBufResult {
-        if let Some(ring_buf_producer) = &mut self.ring_buf_producer {
-            let mut samples = match end_index {
-                Some(end_index) => &self.buf[..end_index],
-                None => &self.buf[..],
-            };
+    pub(crate) fn write(&mut self, mut samples: &[f32]) {
+        if let Some(producer) = &self.ring_buf_producer {
             loop {
-                match ring_buf_producer.write_blocking_timeout(samples, Duration::from_millis(1000))
-                {
+                match producer.write_blocking_timeout(samples, Duration::from_millis(1000)) {
                     Ok(Some(written)) => {
                         samples = &samples[written..];
                     }
@@ -252,105 +269,37 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
                     }
                     Err(_) => {
                         info!("Consumer stalled. Terminating.");
-                        return WriteBufResult::Stop;
+                        return;
                     }
                 }
             }
         }
-        WriteBufResult::Continue
-    }
-}
-
-impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
-    fn write(&mut self, sample_iter: &[f64]) {
-        let mut i = 0;
-
-        for frame in sample_iter {
-            if i == self.buf.len() {
-                if self.write_buf(None) == WriteBufResult::Stop {
-                    return;
-                }
-
-                i = 0;
-            }
-
-            self.buf[i] = <T as FromSample<f64>>::from_sample(*frame);
-            i += 1;
-        }
-
-        self.write_buf(Some(i));
     }
 
-    fn channels(&self) -> usize {
-        self.channels
-    }
-
-    fn stop(&mut self) {
+    pub(crate) fn stop(&mut self) {
         self.stream = None;
     }
 
-    fn set_device_name(&mut self, name: Option<String>) {
-        self.device_name = name;
-    }
-
-    fn start(&mut self) -> Result<()> {
+    pub(crate) fn start(&mut self) -> Result<()> {
         if self.stream.is_some() {
             return Ok(());
         }
 
-        let default_device = self
-            .host
-            .default_output_device()
-            .ok_or(AudioOutputError::NoDefaultDevice)?;
-
-        // Get the default audio output device.
-        let chosen_device_name = match &self.device_name {
-            Some(name) => name.to_owned(),
-            None => default_device
-                .name()
-                .map_err(AudioOutputError::InvalidDefaultDeviceName)?,
-        };
-
-        // We explicitly need to select a device here rather than using the default.
-        // This is because on Mac if we use the default device, we won't receive a disconnect error and the device will change automatically.
-        // This is sometimes fine except when the sample rate on the new device is different, we need to restart the stream to resample correctly.
-        // More info here: https://github.com/RustAudio/cpal/pull/707#issuecomment-1275609798
-        let device = self
-            .host
-            .devices()
-            .map_err(AudioOutputError::LoadDevicesError)?
-            .find(|d| {
-                d.name()
-                    .map(|n| n.trim() == chosen_device_name.trim())
-                    .unwrap_or(false)
-            })
-            // Fall back to default device if chosen device was not found
-            .unwrap_or(default_device);
-
-        let config = device
-            .default_output_config()
-            .map_err(AudioOutputError::OutputDeviceConfigError)?;
-
-        let ring_buf = SpscRb::<T>::new(8 * 1024);
+        let buffer_ms = 200;
+        let ring_buf = SpscRb::<f32>::new(
+            ((buffer_ms * self.config.sample_rate().0 as usize) / 1000)
+                * self.config.channels() as usize,
+        );
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
-        let sample_rate = config.sample_rate();
-        self.sample_rate = sample_rate.0 as usize;
-        let channels = config.channels() as usize;
+        let channels = self.config.channels() as usize;
         if !(1..=2).contains(&channels) {
             return Err(AudioOutputError::UnsupportedConfiguration(format!(
                 "Outputs with {channels} channels are not supported"
             )));
         }
-        self.channels = channels;
 
-        let stream = match Self::create_stream(
-            &device,
-            config,
-            sample_rate,
-            ring_buf_consumer,
-            self.cmd_sender.clone(),
-        ) {
+        let stream = match self.create_stream(ring_buf_consumer) {
             Ok(stream) => stream,
             Err(e) => return Err(e),
         };
@@ -359,9 +308,5 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
         self.stream = Some(stream);
 
         Ok(())
-    }
-
-    fn sample_rate(&self) -> usize {
-        self.sample_rate
     }
 }

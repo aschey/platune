@@ -1,7 +1,9 @@
 use crate::{
     dto::{current_position::CurrentPosition, decoder_error::DecoderError},
+    output::OutputConfig,
     source::Source,
 };
+use cpal::{SampleFormat, SampleRate};
 use std::{
     io,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -22,7 +24,7 @@ use tracing::{error, info, warn};
 #[derive(Debug)]
 pub(crate) struct DecoderParams {
     pub(crate) source: Box<dyn Source>,
-    pub(crate) volume: f64,
+    pub(crate) volume: f32,
     pub(crate) output_channels: usize,
     pub(crate) start_position: Option<Duration>,
 }
@@ -36,13 +38,13 @@ enum InitializeOpt {
 const NANOS_PER_SEC: f64 = 1_000_000_000.0;
 
 pub(crate) struct Decoder {
-    buf: Vec<f64>,
-    sample_buf: SampleBuffer<f64>,
+    buf: Vec<f32>,
+    sample_buf: SampleBuffer<f32>,
     decoder: Box<dyn SymphoniaDecoder>,
     reader: Box<dyn FormatReader>,
     time_base: TimeBase,
     buf_len: usize,
-    volume: f64,
+    volume: f32,
     track_id: u32,
     input_channels: usize,
     output_channels: usize,
@@ -112,7 +114,7 @@ impl Decoder {
             output_channels,
             track_id: track.id,
             buf: vec![],
-            sample_buf: SampleBuffer::<f64>::new(0, SignalSpec::new(0, Channels::all())),
+            sample_buf: SampleBuffer::<f32>::new(0, SignalSpec::new(0, Channels::all())),
             volume,
             timestamp: 0,
             paused: false,
@@ -132,11 +134,11 @@ impl Decoder {
         Ok(decoder)
     }
 
-    pub(crate) fn set_volume(&mut self, volume: f64) {
+    pub(crate) fn set_volume(&mut self, volume: f32) {
         self.volume = volume;
     }
 
-    pub(crate) fn volume(&self) -> f64 {
+    pub(crate) fn volume(&self) -> f32 {
         self.volume
     }
 
@@ -150,6 +152,14 @@ impl Decoder {
 
     pub(crate) fn sample_rate(&self) -> usize {
         self.sample_rate
+    }
+
+    pub(crate) fn output_config(&self) -> OutputConfig {
+        OutputConfig {
+            sample_rate: Some(SampleRate(self.sample_rate as u32)),
+            channels: Some(2),
+            sample_format: Some(SampleFormat::F32),
+        }
     }
 
     pub(crate) fn seek(
@@ -231,7 +241,7 @@ impl Decoder {
                 self.buf_len -= index;
                 samples_skipped += index;
                 // Trim all the silent samples
-                let buf_no_silence: Vec<f64> =
+                let buf_no_silence: Vec<f32> =
                     self.buf[index..].iter().map(|b| b * volume).collect();
 
                 // Put the segment without silence at the beginning
@@ -285,7 +295,7 @@ impl Decoder {
                     "Audio sources with more than 2 channels are not supported".to_owned(),
                 ));
             }
-            self.sample_buf = SampleBuffer::<f64>::new(duration as u64, spec);
+            self.sample_buf = SampleBuffer::<f32>::new(duration as u64, spec);
         }
 
         self.sample_buf.copy_interleaved_ref(decoded);
@@ -321,11 +331,11 @@ impl Decoder {
         Ok(())
     }
 
-    pub(crate) fn current(&self) -> &[f64] {
+    pub(crate) fn current(&self) -> &[f32] {
         &self.buf[..self.buf_len]
     }
 
-    pub(crate) fn next(&mut self) -> Result<Option<&[f64]>, DecoderError> {
+    pub(crate) fn next(&mut self) -> Result<Option<&[f32]>, DecoderError> {
         if self.paused {
             self.buf.fill(0.0);
         } else {
