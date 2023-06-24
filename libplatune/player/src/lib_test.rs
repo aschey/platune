@@ -275,7 +275,7 @@ fn decode_sources(
         }
     }
 
-    all_samples.into_iter().map(|s| s as f32).collect()
+    all_samples
 }
 
 #[rstest(num_songs, case(1), case(2), case(3))]
