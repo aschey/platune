@@ -1,8 +1,8 @@
 use crate::audio_output::*;
 use rb::{RbConsumer, RbProducer, SpscRb, RB};
+use std::result;
 use std::sync::{Arc, RwLock};
 use std::{fmt::Debug, time::Duration};
-use std::{result, thread};
 use tap::TapFallible;
 use thiserror::Error;
 
@@ -48,12 +48,13 @@ pub(crate) struct OutputBuilder {
 impl OutputBuilder {
     pub(crate) fn new(host: Arc<Host>, cmd_sender: TwoWaySender<Command, PlayerResponse>) -> Self {
         let current_device: Arc<RwLock<Option<_>>> = Default::default();
+
         #[cfg(windows)]
         {
             let current_device_ = current_device.clone();
             let cmd_sender_ = cmd_sender.clone();
             let host_ = host.clone();
-            thread::spawn(move || {
+            std::thread::spawn(move || {
                 let mut current_default_device = host_
                     .default_output_device()
                     .map(|d| d.name().unwrap_or_default())
@@ -64,6 +65,7 @@ impl OutputBuilder {
                             .default_output_device()
                             .map(|d| d.name().unwrap_or_default())
                             .unwrap_or_default();
+
                         if default_device != current_default_device {
                             cmd_sender_
                                 .send(Command::Reset)
@@ -73,7 +75,7 @@ impl OutputBuilder {
                         }
                     }
 
-                    thread::sleep(Duration::from_secs(1));
+                    std::thread::sleep(Duration::from_secs(1));
                 }
             });
         }
