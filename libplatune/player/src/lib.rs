@@ -33,6 +33,7 @@ pub mod platune_player {
     use crate::two_way_channel::{two_way_channel, TwoWaySender};
     use crate::{dto::command::Command, event_loop::main_loop};
     use std::fs::remove_file;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
@@ -72,12 +73,13 @@ pub mod platune_player {
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
-        joined: bool,
+        joined: AtomicBool,
     }
 
+    #[uniffi::export]
     impl PlatunePlayer {
         #[uniffi::constructor]
-        pub fn new(settings: Settings) -> Self {
+        pub fn new(settings: Settings) -> Arc<Self> {
             clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -109,22 +111,22 @@ pub mod platune_player {
             tokio::spawn(main_loop_fn);
             let decoder_handle = Some(thread::spawn(decoder_fn));
 
-            PlatunePlayer {
+            Arc::new(PlatunePlayer {
                 cmd_sender: cmd_tx,
                 event_tx,
                 decoder_tx,
                 decoder_handle,
-                joined: false,
-            }
+                joined: AtomicBool::new(false),
+            })
         }
 
-        pub fn subscribe(&self) -> EventSubscription {
-            EventSubscription {
+        pub fn subscribe(&self) -> Arc<EventSubscription> {
+            Arc::new(EventSubscription {
                 rx: Arc::new(tokio::sync::Mutex::new(self.event_tx.subscribe())),
-            }
+            })
         }
 
-        pub fn join(&mut self) -> Result<(), PlayerError> {
+        pub fn join(&self) -> Result<(), PlayerError> {
             info!("Joining player instance");
             self.cmd_sender
                 .send(Command::Stop)
@@ -134,7 +136,7 @@ pub mod platune_player {
                 .send(Command::Shutdown)
                 .map_err(|e| PlayerError::Failure(format!("{e:?}")))?;
             info!("Sent shutdown command");
-            self.joined = true;
+            self.joined.store(true, Ordering::SeqCst);
             Ok(())
         }
     }
@@ -241,7 +243,7 @@ pub mod platune_player {
 
     impl Drop for PlatunePlayer {
         fn drop(&mut self) {
-            if self.joined {
+            if self.joined.load(Ordering::SeqCst) {
                 info!("Waiting for decoder thread to terminate");
                 let _ = self
                     .decoder_handle

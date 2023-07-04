@@ -396,6 +396,10 @@ internal interface _UniFFILib : Library {
         `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
+    fun uniffi_libplatune_player_fn_constructor_platuneplayer_new(
+        `settings`: RustBuffer.ByValue,
+        _uniffi_out_err: RustCallStatus,
+    ): Pointer
     fun uniffi_libplatune_player_fn_method_platuneplayer_add_to_queue(
         `ptr`: Pointer,
         `songs`: RustBuffer.ByValue,
@@ -409,6 +413,10 @@ internal interface _UniFFILib : Library {
         `uniffiExecutor`: USize,
         `uniffiCallback`: UniFfiFutureCallbackRustBuffer,
         `uniffiCallbackData`: USize,
+        _uniffi_out_err: RustCallStatus,
+    ): Unit
+    fun uniffi_libplatune_player_fn_method_platuneplayer_join(
+        `ptr`: Pointer,
         _uniffi_out_err: RustCallStatus,
     ): Unit
     fun uniffi_libplatune_player_fn_method_platuneplayer_next(
@@ -470,6 +478,10 @@ internal interface _UniFFILib : Library {
         `uniffiCallbackData`: USize,
         _uniffi_out_err: RustCallStatus,
     ): Unit
+    fun uniffi_libplatune_player_fn_method_platuneplayer_subscribe(
+        `ptr`: Pointer,
+        _uniffi_out_err: RustCallStatus,
+    ): Pointer
     fun ffi_libplatune_player_rustbuffer_alloc(
         `size`: Int,
         _uniffi_out_err: RustCallStatus,
@@ -490,6 +502,7 @@ internal interface _UniFFILib : Library {
     fun uniffi_libplatune_player_checksum_method_eventsubscription_recv(): Short
     fun uniffi_libplatune_player_checksum_method_platuneplayer_add_to_queue(): Short
     fun uniffi_libplatune_player_checksum_method_platuneplayer_get_current_status(): Short
+    fun uniffi_libplatune_player_checksum_method_platuneplayer_join(): Short
     fun uniffi_libplatune_player_checksum_method_platuneplayer_next(): Short
     fun uniffi_libplatune_player_checksum_method_platuneplayer_pause(): Short
     fun uniffi_libplatune_player_checksum_method_platuneplayer_previous(): Short
@@ -498,6 +511,8 @@ internal interface _UniFFILib : Library {
     fun uniffi_libplatune_player_checksum_method_platuneplayer_set_queue(): Short
     fun uniffi_libplatune_player_checksum_method_platuneplayer_set_volume(): Short
     fun uniffi_libplatune_player_checksum_method_platuneplayer_stop(): Short
+    fun uniffi_libplatune_player_checksum_method_platuneplayer_subscribe(): Short
+    fun uniffi_libplatune_player_checksum_constructor_platuneplayer_new(): Short
     fun uniffi_foreign_executor_callback_set(
         `callback`: UniFfiForeignExecutorCallback,
     ): Unit
@@ -525,6 +540,9 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
     if (lib.uniffi_libplatune_player_checksum_method_platuneplayer_get_current_status() != 5422.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_libplatune_player_checksum_method_platuneplayer_join() != 3092.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_libplatune_player_checksum_method_platuneplayer_next() != 20413.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -547,6 +565,12 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_libplatune_player_checksum_method_platuneplayer_stop() != 27900.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_libplatune_player_checksum_method_platuneplayer_subscribe() != 26581.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_libplatune_player_checksum_constructor_platuneplayer_new() != 21006.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
 }
@@ -947,6 +971,10 @@ public interface PlatunePlayerInterface {
     )@Throws(PlayerException::class)
     suspend fun `getCurrentStatus`():
         PlayerStatus@Throws(PlayerException::class)
+    fun
+
+    `join`(
+    )@Throws(PlayerException::class)
     suspend fun
 
     `next`(
@@ -979,11 +1007,18 @@ public interface PlatunePlayerInterface {
         Double,
     )@Throws(PlayerException::class)
     suspend fun `stop`()
+    fun `subscribe`(): EventSubscription
 }
 
 class PlatunePlayer(
     pointer: Pointer,
 ) : FFIObject(pointer), PlatunePlayerInterface {
+    constructor(`settings`: Settings) :
+        this(
+            rustCall() { _status ->
+                _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_constructor_platuneplayer_new(FfiConverterTypeSettings.lower(`settings`), _status)
+            },
+        )
 
     /**
      * Disconnect the object from the underlying Rust object.
@@ -1066,6 +1101,20 @@ class PlatunePlayer(
             }
         }
     }
+
+    @Throws(
+        PlayerException::class,
+        )
+    override fun `join`() =
+        callWithPointer {
+            rustCallWithError(PlayerException) { _status ->
+                _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_platuneplayer_join(
+                    it,
+
+                    _status,
+                )
+            }
+        }
 
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
@@ -1338,6 +1387,18 @@ class PlatunePlayer(
             }
         }
     }
+    override fun `subscribe`(): EventSubscription =
+        callWithPointer {
+            rustCall() { _status ->
+                _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_platuneplayer_subscribe(
+                    it,
+
+                    _status,
+                )
+            }
+        }.let {
+            FfiConverterTypeEventSubscription.lift(it)
+        }
 }
 
 public object FfiConverterTypePlatunePlayer : FfiConverter<PlatunePlayer, Pointer> {
@@ -1939,6 +2000,11 @@ internal interface UniFfiFutureCallbackByte : com.sun.jna.Callback {
     // continuation, but with JNA it's easier to just store it in the callback handler.
     fun invoke(_callbackData: USize, returnValue: Byte?, callStatus: RustCallStatus.ByValue)
 }
+internal interface UniFfiFutureCallbackPointer : com.sun.jna.Callback {
+    // Note: callbackData is always 0.  We could pass Rust a pointer/usize to represent the
+    // continuation, but with JNA it's easier to just store it in the callback handler.
+    fun invoke(_callbackData: USize, returnValue: Pointer?, callStatus: RustCallStatus.ByValue)
+}
 internal interface UniFfiFutureCallbackRustBuffer : com.sun.jna.Callback {
     // Note: callbackData is always 0.  We could pass Rust a pointer/usize to represent the
     // continuation, but with JNA it's easier to just store it in the callback handler.
@@ -1954,6 +2020,30 @@ internal class UniFfiFutureCallbackHandlerVoid_TypePlayerError(val continuation:
         try {
             checkCallStatus(PlayerException, callStatus)
             continuation.resume(Unit)
+        } catch (e: Throwable) {
+            continuation.resumeWithException(e)
+        }
+    }
+}
+
+internal class UniFfiFutureCallbackHandlerTypeEventSubscription(val continuation: Continuation<EventSubscription>) :
+    UniFfiFutureCallbackPointer {
+    override fun invoke(_callbackData: USize, returnValue: Pointer?, callStatus: RustCallStatus.ByValue) {
+        try {
+            checkCallStatus(NullCallStatusErrorHandler, callStatus)
+            continuation.resume(FfiConverterTypeEventSubscription.lift(returnValue!!))
+        } catch (e: Throwable) {
+            continuation.resumeWithException(e)
+        }
+    }
+}
+
+internal class UniFfiFutureCallbackHandlerTypePlatunePlayer(val continuation: Continuation<PlatunePlayer>) :
+    UniFfiFutureCallbackPointer {
+    override fun invoke(_callbackData: USize, returnValue: Pointer?, callStatus: RustCallStatus.ByValue) {
+        try {
+            checkCallStatus(NullCallStatusErrorHandler, callStatus)
+            continuation.resume(FfiConverterTypePlatunePlayer.lift(returnValue!!))
         } catch (e: Throwable) {
             continuation.resumeWithException(e)
         }
