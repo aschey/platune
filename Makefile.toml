@@ -216,3 +216,9 @@ dependencies = ["unused", "cleanup", "update-all"]
 args = ["deny", "--workspace", "check"]
 command = "cargo"
 install_crate = "cargo-deny"
+
+[tasks.build-android]
+script = '''
+(cd ./libplatune/player && cross build --target aarch64-linux-android)
+cargo run --bin=uniffi-bindgen generate --library target/aarch64-linux-android/debug/liblibplatune_player.so --language kotlin --out-dir gen/kotlin
+'''
