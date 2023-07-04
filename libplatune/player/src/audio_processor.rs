@@ -156,7 +156,9 @@ impl<'a> AudioProcessor<'a> {
                     || position.position - self.last_send_time >= Duration::from_secs(10)
                 {
                     self.event_tx
-                        .send(PlayerEvent::Position(position.clone()))
+                        .send(PlayerEvent::Position {
+                            current_position: position.clone(),
+                        })
                         .unwrap_or_default();
                     self.last_send_time = position.position;
                 }

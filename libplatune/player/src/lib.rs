@@ -15,6 +15,9 @@ mod source;
 mod two_way_channel;
 mod vec_ext;
 
+// use crate::platune_player::*;
+uniffi::include_scaffolding!("player");
+
 pub mod platune_player {
     use crate::audio_output::*;
     pub use crate::dto::audio_status::AudioStatus;
@@ -30,6 +33,7 @@ pub mod platune_player {
     use crate::two_way_channel::{two_way_channel, TwoWaySender};
     use crate::{dto::command::Command, event_loop::main_loop};
     use std::fs::remove_file;
+    use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
     use tap::TapFallible;
@@ -37,11 +41,32 @@ pub mod platune_player {
     use tokio::sync::broadcast;
     use tracing::{error, info, warn};
 
-    #[derive(Debug, Clone, Error)]
-    #[error("{0}")]
-    pub struct PlayerError(String);
+    #[derive(Debug, Clone, Error, uniffi::Error)]
+    #[uniffi(flat_error)]
 
-    #[derive(Debug)]
+    pub enum PlayerError {
+        #[error("{0}")]
+        Failure(String),
+    }
+
+    #[derive(uniffi::Object)]
+    pub struct EventSubscription {
+        rx: Arc<tokio::sync::Mutex<broadcast::Receiver<PlayerEvent>>>,
+    }
+
+    #[uniffi::export(async_runtime = "tokio")]
+    impl EventSubscription {
+        pub async fn recv(&self) -> Result<PlayerEvent, PlayerError> {
+            self.rx
+                .lock()
+                .await
+                .recv()
+                .await
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
+        }
+    }
+
+    #[derive(Debug, uniffi::Object)]
     pub struct PlatunePlayer {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
@@ -51,12 +76,9 @@ pub mod platune_player {
     }
 
     impl PlatunePlayer {
+        #[uniffi::constructor]
         pub fn new(settings: Settings) -> Self {
-            Self::new_with_host(settings, default_host())
-        }
-
-        pub fn new_with_host(settings: Settings, host: Host) -> Self {
-            Self::clean_temp_files();
+            clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
             let event_tx_ = event_tx.clone();
@@ -74,7 +96,14 @@ pub mod platune_player {
             };
 
             let decoder_fn = || {
-                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_, event_tx__, host);
+                decode_loop(
+                    queue_rx_,
+                    1.0,
+                    decoder_rx,
+                    cmd_tx_,
+                    event_tx__,
+                    default_host(),
+                );
             };
 
             tokio::spawn(main_loop_fn);
@@ -89,47 +118,48 @@ pub mod platune_player {
             }
         }
 
-        fn clean_temp_files() {
-            if let Ok(temp_dir) = std::env::temp_dir()
-                .read_dir()
-                .tap_err(|e| error!("Error reading temp dir {:?}", e))
-            {
-                for entry in temp_dir.flatten() {
-                    if entry
-                        .file_name()
-                        .to_string_lossy()
-                        .starts_with("platunecache")
-                    {
-                        let _ = remove_file(entry.path())
-                            .tap_err(|e| error!("Error removing temp file {:?}", e));
-                    }
-                }
+        pub fn subscribe(&self) -> EventSubscription {
+            EventSubscription {
+                rx: Arc::new(tokio::sync::Mutex::new(self.event_tx.subscribe())),
             }
         }
 
-        pub fn subscribe(&self) -> broadcast::Receiver<PlayerEvent> {
-            self.event_tx.subscribe()
+        pub fn join(&mut self) -> Result<(), PlayerError> {
+            info!("Joining player instance");
+            self.cmd_sender
+                .send(Command::Stop)
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))?;
+            info!("Sent stop command");
+            self.cmd_sender
+                .send(Command::Shutdown)
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))?;
+            info!("Sent shutdown command");
+            self.joined = true;
+            Ok(())
         }
+    }
 
+    #[uniffi::export(async_runtime = "tokio")]
+    impl PlatunePlayer {
         pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::SetQueue(queue))
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::AddToQueue(songs))
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Seek(time))
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
@@ -139,7 +169,7 @@ pub mod platune_player {
                 .await
             {
                 Ok(PlayerResponse::StatusResponse(track_status)) => track_status,
-                Err(e) => return Err(PlayerError(format!("{e:?}"))),
+                Err(e) => return Err(PlayerError::Failure(format!("{e:?}"))),
             };
 
             match track_status.status {
@@ -159,9 +189,7 @@ pub mod platune_player {
                                 track_status,
                             })
                         }
-                        Err(e) => Err(PlayerError(format!(
-                            "Error getting current position: {e:?}"
-                        ))),
+                        Err(e) => Err(PlayerError::Failure(format!("{e:?}"))),
                         _ => unreachable!("Should only receive CurrentPositionResponse"),
                     }
                 }
@@ -172,58 +200,42 @@ pub mod platune_player {
             self.cmd_sender
                 .send_async(Command::Stop)
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn set_volume(&self, volume: f64) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::SetVolume(volume))
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn pause(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Pause)
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn resume(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Resume)
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn next(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Next)
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
         pub async fn previous(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Previous)
                 .await
-                .map_err(|e| PlayerError(format!("{e:?}")))
-        }
-
-        pub async fn join(mut self) -> Result<(), PlayerError> {
-            info!("Joining player instance");
-            self.cmd_sender
-                .send_async(Command::Stop)
-                .await
-                .map_err(|e| PlayerError(format!("{e:?}")))?;
-            info!("Sent stop command");
-            self.cmd_sender
-                .send_async(Command::Shutdown)
-                .await
-                .map_err(|e| PlayerError(format!("{e:?}")))?;
-            info!("Sent shutdown command");
-            self.joined = true;
-            Ok(())
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
     }
 
@@ -241,6 +253,24 @@ pub mod platune_player {
                 info!("Decoder thread terminated");
             } else {
                 info!("join() not called, won't wait for decoder thread to terminate");
+            }
+        }
+    }
+
+    fn clean_temp_files() {
+        if let Ok(temp_dir) = std::env::temp_dir()
+            .read_dir()
+            .tap_err(|e| error!("Error reading temp dir {:?}", e))
+        {
+            for entry in temp_dir.flatten() {
+                if entry
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("platunecache")
+                {
+                    let _ = remove_file(entry.path())
+                        .tap_err(|e| error!("Error removing temp file {:?}", e));
+                }
             }
         }
     }

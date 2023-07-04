@@ -38,7 +38,7 @@ enum WriteBufResult {
 
 use rb::*;
 
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::{
     dto::{command::Command, player_response::PlayerResponse},
@@ -162,8 +162,11 @@ impl<T: AudioOutputSample> CpalAudioOutputImpl<T> {
             move |data: &mut [T], _: &OutputCallbackInfo| {
                 // Write out as many samples as possible from the ring buffer to the audio output.
                 let written = ring_buf_consumer.read(data).unwrap_or(0);
-                // Mute any remaining samples.
-                data[written..].iter_mut().for_each(|s| *s = filler);
+                if written < data.len() {
+                    // Mute any remaining samples.
+                    data[written..].iter_mut().for_each(|s| *s = filler);
+                    warn!("Muting remaining");
+                }
             },
             move |err| match err {
                 StreamError::DeviceNotAvailable => {
@@ -259,7 +262,11 @@ impl<T: AudioOutputSample> AudioOutput for CpalAudioOutputImpl<T> {
             .default_output_config()
             .map_err(AudioOutputError::OutputDeviceConfigError)?;
 
-        let ring_buf = SpscRb::<T>::new(8 * 1024);
+        let buffer_ms = 200;
+        let buffer_size =
+            ((buffer_ms * config.sample_rate().0 as usize) / 1000) * config.channels() as usize;
+        info!("Buffer size: {buffer_size}");
+        let ring_buf = SpscRb::<T>::new(buffer_size);
         let (ring_buf_producer, ring_buf_consumer) = (ring_buf.producer(), ring_buf.consumer());
 
         let sample_rate = config.sample_rate();

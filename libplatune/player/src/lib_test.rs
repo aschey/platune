@@ -432,7 +432,7 @@ async fn test_decode_all_data(
     source_2: Option<&str>,
     #[values(1, 2)] out_channels: usize,
     #[values(44_100, 48_000)] sample_rate_out: u32,
-    #[values(1024, 666)] resample_chunk_size: usize,
+    #[values(1024, 666)] resample_chunk_size: u32,
 ) {
     let host = Host::new_with_options(
         Duration::from_millis(1),
@@ -461,7 +461,7 @@ async fn test_decode_all_data(
         paths.clone(),
         out_channels,
         sample_rate_out as usize,
-        resample_chunk_size,
+        resample_chunk_size as usize,
     );
 
     player.set_queue(paths).await.unwrap();

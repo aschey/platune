@@ -1,7 +1,7 @@
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, uniffi::Record)]
 pub struct Settings {
     pub enable_resampling: bool,
-    pub resample_chunk_size: usize,
+    pub resample_chunk_size: u32,
 }
 
 impl Default for Settings {

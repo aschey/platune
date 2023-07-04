@@ -4,6 +4,7 @@ members = [
     "platuned/client/rust",
     "libplatune/player",
     "libplatune/management",
+    "uniffi-bindgen",
 ]
 resolver = "2"
 

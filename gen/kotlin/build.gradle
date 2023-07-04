@@ -1,0 +1,39 @@
+
+buildscript {
+  dependencies {
+      classpath 'com.android.tools.build:gradle:8.0.2'
+      classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.10"
+  }
+}
+
+plugins {
+  id "org.jetbrains.kotlin.android" version "1.8.22"
+  id "com.android.library" version "8.0.2"
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
+    implementation "net.java.dev.jna:jna:5.13.0@aar"
+}
+
+android {
+  compileOptions {
+      sourceCompatibility JavaVersion.VERSION_17
+      targetCompatibility JavaVersion.VERSION_17
+  }
+
+  sourceSets {
+    main {
+      kotlin.srcDirs += ["uniffi/libplatune_player"]
+    }
+  }
+
+  compileSdkVersion 33
+
+  defaultConfig {
+    minSdkVersion 26
+    targetSdkVersion 33
+  }
+
+  namespace 'uniffi.libplatune_player'
+}

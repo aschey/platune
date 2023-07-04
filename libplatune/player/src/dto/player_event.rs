@@ -4,18 +4,18 @@ use strum::Display;
 
 use super::{current_position::CurrentPosition, player_state::PlayerState};
 
-#[derive(Clone, Debug, Display)]
+#[derive(Clone, Debug, Display, uniffi::Enum)]
 pub enum PlayerEvent {
-    StartQueue(PlayerState),
-    QueueUpdated(PlayerState),
-    Stop(PlayerState),
-    Pause(PlayerState),
-    Resume(PlayerState),
-    Ended(PlayerState),
-    Next(PlayerState),
-    Previous(PlayerState),
-    SetVolume(PlayerState),
-    Seek(PlayerState, Duration),
-    QueueEnded(PlayerState),
-    Position(CurrentPosition),
+    StartQueue { state: PlayerState },
+    QueueUpdated { state: PlayerState },
+    Stop { state: PlayerState },
+    Pause { state: PlayerState },
+    Resume { state: PlayerState },
+    Ended { state: PlayerState },
+    Next { state: PlayerState },
+    Previous { state: PlayerState },
+    SetVolume { state: PlayerState },
+    Seek { state: PlayerState, time: Duration },
+    QueueEnded { state: PlayerState },
+    Position { current_position: CurrentPosition },
 }

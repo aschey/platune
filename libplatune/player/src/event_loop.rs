@@ -46,7 +46,7 @@ pub(crate) fn decode_loop(
                         info!("Restarting output stream");
                         audio_manager.stop();
                         if audio_manager
-                            .reset(queue_source.settings.resample_chunk_size)
+                            .reset(queue_source.settings.resample_chunk_size as usize)
                             .tap_err(|e| error!("Error resetting output stream: {e:?}"))
                             .is_err()
                         {
@@ -89,7 +89,7 @@ pub(crate) fn decode_loop(
                     Ok(queue_source) => {
                         info!("recv got source {queue_source:?}");
                         if let Err(e) =
-                            audio_manager.reset(queue_source.settings.resample_chunk_size)
+                            audio_manager.reset(queue_source.settings.resample_chunk_size as usize)
                         {
                             error!("Error resetting output stream: {e:?}");
                             return;

@@ -1,0 +1,8 @@
+FROM ghcr.io/cross-rs/aarch64-linux-android:main
+ENV OPENSSL_STATIC=1
+ENV PATH="/root/.cargo/bin:${PATH}"
+COPY . .
+RUN dpkg --add-architecture aarch64-linux-android-gcc && \
+    apt-get update && \
+    apt-get install --assume-yes libssl-dev
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y

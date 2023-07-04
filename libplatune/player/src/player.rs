@@ -224,7 +224,9 @@ impl Player {
 
         self.audio_status = AudioStatus::Playing;
         self.event_tx
-            .send(PlayerEvent::Resume(self.state.clone()))
+            .send(PlayerEvent::Resume {
+                state: self.state.clone(),
+            })
             .unwrap_or_default();
 
         Ok(())
@@ -243,7 +245,9 @@ impl Player {
 
         self.audio_status = AudioStatus::Paused;
         self.event_tx
-            .send(PlayerEvent::Pause(self.state.clone()))
+            .send(PlayerEvent::Pause {
+                state: self.state.clone(),
+            })
             .unwrap_or_default();
 
         Ok(())
@@ -279,7 +283,10 @@ impl Player {
             Ok(DecoderResponse::SeekResponse(Ok(seek_result))) => {
                 info!("Seeked to {seek_result:?}");
                 self.event_tx
-                    .send(PlayerEvent::Seek(self.state.clone(), time))
+                    .send(PlayerEvent::Seek {
+                        state: self.state.clone(),
+                        time,
+                    })
                     .unwrap_or_default();
             }
             Ok(DecoderResponse::SeekResponse(Err(e))) => warn!("Error seeking: {e:?}"),
@@ -294,7 +301,9 @@ impl Player {
         self.state.queue = vec![];
         self.queued_count = 0;
         self.event_tx
-            .send(PlayerEvent::Stop(self.state.clone()))
+            .send(PlayerEvent::Stop {
+                state: self.state.clone(),
+            })
             .unwrap_or_default();
 
         Ok(())
@@ -329,11 +338,13 @@ impl Player {
         self.queued_count -= 1;
         info!("Queued count {}", self.queued_count);
 
-        if self.state.queue_position < self.state.queue.len() - 1 {
+        if (self.state.queue_position as usize) < self.state.queue.len() - 1 {
             self.wait_for_decoder().await;
             self.state.queue_position += 1;
             self.event_tx
-                .send(PlayerEvent::Ended(self.state.clone()))
+                .send(PlayerEvent::Ended {
+                    state: self.state.clone(),
+                })
                 .unwrap_or_default();
             info!(
                 "Incrementing position. New position: {}",
@@ -342,10 +353,14 @@ impl Player {
         } else {
             self.audio_status = AudioStatus::Stopped;
             self.event_tx
-                .send(PlayerEvent::Ended(self.state.clone()))
+                .send(PlayerEvent::Ended {
+                    state: self.state.clone(),
+                })
                 .unwrap_or_default();
             self.event_tx
-                .send(PlayerEvent::QueueEnded(self.state.clone()))
+                .send(PlayerEvent::QueueEnded {
+                    state: self.state.clone(),
+                })
                 .unwrap_or_default();
         }
 
@@ -359,7 +374,7 @@ impl Player {
     pub(crate) async fn reset(&mut self) -> Result<(), String> {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
-        self.set_queue_internal(queue, queue_position, QueueStartMode::ForceRestart)
+        self.set_queue_internal(queue, queue_position as usize, QueueStartMode::ForceRestart)
             .await?;
 
         Ok(())
@@ -369,7 +384,9 @@ impl Player {
         self.set_queue_internal(queue, 0, QueueStartMode::Normal)
             .await?;
         self.event_tx
-            .send(PlayerEvent::StartQueue(self.state.clone()))
+            .send(PlayerEvent::StartQueue {
+                state: self.state.clone(),
+            })
             .unwrap_or_default();
 
         Ok(())
@@ -386,7 +403,7 @@ impl Player {
             self.reset_queue().await?;
         }
 
-        self.state.queue_position = start_position;
+        self.state.queue_position = start_position as u32;
         self.state.queue = queue;
 
         match self.start(queue_start_mode).await {
@@ -418,7 +435,9 @@ impl Player {
             }
 
             self.event_tx
-                .send(PlayerEvent::QueueUpdated(self.state.clone()))
+                .send(PlayerEvent::QueueUpdated {
+                    state: self.state.clone(),
+                })
                 .unwrap_or_default();
         }
 
@@ -426,11 +445,11 @@ impl Player {
     }
 
     fn get_current(&self) -> Option<String> {
-        self.get_position(self.state.queue_position)
+        self.get_position(self.state.queue_position as usize)
     }
 
     fn get_next(&self) -> Option<String> {
-        self.get_position(self.state.queue_position + 1)
+        self.get_position((self.state.queue_position + 1) as usize)
     }
 
     fn get_position(&self, position: usize) -> Option<String> {
@@ -440,7 +459,7 @@ impl Player {
     pub(crate) async fn go_next(&mut self) -> Result<(), String> {
         let queue_len = self.state.queue.len();
         // need to check for length > 0 first because an unsigned value of 0 - 1 panics
-        if queue_len > 0 && self.state.queue_position < queue_len - 1 {
+        if queue_len > 0 && (self.state.queue_position as usize) < queue_len - 1 {
             info!(
                 "Current position: {}, Going to next track.",
                 self.state.queue_position
@@ -449,7 +468,9 @@ impl Player {
             self.reset_queue().await?;
             if self.start(QueueStartMode::Normal).await.is_ok() {
                 self.event_tx
-                    .send(PlayerEvent::Next(self.state.clone()))
+                    .send(PlayerEvent::Next {
+                        state: self.state.clone(),
+                    })
                     .unwrap_or_default();
             }
         } else {
@@ -472,7 +493,9 @@ impl Player {
             self.reset_queue().await?;
             if self.start(QueueStartMode::Normal).await.is_ok() {
                 self.event_tx
-                    .send(PlayerEvent::Previous(self.state.clone()))
+                    .send(PlayerEvent::Previous {
+                        state: self.state.clone(),
+                    })
                     .unwrap_or_default();
             }
         } else {

@@ -136,7 +136,7 @@ impl AudioManager {
         if input_sample_rate != self.input_sample_rate {
             self.play_remaining();
             self.input_sample_rate = input_sample_rate;
-            self.set_resampler(settings.resample_chunk_size);
+            self.set_resampler(settings.resample_chunk_size as usize);
         }
 
         if settings.enable_resampling && processor.sample_rate() != self.output.sample_rate() {

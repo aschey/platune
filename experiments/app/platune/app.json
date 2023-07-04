@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "platune",
+    "slug": "platune",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.example.with-new-arch"
+    },
+    "android": {
+      "package": "com.example.withnewarch"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "newArchEnabled": true
+          },
+          "android": {
+            "newArchEnabled": true
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f195f51c-9db3-4582-ae45-d4f27b6620b3"
+      }
+    }
+  }
+}
