@@ -37,3 +37,10 @@ android {
 
   namespace 'uniffi.libplatune_player'
 }
+
+tasks.register('copyArtifacts', Copy) {
+  from layout.buildDirectory.file("outputs/aar/libplatune_player-debug.aar")
+  into layout.buildDirectory.dir("./../../../experiments/app/platune/modules/test-module/android/libs")
+}
+
+tasks.named("build") { finalizedBy("copyArtifacts") }
