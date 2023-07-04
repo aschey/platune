@@ -17,6 +17,10 @@ export async function setValueAsync(value: string) {
   return await TestModule.setValueAsync(value);
 }
 
+export async function suspendFunction(message: string) {
+  return await TestModule.suspendFunction(message);
+}
+
 const emitter = new EventEmitter(TestModule ?? NativeModulesProxy.TestModule);
 
 export function addChangeListener(listener: (event: ChangeEventPayload) => void): Subscription {

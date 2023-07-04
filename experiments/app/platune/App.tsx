@@ -2,9 +2,16 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { hello } from "./modules/test-module";
+import { hello, suspendFunction } from "./modules/test-module";
+import { useEffect, useState } from 'react';
 
 export default function App() {
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+   suspendFunction("test").then(setMessage);
+  },[]);
+ 
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -27,7 +34,7 @@ export default function App() {
       />
 
       <Text style={{ fontSize: 22, marginTop: 15, color: '#fff', zIndex: 10 }}>
-        New Architecture: <Text style={{ fontWeight: 'bold' }}>{hello()}</Text>
+        New Architecture: <Text style={{ fontWeight: 'bold' }}>{message}</Text>
       </Text>
 
       < StatusBar style="auto" />

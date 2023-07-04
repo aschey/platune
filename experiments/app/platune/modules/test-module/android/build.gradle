@@ -90,6 +90,8 @@ dependencies {
   implementation project(':expo-modules-core')
   implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${getKotlinVersion()}"
   implementation "net.java.dev.jna:jna:5.13.0@aar"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.2"
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.2"
   api fileTree(include: ['*.aar'], dir: 'libs')
   implementation files('libs/libplatune_player-debug.aar')
 }

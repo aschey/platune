@@ -2,6 +2,8 @@ package expo.modules.testmodule
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.functions.Coroutine
+import kotlinx.coroutines.launch
 
 class TestModule : Module() {
   // Each module class must implement the definition function. The definition consists of components
@@ -33,6 +35,10 @@ class TestModule : Module() {
       sendEvent("onChange", mapOf(
         "value" to value
       ))
+    }
+
+    AsyncFunction("suspendFunction") Coroutine { message: String ->
+      return@Coroutine message
     }
 
     // Enables the module to be used as a native view. Definition components that are accepted as part of
