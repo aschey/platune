@@ -74,6 +74,7 @@ pub mod platune_player {
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
         joined: AtomicBool,
+        rt: tokio::runtime::Runtime,
     }
 
     #[uniffi::export]
@@ -92,6 +93,12 @@ pub mod platune_player {
             let (decoder_tx, decoder_rx) = two_way_channel();
             let decoder_tx_ = decoder_tx.clone();
 
+            let rt = tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            let _ = rt.enter();
+
             let main_loop_fn = async move {
                 let player = Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings);
                 main_loop(cmd_rx, player).await
@@ -108,7 +115,7 @@ pub mod platune_player {
                 );
             };
 
-            tokio::spawn(main_loop_fn);
+            rt.spawn(main_loop_fn);
             let decoder_handle = Some(thread::spawn(decoder_fn));
 
             Arc::new(PlatunePlayer {
@@ -117,6 +124,7 @@ pub mod platune_player {
                 decoder_tx,
                 decoder_handle,
                 joined: AtomicBool::new(false),
+                rt,
             })
         }
 
@@ -165,6 +173,7 @@ pub mod platune_player {
         }
 
         pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
+            _ = self.rt.enter();
             let track_status = match self
                 .cmd_sender
                 .get_response(Command::GetCurrentStatus)

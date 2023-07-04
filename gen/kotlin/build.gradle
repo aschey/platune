@@ -25,7 +25,8 @@ android {
 
   sourceSets {
     main {
-      kotlin.srcDirs += ["uniffi/libplatune_player"]
+      kotlin.srcDirs += "uniffi/libplatune_player"
+      main.jniLibs.srcDirs += "path"
     }
   }
 

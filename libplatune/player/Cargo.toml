@@ -11,7 +11,7 @@ path = "src/lib.rs"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
-cpal = "0.15"
+cpal = { version = "0.15", features = ["oboe-shared-stdcxx"] }
 eyre = "0.6"
 flume = "0.10"
 futures-util = "0.3"

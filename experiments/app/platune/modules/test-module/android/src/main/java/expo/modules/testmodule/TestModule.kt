@@ -3,8 +3,13 @@ package expo.modules.testmodule
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.functions.Coroutine
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import uniffi.libplatune_player.*;
+import android.util.Log;
+
+enum class AudioStatus {
+  PLAYING, PAUSED, STOPPED
+}
 
 class TestModule : Module() {
   val player: PlatunePlayer
@@ -42,8 +47,14 @@ class TestModule : Module() {
       ))
     }
 
-    AsyncFunction("suspendFunction") Coroutine { message: String ->
+    AsyncFunction("suspendFunction") Coroutine { message: String -> 
       return@Coroutine message
+    }
+
+    AsyncFunction("getCurrentStatus") Coroutine { ->
+      val res = player.getCurrentStatus()
+      
+      return@Coroutine res.toString()
     }
 
     // Enables the module to be used as a native view. Definition components that are accepted as part of

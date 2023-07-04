@@ -2,14 +2,14 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { hello, suspendFunction } from "./modules/test-module";
+import { getCurrentStatus, hello, suspendFunction } from "./modules/test-module";
 import { useEffect, useState } from 'react';
 
 export default function App() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-   suspendFunction("test").then(setMessage);
+   getCurrentStatus().then(setMessage);
   },[]);
  
   return (

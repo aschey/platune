@@ -9,9 +9,6 @@
     "android": {
       "package": "com.example.withnewarch"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
     "plugins": [
       [
         "expo-build-properties",

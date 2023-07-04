@@ -220,6 +220,14 @@ install_crate = "cargo-deny"
 [tasks.build-android]
 script = '''
 (cd ./libplatune/player && cross build --target aarch64-linux-android)
+(cd ./libplatune/player && cross build --target armv7-linux-androideabi)
+(cd ./libplatune/player && cross build --target i686-linux-android)
+(cd ./libplatune/player && cross build --target x86_64-linux-android)
 cargo run --bin=uniffi-bindgen generate --library target/aarch64-linux-android/debug/liblibplatune_player.so --language kotlin --out-dir gen/kotlin
+cp ./target/aarch64-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/arm64-v8a/liblibplatune_player.so
+cp ./target/armv7-linux-androideabi/debug/liblibplatune_player.so ./gen/kotlin/path/armeabi-v7a/liblibplatune_player.so
+cp ./target/i686-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/x86/liblibplatune_player.so
+cp ./target/x86_64-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/x86_64/liblibplatune_player.so
+
 cd ./gen/kotlin && ./gradlew clean build
 '''
