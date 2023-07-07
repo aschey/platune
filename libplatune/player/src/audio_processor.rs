@@ -1,22 +1,26 @@
 use crate::{
-    decoder::{Decoder, DecoderParams},
     dto::{
         command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
         player_response::PlayerResponse, processor_error::ProcessorError,
     },
-    output::OutputConfig,
     platune_player::PlayerEvent,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
+};
+use decal::{
+    decoder::{Decoder, DecoderResult},
+    output::AudioBackend,
+    AudioManager,
 };
 use flume::TryRecvError;
 use std::time::Duration;
 use tap::TapFallible;
 use tracing::{error, info};
 
-pub(crate) struct AudioProcessor<'a> {
+pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
     cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
-    decoder: Decoder,
+    manager: &'a mut AudioManager<f32, B>,
+    decoder: Decoder<f32>,
     last_send_time: Duration,
     event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
 }
@@ -26,9 +30,10 @@ enum InputResult {
     Stop,
 }
 
-impl<'a> AudioProcessor<'a> {
+impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
     pub(crate) fn new(
-        decoder_params: DecoderParams,
+        manager: &'a mut AudioManager<f32, B>,
+        decoder: Decoder<f32>,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
@@ -45,42 +50,19 @@ impl<'a> AudioProcessor<'a> {
             }
         }
 
-        match Decoder::new(decoder_params) {
-            Ok(decoder) => {
-                cmd_rx
-                    .respond(DecoderResponse::InitializationSucceeded)
-                    .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
-                    .tap_err(|e| error!("Error sending decoder initialization succeeded: {e:?}"))?;
+        cmd_rx
+            .respond(DecoderResponse::InitializationSucceeded)
+            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+            .tap_err(|e| error!("Error sending decoder initialization succeeded: {e:?}"))?;
 
-                Ok(Self {
-                    decoder,
-                    cmd_rx,
-                    player_cmd_tx,
-                    event_tx,
-                    last_send_time: Duration::default(),
-                })
-            }
-            Err(e) => {
-                cmd_rx
-                    .respond(DecoderResponse::InitializationFailed)
-                    .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
-                    .tap_err(|e| error!("Error sending decoder initialization failed: {e:?}"))?;
-
-                Err(ProcessorError::DecoderError(e))
-            }
-        }
-    }
-
-    pub(crate) fn sample_rate(&self) -> usize {
-        self.decoder.sample_rate()
-    }
-
-    pub(crate) fn output_config(&self) -> OutputConfig {
-        self.decoder.output_config()
-    }
-
-    pub(crate) fn volume(&self) -> f32 {
-        self.decoder.volume()
+        Ok(Self {
+            decoder,
+            manager,
+            cmd_rx,
+            player_cmd_tx,
+            event_tx,
+            last_send_time: Duration::default(),
+        })
     }
 
     pub(crate) fn current_position(&self) -> Duration {
@@ -131,6 +113,7 @@ impl<'a> AudioProcessor<'a> {
                             .tap_err(|e| error!("Error sending stopped response: {e:?}"))?;
                     }
                     DecoderCommand::SetVolume(volume) => {
+                        self.manager.set_volume(volume);
                         self.decoder.set_volume(volume);
 
                         self.cmd_rx
@@ -175,18 +158,15 @@ impl<'a> AudioProcessor<'a> {
         Ok(InputResult::Continue)
     }
 
-    pub(crate) fn current(&self) -> &[f32] {
-        self.decoder.current()
-    }
-
-    pub(crate) fn next(&mut self) -> Result<Option<&[f32]>, ProcessorError> {
+    pub(crate) fn next(&mut self) -> Result<DecoderResult, ProcessorError> {
         match self.process_input() {
             Ok(InputResult::Continue) => {}
-            Ok(InputResult::Stop) => return Ok(None),
+            Ok(InputResult::Stop) => return Ok(DecoderResult::Finished),
+
             Err(e) => return Err(e),
         };
-        match self.decoder.next() {
-            Ok(Some(val)) => Ok(Some(val)),
+        match self.manager.write(&mut self.decoder) {
+            Ok(DecoderResult::Unfinished) => Ok(DecoderResult::Unfinished),
             val => {
                 self.player_cmd_tx
                     .send(Command::Ended)

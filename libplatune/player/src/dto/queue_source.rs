@@ -1,4 +1,5 @@
-use crate::{settings::Settings, source::Source};
+use crate::settings::Settings;
+use decal::decoder::Source;
 
 #[derive(Debug)]
 pub(crate) struct QueueSource {
@@ -10,6 +11,9 @@ pub(crate) struct QueueSource {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub(crate) enum QueueStartMode {
-    ForceRestart { device_name: Option<String> },
+    ForceRestart {
+        device_name: Option<String>,
+        paused: bool,
+    },
     Normal,
 }

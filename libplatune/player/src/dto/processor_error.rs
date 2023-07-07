@@ -1,6 +1,5 @@
+use decal::decoder::DecoderError;
 use thiserror::Error;
-
-use super::decoder_error::DecoderError;
 
 #[derive(Error, Debug)]
 pub(crate) enum ProcessorError {

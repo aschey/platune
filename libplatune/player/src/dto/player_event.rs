@@ -1,8 +1,9 @@
 use std::time::Duration;
 
+use decal::decoder::CurrentPosition;
 use strum::Display;
 
-use super::{current_position::CurrentPosition, player_state::PlayerState};
+use super::player_state::PlayerState;
 
 #[derive(Clone, Debug, Display)]
 pub enum PlayerEvent {

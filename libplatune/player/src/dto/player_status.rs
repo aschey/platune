@@ -1,4 +1,5 @@
-use super::{audio_status::AudioStatus, current_position::CurrentPosition};
+use super::audio_status::AudioStatus;
+use decal::decoder::CurrentPosition;
 
 #[derive(Clone, Debug)]
 pub struct TrackStatus {

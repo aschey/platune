@@ -1,6 +1,4 @@
-use symphonia::core::units::TimeStamp;
-
-use super::current_position::CurrentPosition;
+use decal::decoder::{CurrentPosition, TimeStamp};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum DecoderResponse {

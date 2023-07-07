@@ -1,187 +1,186 @@
-use std::{error::Error, sync::Arc, time::Duration};
-
 use crate::{
-    audio_manager::AudioManager,
+    audio_processor::AudioProcessor,
     dto::{
         command::Command,
         decoder_command::DecoderCommand,
         decoder_response::DecoderResponse,
         player_response::PlayerResponse,
+        processor_error::ProcessorError,
         queue_source::{QueueSource, QueueStartMode},
     },
-    output::OutputBuilder,
     platune_player::PlayerEvent,
     player::Player,
     two_way_channel::{TwoWayReceiver, TwoWaySender},
 };
+use std::time::Duration;
 
-use crate::audio_output::*;
+use decal::{
+    decoder::{Decoder, DecoderError, DecoderResult, DecoderSettings, ResamplerSettings, Source},
+    output::{AudioBackend, OutputBuilder},
+    AudioManager,
+};
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
-use tracing::{error, info};
+use tracing::{error, info, log::warn};
 
-pub(crate) fn decode_loop(
+pub(crate) fn decode_loop<B: AudioBackend>(
     queue_rx: Receiver<QueueSource>,
     volume: f32,
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
     event_tx: tokio::sync::broadcast::Sender<PlayerEvent>,
-    host: Arc<Host>,
+    audio_backend: B,
 ) {
-    let output = OutputBuilder::new(host, player_cmd_tx.clone());
-    let Ok(mut audio_manager) =
-        AudioManager::new(output, volume).tap_err(|e| error!("Error creating audio manager: {e:?}")) else {
-            return;
-        };
-    let mut prev_stop_position = Duration::default();
+    let player_cmd_tx_ = player_cmd_tx.clone();
+    let output_builder = OutputBuilder::new(
+        audio_backend,
+        move || {
+            player_cmd_tx_
+                .send(Command::Reset)
+                .tap_err(|e| error!("Error sending reset command: {e}"))
+                .ok();
+        },
+        |err| error!("Output error: {err}"),
+    );
+    let mut manager = AudioManager::<f32, _>::new(output_builder, ResamplerSettings::default());
+    manager.set_volume(volume);
+    let mut last_stop_position = Duration::default();
 
     loop {
-        match queue_rx.try_recv() {
+        let decoder = match queue_rx.try_recv() {
             Ok(queue_source) => {
-                info!("try_recv got source {queue_source:?}");
-                let start_mode = queue_source.queue_start_mode.clone();
-                match start_mode {
-                    QueueStartMode::ForceRestart { device_name } => {
-                        if let Ok(pos) = handle_force_restart(
-                            queue_source,
-                            &mut audio_manager,
-                            device_name,
-                            prev_stop_position,
-                            &mut cmd_rx,
-                            &player_cmd_tx,
-                            &event_tx,
-                        ) {
-                            prev_stop_position = pos;
-                        } else {
-                            return;
-                        }
-                    }
+                init_source(&mut manager, &queue_source);
+
+                match queue_source.queue_start_mode {
+                    QueueStartMode::ForceRestart {
+                        device_name,
+                        paused,
+                    } => handle_force_restart(
+                        &mut manager,
+                        device_name,
+                        queue_source.source,
+                        last_stop_position,
+                        paused,
+                    ),
                     QueueStartMode::Normal => {
-                        let Ok(mut processor) = audio_manager
-                            .initialize_processor(
-                                queue_source.source,
-                                queue_source.volume,
-                                &mut cmd_rx,
-                                &player_cmd_tx,
-                                &event_tx,
-                                None,
-                            ).tap_err(|e| error!("Error initializing processor: {e:?}"))
-                            else {
-                                return;
-                            };
-
-                        if audio_manager
-                            .start()
-                            .tap_err(|e| error!("Error starting output stream: {e:?}"))
-                            .is_err()
-                        {
-                            return;
-                        }
-
-                        prev_stop_position =
-                            audio_manager.decode_source(&mut processor, &queue_source.settings);
+                        let mut decoder = manager.init_decoder(
+                            queue_source.source,
+                            DecoderSettings {
+                                enable_gapless: true,
+                            },
+                        );
+                        manager.initialize(&mut decoder);
+                        decoder
                     }
                 }
             }
             Err(TryRecvError::Empty) => {
-                // If no pending source, stop the output to preserve cpu
-                info!("No pending source, stopping output");
-                audio_manager.play_remaining();
-                audio_manager.stop();
+                manager.flush();
                 match queue_rx.recv() {
                     Ok(queue_source) => {
-                        info!("recv got source {queue_source:?}");
-                        let start_mode = queue_source.queue_start_mode.clone();
-                        match start_mode {
-                            QueueStartMode::ForceRestart { device_name } => {
-                                if let Ok(pos) = handle_force_restart(
-                                    queue_source,
-                                    &mut audio_manager,
-                                    device_name,
-                                    prev_stop_position,
-                                    &mut cmd_rx,
-                                    &player_cmd_tx,
-                                    &event_tx,
-                                ) {
-                                    prev_stop_position = pos;
-                                } else {
-                                    return;
-                                }
-                            }
-                            QueueStartMode::Normal => {
-                                let Ok(mut processor) = audio_manager
-                                    .initialize_processor(
-                                        queue_source.source,
-                                        queue_source.volume,
-                                        &mut cmd_rx,
-                                        &player_cmd_tx,
-                                        &event_tx,
-                                        None,
-                                    )
-                                    .tap_err(|e| error!("Error initializing processor: {e:?}")) else {
-                                        return;
-                                    };
-                                if audio_manager
-                                    .reset(
-                                        processor.output_config(),
-                                        queue_source.settings.resample_chunk_size,
-                                    )
-                                    .tap_err(|e| error!("Error resetting output stream: {e:?}"))
-                                    .is_err()
-                                {
-                                    return;
-                                }
+                        init_source(&mut manager, &queue_source);
 
-                                prev_stop_position = audio_manager
-                                    .decode_source(&mut processor, &queue_source.settings);
+                        match queue_source.queue_start_mode {
+                            QueueStartMode::ForceRestart {
+                                device_name,
+                                paused,
+                            } => handle_force_restart(
+                                &mut manager,
+                                device_name,
+                                queue_source.source,
+                                last_stop_position,
+                                paused,
+                            ),
+                            QueueStartMode::Normal => {
+                                let mut decoder = manager.init_decoder(
+                                    queue_source.source,
+                                    DecoderSettings {
+                                        enable_gapless: true,
+                                    },
+                                );
+                                manager.reset(&mut decoder);
+                                decoder
                             }
                         }
                     }
                     Err(_) => {
                         info!("Queue receiver disconnected");
+                        return;
                     }
-                };
+                }
             }
             Err(TryRecvError::Disconnected) => {
                 info!("Decoder thread receiver disconnected. Terminating.");
                 break;
             }
+        };
+        if let Ok(mut processor) = AudioProcessor::new(
+            &mut manager,
+            decoder,
+            &mut cmd_rx,
+            &player_cmd_tx,
+            &event_tx,
+        )
+        .tap_err(|e| error!("Error creating processor: {e}"))
+        {
+            loop {
+                match processor.next() {
+                    Ok(DecoderResult::Unfinished) => {}
+                    Ok(DecoderResult::Finished) => {
+                        break;
+                    }
+                    Err(ProcessorError::DecoderError(DecoderError::ResetRequired)) => {
+                        player_cmd_tx
+                            .send(Command::Reset)
+                            .tap_err(|e| error!("Error sending reset command: {e}"))
+                            .ok();
+                    }
+                    Err(e) => {
+                        error!("Error while decoding: {e:?}");
+                        break;
+                    }
+                }
+            }
+            last_stop_position = processor.current_position();
         }
     }
 }
 
-fn handle_force_restart(
-    queue_source: QueueSource,
-    audio_manager: &mut AudioManager,
+fn init_source<B: AudioBackend>(manager: &mut AudioManager<f32, B>, queue_source: &QueueSource) {
+    info!("got source {queue_source:?}");
+    if let Some(volume) = queue_source.volume {
+        manager.set_volume(volume);
+    }
+    manager.set_resampler_settings(ResamplerSettings {
+        chunk_size: queue_source.settings.resample_chunk_size,
+    });
+}
+
+fn handle_force_restart<B: AudioBackend>(
+    manager: &mut AudioManager<f32, B>,
     device_name: Option<String>,
-    prev_stop_position: Duration,
-    cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    player_cmd_tx: &TwoWaySender<Command, PlayerResponse>,
-    event_tx: &tokio::sync::broadcast::Sender<PlayerEvent>,
-) -> Result<Duration, Box<dyn Error>> {
-    info!("Restarting output stream");
-    audio_manager.stop();
-    audio_manager.set_device_name(device_name);
+    source: Box<dyn Source>,
+    last_stop_position: Duration,
+    paused: bool,
+) -> Decoder<f32> {
+    manager.set_device(device_name);
+    let mut decoder = manager.init_decoder(
+        source,
+        DecoderSettings {
+            enable_gapless: true,
+        },
+    );
 
-    let mut processor = audio_manager
-        .initialize_processor(
-            queue_source.source,
-            queue_source.volume,
-            cmd_rx,
-            player_cmd_tx,
-            event_tx,
-            Some(prev_stop_position),
-        )
-        .tap_err(|e| error!("Error initializing processor: {e:?}"))?;
+    decoder
+        .seek(last_stop_position)
+        .map_err(|e| warn!("Error seeking: {e}"))
+        .ok();
 
-    audio_manager
-        .reset(
-            processor.output_config(),
-            queue_source.settings.resample_chunk_size,
-        )
-        .tap_err(|e| error!("Error resetting output stream: {e:?}"))?;
-
-    Ok(audio_manager.decode_source(&mut processor, &queue_source.settings))
+    if paused {
+        decoder.pause();
+    }
+    manager.reset(&mut decoder);
+    decoder
 }
 
 pub(crate) async fn main_loop(

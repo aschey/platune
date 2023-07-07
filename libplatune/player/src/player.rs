@@ -1,3 +1,4 @@
+use decal::decoder::{ReadSeekSource, Source};
 use flume::{Receiver, Sender};
 use std::{fs::File, io::BufReader, path::Path, time::Duration};
 use tap::{TapFallible, TapOptional};
@@ -16,7 +17,6 @@ use crate::{
     },
     http_stream_reader::HttpStreamReader,
     settings::Settings,
-    source::{ReadSeekSource, Source},
     two_way_channel::TwoWaySender,
 };
 
@@ -154,11 +154,16 @@ impl Player {
 
                     if let Some(path) = self.get_next() {
                         let start_mode = match (&queue_start_mode, &success) {
-                            (QueueStartMode::ForceRestart { device_name }, Err(_)) => {
+                            (
                                 QueueStartMode::ForceRestart {
-                                    device_name: device_name.to_owned(),
-                                }
-                            }
+                                    device_name,
+                                    paused,
+                                },
+                                Err(_),
+                            ) => QueueStartMode::ForceRestart {
+                                device_name: device_name.to_owned(),
+                                paused: *paused && success.is_err(),
+                            },
                             _ => QueueStartMode::Normal,
                         };
                         match self.append_file(path, start_mode).await {
@@ -374,6 +379,7 @@ impl Player {
             queue_position,
             QueueStartMode::ForceRestart {
                 device_name: self.device_name.clone(),
+                paused: self.audio_status == AudioStatus::Paused,
             },
         )
         .await?;

@@ -1,22 +1,13 @@
-mod audio_manager;
-mod audio_output;
 mod audio_processor;
-mod channel_buffer;
-mod decoder;
 mod dto;
 mod event_loop;
 mod http_stream_reader;
-#[cfg(test)]
-mod mock_output;
-mod output;
 mod player;
 mod settings;
-mod source;
 mod two_way_channel;
-mod vec_ext;
+pub use decal::output::{AudioBackend, CpalOutput, MockOutput};
 
 pub mod platune_player {
-    use crate::audio_output::*;
     pub use crate::dto::audio_status::AudioStatus;
     use crate::dto::decoder_command::DecoderCommand;
     use crate::dto::decoder_response::DecoderResponse;
@@ -29,9 +20,9 @@ pub mod platune_player {
     pub use crate::settings::Settings;
     use crate::two_way_channel::{two_way_channel, TwoWaySender};
     use crate::{dto::command::Command, event_loop::main_loop};
+    use decal::output::{AudioBackend, DeviceTrait, HostTrait};
     use derivative::Derivative;
     use std::fs::remove_file;
-    use std::sync::Arc;
     use std::thread;
     use std::time::Duration;
     use tap::TapFallible;
@@ -45,22 +36,18 @@ pub mod platune_player {
 
     #[derive(Derivative)]
     #[derivative(Debug)]
-    pub struct PlatunePlayer {
+    pub struct PlatunePlayer<B: AudioBackend> {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
         #[derivative(Debug = "ignore")]
-        host: Arc<Host>,
+        audio_backend: B,
         joined: bool,
     }
 
-    impl PlatunePlayer {
-        pub fn new(settings: Settings) -> Self {
-            Self::new_with_host(settings, default_host())
-        }
-
-        pub fn new_with_host(settings: Settings, host: Host) -> Self {
+    impl<B: AudioBackend + Send + 'static> PlatunePlayer<B> {
+        pub fn new(audio_backend: B, settings: Settings) -> Self {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -78,10 +65,16 @@ pub mod platune_player {
                     Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings, None);
                 main_loop(cmd_rx, player).await
             };
-            let host = Arc::new(host);
-            let host_ = host.clone();
+            let audio_backend_ = audio_backend.clone();
             let decoder_fn = || {
-                decode_loop(queue_rx_, 1.0, decoder_rx, cmd_tx_, event_tx__, host_);
+                decode_loop(
+                    queue_rx_,
+                    1.0,
+                    decoder_rx,
+                    cmd_tx_,
+                    event_tx__,
+                    audio_backend_,
+                );
             };
 
             tokio::spawn(main_loop_fn);
@@ -92,7 +85,7 @@ pub mod platune_player {
                 event_tx,
                 decoder_tx,
                 decoder_handle,
-                host,
+                audio_backend,
                 joined: false,
             }
         }
@@ -117,7 +110,8 @@ pub mod platune_player {
 
         pub fn output_devices(&self) -> Result<Vec<String>, PlayerError> {
             let devices = self
-                .host
+                .audio_backend
+                .default_host()
                 .output_devices()
                 .map_err(|e| PlayerError(format!("{e:?}")))?;
 
@@ -254,7 +248,7 @@ pub mod platune_player {
         }
     }
 
-    impl Drop for PlatunePlayer {
+    impl<B: AudioBackend> Drop for PlatunePlayer<B> {
         fn drop(&mut self) {
             if self.joined {
                 info!("Waiting for decoder thread to terminate");

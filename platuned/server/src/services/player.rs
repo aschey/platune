@@ -5,18 +5,21 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
-use libplatune_player::platune_player::*;
+use libplatune_player::{platune_player::*, CpalOutput};
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
 
 pub struct PlayerImpl {
-    player: Arc<PlatunePlayer>,
+    player: Arc<PlatunePlayer<CpalOutput>>,
     shutdown_rx: BroadcastEventStore<Signal>,
 }
 
 impl PlayerImpl {
-    pub fn new(player: Arc<PlatunePlayer>, shutdown_rx: BroadcastEventStore<Signal>) -> Self {
+    pub fn new(
+        player: Arc<PlatunePlayer<CpalOutput>>,
+        shutdown_rx: BroadcastEventStore<Signal>,
+    ) -> Self {
         PlayerImpl {
             player,
             shutdown_rx,

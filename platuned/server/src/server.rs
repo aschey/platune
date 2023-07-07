@@ -24,6 +24,7 @@ use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::Manager;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
+use libplatune_player::CpalOutput;
 use std::env;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -44,7 +45,7 @@ enum Transport {
 #[derive(Clone)]
 struct Services {
     #[cfg(feature = "player")]
-    player: Arc<PlatunePlayer>,
+    player: Arc<PlatunePlayer<CpalOutput>>,
     #[cfg(feature = "management")]
     manager: FileWatchManager,
 }
@@ -55,7 +56,7 @@ impl Services {
         let manager = init_manager().await?;
         Ok(Self {
             #[cfg(feature = "player")]
-            player: Arc::new(PlatunePlayer::new(Default::default())),
+            player: Arc::new(PlatunePlayer::new(Default::default(), Default::default())),
             #[cfg(feature = "management")]
             manager: FileWatchManager::new(manager, Duration::from_millis(500))
                 .await

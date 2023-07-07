@@ -15,25 +15,14 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.10"
 futures-util = "0.3"
-rb = "0.4"
-reqwest = { version = "0.11", features = ["stream"] }
-rubato = "0.12"
 stream-download = { git = "https://github.com/aschey/stream-download-rs", rev = "66c3cf79ac5f6b528bd24b0da064b8b8c2e43a54" }
 strum = { version = "0.24", features = ["derive"] }
-symphonia = { version = "0.5", features = [
-    "aac",
-    "flac",
-    "mp3",
-    "isomp4",
-    "wav",
-    "ogg",
-    "vorbis",
-] }
 tap = "1"
 tempfile = "3"
 thiserror = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
+decal = { git = "https://github.com/aschey/decal", rev = "234c53ebed2d80c6bb8b4046bddc7f9ea315878e" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
