@@ -163,3 +163,8 @@ platune-cli/cli
 go.work
 go.work.sum
 *.so
+
+module.abi.json
+*.swiftdoc
+*.swiftsourceinfo
+*.swiftmodule

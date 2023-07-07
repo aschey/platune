@@ -61,6 +61,8 @@ typedef struct RustCallStatus {
 
 // Callbacks for UniFFI Futures
 typedef void (*UniFfiFutureCallbackUInt8)(const void * _Nonnull, uint8_t, RustCallStatus);
+typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
+typedef void (*UniFfiFutureCallbackUnsafeMutableRawPointer)(const void * _Nonnull, void*_Nonnull, RustCallStatus);
 typedef void (*UniFfiFutureCallbackRustBuffer)(const void * _Nonnull, RustBuffer, RustCallStatus);
 
 // Scaffolding functions
@@ -70,9 +72,13 @@ void uniffi_libplatune_player_fn_method_eventsubscription_recv(void*_Nonnull ptr
 );
 void uniffi_libplatune_player_fn_free_platuneplayer(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
+void*_Nonnull uniffi_libplatune_player_fn_constructor_platuneplayer_new(RustBuffer settings, RustCallStatus *_Nonnull out_status
+);
 void uniffi_libplatune_player_fn_method_platuneplayer_add_to_queue(void*_Nonnull ptr, RustBuffer songs, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
 void uniffi_libplatune_player_fn_method_platuneplayer_get_current_status(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackRustBuffer _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
+);
+void uniffi_libplatune_player_fn_method_platuneplayer_join(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
 );
 void uniffi_libplatune_player_fn_method_platuneplayer_next(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
@@ -90,6 +96,8 @@ void uniffi_libplatune_player_fn_method_platuneplayer_set_volume(void*_Nonnull p
 );
 void uniffi_libplatune_player_fn_method_platuneplayer_stop(void*_Nonnull ptr, size_t uniffi_executor, UniFfiFutureCallbackUInt8 _Nonnull uniffi_callback, void* _Nonnull uniffi_callback_data, RustCallStatus *_Nonnull out_status
 );
+void*_Nonnull uniffi_libplatune_player_fn_method_platuneplayer_subscribe(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
 RustBuffer ffi_libplatune_player_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
 );
 RustBuffer ffi_libplatune_player_rustbuffer_from_bytes(ForeignBytes bytes, RustCallStatus *_Nonnull out_status
@@ -105,6 +113,9 @@ uint16_t uniffi_libplatune_player_checksum_method_platuneplayer_add_to_queue(voi
     
 );
 uint16_t uniffi_libplatune_player_checksum_method_platuneplayer_get_current_status(void
+    
+);
+uint16_t uniffi_libplatune_player_checksum_method_platuneplayer_join(void
     
 );
 uint16_t uniffi_libplatune_player_checksum_method_platuneplayer_next(void
@@ -129,6 +140,12 @@ uint16_t uniffi_libplatune_player_checksum_method_platuneplayer_set_volume(void
     
 );
 uint16_t uniffi_libplatune_player_checksum_method_platuneplayer_stop(void
+    
+);
+uint16_t uniffi_libplatune_player_checksum_method_platuneplayer_subscribe(void
+    
+);
+uint16_t uniffi_libplatune_player_checksum_constructor_platuneplayer_new(void
     
 );
 void uniffi_foreign_executor_callback_set(UniFfiForeignExecutorCallback _Nonnull callback

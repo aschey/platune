@@ -486,6 +486,7 @@ public func FfiConverterTypeEventSubscription_lower(_ value: EventSubscription) 
 public protocol PlatunePlayerProtocol {
     func addToQueue(songs: [String]) async throws
     func getCurrentStatus() async throws -> PlayerStatus
+    func join() throws
     func next() async throws
     func pause() async throws
     func previous() async throws
@@ -494,6 +495,7 @@ public protocol PlatunePlayerProtocol {
     func setQueue(queue: [String]) async throws
     func setVolume(volume: Double) async throws
     func stop() async throws
+    func subscribe() -> EventSubscription
 }
 
 public class PlatunePlayer: PlatunePlayerProtocol {
@@ -504,6 +506,14 @@ public class PlatunePlayer: PlatunePlayerProtocol {
     // make it `required` without making it `public`.
     required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
+    }
+
+    public convenience init(settings: Settings) {
+        self.init(unsafeFromRawPointer: try! rustCall {
+            uniffi_libplatune_player_fn_constructor_platuneplayer_new(
+                FfiConverterTypeSettings.lower(settings), $0
+            )
+        })
     }
 
     deinit {
@@ -553,6 +563,13 @@ public class PlatunePlayer: PlatunePlayerProtocol {
                 )
             }
         }
+    }
+
+    public func join() throws {
+        try
+            rustCallWithError(FfiConverterTypePlayerError.lift) {
+                uniffi_libplatune_player_fn_method_platuneplayer_join(self.pointer, $0)
+            }
     }
 
     public func next() async throws {
@@ -732,6 +749,15 @@ public class PlatunePlayer: PlatunePlayerProtocol {
                 )
             }
         }
+    }
+
+    public func subscribe() -> EventSubscription {
+        return try! FfiConverterTypeEventSubscription.lift(
+            try!
+                rustCall {
+                    uniffi_libplatune_player_fn_method_platuneplayer_subscribe(self.pointer, $0)
+                }
+        )
     }
 }
 
@@ -1421,6 +1447,42 @@ private func uniffiFutureCallbackHandlerVoidTypePlayerError(
     }
 }
 
+private func uniffiFutureCallbackHandlerTypeEventSubscription(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: UnsafeMutableRawPointer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<EventSubscription, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
+        try continuation.pointee.resume(returning: FfiConverterTypeEventSubscription.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
+private func uniffiFutureCallbackHandlerTypePlatunePlayer(
+    rawContinutation: UnsafeRawPointer,
+    returnValue: UnsafeMutableRawPointer,
+    callStatus: RustCallStatus
+) {
+    let continuation = rawContinutation.bindMemory(
+        to: CheckedContinuation<PlatunePlayer, Error>.self,
+        capacity: 1
+    )
+
+    do {
+        try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: nil)
+        try continuation.pointee.resume(returning: FfiConverterTypePlatunePlayer.lift(returnValue))
+    } catch {
+        continuation.pointee.resume(throwing: error)
+    }
+}
+
 private func uniffiFutureCallbackHandlerTypePlayerStatusTypePlayerError(
     rawContinutation: UnsafeRawPointer,
     returnValue: RustBuffer,
@@ -1482,6 +1544,9 @@ private var initializationResult: InitializationResult {
     if uniffi_libplatune_player_checksum_method_platuneplayer_get_current_status() != 5422 {
         return InitializationResult.apiChecksumMismatch
     }
+    if uniffi_libplatune_player_checksum_method_platuneplayer_join() != 3092 {
+        return InitializationResult.apiChecksumMismatch
+    }
     if uniffi_libplatune_player_checksum_method_platuneplayer_next() != 20413 {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1504,6 +1569,12 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if uniffi_libplatune_player_checksum_method_platuneplayer_stop() != 27900 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_libplatune_player_checksum_method_platuneplayer_subscribe() != 26581 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_libplatune_player_checksum_constructor_platuneplayer_new() != 21006 {
         return InitializationResult.apiChecksumMismatch
     }
 

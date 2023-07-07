@@ -238,3 +238,10 @@ cp "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/x86_64/l
 
 cd ./gen/kotlin && ./gradlew clean build
 '''
+
+[tasks.build-ios]
+script = '''
+(cd ./libplatune/player && cargo lipo --features ffi)
+cargo run --bin=uniffi-bindgen generate --library target/aarch64-linux-android/debug/liblibplatune_player.so --language swift --out-dir gen/swift
+swiftc -module-name libplatune_player -emit-module -emit-module-path ./gen/swift/module -parse-as-library -L ./target/universal/debug/  -lliblibplatune_player -Xcc -fmodule-map-file=./gen/swift/libplatune_playerFFI.modulemap ./gen/swift/libplatune_player.swift
+'''
