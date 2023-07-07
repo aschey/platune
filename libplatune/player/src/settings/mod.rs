@@ -1,4 +1,5 @@
-#[derive(Clone, Debug, uniffi::Record)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Record))]
 pub struct Settings {
     pub enable_resampling: bool,
     pub resample_chunk_size: u32,

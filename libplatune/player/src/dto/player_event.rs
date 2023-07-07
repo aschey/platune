@@ -4,7 +4,8 @@ use strum::Display;
 
 use super::{current_position::CurrentPosition, player_state::PlayerState};
 
-#[derive(Clone, Debug, Display, uniffi::Enum)]
+#[derive(Clone, Debug, Display)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Enum))]
 pub enum PlayerEvent {
     StartQueue { state: PlayerState },
     QueueUpdated { state: PlayerState },

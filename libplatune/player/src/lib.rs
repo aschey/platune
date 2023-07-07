@@ -15,7 +15,7 @@ mod source;
 mod two_way_channel;
 mod vec_ext;
 
-// use crate::platune_player::*;
+#[cfg(feature = "ffi")]
 uniffi::include_scaffolding!("player");
 
 pub mod platune_player {
@@ -42,20 +42,20 @@ pub mod platune_player {
     use tokio::sync::broadcast;
     use tracing::{error, info, warn};
 
-    #[derive(Debug, Clone, Error, uniffi::Error)]
-    #[uniffi(flat_error)]
-
+    #[derive(Debug, Clone, Error)]
+    #[cfg_attr(feature = "ffi", derive(uniffi::Error))]
+    #[cfg_attr(feature = "ffi", uniffi(flat_error))]
     pub enum PlayerError {
         #[error("{0}")]
         Failure(String),
     }
 
-    #[derive(uniffi::Object)]
+    #[cfg_attr(feature = "ffi", derive(uniffi::Object))]
     pub struct EventSubscription {
         rx: Arc<tokio::sync::Mutex<broadcast::Receiver<PlayerEvent>>>,
     }
 
-    #[uniffi::export(async_runtime = "tokio")]
+    #[cfg_attr(feature = "ffi", uniffi::export(async_runtime = "tokio"))]
     impl EventSubscription {
         pub async fn recv(&self) -> Result<PlayerEvent, PlayerError> {
             self.rx
@@ -67,20 +67,24 @@ pub mod platune_player {
         }
     }
 
-    #[derive(Debug, uniffi::Object)]
+    #[cfg_attr(feature = "ffi", derive(uniffi::Object))]
     pub struct PlatunePlayer {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
         joined: AtomicBool,
+        #[cfg(feature = "ffi")]
         rt: tokio::runtime::Runtime,
     }
 
-    #[uniffi::export]
     impl PlatunePlayer {
-        #[uniffi::constructor]
+        #[cfg(not(feature = "ffi"))]
         pub fn new(settings: Settings) -> Arc<Self> {
+            Self::new_inner(settings)
+        }
+
+        fn new_inner(settings: Settings) -> Arc<Self> {
             clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -93,10 +97,12 @@ pub mod platune_player {
             let (decoder_tx, decoder_rx) = two_way_channel();
             let decoder_tx_ = decoder_tx.clone();
 
+            #[cfg(feature = "ffi")]
             let rt = tokio::runtime::Builder::new_multi_thread()
                 .enable_all()
                 .build()
                 .unwrap();
+            #[cfg(feature = "ffi")]
             let _ = rt.enter();
 
             let main_loop_fn = async move {
@@ -115,7 +121,11 @@ pub mod platune_player {
                 );
             };
 
+            #[cfg(feature = "ffi")]
             rt.spawn(main_loop_fn);
+            #[cfg(not(feature = "ffi"))]
+            tokio::spawn(main_loop_fn);
+
             let decoder_handle = Some(thread::spawn(decoder_fn));
 
             Arc::new(PlatunePlayer {
@@ -124,8 +134,18 @@ pub mod platune_player {
                 decoder_tx,
                 decoder_handle,
                 joined: AtomicBool::new(false),
+                #[cfg(feature = "ffi")]
                 rt,
             })
+        }
+    }
+
+    #[cfg_attr(feature = "ffi", uniffi::export)]
+    impl PlatunePlayer {
+        #[cfg(feature = "ffi")]
+        #[uniffi::constructor]
+        pub fn new(settings: Settings) -> Arc<Self> {
+            Self::new_inner(settings)
         }
 
         pub fn subscribe(&self) -> Arc<EventSubscription> {
@@ -149,9 +169,11 @@ pub mod platune_player {
         }
     }
 
-    #[uniffi::export(async_runtime = "tokio")]
+    #[cfg_attr(feature = "ffi", uniffi::export(async_runtime = "tokio"))]
     impl PlatunePlayer {
         pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::SetQueue(queue))
                 .await
@@ -159,6 +181,8 @@ pub mod platune_player {
         }
 
         pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::AddToQueue(songs))
                 .await
@@ -166,6 +190,8 @@ pub mod platune_player {
         }
 
         pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Seek(time))
                 .await
@@ -173,7 +199,8 @@ pub mod platune_player {
         }
 
         pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
-            _ = self.rt.enter();
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             let track_status = match self
                 .cmd_sender
                 .get_response(Command::GetCurrentStatus)
@@ -208,6 +235,8 @@ pub mod platune_player {
         }
 
         pub async fn stop(&self) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Stop)
                 .await
@@ -215,6 +244,8 @@ pub mod platune_player {
         }
 
         pub async fn set_volume(&self, volume: f64) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::SetVolume(volume))
                 .await
@@ -222,6 +253,8 @@ pub mod platune_player {
         }
 
         pub async fn pause(&self) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Pause)
                 .await
@@ -236,6 +269,8 @@ pub mod platune_player {
         }
 
         pub async fn next(&self) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Next)
                 .await
@@ -243,6 +278,8 @@ pub mod platune_player {
         }
 
         pub async fn previous(&self) -> Result<(), PlayerError> {
+            #[cfg(feature = "ffi")]
+            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Previous)
                 .await
