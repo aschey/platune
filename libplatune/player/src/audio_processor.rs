@@ -172,7 +172,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
                     .send(Command::Ended)
                     .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
                     .tap_err(|e| error!("Unable to send ended command: {e:?}"))?;
-                val.map_err(ProcessorError::DecoderError)
+                val.map_err(ProcessorError::WriteOutputError)
             }
         }
     }
