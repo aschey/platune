@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,\n            al.album_name album, aa.artist_name album_artist, s.track_number track\n            FROM song s\n            INNER JOIN artist ar ON ar.artist_id = s.artist_id\n            INNER JOIN album al ON al.album_id = s.album_id\n            INNER JOIN artist aa ON aa.artist_id = al.artist_id\n            WHERE s.song_path = ?\n            ORDER BY aa.artist_id, al.album_id, s.track_number;\n            ",
+  "query": "\n            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,\n            al.album_name album, aa.artist_name album_artist, s.track_number track\n            FROM artist ar\n            INNER JOIN song s ON s.artist_id = ar.artist_id\n            INNER JOIN album al ON al.album_id = s.album_id\n            INNER JOIN artist aa ON aa.artist_id = al.artist_id\n            WHERE ar.artist_id = $1 OR aa.artist_id = $1\n            ORDER BY aa.artist_id, al.album_id, s.disc_number, s.track_number;\n            ",
   "describe": {
     "columns": [
       {
@@ -52,5 +52,5 @@
       false
     ]
   },
-  "hash": "0c044889a0bb63aa847edd6f78ca938843dd5e9f9184c81bd04fde7adcf7051e"
+  "hash": "1321009a83e681377aa49323f0b35abe554eaf51e43dd4e80c8050d7ec651d88"
 }

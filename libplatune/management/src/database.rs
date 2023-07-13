@@ -267,7 +267,7 @@ impl Database {
             INNER JOIN album al ON al.album_id = s.album_id
             INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE s.song_path = ?
-            ORDER BY aa.artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.disc_number, s.track_number;
             ",
             path
         )
@@ -287,7 +287,7 @@ impl Database {
             INNER JOIN album al ON al.album_id = s.album_id
             INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE ar.artist_id = $1 OR aa.artist_id = $1
-            ORDER BY aa.artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.disc_number, s.track_number;
             ",
             artist_ids[0]
         )
@@ -307,7 +307,7 @@ impl Database {
             INNER JOIN song s ON s.album_id = al.album_id
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             WHERE al.album_id = ?
-            ORDER BY aa.artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.disc_number, s.track_number;
             ",
             album_ids[0]
         )
@@ -327,7 +327,7 @@ impl Database {
             INNER JOIN album al ON al.album_id = s.album_id
             INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE s.song_id = ?
-            ORDER BY aa.artist_id, al.album_id, s.track_number;
+            ORDER BY aa.artist_id, al.album_id, s.disc_number, s.track_number;
             ",
             song_ids[0]
         )
