@@ -24,6 +24,7 @@ use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::Manager;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
+#[cfg(feature = "player")]
 use libplatune_player::CpalOutput;
 use std::env;
 use std::net::SocketAddr;
