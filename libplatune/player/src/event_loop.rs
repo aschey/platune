@@ -16,8 +16,8 @@ use std::time::Duration;
 
 use decal::{
     decoder::{Decoder, DecoderError, DecoderResult, DecoderSettings, ResamplerSettings, Source},
-    output::{AudioBackend, OutputBuilder},
-    AudioManager,
+    output::{AudioBackend, OutputBuilder, OutputSettings},
+    AudioManager, WriteOutputError,
 };
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
@@ -34,6 +34,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
     let player_cmd_tx_ = player_cmd_tx.clone();
     let output_builder = OutputBuilder::new(
         audio_backend,
+        OutputSettings::default(),
         move || {
             player_cmd_tx_
                 .send(Command::Reset)
@@ -69,13 +70,13 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                                 enable_gapless: true,
                             },
                         );
-                        manager.initialize(&mut decoder);
+                        manager.initialize(&mut decoder).ok();
                         decoder
                     }
                 }
             }
             Err(TryRecvError::Empty) => {
-                manager.flush();
+                manager.flush().ok();
                 match queue_rx.recv() {
                     Ok(queue_source) => {
                         init_source(&mut manager, &queue_source);
@@ -98,7 +99,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                                         enable_gapless: true,
                                     },
                                 );
-                                manager.reset(&mut decoder);
+                                manager.reset(&mut decoder).ok();
                                 decoder
                             }
                         }
@@ -125,11 +126,25 @@ pub(crate) fn decode_loop<B: AudioBackend>(
         {
             loop {
                 match processor.next() {
-                    Ok(DecoderResult::Unfinished) => {}
-                    Ok(DecoderResult::Finished) => {
+                    Ok(DecoderResult::Unfinished)
+                    | Err(ProcessorError::WriteOutputError(
+                        WriteOutputError::WriteBlockingError {
+                            decoder_result: DecoderResult::Unfinished,
+                            error: _,
+                        },
+                    )) => {}
+                    Ok(DecoderResult::Finished)
+                    | Err(ProcessorError::WriteOutputError(
+                        WriteOutputError::WriteBlockingError {
+                            decoder_result: DecoderResult::Finished,
+                            error: _,
+                        },
+                    )) => {
                         break;
                     }
-                    Err(ProcessorError::DecoderError(DecoderError::ResetRequired)) => {
+                    Err(ProcessorError::WriteOutputError(WriteOutputError::DecoderError(
+                        DecoderError::ResetRequired,
+                    ))) => {
                         player_cmd_tx
                             .send(Command::Reset)
                             .tap_err(|e| error!("Error sending reset command: {e}"))
@@ -179,7 +194,7 @@ fn handle_force_restart<B: AudioBackend>(
     if paused {
         decoder.pause();
     }
-    manager.reset(&mut decoder);
+    manager.reset(&mut decoder).ok();
     decoder
 }
 
