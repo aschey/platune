@@ -11,7 +11,7 @@ async-trait = "0.1.71"
 console-subscriber = { version = "0.1.10", features = [
     "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "6866fdfd4994f31ed8dcf1ed81174e461c611596", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "06b0048693a48a28ba887081692d5aa0a67135ca", features = [
     "client-standard",
     "server-standard",
     "notify",
@@ -47,7 +47,7 @@ tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
 tonic-build = { version = "0.9.2", features = ["prost"] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "6866fdfd4994f31ed8dcf1ed81174e461c611596", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "06b0048693a48a28ba887081692d5aa0a67135ca", features = [
     "build-info",
     "build-info-build",
     "build-info-cargo",
