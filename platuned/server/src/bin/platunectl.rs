@@ -1,4 +1,9 @@
 use daemon_slayer::{
+    build_info::{
+        cli::BuildInfoCliProvider,
+        vergen_pretty::{vergen_pretty_env, PrettyBuilder, Style},
+        Color,
+    },
     cli::Cli,
     client::{
         self,
@@ -29,7 +34,7 @@ async fn main() -> Result<(), ErrorSink> {
 }
 
 async fn run() -> Result<(), BoxedError> {
-    let label: Label = "platuned".parse()?;
+    let label: Label = "com.platune.platuned".parse()?;
     let mut manager_builder = client::builder(
         label.clone(),
         current_exe()?
@@ -73,6 +78,14 @@ async fn run() -> Result<(), BoxedError> {
         .await
         .with_health_check(Box::new(health_check.clone()));
 
+    let pretty = PrettyBuilder::default()
+        .env(vergen_pretty_env!())
+        .key_style(Style::default().fg(Color::Cyan).bold())
+        .value_style(Style::default())
+        .category(false)
+        .build()
+        .unwrap();
+
     let mut cli = Cli::builder()
         .with_provider(ClientCliProvider::new(manager.clone()))
         .with_provider(ProcessCliProvider::new(manager.info().await?.pid))
@@ -80,6 +93,7 @@ async fn run() -> Result<(), BoxedError> {
         .with_provider(LoggingCliProvider::new(logger_builder))
         .with_provider(ErrorHandlerCliProvider::default())
         .with_provider(HealthCheckCliProvider::new(health_check))
+        .with_provider(BuildInfoCliProvider::new(pretty))
         .initialize()?;
 
     let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;

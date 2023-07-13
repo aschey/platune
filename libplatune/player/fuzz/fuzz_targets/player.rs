@@ -1,6 +1,9 @@
 #![no_main]
 use libfuzzer_sys::{arbitrary::Arbitrary, fuzz_target};
-use libplatune_player::platune_player::{PlatunePlayer, Settings};
+use libplatune_player::{
+    platune_player::{PlatunePlayer, Settings},
+    CpalOutput,
+};
 use once_cell::sync::Lazy;
 use std::{env::current_dir, time::Duration};
 use tokio::runtime::Runtime;
@@ -27,12 +30,8 @@ enum Input {
     Resume,
 }
 
-static PLAYER: Lazy<PlatunePlayer> = Lazy::new(|| {
-    PlatunePlayer::new(Settings {
-        enable_resampling: true,
-        ..Default::default()
-    })
-});
+static PLAYER: Lazy<PlatunePlayer<CpalOutput>> =
+    Lazy::new(|| PlatunePlayer::new(CpalOutput::default(), Settings::default()));
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().unwrap());
 
@@ -78,7 +77,7 @@ fuzz_target!(|input: Input| {
             }
             Input::SetVolume(volume) => {
                 PLAYER
-                    .set_volume(((volume as f64) / 255.0).max(0.1))
+                    .set_volume(((volume as f32) / 255.0).max(0.1))
                     .await
                     .unwrap();
             }

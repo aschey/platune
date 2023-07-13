@@ -215,7 +215,7 @@ impl SearchEngine {
             )
             .await?;
 
-        for mut r in &mut search_entries {
+        for r in &mut search_entries {
             r.weights = weights.clone();
         }
         search_entries.extend(rest);

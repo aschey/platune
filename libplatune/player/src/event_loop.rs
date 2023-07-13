@@ -21,7 +21,7 @@ use decal::{
 };
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
-use tracing::{error, info, log::warn};
+use tracing::{error, info, warn};
 
 pub(crate) fn decode_loop<B: AudioBackend>(
     queue_rx: Receiver<QueueSource>,

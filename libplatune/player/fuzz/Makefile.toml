@@ -1,7 +1,16 @@
 [tasks.fuzz]
-args = ["fuzz", "run", "player", "--", "-detect_leaks=0"]
+args = [
+    "+nightly",
+    "fuzz",
+    "run",
+    "player",
+    "--target",
+    "x86_64-unknown-linux-gnu",
+    "--",
+    "-detect_leaks=0",
+]
 command = "cargo"
-condition = {platforms = ["linux"]}
+condition = { platforms = ["linux"] }
 install_crate = "cargo-fuzz"
 
 [tasks.update]

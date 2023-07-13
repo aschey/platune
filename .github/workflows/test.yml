@@ -42,12 +42,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: cache-${{ hashFiles('**/Cargo.lock') }}
-      - name: Clippy
+      - name: Build
         run: |
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-${{ matrix.protoc-target }}.zip
           unzip protoc-3.19.4-${{ matrix.protoc-target }}.zip -d "${{ github.workspace }}/protoc"
-          # TODO: re-enable for every crate once tonic fixes clippy warnings
-          cargo clippy -- -D warnings
+          cargo build --no-default-features
+          cargo build
+          cargo build --all-features
+      - name: Clippy
+        run: |
+          cargo clippy --all-features -- -D warnings
       - name: Test
         run: |
           # Install precompiled binaries to improve build time

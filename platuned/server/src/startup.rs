@@ -30,7 +30,9 @@ impl Handler for ServiceHandler {
     }
 
     fn label() -> Label {
-        "platuned".parse().expect("failed to parse label")
+        "com.platune.platuned"
+            .parse()
+            .expect("failed to parse label")
     }
 
     async fn run_service<F: FnOnce() + Send>(
