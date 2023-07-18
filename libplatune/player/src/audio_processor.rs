@@ -9,7 +9,7 @@ use crate::{
 use decal::{
     decoder::{Decoder, DecoderResult},
     output::AudioBackend,
-    AudioManager,
+    AudioManager, WriteOutputError,
 };
 use flume::TryRecvError;
 use std::time::Duration;
@@ -166,7 +166,11 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             Err(e) => return Err(e),
         };
         match self.manager.write(&mut self.decoder) {
-            Ok(DecoderResult::Unfinished) => Ok(DecoderResult::Unfinished),
+            Ok(DecoderResult::Unfinished)
+            | Err(WriteOutputError::WriteBlockingError {
+                decoder_result: DecoderResult::Unfinished,
+                error: _,
+            }) => Ok(DecoderResult::Unfinished),
             val => {
                 self.player_cmd_tx
                     .send(Command::Ended)
