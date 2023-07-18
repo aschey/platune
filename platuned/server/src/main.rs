@@ -8,11 +8,6 @@ use crate::startup::ServiceHandler;
 #[cfg(feature = "tokio-console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::{
-    build_info::{
-        cli::BuildInfoCliProvider,
-        vergen_pretty::{vergen_pretty_env, PrettyBuilder, Style},
-        Color,
-    },
     cli::Cli,
     core::BoxedError,
     error_handler::{cli::ErrorHandlerCliProvider, color_eyre::eyre, ErrorSink},
@@ -24,6 +19,7 @@ use daemon_slayer::{
     server::{cli::ServerCliProvider, Handler},
 };
 use dotenvy::dotenv;
+use platuned::{build_info, clap_base_command};
 use rpc::*;
 
 #[tokio::main]
@@ -46,15 +42,8 @@ async fn run() -> Result<(), BoxedError> {
             log_level: LogLevel(default_level),
         });
 
-    let pretty = PrettyBuilder::default()
-        .env(vergen_pretty_env!())
-        .key_style(Style::default().fg(Color::Cyan).bold())
-        .value_style(Style::default())
-        .category(false)
-        .build()
-        .unwrap();
-
     let mut cli = Cli::builder()
+        .with_base_command(clap_base_command())
         .with_provider(ServerCliProvider::<ServiceHandler>::new(
             &"run".parse().unwrap(),
         ))
@@ -65,7 +54,7 @@ async fn run() -> Result<(), BoxedError> {
                     .summary("The platune service encountered a fatal error"),
             ),
         )
-        .with_provider(BuildInfoCliProvider::new(pretty))
+        .with_provider(build_info())
         .initialize()?;
 
     let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;

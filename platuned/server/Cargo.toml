@@ -4,10 +4,12 @@ edition = "2021"
 name = "platuned"
 version = "0.1.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
 
 [dependencies]
 async-trait = "0.1.71"
+clap = { version = "4.3.15", features = ["unstable-styles"] }
 console-subscriber = { version = "0.1.10", features = [
     "parking_lot",
 ], optional = true }

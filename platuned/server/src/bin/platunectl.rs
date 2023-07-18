@@ -1,9 +1,4 @@
 use daemon_slayer::{
-    build_info::{
-        cli::BuildInfoCliProvider,
-        vergen_pretty::{vergen_pretty_env, PrettyBuilder, Style},
-        Color,
-    },
     cli::Cli,
     client::{
         self,
@@ -15,7 +10,7 @@ use daemon_slayer::{
         },
     },
     console::{cli::ConsoleCliProvider, Console, LogSource},
-    core::{BoxedError, Label},
+    core::BoxedError,
     error_handler::{cli::ErrorHandlerCliProvider, color_eyre::eyre, ErrorSink},
     health_check::{cli::HealthCheckCliProvider, GrpcHealthCheck},
     logging::{
@@ -23,6 +18,7 @@ use daemon_slayer::{
     },
     process::cli::ProcessCliProvider,
 };
+use platuned::{build_info, clap_base_command, service_label, MAIN_SERVER_PORT};
 use std::env::current_exe;
 
 #[tokio::main]
@@ -34,7 +30,7 @@ async fn main() -> Result<(), ErrorSink> {
 }
 
 async fn run() -> Result<(), BoxedError> {
-    let label: Label = "com.platune.platuned".parse()?;
+    let label = service_label();
     let mut manager_builder = client::builder(
         label.clone(),
         current_exe()?
@@ -72,28 +68,21 @@ async fn run() -> Result<(), BoxedError> {
     let manager = manager_builder.build().await.unwrap();
     let logger_builder = LoggerBuilder::new(label.clone());
 
-    let health_check = GrpcHealthCheck::new("http://[::1]:50051").unwrap();
+    let health_check = GrpcHealthCheck::new(format!("http://[::1]:{MAIN_SERVER_PORT}")).unwrap();
 
     let console = Console::new(manager.clone(), LogSource::Ipc)
         .await
         .with_health_check(Box::new(health_check.clone()));
 
-    let pretty = PrettyBuilder::default()
-        .env(vergen_pretty_env!())
-        .key_style(Style::default().fg(Color::Cyan).bold())
-        .value_style(Style::default())
-        .category(false)
-        .build()
-        .unwrap();
-
     let mut cli = Cli::builder()
+        .with_base_command(clap_base_command())
         .with_provider(ClientCliProvider::new(manager.clone()))
         .with_provider(ProcessCliProvider::new(manager.info().await?.pid))
         .with_provider(ConsoleCliProvider::new(console))
         .with_provider(LoggingCliProvider::new(logger_builder))
         .with_provider(ErrorHandlerCliProvider::default())
         .with_provider(HealthCheckCliProvider::new(health_check))
-        .with_provider(BuildInfoCliProvider::new(pretty))
+        .with_provider(build_info())
         .initialize()?;
 
     let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;

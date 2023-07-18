@@ -6,6 +6,7 @@ use daemon_slayer::{
     server::{BroadcastEventStore, Handler, Service, ServiceContext, Signal, SignalHandler},
     signals::SignalListener,
 };
+use platuned::service_label;
 use tracing::info;
 
 #[derive(Service)]
@@ -30,9 +31,7 @@ impl Handler for ServiceHandler {
     }
 
     fn label() -> Label {
-        "com.platune.platuned"
-            .parse()
-            .expect("failed to parse label")
+        service_label()
     }
 
     async fn run_service<F: FnOnce() + Send>(
