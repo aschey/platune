@@ -1,15 +1,15 @@
 use crate::{
     dto::{
-        command::Command, decoder_command::DecoderCommand, decoder_response::DecoderResponse,
-        player_response::PlayerResponse, processor_error::ProcessorError,
+        decoder_command::DecoderCommand, decoder_response::DecoderResponse,
+        processor_error::ProcessorError,
     },
     platune_player::PlayerEvent,
-    two_way_channel::{TwoWayReceiver, TwoWaySender},
+    two_way_channel::TwoWayReceiver,
 };
 use decal::{
     decoder::{Decoder, DecoderResult},
     output::AudioBackend,
-    AudioManager, WriteOutputError,
+    AudioManager,
 };
 use flume::TryRecvError;
 use std::time::Duration;
@@ -18,14 +18,13 @@ use tracing::{error, info};
 
 pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
     cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
     manager: &'a mut AudioManager<f32, B>,
     decoder: Decoder<f32>,
     last_send_time: Duration,
     event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
 }
 
-enum InputResult {
+pub(crate) enum InputResult {
     Continue,
     Stop,
 }
@@ -35,7 +34,6 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
         manager: &'a mut AudioManager<f32, B>,
         decoder: Decoder<f32>,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-        player_cmd_tx: &'a TwoWaySender<Command, PlayerResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
     ) -> Result<Self, ProcessorError> {
         match cmd_rx.recv() {
@@ -59,7 +57,6 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             decoder,
             manager,
             cmd_rx,
-            player_cmd_tx,
             event_tx,
             last_send_time: Duration::default(),
         })
@@ -158,26 +155,16 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
         Ok(InputResult::Continue)
     }
 
-    pub(crate) fn next(&mut self) -> Result<DecoderResult, ProcessorError> {
+    pub(crate) fn next(&mut self) -> Result<(InputResult, DecoderResult), ProcessorError> {
         match self.process_input() {
             Ok(InputResult::Continue) => {}
-            Ok(InputResult::Stop) => return Ok(DecoderResult::Finished),
-
+            Ok(InputResult::Stop) => return Ok((InputResult::Stop, DecoderResult::Finished)),
             Err(e) => return Err(e),
         };
-        match self.manager.write(&mut self.decoder) {
-            Ok(DecoderResult::Unfinished)
-            | Err(WriteOutputError::WriteBlockingError {
-                decoder_result: DecoderResult::Unfinished,
-                error: _,
-            }) => Ok(DecoderResult::Unfinished),
-            val => {
-                self.player_cmd_tx
-                    .send(Command::Ended)
-                    .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
-                    .tap_err(|e| error!("Unable to send ended command: {e:?}"))?;
-                val.map_err(ProcessorError::WriteOutputError)
-            }
-        }
+        let res = self
+            .manager
+            .write(&mut self.decoder)
+            .map_err(ProcessorError::WriteOutputError)?;
+        Ok((InputResult::Continue, res))
     }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    audio_processor::AudioProcessor,
+    audio_processor::{AudioProcessor, InputResult},
     dto::{
         command::Command,
         decoder_command::DecoderCommand,
@@ -50,6 +50,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
     loop {
         let decoder = match queue_rx.try_recv() {
             Ok(queue_source) => {
+                info!("Got source on initial attempt");
                 init_source(&mut manager, &queue_source);
 
                 match queue_source.queue_start_mode {
@@ -76,9 +77,11 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                 }
             }
             Err(TryRecvError::Empty) => {
+                info!("No sources on initial attempt, waiting");
                 manager.flush().ok();
                 match queue_rx.recv() {
                     Ok(queue_source) => {
+                        info!("Got source after waiting");
                         init_source(&mut manager, &queue_source);
 
                         match queue_source.queue_start_mode {
@@ -115,31 +118,37 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                 break;
             }
         };
-        if let Ok(mut processor) = AudioProcessor::new(
-            &mut manager,
-            decoder,
-            &mut cmd_rx,
-            &player_cmd_tx,
-            &event_tx,
-        )
-        .tap_err(|e| error!("Error creating processor: {e}"))
+        info!("Creating processor");
+        if let Ok(mut processor) =
+            AudioProcessor::new(&mut manager, decoder, &mut cmd_rx, &event_tx)
+                .tap_err(|e| error!("Error creating processor: {e}"))
         {
             loop {
                 match processor.next() {
-                    Ok(DecoderResult::Unfinished)
+                    Ok((InputResult::Stop, _)) => {
+                        // Don't send Command::Ended when we explicitly requested to stop
+                        // because we don't want to initialize the next track
+                        break;
+                    }
+                    Ok((_, DecoderResult::Unfinished))
                     | Err(ProcessorError::WriteOutputError(
                         WriteOutputError::WriteBlockingError {
                             decoder_result: DecoderResult::Unfinished,
                             error: _,
                         },
                     )) => {}
-                    Ok(DecoderResult::Finished)
+                    Ok((_, DecoderResult::Finished))
                     | Err(ProcessorError::WriteOutputError(
                         WriteOutputError::WriteBlockingError {
                             decoder_result: DecoderResult::Finished,
                             error: _,
                         },
                     )) => {
+                        info!("Sending ended event");
+                        player_cmd_tx
+                            .send(Command::Ended)
+                            .tap_err(|e| error!("Unable to send ended command: {e:?}"))
+                            .ok();
                         break;
                     }
                     Err(ProcessorError::WriteOutputError(WriteOutputError::DecoderError(
@@ -178,6 +187,7 @@ fn handle_force_restart<B: AudioBackend>(
     last_stop_position: Duration,
     paused: bool,
 ) -> Decoder<f32> {
+    info!("Force restarting");
     manager.set_device(device_name);
     let mut decoder = manager.init_decoder(
         source,

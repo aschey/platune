@@ -181,6 +181,7 @@ impl Player {
             }
         }
 
+        info!("Waiting for decoder after starting");
         if success.is_ok()
             && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded
         {
@@ -337,6 +338,7 @@ impl Player {
         info!("Queued count {}", self.queued_count);
 
         if self.state.queue_position < self.state.queue.len() - 1 {
+            info!("Waiting for decoder after ended event");
             self.wait_for_decoder().await;
             self.state.queue_position += 1;
             self.event_tx
@@ -347,6 +349,7 @@ impl Player {
                 self.state.queue_position
             );
         } else {
+            info!("No more tracks in queue, changing to stopped state");
             self.audio_status = AudioStatus::Stopped;
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
