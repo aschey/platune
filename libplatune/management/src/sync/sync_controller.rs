@@ -2,7 +2,7 @@ use super::{
     progress_stream::ProgressStream,
     sync_engine::{SyncEngine, SyncError},
 };
-use daemon_slayer::{core::notify::ShowNotification, notify::notification::Notification};
+use daemon_slayer::{core::notify::AsyncNotification, notify::notification::Notification};
 use sqlx::{Pool, Sqlite};
 use tap::TapFallible;
 use tokio::sync::{broadcast, oneshot};

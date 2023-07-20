@@ -1,37 +1,31 @@
-mod audio_manager;
-mod audio_output;
 mod audio_processor;
-mod channel_buffer;
-mod decoder;
 mod dto;
 mod event_loop;
 mod http_stream_reader;
-#[cfg(test)]
-mod mock_output;
-mod output;
 mod player;
 mod settings;
-mod source;
 mod two_way_channel;
-mod vec_ext;
+pub use decal::output::{AudioBackend, CpalOutput, MockOutput};
 
 #[cfg(feature = "ffi")]
 uniffi::include_scaffolding!("player");
 
 pub mod platune_player {
-    use crate::audio_output::*;
     pub use crate::dto::audio_status::AudioStatus;
     use crate::dto::decoder_command::DecoderCommand;
     use crate::dto::decoder_response::DecoderResponse;
     pub use crate::dto::player_event::PlayerEvent;
     use crate::dto::player_response::PlayerResponse;
     pub use crate::dto::player_state::PlayerState;
+    use crate::dto::player_status::CurrentPosition;
     pub use crate::dto::player_status::PlayerStatus;
     use crate::event_loop::decode_loop;
     use crate::player::Player;
     pub use crate::settings::Settings;
     use crate::two_way_channel::{two_way_channel, TwoWaySender};
     use crate::{dto::command::Command, event_loop::main_loop};
+    use decal::output::{AudioBackend, CpalOutput, DeviceTrait, HostTrait};
+    use derivative::Derivative;
     use std::fs::remove_file;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
@@ -39,7 +33,8 @@ pub mod platune_player {
     use std::time::Duration;
     use tap::TapFallible;
     use thiserror::Error;
-    use tokio::sync::broadcast;
+    use tokio::runtime::Runtime;
+    use tokio::sync::{broadcast, Mutex};
     use tracing::{error, info, warn};
 
     #[derive(Debug, Clone, Error)]
@@ -50,15 +45,28 @@ pub mod platune_player {
         Failure(String),
     }
 
-    #[cfg_attr(feature = "ffi", derive(uniffi::Object))]
     pub struct EventSubscription {
-        rx: Arc<tokio::sync::Mutex<broadcast::Receiver<PlayerEvent>>>,
+        rx: broadcast::Receiver<PlayerEvent>,
     }
 
-    #[cfg_attr(feature = "ffi", uniffi::export(async_runtime = "tokio"))]
     impl EventSubscription {
-        pub async fn recv(&self) -> Result<PlayerEvent, PlayerError> {
+        pub async fn recv(&mut self) -> Result<PlayerEvent, PlayerError> {
             self.rx
+                .recv()
+                .await
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
+        }
+    }
+
+    #[cfg(feature = "ffi")]
+    #[derive(uniffi::Object)]
+    pub struct FfiEventSubscription(Arc<Mutex<EventSubscription>>);
+
+    #[cfg(feature = "ffi")]
+    #[uniffi::export(async_runtime = "tokio")]
+    impl FfiEventSubscription {
+        pub async fn recv(&self) -> Result<PlayerEvent, PlayerError> {
+            self.0
                 .lock()
                 .await
                 .recv()
@@ -67,24 +75,108 @@ pub mod platune_player {
         }
     }
 
-    #[cfg_attr(feature = "ffi", derive(uniffi::Object))]
-    pub struct PlatunePlayer {
+    #[cfg(feature = "ffi")]
+    #[derive(uniffi::Object)]
+    pub struct FfiPlatunePlayer {
+        player: PlatunePlayer<CpalOutput>,
+        _rt: Runtime,
+    }
+
+    #[cfg(feature = "ffi")]
+    #[uniffi::export]
+    impl FfiPlatunePlayer {
+        #[cfg(feature = "ffi")]
+        #[uniffi::constructor]
+        pub fn new(settings: Settings) -> Arc<Self> {
+            let rt = Runtime::new().unwrap();
+            let _guard = rt.enter();
+            Arc::new(Self {
+                player: PlatunePlayer::new(CpalOutput::default(), settings),
+                _rt: rt,
+            })
+        }
+
+        pub fn subscribe(&self) -> Arc<FfiEventSubscription> {
+            Arc::new(FfiEventSubscription(Arc::new(Mutex::new(
+                self.player.subscribe(),
+            ))))
+        }
+
+        pub fn output_devices(&self) -> Result<Vec<String>, PlayerError> {
+            self.player.output_devices()
+        }
+    }
+
+    #[cfg(feature = "ffi")]
+    #[uniffi::export(async_runtime = "tokio")]
+    impl FfiPlatunePlayer {
+        pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
+            self.player.set_queue(queue).await
+        }
+
+        pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
+            self.player.add_to_queue(songs).await
+        }
+
+        pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
+            self.player.seek(time).await
+        }
+
+        pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
+            self.player.get_current_status().await
+        }
+
+        pub async fn stop(&self) -> Result<(), PlayerError> {
+            self.player.stop().await
+        }
+
+        pub async fn set_volume(&self, volume: f32) -> Result<(), PlayerError> {
+            self.player.set_volume(volume).await
+        }
+
+        pub async fn pause(&self) -> Result<(), PlayerError> {
+            self.player.pause().await
+        }
+
+        pub async fn resume(&self) -> Result<(), PlayerError> {
+            self.player.resume().await
+        }
+
+        pub async fn next(&self) -> Result<(), PlayerError> {
+            self.player.next().await
+        }
+
+        pub async fn previous(&self) -> Result<(), PlayerError> {
+            self.player.previous().await
+        }
+
+        pub async fn set_output_device(&self, device: Option<String>) -> Result<(), PlayerError> {
+            self.player.set_output_device(device).await
+        }
+
+        pub async fn join(&self) -> Result<(), PlayerError> {
+            self.player.join().await
+        }
+    }
+
+    #[derive(Derivative)]
+    #[derivative(Debug)]
+    // #[cfg_attr(feature = "ffi", derive(uniffi::Object))]
+    pub struct PlatunePlayer<B>
+    where
+        B: AudioBackend,
+    {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: Option<std::thread::JoinHandle<()>>,
+        #[derivative(Debug = "ignore")]
+        audio_backend: B,
         joined: AtomicBool,
-        #[cfg(feature = "ffi")]
-        rt: tokio::runtime::Runtime,
     }
 
-    impl PlatunePlayer {
-        #[cfg(not(feature = "ffi"))]
-        pub fn new(settings: Settings) -> Arc<Self> {
-            Self::new_inner(settings)
-        }
-
-        fn new_inner(settings: Settings) -> Arc<Self> {
+    impl<B: AudioBackend + Send + 'static> PlatunePlayer<B> {
+        pub fn new(audio_backend: B, settings: Settings) -> Self {
             clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -97,19 +189,12 @@ pub mod platune_player {
             let (decoder_tx, decoder_rx) = two_way_channel();
             let decoder_tx_ = decoder_tx.clone();
 
-            #[cfg(feature = "ffi")]
-            let rt = tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .unwrap();
-            #[cfg(feature = "ffi")]
-            let _ = rt.enter();
-
             let main_loop_fn = async move {
-                let player = Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings);
+                let player =
+                    Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings, None);
                 main_loop(cmd_rx, player).await
             };
-
+            let audio_backend_ = audio_backend.clone();
             let decoder_fn = || {
                 decode_loop(
                     queue_rx_,
@@ -117,51 +202,59 @@ pub mod platune_player {
                     decoder_rx,
                     cmd_tx_,
                     event_tx__,
-                    default_host(),
+                    audio_backend_,
                 );
             };
 
-            #[cfg(feature = "ffi")]
-            rt.spawn(main_loop_fn);
-            #[cfg(not(feature = "ffi"))]
             tokio::spawn(main_loop_fn);
-
             let decoder_handle = Some(thread::spawn(decoder_fn));
 
-            Arc::new(PlatunePlayer {
+            Self {
                 cmd_sender: cmd_tx,
                 event_tx,
                 decoder_tx,
                 decoder_handle,
+                audio_backend,
                 joined: AtomicBool::new(false),
-                #[cfg(feature = "ffi")]
-                rt,
-            })
-        }
-    }
-
-    #[cfg_attr(feature = "ffi", uniffi::export)]
-    impl PlatunePlayer {
-        #[cfg(feature = "ffi")]
-        #[uniffi::constructor]
-        pub fn new(settings: Settings) -> Arc<Self> {
-            Self::new_inner(settings)
+            }
         }
 
-        pub fn subscribe(&self) -> Arc<EventSubscription> {
-            Arc::new(EventSubscription {
-                rx: Arc::new(tokio::sync::Mutex::new(self.event_tx.subscribe())),
-            })
+        pub fn subscribe(&self) -> EventSubscription {
+            EventSubscription {
+                rx: self.event_tx.subscribe(),
+            }
         }
 
-        pub fn join(&self) -> Result<(), PlayerError> {
+        pub fn output_devices(&self) -> Result<Vec<String>, PlayerError> {
+            let devices = self
+                .audio_backend
+                .default_host()
+                .output_devices()
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))?;
+
+            Ok(devices
+                .into_iter()
+                .filter_map(|d| d.name().map(|n| n.trim_end().to_owned()).ok())
+                .collect())
+        }
+
+        pub async fn set_output_device(&self, device: Option<String>) -> Result<(), PlayerError> {
+            self.cmd_sender
+                .send_async(Command::SetDeviceName(device))
+                .await
+                .map_err(|e| PlayerError::Failure(format!("{e:?}")))
+        }
+
+        pub async fn join(&self) -> Result<(), PlayerError> {
             info!("Joining player instance");
             self.cmd_sender
-                .send(Command::Stop)
+                .send_async(Command::Stop)
+                .await
                 .map_err(|e| PlayerError::Failure(format!("{e:?}")))?;
             info!("Sent stop command");
             self.cmd_sender
-                .send(Command::Shutdown)
+                .send_async(Command::Shutdown)
+                .await
                 .map_err(|e| PlayerError::Failure(format!("{e:?}")))?;
             info!("Sent shutdown command");
             self.joined.store(true, Ordering::SeqCst);
@@ -169,11 +262,9 @@ pub mod platune_player {
         }
     }
 
-    #[cfg_attr(feature = "ffi", uniffi::export(async_runtime = "tokio"))]
-    impl PlatunePlayer {
+    // #[cfg_attr(feature = "ffi", uniffi::export(async_runtime = "tokio"))]
+    impl<B: AudioBackend> PlatunePlayer<B> {
         pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::SetQueue(queue))
                 .await
@@ -181,8 +272,6 @@ pub mod platune_player {
         }
 
         pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::AddToQueue(songs))
                 .await
@@ -190,8 +279,6 @@ pub mod platune_player {
         }
 
         pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Seek(time))
                 .await
@@ -199,8 +286,6 @@ pub mod platune_player {
         }
 
         pub async fn get_current_status(&self) -> Result<PlayerStatus, PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             let track_status = match self
                 .cmd_sender
                 .get_response(Command::GetCurrentStatus)
@@ -223,7 +308,10 @@ pub mod platune_player {
                     {
                         Ok(DecoderResponse::CurrentPositionResponse(current_position)) => {
                             Ok(PlayerStatus {
-                                current_position: Some(current_position),
+                                current_position: Some(CurrentPosition {
+                                    position: current_position.position,
+                                    retrieval_time: current_position.retrieval_time,
+                                }),
                                 track_status,
                             })
                         }
@@ -235,17 +323,13 @@ pub mod platune_player {
         }
 
         pub async fn stop(&self) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Stop)
                 .await
                 .map_err(|e| PlayerError::Failure(format!("{e:?}")))
         }
 
-        pub async fn set_volume(&self, volume: f64) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
+        pub async fn set_volume(&self, volume: f32) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::SetVolume(volume))
                 .await
@@ -253,8 +337,6 @@ pub mod platune_player {
         }
 
         pub async fn pause(&self) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Pause)
                 .await
@@ -269,8 +351,6 @@ pub mod platune_player {
         }
 
         pub async fn next(&self) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Next)
                 .await
@@ -278,8 +358,6 @@ pub mod platune_player {
         }
 
         pub async fn previous(&self) -> Result<(), PlayerError> {
-            #[cfg(feature = "ffi")]
-            let _ = self.rt.enter();
             self.cmd_sender
                 .send_async(Command::Previous)
                 .await
@@ -287,7 +365,7 @@ pub mod platune_player {
         }
     }
 
-    impl Drop for PlatunePlayer {
+    impl<B: AudioBackend> Drop for PlatunePlayer<B> {
         fn drop(&mut self) {
             if self.joined.load(Ordering::SeqCst) {
                 info!("Waiting for decoder thread to terminate");

@@ -24,6 +24,9 @@ use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::Manager;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
+#[cfg(feature = "player")]
+use libplatune_player::CpalOutput;
+use platuned::MAIN_SERVER_PORT;
 use std::env;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -44,7 +47,7 @@ enum Transport {
 #[derive(Clone)]
 struct Services {
     #[cfg(feature = "player")]
-    player: Arc<PlatunePlayer>,
+    player: Arc<PlatunePlayer<CpalOutput>>,
     #[cfg(feature = "management")]
     manager: FileWatchManager,
 }
@@ -55,7 +58,7 @@ impl Services {
         let manager = init_manager().await?;
         Ok(Self {
             #[cfg(feature = "player")]
-            player: Arc::new(PlatunePlayer::new(Default::default())),
+            player: Arc::new(PlatunePlayer::new(Default::default(), Default::default())),
             #[cfg(feature = "management")]
             manager: FileWatchManager::new(manager, Duration::from_millis(500))
                 .await
@@ -91,7 +94,11 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     let http_server = run_server(
         shutdown_rx.clone(),
         services.clone(),
-        Transport::Http("0.0.0.0:50051".parse().expect("failed to parse address")),
+        Transport::Http(
+            format!("0.0.0.0:{MAIN_SERVER_PORT}")
+                .parse()
+                .expect("failed to parse address"),
+        ),
     );
     servers.push(tokio::spawn(http_server));
 

@@ -1,4 +1,4 @@
-use crate::source::{ReadSeekSource, Source};
+use decal::decoder::{ReadSeekSource, Source};
 use eyre::{Context, Result};
 use tracing::info;
 

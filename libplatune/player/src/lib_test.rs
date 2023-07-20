@@ -120,7 +120,7 @@
 // ) -> Vec<f32> {
 //     let mut all_samples = vec![];
 //     let mut cur_sample_rate = 44_100;
-//     let mut resampler = FftFixedInOut::<f64>::new(
+//     let mut resampler = FftFixedInOut::<f32>::new(
 //         cur_sample_rate,
 //         sample_rate_out,
 //         resample_chunk_size,
@@ -169,7 +169,7 @@
 //             match decoder.decode(&packet) {
 //                 Ok(decoded) => {
 //                     let mut sample_buf =
-//                         SampleBuffer::<f64>::new(decoded.capacity() as u64, *decoded.spec());
+//                         SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
 
 //                     sample_buf.copy_interleaved_ref(decoded);
 
@@ -220,7 +220,7 @@
 //             }
 
 //             cur_sample_rate = sample_rate;
-//             resampler = FftFixedInOut::<f64>::new(
+//             resampler = FftFixedInOut::<f32>::new(
 //                 cur_sample_rate,
 //                 sample_rate_out,
 //                 resample_chunk_size,
@@ -233,7 +233,7 @@
 //         }
 
 //         if sample_rate == sample_rate_out {
-//             let trimmed: Vec<f64> = trimmed.collect();
+//             let trimmed: Vec<f32> = trimmed.collect();
 //             all_samples.extend_from_slice(&trimmed);
 //             continue;
 //         }
@@ -275,7 +275,7 @@
 //         }
 //     }
 
-//     all_samples.into_iter().map(|s| s as f32).collect()
+//     all_samples
 // }
 
 // #[rstest(num_songs, case(1), case(2), case(3))]
@@ -432,7 +432,7 @@
 //     source_2: Option<&str>,
 //     #[values(1, 2)] out_channels: usize,
 //     #[values(44_100, 48_000)] sample_rate_out: u32,
-//     #[values(1024, 666)] resample_chunk_size: u32,
+//     #[values(1024, 666)] resample_chunk_size: usize,
 // ) {
 //     let host = Host::new_with_options(
 //         Duration::from_millis(1),
@@ -444,7 +444,6 @@
 
 //     let player = PlatunePlayer::new_with_host(
 //         Settings {
-//             enable_resampling: true,
 //             resample_chunk_size,
 //         },
 //         host,
@@ -461,7 +460,7 @@
 //         paths.clone(),
 //         out_channels,
 //         sample_rate_out as usize,
-//         resample_chunk_size as usize,
+//         resample_chunk_size,
 //     );
 
 //     player.set_queue(paths).await.unwrap();

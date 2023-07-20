@@ -12,15 +12,13 @@ path = "src/lib.rs"
 harness = false
 name = "bench"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 concread = { version = "0.4", default-features = false, features = ["arcache"] }
 directories = "5"
 eyre = "0.6"
 futures = "0.3"
 ignore = "0.4"
-itertools = "0.10"
+itertools = "0.11"
 lazy_static = "1"
 lofty = { git = "https://github.com/aschey/lofty-rs", rev = "48aac90bb18b626c61bbeed29eeb4bc5be1d4871" }
 log = "0.4"
@@ -40,10 +38,10 @@ sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "15458fa9d6f46a3c55f
     "macros",
     "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "bbd268ea3caa603d9ad9d4c39027cebc5cba0a24", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "06b0048693a48a28ba887081692d5aa0a67135ca", features = [
     "native-notification",
 ] }
-strum = { version = "0.24", features = ["derive"] }
+strum = { version = "0.25", features = ["derive"] }
 tap = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
@@ -54,8 +52,8 @@ walkdir = "2"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio"] }
-ctor = "0.2.2"
-pretty_assertions = "1.3.0"
-rstest = "0.17.0"
-tempfile = "3.5.0"
+ctor = "0.2.4"
+pretty_assertions = "1.4.0"
+rstest = "0.18.1"
+tempfile = "3.6.0"
 tracing-subscriber = "0.3.17"

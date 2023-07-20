@@ -1,3 +1,4 @@
+use decal::decoder::{ReadSeekSource, Source};
 use flume::{Receiver, Sender};
 use std::{fs::File, io::BufReader, path::Path, time::Duration};
 use tap::{TapFallible, TapOptional};
@@ -16,7 +17,6 @@ use crate::{
     },
     http_stream_reader::HttpStreamReader,
     settings::Settings,
-    source::{ReadSeekSource, Source},
     two_way_channel::TwoWaySender,
 };
 
@@ -35,7 +35,8 @@ pub(crate) struct Player {
     cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
     audio_status: AudioStatus,
     settings: Settings,
-    pending_volume: Option<f64>,
+    pending_volume: Option<f32>,
+    device_name: Option<String>,
 }
 
 impl Player {
@@ -45,6 +46,7 @@ impl Player {
         queue_rx: Receiver<QueueSource>,
         cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
         settings: Settings,
+        device_name: Option<String>,
     ) -> Self {
         Self {
             event_tx,
@@ -60,6 +62,7 @@ impl Player {
             audio_status: AudioStatus::Stopped,
             settings,
             pending_volume: None,
+            device_name,
         }
     }
 
@@ -138,7 +141,10 @@ impl Player {
         while success.is_err() {
             match self.get_current() {
                 Some(path) => {
-                    match self.append_file(path.clone(), queue_start_mode).await {
+                    match self
+                        .append_file(path.clone(), queue_start_mode.clone())
+                        .await
+                    {
                         Ok(_) => {
                             success = Ok(());
                         }
@@ -147,19 +153,20 @@ impl Player {
                     }
 
                     if let Some(path) = self.get_next() {
-                        match self
-                            .append_file(
-                                path,
-                                if queue_start_mode == QueueStartMode::ForceRestart
-                                    && success.is_err()
-                                {
-                                    QueueStartMode::ForceRestart
-                                } else {
-                                    QueueStartMode::Normal
+                        let start_mode = match (&queue_start_mode, &success) {
+                            (
+                                QueueStartMode::ForceRestart {
+                                    device_name,
+                                    paused,
                                 },
-                            )
-                            .await
-                        {
+                                Err(_),
+                            ) => QueueStartMode::ForceRestart {
+                                device_name: device_name.to_owned(),
+                                paused: *paused && success.is_err(),
+                            },
+                            _ => QueueStartMode::Normal,
+                        };
+                        match self.append_file(path, start_mode).await {
                             Ok(_) => {
                                 success = Ok(());
                             }
@@ -174,6 +181,7 @@ impl Player {
             }
         }
 
+        info!("Waiting for decoder after starting");
         if success.is_ok()
             && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded
         {
@@ -253,7 +261,7 @@ impl Player {
         Ok(())
     }
 
-    pub(crate) async fn set_volume(&mut self, volume: f64) -> Result<(), String> {
+    pub(crate) async fn set_volume(&mut self, volume: f32) -> Result<(), String> {
         if self.audio_status == AudioStatus::Stopped {
             // Decoder isn't running so we can't set the volume yet
             // This will get sent with the next source
@@ -338,7 +346,8 @@ impl Player {
         self.queued_count -= 1;
         info!("Queued count {}", self.queued_count);
 
-        if (self.state.queue_position as usize) < self.state.queue.len() - 1 {
+        if self.state.queue_position < (self.state.queue.len() - 1) as u32 {
+            info!("Waiting for decoder after ended event");
             self.wait_for_decoder().await;
             self.state.queue_position += 1;
             self.event_tx
@@ -351,6 +360,7 @@ impl Player {
                 self.state.queue_position
             );
         } else {
+            info!("No more tracks in queue, changing to stopped state");
             self.audio_status = AudioStatus::Stopped;
             self.event_tx
                 .send(PlayerEvent::Ended {
@@ -371,11 +381,26 @@ impl Player {
         }
     }
 
+    pub(crate) async fn set_device_name(
+        &mut self,
+        device_name: Option<String>,
+    ) -> Result<(), String> {
+        self.device_name = device_name;
+        self.reset().await
+    }
+
     pub(crate) async fn reset(&mut self) -> Result<(), String> {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
-        self.set_queue_internal(queue, queue_position as usize, QueueStartMode::ForceRestart)
-            .await?;
+        self.set_queue_internal(
+            queue,
+            queue_position as usize,
+            QueueStartMode::ForceRestart {
+                device_name: self.device_name.clone(),
+                paused: self.audio_status == AudioStatus::Paused,
+            },
+        )
+        .await?;
 
         Ok(())
     }

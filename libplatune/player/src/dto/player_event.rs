@@ -1,8 +1,6 @@
+use super::{player_state::PlayerState, player_status::CurrentPosition};
 use std::time::Duration;
-
 use strum::Display;
-
-use super::{current_position::CurrentPosition, player_state::PlayerState};
 
 #[derive(Clone, Debug, Display)]
 #[cfg_attr(feature = "ffi", derive(uniffi::Enum))]

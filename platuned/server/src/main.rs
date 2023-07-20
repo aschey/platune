@@ -5,7 +5,7 @@ mod services;
 mod startup;
 
 use crate::startup::ServiceHandler;
-#[cfg(feature = "console")]
+#[cfg(feature = "tokio-console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::{
     cli::Cli,
@@ -19,6 +19,7 @@ use daemon_slayer::{
     server::{cli::ServerCliProvider, Handler},
 };
 use dotenvy::dotenv;
+use platuned::{build_info, clap_base_command};
 use rpc::*;
 
 #[tokio::main]
@@ -42,6 +43,7 @@ async fn run() -> Result<(), BoxedError> {
         });
 
     let mut cli = Cli::builder()
+        .with_base_command(clap_base_command())
         .with_provider(ServerCliProvider::<ServiceHandler>::new(
             &"run".parse().unwrap(),
         ))
@@ -52,11 +54,13 @@ async fn run() -> Result<(), BoxedError> {
                     .summary("The platune service encountered a fatal error"),
             ),
         )
+        .with_provider(build_info())
         .initialize()?;
 
     let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;
     #[cfg(feature = "tokio-console")]
     let logger = logger.with(console_subscriber::spawn());
+
     logger.init();
 
     let matches = cli.get_matches();

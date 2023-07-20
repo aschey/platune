@@ -7,6 +7,6 @@ pub(crate) enum DecoderCommand {
     Pause,
     Play,
     Stop,
-    SetVolume(f64),
+    SetVolume(f32),
     GetCurrentPosition,
 }

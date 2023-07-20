@@ -5,18 +5,21 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
-use libplatune_player::platune_player::*;
+use libplatune_player::{platune_player::*, CpalOutput};
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
 
 pub struct PlayerImpl {
-    player: Arc<PlatunePlayer>,
+    player: Arc<PlatunePlayer<CpalOutput>>,
     shutdown_rx: BroadcastEventStore<Signal>,
 }
 
 impl PlayerImpl {
-    pub fn new(player: Arc<PlatunePlayer>, shutdown_rx: BroadcastEventStore<Signal>) -> Self {
+    pub fn new(
+        player: Arc<PlatunePlayer<CpalOutput>>,
+        shutdown_rx: BroadcastEventStore<Signal>,
+    ) -> Self {
         PlayerImpl {
             player,
             shutdown_rx,
@@ -193,6 +196,29 @@ impl Player for PlayerImpl {
             },
             current_song: status.track_status.current_song,
         }))
+    }
+
+    async fn list_output_devices(
+        &self,
+        _: Request<()>,
+    ) -> Result<Response<DevicesResponse>, Status> {
+        let devices = self
+            .player
+            .output_devices()
+            .map_err(|e| format_error(format!("Error getting output devices: {e:?}")))?;
+        Ok(Response::new(DevicesResponse { devices }))
+    }
+
+    async fn set_output_device(
+        &self,
+        request: Request<SetOutputDeviceRequest>,
+    ) -> Result<Response<()>, Status> {
+        let request = request.into_inner();
+        self.player
+            .set_output_device(request.device)
+            .await
+            .map_err(|e| format_error(format!("Error setting output device: {e:?}")))?;
+        Ok(Response::new(()))
     }
 
     type SubscribeEventsStream =

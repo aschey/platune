@@ -12,9 +12,9 @@ enum class AudioStatus {
 }
 
 class TestModule : Module() {
-  val player: PlatunePlayer
+  val player: FfiPlatunePlayer
   init {
-    player = PlatunePlayer(Settings(true,1024u))
+    player = FfiPlatunePlayer(Settings(1024u))
   }
   // Each module class must implement the definition function. The definition consists of components
   // that describes the module's functionality and behavior.
