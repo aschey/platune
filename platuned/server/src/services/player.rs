@@ -6,7 +6,6 @@ use std::{pin::Pin, sync::Arc, time::Duration};
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
 use libplatune_player::{platune_player::*, CpalOutput};
-use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
 
@@ -45,14 +44,14 @@ fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse,
 
 fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
     match msg {
-        PlayerEvent::Stop(state) => get_event_response(Event::Stop, state),
-        PlayerEvent::Pause(state) => get_event_response(Event::Pause, state),
-        PlayerEvent::Resume(state) => get_event_response(Event::Resume, state),
-        PlayerEvent::Ended(state) => get_event_response(Event::Ended, state),
-        PlayerEvent::Next(state) => get_event_response(Event::Next, state),
-        PlayerEvent::StartQueue(state) => get_event_response(Event::StartQueue, state),
-        PlayerEvent::QueueUpdated(state) => get_event_response(Event::QueueUpdated, state),
-        PlayerEvent::Seek(state, time) => Ok(EventResponse {
+        PlayerEvent::Stop { state } => get_event_response(Event::Stop, state),
+        PlayerEvent::Pause { state } => get_event_response(Event::Pause, state),
+        PlayerEvent::Resume { state } => get_event_response(Event::Resume, state),
+        PlayerEvent::Ended { state } => get_event_response(Event::Ended, state),
+        PlayerEvent::Next { state } => get_event_response(Event::Next, state),
+        PlayerEvent::StartQueue { state } => get_event_response(Event::StartQueue, state),
+        PlayerEvent::QueueUpdated { state } => get_event_response(Event::QueueUpdated, state),
+        PlayerEvent::Seek { state, time } => Ok(EventResponse {
             event: Event::Seek.into(),
             event_payload: Some(EventPayload::SeekData(SeekResponse {
                 state: Some(State {
@@ -63,18 +62,18 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
                 seek_millis: time.as_millis() as u64,
             })),
         }),
-        PlayerEvent::Previous(state) => get_event_response(Event::Previous, state),
-        PlayerEvent::QueueEnded(state) => get_event_response(Event::QueueEnded, state),
-        PlayerEvent::Position(position) => Ok(EventResponse {
+        PlayerEvent::Previous { state } => get_event_response(Event::Previous, state),
+        PlayerEvent::QueueEnded { state } => get_event_response(Event::QueueEnded, state),
+        PlayerEvent::Position { current_position } => Ok(EventResponse {
             event: Event::Position.into(),
             event_payload: Some(EventPayload::Progress(PositionResponse {
                 position: Some(
-                    position
+                    current_position
                         .position
                         .try_into()
                         .map_err(|e| format_error(format!("Error converting position: {e:?}")))?,
                 ),
-                retrieval_time: position
+                retrieval_time: current_position
                     .retrieval_time
                     .map(|t| {
                         t.try_into().map_err(|e| {
@@ -232,7 +231,7 @@ impl Player for PlayerImpl {
         let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
-            while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.next() => Err(RecvError::Closed) }
+            while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.next() => Err(PlayerError::Failure("closed".to_owned())) }
             {
                 info!("Server received event {:?}", msg);
                 let msg = map_response(msg);
