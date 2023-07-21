@@ -9,6 +9,7 @@ use log::LevelFilter;
 use regex::Regex;
 use rust_embed::RustEmbed;
 use slite::{Connection, Migrator};
+use sqlx::sqlite::SqliteJournalMode;
 use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -80,6 +81,7 @@ impl Database {
             .filename(path.as_ref())
             .create_if_missing(create_if_missing)
             .read_only(true)
+            .journal_mode(SqliteJournalMode::Wal)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
             .extension(Self::get_spellfix_lib());
@@ -87,6 +89,7 @@ impl Database {
         let writer_opts = SqliteConnectOptions::new()
             .filename(path.as_ref())
             .create_if_missing(create_if_missing)
+            .journal_mode(SqliteJournalMode::Wal)
             .log_statements(LevelFilter::Debug)
             .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
             .extension(Self::get_spellfix_lib());
@@ -207,11 +210,7 @@ impl Database {
         self.search_engine.search(query, options).await
     }
 
-    pub(crate) async fn sync(
-        &mut self,
-        folders: Vec<String>,
-        mount: Option<String>,
-    ) -> ProgressStream {
+    pub(crate) async fn sync(&self, folders: Vec<String>, mount: Option<String>) -> ProgressStream {
         let search_engine = self.search_engine.clone();
         self.sync_controller
             .lock()

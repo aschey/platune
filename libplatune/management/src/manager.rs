@@ -117,7 +117,7 @@ impl Manager {
         Ok(self.expand_paths(folders).await)
     }
 
-    pub async fn sync(&mut self, paths: Option<Vec<String>>) -> Result<ProgressStream, DbError> {
+    pub async fn sync(&self, paths: Option<Vec<String>>) -> Result<ProgressStream, DbError> {
         let folders = match paths {
             Some(paths) => paths,
             None => self.get_all_folders().await?,
@@ -174,7 +174,7 @@ impl Manager {
         Ok(res)
     }
 
-    pub async fn rename_path<P>(&mut self, from: P, to: P) -> Result<(), DbError>
+    pub async fn rename_path<P>(&self, from: P, to: P) -> Result<(), DbError>
     where
         P: AsRef<Path>,
     {
