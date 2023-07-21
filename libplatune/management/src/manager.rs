@@ -2,18 +2,20 @@ pub use crate::entry_type::EntryType;
 pub use crate::search::search_options::SearchOptions;
 pub use crate::search::search_result::SearchResult;
 use crate::{
-    config::Config,
+    config::{Config, FileConfig, MemoryConfig},
     database::{Database, DeletedEntry, LookupEntry},
     db_error::DbError,
     path_util::{clean_file_path, update_path, PathMut},
     sync::progress_stream::ProgressStream,
 };
+use itertools::Itertools;
 use normpath::PathExt;
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
 use thiserror::Error;
+use tokio::runtime::Runtime;
 
 #[derive(Error, Debug)]
 pub enum ManagerError {
@@ -23,6 +25,70 @@ pub enum ManagerError {
     WriteError(String),
     #[error(transparent)]
     DbError(DbError),
+}
+
+#[cfg(feature = "ffi")]
+#[derive(uniffi::Object)]
+pub struct FfiManager {
+    manager: Manager,
+}
+
+#[cfg(feature = "ffi")]
+#[derive(uniffi::Record)]
+pub struct FfiSearchOptions {
+    pub start_highlight: String,
+    pub end_highlight: String,
+    pub limit: i32,
+    pub valid_entry_types: Vec<String>,
+}
+
+#[cfg(feature = "ffi")]
+#[uniffi::export]
+impl FfiManager {
+    #[uniffi::constructor]
+    pub fn new(database: Arc<crate::database::FfiDatabase>) -> Arc<Self> {
+        Arc::new(Self {
+            manager: Manager::new(&database.database, Arc::new(MemoryConfig::new_boxed())),
+        })
+    }
+}
+
+#[cfg(feature = "ffi")]
+#[uniffi::export(async_runtime = "tokio")]
+impl FfiManager {
+    pub async fn lookup(
+        &self,
+        correlation_ids: Vec<i64>,
+        entry_type: EntryType,
+    ) -> Result<Vec<LookupEntry>, DbError> {
+        self.manager.lookup(correlation_ids, entry_type).await
+    }
+
+    pub async fn get_song_by_path(&self, path: String) -> Result<Option<LookupEntry>, DbError> {
+        self.manager.get_song_by_path(path).await
+    }
+
+    pub async fn search(
+        &self,
+        query: String,
+        options: FfiSearchOptions,
+    ) -> Result<Vec<SearchResult>, DbError> {
+        self.manager
+            .search(
+                &query,
+                SearchOptions {
+                    start_highlight: &options.start_highlight,
+                    end_highlight: &options.end_highlight,
+                    limit: options.limit,
+                    valid_entry_types: options
+                        .valid_entry_types
+                        .iter()
+                        .map(|s| s.as_str())
+                        .collect_vec(),
+                },
+            )
+            .await
+    }
 }
 
 #[derive(Clone)]

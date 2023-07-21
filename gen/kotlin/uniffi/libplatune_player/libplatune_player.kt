@@ -3,7 +3,7 @@
 
 @file:Suppress("NAME_SHADOWING")
 
-package uniffi.libplatune_player
+package uniffi.libplatune_player;
 
 // Common helper code.
 //
@@ -17,17 +17,13 @@ package uniffi.libplatune_player
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
-import com.sun.jna.Callback
-import com.sun.jna.IntegerType
 import com.sun.jna.Library
+import com.sun.jna.IntegerType
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
+import com.sun.jna.Callback
 import com.sun.jna.ptr.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.ConcurrentHashMap
@@ -37,6 +33,10 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -45,20 +45,18 @@ import kotlin.coroutines.suspendCoroutine
 @Structure.FieldOrder("capacity", "len", "data")
 open class RustBuffer : Structure() {
     @JvmField var capacity: Int = 0
-
     @JvmField var len: Int = 0
-
     @JvmField var data: Pointer? = null
 
-    class ByValue : RustBuffer(), Structure.ByValue
-    class ByReference : RustBuffer(), Structure.ByReference
+    class ByValue: RustBuffer(), Structure.ByValue
+    class ByReference: RustBuffer(), Structure.ByReference
 
     companion object {
         internal fun alloc(size: Int = 0) = rustCall() { status ->
             _UniFFILib.INSTANCE.ffi_libplatune_player_rustbuffer_alloc(size, status).also {
-                if (it.data == null) {
-                    throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=$size)")
-                }
+                if(it.data == null) {
+                   throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
+               }
             }
         }
 
@@ -115,12 +113,10 @@ class RustBufferByReference : ByReference(16) {
 @Structure.FieldOrder("len", "data")
 open class ForeignBytes : Structure() {
     @JvmField var len: Int = 0
-
     @JvmField var data: Pointer? = null
 
     class ByValue : ForeignBytes(), Structure.ByValue
 }
-
 // The FfiConverter interface handles converter types to and from the FFI
 //
 // All implementing objects should be public to support external types.  When a
@@ -176,11 +172,11 @@ public interface FfiConverter<KotlinType, FfiType> {
     fun liftFromRustBuffer(rbuf: RustBuffer.ByValue): KotlinType {
         val byteBuf = rbuf.asByteBuffer()!!
         try {
-            val item = read(byteBuf)
-            if (byteBuf.hasRemaining()) {
-                throw RuntimeException("junk remaining in buffer after lifting, something is very wrong!!")
-            }
-            return item
+           val item = read(byteBuf)
+           if (byteBuf.hasRemaining()) {
+               throw RuntimeException("junk remaining in buffer after lifting, something is very wrong!!")
+           }
+           return item
         } finally {
             RustBuffer.free(rbuf)
         }
@@ -188,21 +184,19 @@ public interface FfiConverter<KotlinType, FfiType> {
 }
 
 // FfiConverter that uses `RustBuffer` as the FfiType
-public interface FfiConverterRustBuffer<KotlinType> : FfiConverter<KotlinType, RustBuffer.ByValue> {
+public interface FfiConverterRustBuffer<KotlinType>: FfiConverter<KotlinType, RustBuffer.ByValue> {
     override fun lift(value: RustBuffer.ByValue) = liftFromRustBuffer(value)
     override fun lower(value: KotlinType) = lowerIntoRustBuffer(value)
 }
-
 // A handful of classes and functions to support the generated data structures.
 // This would be a good candidate for isolating in its own ffi-support lib.
 // Error runtime.
 @Structure.FieldOrder("code", "error_buf")
 internal open class RustCallStatus : Structure() {
     @JvmField var code: Byte = 0
-
     @JvmField var error_buf: RustBuffer.ByValue = RustBuffer.ByValue()
 
-    class ByValue : RustCallStatus(), Structure.ByValue
+    class ByValue: RustCallStatus(), Structure.ByValue
 
     fun isSuccess(): Boolean {
         return code == 0.toByte()
@@ -221,7 +215,7 @@ class InternalException(message: String) : Exception(message)
 
 // Each top-level error class has a companion object that can lift the error from the call status's rust buffer
 interface CallStatusErrorHandler<E> {
-    fun lift(error_buf: RustBuffer.ByValue): E
+    fun lift(error_buf: RustBuffer.ByValue): E;
 }
 
 // Helpers for calling Rust
@@ -229,15 +223,15 @@ interface CallStatusErrorHandler<E> {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-private inline fun <U, E : Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, callback: (RustCallStatus) -> U): U {
-    var status = RustCallStatus()
+private inline fun <U, E: Exception> rustCallWithError(errorHandler: CallStatusErrorHandler<E>, callback: (RustCallStatus) -> U): U {
+    var status = RustCallStatus();
     val return_value = callback(status)
     checkCallStatus(errorHandler, status)
     return return_value
 }
 
 // Check RustCallStatus and throw an error if the call wasn't successful
-private fun<E : Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<E>, status: RustCallStatus) {
+private fun<E: Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<E>, status: RustCallStatus) {
     if (status.isSuccess()) {
         return
     } else if (status.isError()) {
@@ -257,7 +251,7 @@ private fun<E : Exception> checkCallStatus(errorHandler: CallStatusErrorHandler<
 }
 
 // CallStatusErrorHandler implementation for times when we don't expect a CALL_ERROR
-object NullCallStatusErrorHandler : CallStatusErrorHandler<InternalException> {
+object NullCallStatusErrorHandler: CallStatusErrorHandler<InternalException> {
     override fun lift(error_buf: RustBuffer.ByValue): InternalException {
         RustBuffer.free(error_buf)
         return InternalException("Unexpected CALL_ERROR")
@@ -266,7 +260,7 @@ object NullCallStatusErrorHandler : CallStatusErrorHandler<InternalException> {
 
 // Call a rust function that returns a plain value
 private inline fun <U> rustCall(callback: (RustCallStatus) -> U): U {
-    return rustCallWithError(NullCallStatusErrorHandler, callback)
+    return rustCallWithError(NullCallStatusErrorHandler, callback);
 }
 
 // IntegerType that matches Rust's `usize` / C's `size_t`
@@ -295,7 +289,7 @@ public class USize(value: Long = 0) : IntegerType(Native.SIZE_T_SIZE, value, tru
         val size: Int
             get() = Native.SIZE_T_SIZE
 
-        fun readFromBuffer(buf: ByteBuffer): USize {
+        fun readFromBuffer(buf: ByteBuffer) : USize {
             // Make sure we always read usize integers using native byte-order, since they may be
             // casted from pointer values
             buf.order(ByteOrder.nativeOrder())
@@ -312,6 +306,7 @@ public class USize(value: Long = 0) : IntegerType(Native.SIZE_T_SIZE, value, tru
     }
 }
 
+
 // Map handles to objects
 //
 // This is used when the Rust code expects an opaque pointer to represent some foreign object.
@@ -322,9 +317,8 @@ public class USize(value: Long = 0) : IntegerType(Native.SIZE_T_SIZE, value, tru
 // Rust when it needs an opaque pointer.
 //
 // TODO: refactor callbacks to use this class
-internal class UniFfiHandleMap<T : Any> {
+internal class UniFfiHandleMap<T: Any> {
     private val map = ConcurrentHashMap<USize, T>()
-
     // Use AtomicInteger for our counter, since we may be on a 32-bit system.  4 billion possible
     // values seems like enough. If somehow we generate 4 billion handles, then this will wrap
     // around back to zero and we can assume the first handle generated will have been dropped by
@@ -361,7 +355,7 @@ private fun findLibraryName(componentName: String): String {
 }
 
 private inline fun <reified Lib : Library> loadIndirect(
-    componentName: String,
+    componentName: String
 ): Lib {
     return Native.load<Lib>(findLibraryName(componentName), Lib::class.java)
 }
@@ -373,167 +367,95 @@ internal interface _UniFFILib : Library {
     companion object {
         internal val INSTANCE: _UniFFILib by lazy {
             loadIndirect<_UniFFILib>(componentName = "libplatune_player")
-                .also { lib: _UniFFILib ->
-                    uniffiCheckContractApiVersion(lib)
-                    uniffiCheckApiChecksums(lib)
-                    FfiConverterForeignExecutor.register(lib)
+            .also { lib: _UniFFILib ->
+                uniffiCheckContractApiVersion(lib)
+                uniffiCheckApiChecksums(lib)
+                FfiConverterForeignExecutor.register(lib)
                 }
         }
     }
 
-    fun uniffi_libplatune_player_fn_free_ffieventsubscription(
-        `ptr`: Pointer,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_free_ffieventsubscription(`ptr`: Pointer,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffieventsubscription_recv(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackRustBuffer,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffieventsubscription_recv(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackRustBuffer,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_free_ffiplatuneplayer(
-        `ptr`: Pointer,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_free_ffiplatuneplayer(`ptr`: Pointer,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_constructor_ffiplatuneplayer_new(
-        `settings`: RustBuffer.ByValue,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_constructor_ffiplatuneplayer_new(`settings`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): Pointer
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_add_to_queue(
-        `ptr`: Pointer,
-        `songs`: RustBuffer.ByValue,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_add_to_queue(`ptr`: Pointer,`songs`: RustBuffer.ByValue,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_get_current_status(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackRustBuffer,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_get_current_status(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackRustBuffer,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_join(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_join(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_next(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_next(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_output_devices(
-        `ptr`: Pointer,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_output_devices(`ptr`: Pointer,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_pause(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_pause(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_previous(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_previous(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_resume(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_resume(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_seek(
-        `ptr`: Pointer,
-        `time`: RustBuffer.ByValue,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_seek(`ptr`: Pointer,`time`: RustBuffer.ByValue,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_set_output_device(
-        `ptr`: Pointer,
-        `device`: RustBuffer.ByValue,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_set_output_device(`ptr`: Pointer,`device`: RustBuffer.ByValue,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_set_queue(
-        `ptr`: Pointer,
-        `queue`: RustBuffer.ByValue,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_set_queue(`ptr`: Pointer,`queue`: RustBuffer.ByValue,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_set_volume(
-        `ptr`: Pointer,
-        `volume`: Float,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_set_volume(`ptr`: Pointer,`volume`: Float,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_stop(
-        `ptr`: Pointer,
-        `uniffiExecutor`: USize,
-        `uniffiCallback`: UniFfiFutureCallbackByte,
-        `uniffiCallbackData`: USize,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_stop(`ptr`: Pointer,`uniffiExecutor`: USize,`uniffiCallback`: UniFfiFutureCallbackByte,`uniffiCallbackData`: USize,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_subscribe(
-        `ptr`: Pointer,
-        _uniffi_out_err: RustCallStatus,
+    fun uniffi_libplatune_player_fn_method_ffiplatuneplayer_subscribe(`ptr`: Pointer,_uniffi_out_err: RustCallStatus, 
     ): Pointer
-    fun ffi_libplatune_player_rustbuffer_alloc(
-        `size`: Int,
-        _uniffi_out_err: RustCallStatus,
+    fun ffi_libplatune_player_rustbuffer_alloc(`size`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
-    fun ffi_libplatune_player_rustbuffer_from_bytes(
-        `bytes`: ForeignBytes.ByValue,
-        _uniffi_out_err: RustCallStatus,
+    fun ffi_libplatune_player_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
-    fun ffi_libplatune_player_rustbuffer_free(
-        `buf`: RustBuffer.ByValue,
-        _uniffi_out_err: RustCallStatus,
+    fun ffi_libplatune_player_rustbuffer_free(`buf`: RustBuffer.ByValue,_uniffi_out_err: RustCallStatus, 
     ): Unit
-    fun ffi_libplatune_player_rustbuffer_reserve(
-        `buf`: RustBuffer.ByValue,
-        `additional`: Int,
-        _uniffi_out_err: RustCallStatus,
+    fun ffi_libplatune_player_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Int,_uniffi_out_err: RustCallStatus, 
     ): RustBuffer.ByValue
-    fun uniffi_libplatune_player_checksum_method_ffieventsubscription_recv(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_add_to_queue(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_get_current_status(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_join(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_next(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_output_devices(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_pause(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_previous(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_resume(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_seek(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_set_output_device(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_set_queue(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_set_volume(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_stop(): Short
-    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_subscribe(): Short
-    fun uniffi_libplatune_player_checksum_constructor_ffiplatuneplayer_new(): Short
-    fun uniffi_foreign_executor_callback_set(
-        `callback`: UniFfiForeignExecutorCallback,
+    fun uniffi_libplatune_player_checksum_method_ffieventsubscription_recv(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_add_to_queue(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_get_current_status(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_join(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_next(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_output_devices(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_pause(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_previous(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_resume(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_seek(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_set_output_device(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_set_queue(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_set_volume(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_stop(
+    ): Short
+    fun uniffi_libplatune_player_checksum_method_ffiplatuneplayer_subscribe(
+    ): Short
+    fun uniffi_libplatune_player_checksum_constructor_ffiplatuneplayer_new(
+    ): Short
+    fun uniffi_foreign_executor_callback_set(`callback`: UniFfiForeignExecutorCallback,
     ): Unit
-    fun ffi_libplatune_player_uniffi_contract_version(): Int
+    fun ffi_libplatune_player_uniffi_contract_version(
+    ): Int
+    
 }
 
 private fun uniffiCheckContractApiVersion(lib: _UniFFILib) {
@@ -600,7 +522,8 @@ private fun uniffiCheckApiChecksums(lib: _UniFFILib) {
 
 // Public interface members begin here.
 
-public object FfiConverterUInt : FfiConverter<UInt, Int> {
+
+public object FfiConverterUInt: FfiConverter<UInt, Int> {
     override fun lift(value: Int): UInt {
         return value.toUInt()
     }
@@ -620,7 +543,7 @@ public object FfiConverterUInt : FfiConverter<UInt, Int> {
     }
 }
 
-public object FfiConverterFloat : FfiConverter<Float, Float> {
+public object FfiConverterFloat: FfiConverter<Float, Float> {
     override fun lift(value: Float): Float {
         return value
     }
@@ -640,7 +563,7 @@ public object FfiConverterFloat : FfiConverter<Float, Float> {
     }
 }
 
-public object FfiConverterString : FfiConverter<String, RustBuffer.ByValue> {
+public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
     // store our length and avoid writing it out to the buffer.
@@ -686,7 +609,8 @@ public object FfiConverterString : FfiConverter<String, RustBuffer.ByValue> {
     }
 }
 
-public object FfiConverterDuration : FfiConverterRustBuffer<java.time.Duration> {
+
+public object FfiConverterDuration: FfiConverterRustBuffer<java.time.Duration> {
     override fun read(buf: ByteBuffer): java.time.Duration {
         // Type mismatch (should be u64) but we check for overflow/underflow below
         val seconds = buf.getLong()
@@ -722,6 +646,7 @@ public object FfiConverterDuration : FfiConverterRustBuffer<java.time.Duration> 
         buf.putInt(value.nano)
     }
 }
+
 
 // Interface implemented by anything that can contain an object reference.
 //
@@ -835,13 +760,13 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 abstract class FFIObject(
-    protected val pointer: Pointer,
-) : Disposable, AutoCloseable {
+    protected val pointer: Pointer
+): Disposable, AutoCloseable {
 
     private val wasDestroyed = AtomicBoolean(false)
     private val callCounter = AtomicLong(1)
 
-    protected open fun freeRustArcPtr() {
+    open protected fun freeRustArcPtr() {
         // To be overridden in subclasses.
     }
 
@@ -872,7 +797,7 @@ abstract class FFIObject(
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (!this.callCounter.compareAndSet(c, c + 1L))
+        } while (! this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.pointer)
@@ -891,7 +816,7 @@ public interface FfiEventSubscriptionInterface {
 }
 
 class FfiEventSubscription(
-    pointer: Pointer,
+    pointer: Pointer
 ) : FFIObject(pointer), FfiEventSubscriptionInterface {
 
     /**
@@ -902,15 +827,16 @@ class FfiEventSubscription(
      *
      * Clients **must** call this method once done with the object, or cause a memory leak.
      */
-    protected override fun freeRustArcPtr() {
+    override protected fun freeRustArcPtr() {
         rustCall() { status ->
             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_free_ffieventsubscription(this.pointer, status)
         }
     }
 
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `recv`(): PlayerEvent {
+    override suspend fun `recv`() : PlayerEvent {
         // Create a new `CoroutineScope` for this operation, suspend the coroutine, and call the
         // scaffolding function, passing it one of the callback handlers from `AsyncTypes.kt`.
         //
@@ -927,7 +853,7 @@ class FfiEventSubscription(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffieventsubscription_recv(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -941,9 +867,12 @@ class FfiEventSubscription(
             }
         }
     }
+    
+
+    
 }
 
-public object FfiConverterTypeFfiEventSubscription : FfiConverter<FfiEventSubscription, Pointer> {
+public object FfiConverterTypeFfiEventSubscription: FfiConverter<FfiEventSubscription, Pointer> {
     override fun lower(value: FfiEventSubscription): Pointer = value.callWithPointer { it }
 
     override fun lift(value: Pointer): FfiEventSubscription {
@@ -965,71 +894,35 @@ public object FfiConverterTypeFfiEventSubscription : FfiConverter<FfiEventSubscr
     }
 }
 
+
+
+
 public interface FfiPlatunePlayerInterface {
     @Throws(PlayerException::class)
-    suspend fun `addToQueue`(
-        `songs`:
-
-        List<String>,
-    )@Throws(PlayerException::class)
-    suspend fun `getCurrentStatus`():
-        PlayerStatus@Throws(PlayerException::class)
-    suspend fun
-
-    `join`(
-    )@Throws(PlayerException::class)
-    suspend fun
-
-    `next`(
-    )@Throws(PlayerException::class)
-    fun `outputDevices`(): List<
-        String,
-        >@Throws(PlayerException::class)
-    suspend fun
-
-    `pause`(
-    )@Throws(PlayerException::class)
-    suspend fun
-
-    `previous`(
-    )@Throws(PlayerException::class)
-    suspend fun
-
-    `resume`(
-    )@Throws(PlayerException::class)
-    suspend fun `seek`(
-        `time`:
-
-        java.time.Duration,
-    )@Throws(PlayerException::class)
-    suspend fun `setOutputDevice`(
-        `device`:
-
-        String?,
-    )@Throws(PlayerException::class)
-    suspend fun `setQueue`(
-        `queue`:
-
-        List<String>,
-    )@Throws(PlayerException::class)
-    suspend fun `setVolume`(
-        `volume`:
-
-        Float,
-    )@Throws(PlayerException::class)
+    suspend fun `addToQueue`(`songs`: List<String>)@Throws(PlayerException::class)
+    suspend fun `getCurrentStatus`(): PlayerStatus@Throws(PlayerException::class)
+    suspend fun `join`()@Throws(PlayerException::class)
+    suspend fun `next`()@Throws(PlayerException::class)
+    fun `outputDevices`(): List<String>@Throws(PlayerException::class)
+    suspend fun `pause`()@Throws(PlayerException::class)
+    suspend fun `previous`()@Throws(PlayerException::class)
+    suspend fun `resume`()@Throws(PlayerException::class)
+    suspend fun `seek`(`time`: java.time.Duration)@Throws(PlayerException::class)
+    suspend fun `setOutputDevice`(`device`: String?)@Throws(PlayerException::class)
+    suspend fun `setQueue`(`queue`: List<String>)@Throws(PlayerException::class)
+    suspend fun `setVolume`(`volume`: Float)@Throws(PlayerException::class)
     suspend fun `stop`()
     fun `subscribe`(): FfiEventSubscription
 }
 
 class FfiPlatunePlayer(
-    pointer: Pointer,
+    pointer: Pointer
 ) : FFIObject(pointer), FfiPlatunePlayerInterface {
     constructor(`settings`: Settings) :
         this(
-            rustCall() { _status ->
-                _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_constructor_ffiplatuneplayer_new(FfiConverterTypeSettings.lower(`settings`), _status)
-            },
-        )
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_constructor_ffiplatuneplayer_new(FfiConverterTypeSettings.lower(`settings`),_status)
+})
 
     /**
      * Disconnect the object from the underlying Rust object.
@@ -1039,12 +932,13 @@ class FfiPlatunePlayer(
      *
      * Clients **must** call this method once done with the object, or cause a memory leak.
      */
-    protected override fun freeRustArcPtr() {
+    override protected fun freeRustArcPtr() {
         rustCall() { status ->
             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_free_ffiplatuneplayer(this.pointer, status)
         }
     }
 
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `addToQueue`(`songs`: List<String>) {
@@ -1078,10 +972,10 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `getCurrentStatus`(): PlayerStatus {
+    override suspend fun `getCurrentStatus`() : PlayerStatus {
         // Create a new `CoroutineScope` for this operation, suspend the coroutine, and call the
         // scaffolding function, passing it one of the callback handlers from `AsyncTypes.kt`.
         //
@@ -1098,7 +992,7 @@ class FfiPlatunePlayer(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_get_current_status(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -1112,7 +1006,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `join`() {
@@ -1132,7 +1026,7 @@ class FfiPlatunePlayer(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_join(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -1146,7 +1040,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `next`() {
@@ -1166,7 +1060,7 @@ class FfiPlatunePlayer(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_next(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -1180,23 +1074,19 @@ class FfiPlatunePlayer(
             }
         }
     }
-
-    @Throws(
-        PlayerException::class,
-        )
-    override fun `outputDevices`(): List<String> =
+    
+    @Throws(PlayerException::class)override fun `outputDevices`(): List<String> =
         callWithPointer {
-            rustCallWithError(PlayerException) { _status ->
-                _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_output_devices(
-                    it,
-
-                    _status,
-                )
-            }
+    rustCallWithError(PlayerException) { _status ->
+    _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_output_devices(it,
+        
+        _status)
+}
         }.let {
             FfiConverterSequenceString.lift(it)
         }
-
+    
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `pause`() {
@@ -1216,7 +1106,7 @@ class FfiPlatunePlayer(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_pause(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -1230,7 +1120,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `previous`() {
@@ -1250,7 +1140,7 @@ class FfiPlatunePlayer(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_previous(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -1264,7 +1154,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `resume`() {
@@ -1284,7 +1174,7 @@ class FfiPlatunePlayer(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_resume(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -1298,7 +1188,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `seek`(`time`: java.time.Duration) {
@@ -1332,7 +1222,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `setOutputDevice`(`device`: String?) {
@@ -1366,7 +1256,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `setQueue`(`queue`: List<String>) {
@@ -1400,7 +1290,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `setVolume`(`volume`: Float) {
@@ -1434,7 +1324,7 @@ class FfiPlatunePlayer(
             }
         }
     }
-
+    
     @Throws(PlayerException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
     override suspend fun `stop`() {
@@ -1454,7 +1344,7 @@ class FfiPlatunePlayer(
                         rustCall { status ->
                             _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_stop(
                                 thisPtr,
-
+                                
                                 FfiConverterForeignExecutor.lower(scope),
                                 callback,
                                 USize(0),
@@ -1470,19 +1360,21 @@ class FfiPlatunePlayer(
     }
     override fun `subscribe`(): FfiEventSubscription =
         callWithPointer {
-            rustCall() { _status ->
-                _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_subscribe(
-                    it,
-
-                    _status,
-                )
-            }
+    rustCall() { _status ->
+    _UniFFILib.INSTANCE.uniffi_libplatune_player_fn_method_ffiplatuneplayer_subscribe(it,
+        
+        _status)
+}
         }.let {
             FfiConverterTypeFfiEventSubscription.lift(it)
         }
+    
+    
+
+    
 }
 
-public object FfiConverterTypeFfiPlatunePlayer : FfiConverter<FfiPlatunePlayer, Pointer> {
+public object FfiConverterTypeFfiPlatunePlayer: FfiConverter<FfiPlatunePlayer, Pointer> {
     override fun lower(value: FfiPlatunePlayer): Pointer = value.callWithPointer { it }
 
     override fun lift(value: Pointer): FfiPlatunePlayer {
@@ -1503,6 +1395,11 @@ public object FfiConverterTypeFfiPlatunePlayer : FfiConverter<FfiPlatunePlayer, 
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
+
+
+
+
+
 
 // Callback function to execute a Rust task.  The Kotlin code schedules these in a coroutine then
 // invokes them.
@@ -1526,7 +1423,7 @@ object UniFfiForeignExecutorCallback : com.sun.jna.Callback {
     }
 }
 
-public object FfiConverterForeignExecutor : FfiConverter<CoroutineScope, USize> {
+public object FfiConverterForeignExecutor: FfiConverter<CoroutineScope, USize> {
     internal val handleMap = UniFfiHandleMap<CoroutineScope>()
 
     internal fun drop(handle: USize) {
@@ -1538,7 +1435,7 @@ public object FfiConverterForeignExecutor : FfiConverter<CoroutineScope, USize> 
     }
 
     // Number of live handles, exposed so we can test the memory management
-    public fun handleCount(): Int {
+    public fun handleCount() : Int {
         return handleMap.size
     }
 
@@ -1561,12 +1458,17 @@ public object FfiConverterForeignExecutor : FfiConverter<CoroutineScope, USize> 
     }
 }
 
-data class CurrentPosition(
-    var `position`: java.time.Duration,
-    var `retrievalTime`: java.time.Duration?,
-)
 
-public object FfiConverterTypeCurrentPosition : FfiConverterRustBuffer<CurrentPosition> {
+
+
+data class CurrentPosition (
+    var `position`: java.time.Duration, 
+    var `retrievalTime`: java.time.Duration?
+) {
+    
+}
+
+public object FfiConverterTypeCurrentPosition: FfiConverterRustBuffer<CurrentPosition> {
     override fun read(buf: ByteBuffer): CurrentPosition {
         return CurrentPosition(
             FfiConverterDuration.read(buf),
@@ -1575,23 +1477,28 @@ public object FfiConverterTypeCurrentPosition : FfiConverterRustBuffer<CurrentPo
     }
 
     override fun allocationSize(value: CurrentPosition) = (
-        FfiConverterDuration.allocationSize(value.`position`) +
+            FfiConverterDuration.allocationSize(value.`position`) +
             FfiConverterOptionalDuration.allocationSize(value.`retrievalTime`)
-        )
+    )
 
     override fun write(value: CurrentPosition, buf: ByteBuffer) {
-        FfiConverterDuration.write(value.`position`, buf)
-        FfiConverterOptionalDuration.write(value.`retrievalTime`, buf)
+            FfiConverterDuration.write(value.`position`, buf)
+            FfiConverterOptionalDuration.write(value.`retrievalTime`, buf)
     }
 }
 
-data class PlayerState(
-    var `volume`: Float,
-    var `queue`: List<String>,
-    var `queuePosition`: UInt,
-)
 
-public object FfiConverterTypePlayerState : FfiConverterRustBuffer<PlayerState> {
+
+
+data class PlayerState (
+    var `volume`: Float, 
+    var `queue`: List<String>, 
+    var `queuePosition`: UInt
+) {
+    
+}
+
+public object FfiConverterTypePlayerState: FfiConverterRustBuffer<PlayerState> {
     override fun read(buf: ByteBuffer): PlayerState {
         return PlayerState(
             FfiConverterFloat.read(buf),
@@ -1601,24 +1508,29 @@ public object FfiConverterTypePlayerState : FfiConverterRustBuffer<PlayerState> 
     }
 
     override fun allocationSize(value: PlayerState) = (
-        FfiConverterFloat.allocationSize(value.`volume`) +
+            FfiConverterFloat.allocationSize(value.`volume`) +
             FfiConverterSequenceString.allocationSize(value.`queue`) +
             FfiConverterUInt.allocationSize(value.`queuePosition`)
-        )
+    )
 
     override fun write(value: PlayerState, buf: ByteBuffer) {
-        FfiConverterFloat.write(value.`volume`, buf)
-        FfiConverterSequenceString.write(value.`queue`, buf)
-        FfiConverterUInt.write(value.`queuePosition`, buf)
+            FfiConverterFloat.write(value.`volume`, buf)
+            FfiConverterSequenceString.write(value.`queue`, buf)
+            FfiConverterUInt.write(value.`queuePosition`, buf)
     }
 }
 
-data class PlayerStatus(
-    var `trackStatus`: TrackStatus,
-    var `currentPosition`: CurrentPosition?,
-)
 
-public object FfiConverterTypePlayerStatus : FfiConverterRustBuffer<PlayerStatus> {
+
+
+data class PlayerStatus (
+    var `trackStatus`: TrackStatus, 
+    var `currentPosition`: CurrentPosition?
+) {
+    
+}
+
+public object FfiConverterTypePlayerStatus: FfiConverterRustBuffer<PlayerStatus> {
     override fun read(buf: ByteBuffer): PlayerStatus {
         return PlayerStatus(
             FfiConverterTypeTrackStatus.read(buf),
@@ -1627,21 +1539,26 @@ public object FfiConverterTypePlayerStatus : FfiConverterRustBuffer<PlayerStatus
     }
 
     override fun allocationSize(value: PlayerStatus) = (
-        FfiConverterTypeTrackStatus.allocationSize(value.`trackStatus`) +
+            FfiConverterTypeTrackStatus.allocationSize(value.`trackStatus`) +
             FfiConverterOptionalTypeCurrentPosition.allocationSize(value.`currentPosition`)
-        )
+    )
 
     override fun write(value: PlayerStatus, buf: ByteBuffer) {
-        FfiConverterTypeTrackStatus.write(value.`trackStatus`, buf)
-        FfiConverterOptionalTypeCurrentPosition.write(value.`currentPosition`, buf)
+            FfiConverterTypeTrackStatus.write(value.`trackStatus`, buf)
+            FfiConverterOptionalTypeCurrentPosition.write(value.`currentPosition`, buf)
     }
 }
 
-data class Settings(
-    var `resampleChunkSize`: UInt,
-)
 
-public object FfiConverterTypeSettings : FfiConverterRustBuffer<Settings> {
+
+
+data class Settings (
+    var `resampleChunkSize`: UInt
+) {
+    
+}
+
+public object FfiConverterTypeSettings: FfiConverterRustBuffer<Settings> {
     override fun read(buf: ByteBuffer): Settings {
         return Settings(
             FfiConverterUInt.read(buf),
@@ -1649,20 +1566,25 @@ public object FfiConverterTypeSettings : FfiConverterRustBuffer<Settings> {
     }
 
     override fun allocationSize(value: Settings) = (
-        FfiConverterUInt.allocationSize(value.`resampleChunkSize`)
-        )
+            FfiConverterUInt.allocationSize(value.`resampleChunkSize`)
+    )
 
     override fun write(value: Settings, buf: ByteBuffer) {
-        FfiConverterUInt.write(value.`resampleChunkSize`, buf)
+            FfiConverterUInt.write(value.`resampleChunkSize`, buf)
     }
 }
 
-data class TrackStatus(
-    var `status`: AudioStatus,
-    var `currentSong`: String?,
-)
 
-public object FfiConverterTypeTrackStatus : FfiConverterRustBuffer<TrackStatus> {
+
+
+data class TrackStatus (
+    var `status`: AudioStatus, 
+    var `currentSong`: String?
+) {
+    
+}
+
+public object FfiConverterTypeTrackStatus: FfiConverterRustBuffer<TrackStatus> {
     override fun read(buf: ByteBuffer): TrackStatus {
         return TrackStatus(
             FfiConverterTypeAudioStatus.read(buf),
@@ -1671,21 +1593,24 @@ public object FfiConverterTypeTrackStatus : FfiConverterRustBuffer<TrackStatus> 
     }
 
     override fun allocationSize(value: TrackStatus) = (
-        FfiConverterTypeAudioStatus.allocationSize(value.`status`) +
+            FfiConverterTypeAudioStatus.allocationSize(value.`status`) +
             FfiConverterOptionalString.allocationSize(value.`currentSong`)
-        )
+    )
 
     override fun write(value: TrackStatus, buf: ByteBuffer) {
-        FfiConverterTypeAudioStatus.write(value.`status`, buf)
-        FfiConverterOptionalString.write(value.`currentSong`, buf)
+            FfiConverterTypeAudioStatus.write(value.`status`, buf)
+            FfiConverterOptionalString.write(value.`currentSong`, buf)
     }
 }
 
+
+
+
 enum class AudioStatus {
-    PLAYING, PAUSED, STOPPED
+    PLAYING,PAUSED,STOPPED;
 }
 
-public object FfiConverterTypeAudioStatus : FfiConverterRustBuffer<AudioStatus> {
+public object FfiConverterTypeAudioStatus: FfiConverterRustBuffer<AudioStatus> {
     override fun read(buf: ByteBuffer) = try {
         AudioStatus.values()[buf.getInt() - 1]
     } catch (e: IndexOutOfBoundsException) {
@@ -1699,10 +1624,17 @@ public object FfiConverterTypeAudioStatus : FfiConverterRustBuffer<AudioStatus> 
     }
 }
 
-sealed class PlayerException(message: String) : Exception(message) {
-    // Each variant is a nested class
-    // Flat enums carries a string error message, so no special implementation is necessary.
-    class Failure(message: String) : PlayerException(message)
+
+
+
+
+
+
+sealed class PlayerException(message: String): Exception(message) {
+        // Each variant is a nested class
+        // Flat enums carries a string error message, so no special implementation is necessary.
+        class Failure(message: String) : PlayerException(message)
+        
 
     companion object ErrorHandler : CallStatusErrorHandler<PlayerException> {
         override fun lift(error_buf: RustBuffer.ByValue): PlayerException = FfiConverterTypePlayerError.lift(error_buf)
@@ -1711,10 +1643,12 @@ sealed class PlayerException(message: String) : Exception(message) {
 
 public object FfiConverterTypePlayerError : FfiConverterRustBuffer<PlayerException> {
     override fun read(buf: ByteBuffer): PlayerException {
-        return when (buf.getInt()) {
+        
+            return when(buf.getInt()) {
             1 -> PlayerException.Failure(FfiConverterString.read(buf))
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
+        
     }
 
     override fun allocationSize(value: PlayerException): Int {
@@ -1722,189 +1656,196 @@ public object FfiConverterTypePlayerError : FfiConverterRustBuffer<PlayerExcepti
     }
 
     override fun write(value: PlayerException, buf: ByteBuffer) {
-        when (value) {
+        when(value) {
             is PlayerException.Failure -> {
                 buf.putInt(1)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
+
 }
+
+
+
 
 sealed class PlayerEvent {
     data class StartQueue(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class QueueUpdated(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Stop(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Pause(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Resume(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Ended(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Next(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Previous(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class SetVolume(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Seek(
-        val `state`: PlayerState,
-        val `time`: java.time.Duration,
-    ) : PlayerEvent()
+        val `state`: PlayerState, 
+        val `time`: java.time.Duration
+        ) : PlayerEvent()
     data class QueueEnded(
-        val `state`: PlayerState,
-    ) : PlayerEvent()
+        val `state`: PlayerState
+        ) : PlayerEvent()
     data class Position(
-        val `currentPosition`: CurrentPosition,
-    ) : PlayerEvent()
+        val `currentPosition`: CurrentPosition
+        ) : PlayerEvent()
+    
+
+    
 }
 
-public object FfiConverterTypePlayerEvent : FfiConverterRustBuffer<PlayerEvent> {
+public object FfiConverterTypePlayerEvent : FfiConverterRustBuffer<PlayerEvent>{
     override fun read(buf: ByteBuffer): PlayerEvent {
-        return when (buf.getInt()) {
+        return when(buf.getInt()) {
             1 -> PlayerEvent.StartQueue(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             2 -> PlayerEvent.QueueUpdated(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             3 -> PlayerEvent.Stop(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             4 -> PlayerEvent.Pause(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             5 -> PlayerEvent.Resume(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             6 -> PlayerEvent.Ended(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             7 -> PlayerEvent.Next(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             8 -> PlayerEvent.Previous(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             9 -> PlayerEvent.SetVolume(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             10 -> PlayerEvent.Seek(
                 FfiConverterTypePlayerState.read(buf),
                 FfiConverterDuration.read(buf),
-            )
+                )
             11 -> PlayerEvent.QueueEnded(
                 FfiConverterTypePlayerState.read(buf),
-            )
+                )
             12 -> PlayerEvent.Position(
                 FfiConverterTypeCurrentPosition.read(buf),
-            )
+                )
             else -> throw RuntimeException("invalid enum value, something is very wrong!!")
         }
     }
 
-    override fun allocationSize(value: PlayerEvent) = when (value) {
+    override fun allocationSize(value: PlayerEvent) = when(value) {
         is PlayerEvent.StartQueue -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.QueueUpdated -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Stop -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Pause -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Resume -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Ended -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Next -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Previous -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.SetVolume -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Seek -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`) +
-                    FfiConverterDuration.allocationSize(value.`time`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+                + FfiConverterDuration.allocationSize(value.`time`)
+            )
         }
         is PlayerEvent.QueueEnded -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypePlayerState.allocationSize(value.`state`)
-                )
+                4
+                + FfiConverterTypePlayerState.allocationSize(value.`state`)
+            )
         }
         is PlayerEvent.Position -> {
             // Add the size for the Int that specifies the variant plus the size needed for all fields
             (
-                4 +
-                    FfiConverterTypeCurrentPosition.allocationSize(value.`currentPosition`)
-                )
+                4
+                + FfiConverterTypeCurrentPosition.allocationSize(value.`currentPosition`)
+            )
         }
     }
 
     override fun write(value: PlayerEvent, buf: ByteBuffer) {
-        when (value) {
+        when(value) {
             is PlayerEvent.StartQueue -> {
                 buf.putInt(1)
                 FfiConverterTypePlayerState.write(value.`state`, buf)
@@ -1970,7 +1911,12 @@ public object FfiConverterTypePlayerEvent : FfiConverterRustBuffer<PlayerEvent> 
     }
 }
 
-public object FfiConverterOptionalString : FfiConverterRustBuffer<String?> {
+
+
+
+
+
+public object FfiConverterOptionalString: FfiConverterRustBuffer<String?> {
     override fun read(buf: ByteBuffer): String? {
         if (buf.get().toInt() == 0) {
             return null
@@ -1996,7 +1942,10 @@ public object FfiConverterOptionalString : FfiConverterRustBuffer<String?> {
     }
 }
 
-public object FfiConverterOptionalDuration : FfiConverterRustBuffer<java.time.Duration?> {
+
+
+
+public object FfiConverterOptionalDuration: FfiConverterRustBuffer<java.time.Duration?> {
     override fun read(buf: ByteBuffer): java.time.Duration? {
         if (buf.get().toInt() == 0) {
             return null
@@ -2022,7 +1971,10 @@ public object FfiConverterOptionalDuration : FfiConverterRustBuffer<java.time.Du
     }
 }
 
-public object FfiConverterOptionalTypeCurrentPosition : FfiConverterRustBuffer<CurrentPosition?> {
+
+
+
+public object FfiConverterOptionalTypeCurrentPosition: FfiConverterRustBuffer<CurrentPosition?> {
     override fun read(buf: ByteBuffer): CurrentPosition? {
         if (buf.get().toInt() == 0) {
             return null
@@ -2048,7 +2000,10 @@ public object FfiConverterOptionalTypeCurrentPosition : FfiConverterRustBuffer<C
     }
 }
 
-public object FfiConverterSequenceString : FfiConverterRustBuffer<List<String>> {
+
+
+
+public object FfiConverterSequenceString: FfiConverterRustBuffer<List<String>> {
     override fun read(buf: ByteBuffer): List<String> {
         val len = buf.getInt()
         return List<String>(len) {
@@ -2071,28 +2026,38 @@ public object FfiConverterSequenceString : FfiConverterRustBuffer<List<String>> 
 }
 // Async return type handlers
 
+
+
+
+
+
+
+
+
+
+
 // FFI type for callback handlers
 internal interface UniFfiFutureCallbackByte : com.sun.jna.Callback {
     // Note: callbackData is always 0.  We could pass Rust a pointer/usize to represent the
     // continuation, but with JNA it's easier to just store it in the callback handler.
-    fun invoke(_callbackData: USize, returnValue: Byte?, callStatus: RustCallStatus.ByValue)
+    fun invoke(_callbackData: USize, returnValue: Byte?, callStatus: RustCallStatus.ByValue);
 }
 internal interface UniFfiFutureCallbackPointer : com.sun.jna.Callback {
     // Note: callbackData is always 0.  We could pass Rust a pointer/usize to represent the
     // continuation, but with JNA it's easier to just store it in the callback handler.
-    fun invoke(_callbackData: USize, returnValue: Pointer?, callStatus: RustCallStatus.ByValue)
+    fun invoke(_callbackData: USize, returnValue: Pointer?, callStatus: RustCallStatus.ByValue);
 }
 internal interface UniFfiFutureCallbackRustBuffer : com.sun.jna.Callback {
     // Note: callbackData is always 0.  We could pass Rust a pointer/usize to represent the
     // continuation, but with JNA it's easier to just store it in the callback handler.
-    fun invoke(_callbackData: USize, returnValue: RustBuffer.ByValue?, callStatus: RustCallStatus.ByValue)
+    fun invoke(_callbackData: USize, returnValue: RustBuffer.ByValue?, callStatus: RustCallStatus.ByValue);
 }
 
 // Callback handlers for an async call.  These are invoked by Rust when the future is ready.  They
 // lift the return value or error and resume the suspended function.
 
-internal class UniFfiFutureCallbackHandlerVoid_TypePlayerError(val continuation: Continuation<Unit>) :
-    UniFfiFutureCallbackByte {
+internal class UniFfiFutureCallbackHandlerVoid_TypePlayerError(val continuation: Continuation<Unit>)
+    : UniFfiFutureCallbackByte {
     override fun invoke(_callbackData: USize, returnValue: Byte?, callStatus: RustCallStatus.ByValue) {
         try {
             checkCallStatus(PlayerException, callStatus)
@@ -2103,8 +2068,8 @@ internal class UniFfiFutureCallbackHandlerVoid_TypePlayerError(val continuation:
     }
 }
 
-internal class UniFfiFutureCallbackHandlerTypeFfiEventSubscription(val continuation: Continuation<FfiEventSubscription>) :
-    UniFfiFutureCallbackPointer {
+internal class UniFfiFutureCallbackHandlerTypeFfiEventSubscription(val continuation: Continuation<FfiEventSubscription>)
+    : UniFfiFutureCallbackPointer {
     override fun invoke(_callbackData: USize, returnValue: Pointer?, callStatus: RustCallStatus.ByValue) {
         try {
             checkCallStatus(NullCallStatusErrorHandler, callStatus)
@@ -2115,8 +2080,8 @@ internal class UniFfiFutureCallbackHandlerTypeFfiEventSubscription(val continuat
     }
 }
 
-internal class UniFfiFutureCallbackHandlerTypeFfiPlatunePlayer(val continuation: Continuation<FfiPlatunePlayer>) :
-    UniFfiFutureCallbackPointer {
+internal class UniFfiFutureCallbackHandlerTypeFfiPlatunePlayer(val continuation: Continuation<FfiPlatunePlayer>)
+    : UniFfiFutureCallbackPointer {
     override fun invoke(_callbackData: USize, returnValue: Pointer?, callStatus: RustCallStatus.ByValue) {
         try {
             checkCallStatus(NullCallStatusErrorHandler, callStatus)
@@ -2127,8 +2092,8 @@ internal class UniFfiFutureCallbackHandlerTypeFfiPlatunePlayer(val continuation:
     }
 }
 
-internal class UniFfiFutureCallbackHandlerTypePlayerStatus_TypePlayerError(val continuation: Continuation<PlayerStatus>) :
-    UniFfiFutureCallbackRustBuffer {
+internal class UniFfiFutureCallbackHandlerTypePlayerStatus_TypePlayerError(val continuation: Continuation<PlayerStatus>)
+    : UniFfiFutureCallbackRustBuffer {
     override fun invoke(_callbackData: USize, returnValue: RustBuffer.ByValue?, callStatus: RustCallStatus.ByValue) {
         try {
             checkCallStatus(PlayerException, callStatus)
@@ -2139,8 +2104,8 @@ internal class UniFfiFutureCallbackHandlerTypePlayerStatus_TypePlayerError(val c
     }
 }
 
-internal class UniFfiFutureCallbackHandlerTypePlayerEvent_TypePlayerError(val continuation: Continuation<PlayerEvent>) :
-    UniFfiFutureCallbackRustBuffer {
+internal class UniFfiFutureCallbackHandlerTypePlayerEvent_TypePlayerError(val continuation: Continuation<PlayerEvent>)
+    : UniFfiFutureCallbackRustBuffer {
     override fun invoke(_callbackData: USize, returnValue: RustBuffer.ByValue?, callStatus: RustCallStatus.ByValue) {
         try {
             checkCallStatus(PlayerException, callStatus)
@@ -2151,8 +2116,8 @@ internal class UniFfiFutureCallbackHandlerTypePlayerEvent_TypePlayerError(val co
     }
 }
 
-internal class UniFfiFutureCallbackHandlerSequenceString_TypePlayerError(val continuation: Continuation<List<String>>) :
-    UniFfiFutureCallbackRustBuffer {
+internal class UniFfiFutureCallbackHandlerSequenceString_TypePlayerError(val continuation: Continuation<List<String>>)
+    : UniFfiFutureCallbackRustBuffer {
     override fun invoke(_callbackData: USize, returnValue: RustBuffer.ByValue?, callStatus: RustCallStatus.ByValue) {
         try {
             checkCallStatus(PlayerException, callStatus)
@@ -2162,3 +2127,4 @@ internal class UniFfiFutureCallbackHandlerSequenceString_TypePlayerError(val con
         }
     }
 }
+

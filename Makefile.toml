@@ -224,17 +224,28 @@ script = '''
 (cd ./libplatune/player && cross build --features ffi --target i686-linux-android)
 (cd ./libplatune/player && cross build --features ffi --target x86_64-linux-android)
 
+(cd ./libplatune/management && SQLX_OFFLINE=1 cross build --features ffi --target aarch64-linux-android)
+(cd ./libplatune/management && SQLX_OFFLINE=1 cross build --features ffi --target armv7-linux-androideabi)
+(cd ./libplatune/management && SQLX_OFFLINE=1 cross build --features ffi --target i686-linux-android)
+(cd ./libplatune/management && SQLX_OFFLINE=1 cross build --features ffi --target x86_64-linux-android)
+
 cargo run --bin=uniffi-bindgen generate --library target/aarch64-linux-android/debug/liblibplatune_player.so --language kotlin --out-dir gen/kotlin
+cargo run --bin=uniffi-bindgen generate --library target/aarch64-linux-android/debug/liblibplatune_management.so --language kotlin --out-dir gen/kotlin
 
-cp ./target/aarch64-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/arm64-v8a/liblibplatune_player.so
-cp ./target/armv7-linux-androideabi/debug/liblibplatune_player.so ./gen/kotlin/path/armeabi-v7a/liblibplatune_player.so
-cp ./target/i686-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/x86/liblibplatune_player.so
-cp ./target/x86_64-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/x86_64/liblibplatune_player.so
+cp -r ./target/aarch64-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/arm64-v8a/liblibplatune_player.so
+cp -r ./target/armv7-linux-androideabi/debug/liblibplatune_player.so ./gen/kotlin/path/armeabi-v7a/liblibplatune_player.so
+cp -r ./target/i686-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/x86/liblibplatune_player.so
+cp -r ./target/x86_64-linux-android/debug/liblibplatune_player.so ./gen/kotlin/path/x86_64/liblibplatune_player.so
 
-cp "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/arm64-v8a/libc++_shared.so" ./gen/kotlin/path/arm64-v8a/libc++_shared.so
-cp "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/libc++_shared.so" ./gen/kotlin/path/armeabi-v7a/libc++_shared.so
-cp "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/x86/libc++_shared.so" ./gen/kotlin/path/x86/libc++_shared.so
-cp "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/x86_64/libc++_shared.so" ./gen/kotlin/path/x86_64/libc++_shared.so
+cp -r ./target/aarch64-linux-android/debug/liblibplatune_management.so ./gen/kotlin/path/arm64-v8a/liblibplatune_management.so
+cp -r ./target/armv7-linux-androideabi/debug/liblibplatune_management.so ./gen/kotlin/path/armeabi-v7a/liblibplatune_management.so
+cp -r ./target/i686-linux-android/debug/liblibplatune_management.so ./gen/kotlin/path/x86/liblibplatune_management.so
+cp -r ./target/x86_64-linux-android/debug/liblibplatune_management.so ./gen/kotlin/path/x86_64/liblibplatune_management.so
+
+cp -r "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/arm64-v8a/libc++_shared.so" ./gen/kotlin/path/arm64-v8a/libc++_shared.so
+cp -r "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/armeabi-v7a/libc++_shared.so" ./gen/kotlin/path/armeabi-v7a/libc++_shared.so
+cp -r "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/x86/libc++_shared.so" ./gen/kotlin/path/x86/libc++_shared.so
+cp -r "$ANDROID_SDK_ROOT/ndk/23.1.7779620/sources/cxx-stl/llvm-libc++/libs/x86_64/libc++_shared.so" ./gen/kotlin/path/x86_64/libc++_shared.so
 
 cd ./gen/kotlin && ./gradlew clean build
 '''

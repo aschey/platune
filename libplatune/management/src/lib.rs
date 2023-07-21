@@ -9,3 +9,6 @@ mod path_util;
 pub mod search;
 mod sql_util;
 pub mod sync;
+
+#[cfg(feature = "ffi")]
+uniffi::include_scaffolding!("management");

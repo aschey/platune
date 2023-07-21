@@ -161,7 +161,6 @@ pub mod platune_player {
 
     #[derive(Derivative)]
     #[derivative(Debug)]
-    // #[cfg_attr(feature = "ffi", derive(uniffi::Object))]
     pub struct PlatunePlayer<B>
     where
         B: AudioBackend,

@@ -7,6 +7,7 @@ version = "0.1.0"
 [lib]
 name = "libplatune_management"
 path = "src/lib.rs"
+crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bench]]
 harness = false
@@ -38,9 +39,9 @@ sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "15458fa9d6f46a3c55f
     "macros",
     "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "a726cfe4ce2c77bbb5924e297f604558028bbfda", features = [
-    "native-notification",
-] }
+# daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "a726cfe4ce2c77bbb5924e297f604558028bbfda", features = [
+#     "native-notification",
+# ] }
 strum = { version = "0.25", features = ["derive"] }
 tap = "1"
 thiserror = "1"
@@ -49,6 +50,10 @@ tokio-stream = { version = "0.1", features = ["net", "sync"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
 walkdir = "2"
+uniffi = { version = "0.24.1", features = ["tokio"], optional = true }
+
+[build-dependencies]
+uniffi = { version = "0.24.1", features = ["build", "tokio"], optional = true }
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio"] }
@@ -57,3 +62,6 @@ pretty_assertions = "1.4.0"
 rstest = "0.18.1"
 tempfile = "3.6.0"
 tracing-subscriber = "0.3.17"
+
+[features]
+ffi = ["uniffi"]

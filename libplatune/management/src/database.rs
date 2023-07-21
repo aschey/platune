@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{path::Path, time::Duration};
+use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use tracing::info;
 use uuid::Uuid;
@@ -22,6 +23,32 @@ use uuid::Uuid;
 #[derive(RustEmbed)]
 #[folder = "db/schema"]
 struct Schema;
+
+#[cfg(feature = "ffi")]
+#[derive(uniffi::Object)]
+pub struct FfiDatabase {
+    pub(crate) database: Database,
+    _rt: Runtime,
+}
+
+#[cfg(feature = "ffi")]
+#[uniffi::export]
+impl FfiDatabase {
+    #[uniffi::constructor]
+    pub fn new(path: String, create_if_missing: bool) -> Result<Arc<Self>, DbError> {
+        let rt = Runtime::new().unwrap();
+        let database = rt.block_on(async { Database::connect(path, create_if_missing).await })?;
+        Ok(Arc::new(Self { database, _rt: rt }))
+    }
+}
+
+#[cfg(feature = "ffi")]
+#[uniffi::export(async_runtime = "tokio")]
+impl FfiDatabase {
+    pub async fn sync_database(&self) -> Result<(), DbError> {
+        self.database.sync_database().await
+    }
+}
 
 #[derive(Clone)]
 pub struct Database {
@@ -32,6 +59,7 @@ pub struct Database {
 }
 
 #[derive(Debug, sqlx::FromRow)]
+#[cfg_attr(feature = "ffi", derive(uniffi::Record))]
 pub struct LookupEntry {
     pub artist: String,
     pub album_artist: String,
@@ -138,6 +166,8 @@ impl Database {
             Err(_) => "./assets/windows/spellfix.dll".to_owned(),
             #[cfg(target_os = "macos")]
             Err(_) => "./assets/mac/spellfix.dylib".to_owned(),
+            #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+            Err(_) => "".to_owned(),
         }
     }
 

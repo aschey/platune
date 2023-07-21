@@ -16,7 +16,6 @@ eyre = "0.6"
 flume = "0.10"
 futures-util = "0.3"
 rb = "0.4"
-rubato = "0.12"
 stream-download = { git = "https://github.com/aschey/stream-download-rs", rev = "1f230f3f8584f19fab5398333bd6ed74f635b364", features = [
     "http-rustls",
 ] }

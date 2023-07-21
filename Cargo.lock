@@ -1814,7 +1814,7 @@ dependencies = [
  "cpal",
  "dasp",
  "rb",
- "rubato 0.14.1",
+ "rubato",
  "symphonia",
  "tap",
  "thiserror",
@@ -3695,7 +3695,6 @@ dependencies = [
  "concread",
  "criterion",
  "ctor",
- "daemon-slayer",
  "directories",
  "eyre",
  "futures",
@@ -3721,6 +3720,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "tracing-subscriber",
+ "uniffi",
  "uuid",
  "walkdir",
 ]
@@ -3741,7 +3741,6 @@ dependencies = [
  "pretty_assertions",
  "rb",
  "rstest",
- "rubato 0.12.0",
  "spin_sleep",
  "stream-download",
  "strum 0.25.0",
@@ -5200,18 +5199,6 @@ dependencies = [
  "rustc_version",
  "syn 2.0.26",
  "unicode-ident",
-]
-
-[[package]]
-name = "rubato"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd70209c27d5b08f5528bdc779ea3ffb418954e28987f9f9775c6eac41003f9c"
-dependencies = [
- "num-complex",
- "num-integer",
- "num-traits",
- "realfft",
 ]
 
 [[package]]
