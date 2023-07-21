@@ -161,10 +161,7 @@ pub mod platune_player {
 
     #[derive(Derivative)]
     #[derivative(Debug)]
-    pub struct PlatunePlayer<B>
-    where
-        B: AudioBackend,
-    {
+    pub struct PlatunePlayer<B: AudioBackend> {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
