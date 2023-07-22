@@ -30,10 +30,10 @@ notify = { version = "6", default-features = false, features = [
 num_cpus = "1"
 regex = "1"
 rust-embed = "6"
-slite = { git = "https://github.com/aschey/slite", rev = "03431a4d60cc1b66f531099c2a316c61fab251ef", default-features = false, features = [
+slite = { git = "https://github.com/aschey/slite", rev = "3831bd9fa158723a7511ef22ec67cdd4451b4383", default-features = false, features = [
     "read-files",
 ] }
-sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "15458fa9d6f46a3c55fe39c166174e7ed65fa5b4", default-features = false, features = [
+sqlx = { version = "0.7", default-features = false, features = [
     "sqlite",
     "any",
     "macros",
