@@ -29,16 +29,16 @@ notify = { version = "6", default-features = false, features = [
 num_cpus = "1"
 regex = "1"
 rust-embed = "6"
-slite = { git = "https://github.com/aschey/slite", rev = "03431a4d60cc1b66f531099c2a316c61fab251ef", default-features = false, features = [
+slite = { git = "https://github.com/aschey/slite", rev = "3831bd9fa158723a7511ef22ec67cdd4451b4383", default-features = false, features = [
     "read-files",
 ] }
-sqlx = { git = "https://github.com/launchbadge/sqlx", rev = "15458fa9d6f46a3c55fe39c166174e7ed65fa5b4", default-features = false, features = [
+sqlx = { version = "0.7", default-features = false, features = [
     "sqlite",
     "any",
     "macros",
     "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "06b0048693a48a28ba887081692d5aa0a67135ca", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "29aaf2a67a139a32cfc80b6da790d2eb1e20356d", features = [
     "native-notification",
 ] }
 strum = { version = "0.25", features = ["derive"] }

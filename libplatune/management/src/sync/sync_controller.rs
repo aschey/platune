@@ -64,7 +64,7 @@ impl SyncController {
                     .send(None)
                     .tap_err(|e| warn!("Error sending final sync message to clients {e:?}"));
 
-                let _ = Notification::new("platuned".parse().unwrap())
+                let _ = Notification::new("com.platune.platuned".parse().unwrap())
                     .summary("Sync completed")
                     .show()
                     .await
