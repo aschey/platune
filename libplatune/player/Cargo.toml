@@ -15,7 +15,7 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.10"
 futures-util = "0.3"
-stream-download = { git = "https://github.com/aschey/stream-download-rs", rev = "66c3cf79ac5f6b528bd24b0da064b8b8c2e43a54" }
+stream-download = { git = "https://github.com/aschey/stream-download-rs", rev = "2f50deb906349f13269d4786263c919fa357945d", features=["http-rustls"] }
 strum = { version = "0.25", features = ["derive"] }
 tap = "1"
 tempfile = "3"

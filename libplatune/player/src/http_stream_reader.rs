@@ -2,7 +2,11 @@ use decal::decoder::{ReadSeekSource, Source};
 use eyre::{Context, Result};
 use tracing::info;
 
-use stream_download::{http::HttpStream, source::SourceStream, StreamDownload};
+use stream_download::{
+    http::HttpStream,
+    source::{Settings, SourceStream},
+    StreamDownload,
+};
 
 #[derive(Debug)]
 pub(crate) struct HttpStreamReader {
@@ -19,7 +23,7 @@ impl HttpStreamReader {
         let file_len = stream.content_length().await;
         Ok(Self {
             url: url.clone(),
-            downloader: StreamDownload::from_stream(stream)
+            downloader: StreamDownload::from_stream(stream, Settings::default())
                 .wrap_err_with(|| "Error creating stream downloader")?,
             file_len,
         })
