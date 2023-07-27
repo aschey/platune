@@ -1281,7 +1281,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "daemon-slayer-build-info",
  "daemon-slayer-cli",
@@ -1301,7 +1301,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-build-info"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "console",
  "daemon-slayer-core",
@@ -1312,7 +1312,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "clap 4.3.19",
  "daemon-slayer-core",
@@ -1322,7 +1322,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "arc-swap",
  "bollard",
@@ -1354,7 +1354,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-config"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "arc-swap",
  "confique",
@@ -1373,7 +1373,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "confique",
  "crossterm",
@@ -1390,7 +1390,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1424,7 +1424,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "color-eyre",
  "daemon-slayer-core",
@@ -1437,7 +1437,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1451,7 +1451,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "daemon-slayer-core",
  "tokio",
@@ -1462,7 +1462,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "confique",
  "ctor",
@@ -1486,7 +1486,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1497,7 +1497,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-notify"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "daemon-slayer-core",
  "notify-rust",
@@ -1509,7 +1509,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-process"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "bytesize",
  "chrono",
@@ -1525,7 +1525,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "daemon-slayer-core",
  "daemon-slayer-macros",
@@ -1543,7 +1543,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=29aaf2a67a139a32cfc80b6da790d2eb1e20356d#29aaf2a67a139a32cfc80b6da790d2eb1e20356d"
+source = "git+https://github.com/aschey/daemon-slayer?rev=e2bfc76021c255df997a41880451d95d655dd831#e2bfc76021c255df997a41880451d95d655dd831"
 dependencies = [
  "daemon-slayer-core",
  "futures",
