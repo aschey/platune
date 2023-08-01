@@ -77,7 +77,7 @@ async fn run() -> Result<(), BoxedError> {
     let mut cli = Cli::builder()
         .with_base_command(clap_base_command())
         .with_provider(ClientCliProvider::new(manager.clone()))
-        .with_provider(ProcessCliProvider::new(manager.info().await?.pid))
+        .with_provider(ProcessCliProvider::new(manager.status().await?.pid))
         .with_provider(ConsoleCliProvider::new(console))
         .with_provider(LoggingCliProvider::new(logger_builder))
         .with_provider(ErrorHandlerCliProvider::default())

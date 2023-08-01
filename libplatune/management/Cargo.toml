@@ -38,7 +38,7 @@ sqlx = { version = "0.7", default-features = false, features = [
     "macros",
     "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "e2bfc76021c255df997a41880451d95d655dd831", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "29211232215525fe6d898ebaafae167b777879cc", features = [
     "native-notification",
 ] }
 strum = { version = "0.25", features = ["derive"] }
@@ -55,5 +55,5 @@ criterion = { version = "0.5.1", features = ["async_tokio"] }
 ctor = "0.2.4"
 pretty_assertions = "1.4.0"
 rstest = "0.18.1"
-tempfile = "3.6.0"
+tempfile = "3.7.0"
 tracing-subscriber = "0.3.17"

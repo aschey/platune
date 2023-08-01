@@ -26,7 +26,7 @@ decal = { git = "https://github.com/aschey/decal", rev = "49c26561f7ea9a4f783e1d
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.71"
+async-trait = "0.1.72"
 ctor = "0.2.4"
 futures = "0.3.28"
 pretty_assertions = "1.4.0"
