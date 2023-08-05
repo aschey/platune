@@ -1,6 +1,9 @@
 on: [push]
 
 name: CI
+env:
+  BINSTALL_VERSION: 1.1.2
+  PROTOC_VERSION: 23.4
 
 jobs:
   rust:
@@ -23,8 +26,6 @@ jobs:
       fail-fast: false
     env:
       SQLX_OFFLINE: true
-      RUSTFLAGS: "-Cinstrument-coverage"
-      LLVM_PROFILE_FILE: "platune-%p-%m.profraw"
       PROTOC: ${{ github.workspace }}/protoc/bin/protoc
     name: Run Rust tests
     runs-on: ${{ matrix.os }}
@@ -44,8 +45,8 @@ jobs:
           shared-key: cache-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         run: |
-          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v3.19.4/protoc-3.19.4-${{ matrix.protoc-target }}.zip
-          unzip protoc-3.19.4-${{ matrix.protoc-target }}.zip -d "${{ github.workspace }}/protoc"
+          curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v${{env.PROTOC_VERSION}}/protoc-${{env.PROTOC_VERSION}}-${{ matrix.protoc-target }}.zip
+          unzip protoc-${{env.PROTOC_VERSION}}-${{ matrix.protoc-target }}.zip -d "${{ github.workspace }}/protoc"
           cargo build --no-default-features
           cargo build
           cargo build --all-features
@@ -55,7 +56,7 @@ jobs:
       - name: Test
         run: |
           # Install precompiled binaries to improve build time
-          curl -LO https://github.com/cargo-bins/cargo-binstall/releases/download/v0.13.3/cargo-binstall-${{ matrix.binstall-target }}
+          curl -LO https://github.com/cargo-bins/cargo-binstall/releases/download/v${{env.BINSTALL_VERSION}}/cargo-binstall-${{ matrix.binstall-target }}
           ${{ matrix.binstall-extract }} cargo-binstall-${{ matrix.binstall-target }}
           ./cargo-binstall cargo-nextest --no-confirm --force
           rustup component add llvm-tools-preview 
@@ -63,15 +64,15 @@ jobs:
       - name: Generate coverage
         if: matrix.os == 'ubuntu-latest'
         run: |
-          ./cargo-binstall grcov --no-confirm --force
-          grcov . -s . --binary-path ./target/debug/ -t lcov --branch --ignore-not-existing --ignore "target/**/*" --ignore "**/*/*_test.rs" -o ./target/debug/lcov.info
+          ./cargo-binstall cargo-llvm-cov --no-confirm --force
+          cargo llvm-cov --all-features --codecov --ignore-filename-regex ".cargo|.*_test\.rs" > ./codecov.json
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v3
         with:
           verbose: true
           fail_ci_if_error: true
-          files: ./target/debug/lcov.info
+          files: ./codecov.json
   go:
     strategy:
       matrix:
