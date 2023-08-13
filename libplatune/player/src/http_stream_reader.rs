@@ -3,9 +3,7 @@ use eyre::{Context, Result};
 use tracing::info;
 
 use stream_download::{
-    http::HttpStream,
-    source::{Settings, SourceStream},
-    StreamDownload,
+    http::HttpStream, reqwest::client::Client, source::SourceStream, Settings, StreamDownload,
 };
 
 #[derive(Debug)]
@@ -17,10 +15,10 @@ pub(crate) struct HttpStreamReader {
 
 impl HttpStreamReader {
     pub async fn new(url: String) -> Result<Self> {
-        let stream = HttpStream::create(url.parse()?)
+        let stream = HttpStream::<Client>::create(url.parse()?)
             .await
             .wrap_err_with(|| "Error creating http stream")?;
-        let file_len = stream.content_length().await;
+        let file_len = stream.content_length();
         Ok(Self {
             url: url.clone(),
             downloader: StreamDownload::from_stream(stream, Settings::default())

@@ -9,19 +9,23 @@ args = [
     "--",
     "-detect_leaks=0",
 ]
+workspace = false
 command = "cargo"
 condition = { platforms = ["linux"] }
 install_crate = "cargo-fuzz"
 
 [tasks.update]
+workspace = false
 args = ["update"]
 command = "cargo"
 install_crate = "cargo-add"
 
 [tasks.upgrade]
+workspace = false
 args = ["upgrade"]
 command = "cargo"
 install_crate = "cargo-add"
 
 [tasks.update-all]
+workspace = false
 dependencies = ["update", "upgrade"]

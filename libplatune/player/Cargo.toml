@@ -15,7 +15,7 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.10"
 futures-util = "0.3"
-stream-download = { git = "https://github.com/aschey/stream-download-rs", rev = "2f50deb906349f13269d4786263c919fa357945d", features=["http-rustls"] }
+stream-download = { version = "0.1.0", features = ["reqwest-rustls"] }
 strum = { version = "0.25", features = ["derive"] }
 tap = "1"
 tempfile = "3"
@@ -26,7 +26,7 @@ decal = { git = "https://github.com/aschey/decal", rev = "49c26561f7ea9a4f783e1d
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.72"
+async-trait = "0.1.73"
 ctor = "0.2.4"
 futures = "0.3.28"
 pretty_assertions = "1.4.0"
