@@ -1,15 +1,15 @@
-pub use crate::management_client::*;
-pub use crate::player_client::*;
-use rpc::*;
 use std::convert::TryInto;
 use std::env;
 use std::error::Error;
 use std::path::{Path, PathBuf};
-use tonic::{
-    codegen::StdError,
-    transport::{Channel, Endpoint, Uri},
-};
+
+use rpc::*;
+use tonic::codegen::StdError;
+use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
+
+pub use crate::management_client::*;
+pub use crate::player_client::*;
 
 pub mod rpc {
     tonic::include_proto!("player_rpc");

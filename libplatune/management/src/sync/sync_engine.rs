@@ -1,27 +1,27 @@
-use super::{dir_read::DirRead, sync_dal::SyncDAL, tag::Tag};
-use crate::{consts::MIN_WORDS, db_error::DbError, path_util::clean_file_path};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::path::{Path, PathBuf};
+use std::time::Instant;
+
 use ignore::{WalkBuilder, WalkState};
 use itertools::Itertools;
 use lofty::Probe;
 use regex::Regex;
 use sqlx::{Pool, Sqlite};
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-    path::{Path, PathBuf},
-    time::Instant,
-};
 use tap::TapFallible;
 use thiserror::Error;
-use tokio::{
-    sync::{
-        broadcast,
-        mpsc::{self, Sender},
-    },
-    task::{spawn_blocking, JoinHandle},
-};
+use tokio::sync::broadcast;
+use tokio::sync::mpsc::{self, Sender};
+use tokio::task::{spawn_blocking, JoinHandle};
 use tracing::{error, info};
 use walkdir::WalkDir;
+
+use super::dir_read::DirRead;
+use super::sync_dal::SyncDAL;
+use super::tag::Tag;
+use crate::consts::MIN_WORDS;
+use crate::db_error::DbError;
+use crate::path_util::clean_file_path;
 
 #[derive(Error, Debug, Clone)]
 pub enum SyncError {

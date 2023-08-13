@@ -1,18 +1,20 @@
-use crate::{config::MemoryConfig, database::Database, manager::Manager};
+use std::fs::{self, create_dir, create_dir_all, File};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
 use futures::StreamExt;
 use itertools::Itertools;
 use lofty::{Accessor, ItemKey, Probe, TagExt, TaggedFileExt};
 use normpath::PathExt;
 use pretty_assertions::assert_eq;
 use rstest::*;
-use std::{
-    fs::{self, create_dir, create_dir_all, File},
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Duration,
-};
 use tempfile::TempDir;
 use tracing::Level;
+
+use crate::config::MemoryConfig;
+use crate::database::Database;
+use crate::manager::Manager;
 
 #[ctor::ctor]
 fn init() {
@@ -162,7 +164,8 @@ async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager)
     while receiver.next().await.is_some() {}
 
     fs::remove_file(last_song.clone()).unwrap();
-    // We store unix timestamps at a granularity of seconds so we need to wait for enough time to pass
+    // We store unix timestamps at a granularity of seconds so we need to wait for enough time to
+    // pass
     std::thread::sleep(Duration::from_secs(2));
 
     let mut receiver = manager.sync(None).await.unwrap();
@@ -203,7 +206,8 @@ pub async fn test_sync_delete() {
         last_song.to_string_lossy().to_string(),
     );
 
-    // TODO: add test to check if number of songs decreased once we have an endpoint to get all songs
+    // TODO: add test to check if number of songs decreased once we have an endpoint to get all
+    // songs
     assert_eq!(0, deleted2.len());
 }
 
@@ -233,7 +237,8 @@ pub async fn test_sync_delete_and_readd() {
         last_song.to_string_lossy().to_string(),
     );
 
-    // TODO: add test to check if number of songs decreased once we have an endpoint to get all songs
+    // TODO: add test to check if number of songs decreased once we have an endpoint to get all
+    // songs
     assert_eq!(0, deleted2.len());
 }
 

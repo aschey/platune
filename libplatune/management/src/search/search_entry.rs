@@ -1,9 +1,11 @@
+use std::cmp::Ordering;
+use std::collections::HashMap;
+
+use lazy_static::lazy_static;
 use regex::Regex;
 
 use super::result_score::ResultScore;
 use crate::consts::{END_MATCH_TEXT, MIN_LEN, MIN_WORDS, START_MATCH_TEXT};
-use lazy_static::lazy_static;
-use std::{cmp::Ordering, collections::HashMap};
 
 #[derive(Debug)]
 pub(crate) struct SearchEntry {

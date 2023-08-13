@@ -1,11 +1,12 @@
 use std::time::SystemTime;
 
 use itertools::Itertools;
-use sqlx::{sqlite::SqliteQueryResult, Pool, Sqlite, Transaction};
-
-use crate::{consts::MIN_LEN, db_error::DbError};
+use sqlx::sqlite::SqliteQueryResult;
+use sqlx::{Pool, Sqlite, Transaction};
 
 use super::tag::Tag;
+use crate::consts::MIN_LEN;
+use crate::db_error::DbError;
 
 pub(crate) struct SyncDAL<'a> {
     tran: Transaction<'a, Sqlite>,
@@ -45,7 +46,7 @@ impl<'a> SyncDAL<'a> {
     ) -> Result<SqliteQueryResult, DbError> {
         sqlx::query!(
             "
-        INSERT OR IGNORE INTO album(album_name, artist_id, created_date) 
+        INSERT OR IGNORE INTO album(album_name, artist_id, created_date)
         values(?, (SELECT artist_id FROM artist WHERE artist_name = ?), ?);",
             album,
             album_artist,
@@ -98,7 +99,8 @@ impl<'a> SyncDAL<'a> {
         sqlx::query!(
             "
             DELETE FROM deleted_song as ds
-            WHERE EXISTS(SELECT 1 FROM song s WHERE s.song_id = ds.song_id AND s.last_scanned_date = ?)
+            WHERE EXISTS(SELECT 1 FROM song s WHERE s.song_id = ds.song_id AND s.last_scanned_date \
+             = ?)
             ",
             self.timestamp
         )
@@ -249,13 +251,13 @@ impl<'a> SyncDAL<'a> {
             values
             (
                 ?, ?, ?, ?,
-                (SELECT artist_id FROM artist WHERE artist_name = ?), 
-                ?, 
+                (SELECT artist_id FROM artist WHERE artist_name = ?),
+                ?,
                 (
                     SELECT album_id FROM album al
                     INNER JOIN artist ar ON ar.artist_id = al.artist_id
                     WHERE al.album_name = ? AND ar.artist_name = ?
-                ), 
+                ),
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )
             ON CONFLICT(song_path) DO UPDATE

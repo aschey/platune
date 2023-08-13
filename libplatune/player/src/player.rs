@@ -1,24 +1,24 @@
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+use std::time::Duration;
+
 use decal::decoder::{ReadSeekSource, Source};
 use flume::{Receiver, Sender};
-use std::{fs::File, io::BufReader, path::Path, time::Duration};
 use tap::{TapFallible, TapOptional};
 use tokio::sync::broadcast;
 use tracing::{error, info, warn};
 
-use crate::{
-    dto::{
-        audio_status::AudioStatus,
-        decoder_command::DecoderCommand,
-        decoder_response::DecoderResponse,
-        player_event::PlayerEvent,
-        player_state::PlayerState,
-        player_status::TrackStatus,
-        queue_source::{QueueSource, QueueStartMode},
-    },
-    http_stream_reader::HttpStreamReader,
-    settings::Settings,
-    two_way_channel::TwoWaySender,
-};
+use crate::dto::audio_status::AudioStatus;
+use crate::dto::decoder_command::DecoderCommand;
+use crate::dto::decoder_response::DecoderResponse;
+use crate::dto::player_event::PlayerEvent;
+use crate::dto::player_state::PlayerState;
+use crate::dto::player_status::TrackStatus;
+use crate::dto::queue_source::{QueueSource, QueueStartMode};
+use crate::http_stream_reader::HttpStreamReader;
+use crate::settings::Settings;
+use crate::two_way_channel::TwoWaySender;
 
 #[derive(Debug)]
 enum AppendError {
@@ -89,7 +89,12 @@ impl Player {
             let extension = Path::new(&path)
                 .extension()
                 .and_then(|ext| ext.to_str())
-                .tap_none(|| warn!("File extension for {path} contains invalid unicode. Not using extension hint"))
+                .tap_none(|| {
+                    warn!(
+                        "File extension for {path} contains invalid unicode. Not using extension \
+                         hint"
+                    )
+                })
                 .map(|ext| ext.to_owned());
 
             let reader = BufReader::new(file);
@@ -171,7 +176,7 @@ impl Player {
                                 success = Ok(());
                             }
                             Err(AppendError::SendFailed) => {
-                                return Err(Some(AppendError::SendFailed))
+                                return Err(Some(AppendError::SendFailed));
                             }
                             Err(AppendError::SourceUnavailable) => {}
                         }
@@ -319,7 +324,8 @@ impl Player {
         // Get rid of any pending sources
         self.queue_rx.drain();
         self.queued_count = 0;
-        // If decoder is already stopped then sending additional stop events will cause the next song to skip
+        // If decoder is already stopped then sending additional stop events will cause the next
+        // song to skip
         if self.audio_status != AudioStatus::Stopped {
             info!("Sending decoder stop command");
             self.cmd_sender
@@ -434,8 +440,8 @@ impl Player {
             self.set_queue(vec![song]).await?;
         } else {
             self.state.queue.push(song.clone());
-            // Special case: if we started with only one song, then the new song will never get triggered by the ended event
-            // so we need to add it here explicitly
+            // Special case: if we started with only one song, then the new song will never get
+            // triggered by the ended event so we need to add it here explicitly
             if self.queued_count == 1 {
                 self.append_file(song, QueueStartMode::Normal)
                     .await

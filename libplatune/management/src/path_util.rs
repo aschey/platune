@@ -1,7 +1,9 @@
-use std::{io, path::Path};
+use std::io;
+use std::path::Path;
+
+use normpath::PathExt;
 
 use crate::database::LookupEntry;
-use normpath::PathExt;
 
 pub(crate) trait PathMut {
     fn get_path(&self) -> String;

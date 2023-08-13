@@ -1,14 +1,16 @@
-use crate::{config::MemoryConfig, database::Database, manager::Manager};
+use std::fs::{self, create_dir_all};
+use std::sync::Arc;
+
 use futures::StreamExt;
 use lofty::{Accessor, ItemKey, Probe, TagExt, TaggedFileExt};
 use pretty_assertions::assert_eq;
 use rstest::*;
-use std::{
-    fs::{self, create_dir_all},
-    sync::Arc,
-};
 use tempfile::TempDir;
 use tracing::{info, Level};
+
+use crate::config::MemoryConfig;
+use crate::database::Database;
+use crate::manager::Manager;
 
 #[ctor::ctor]
 fn init() {
@@ -42,7 +44,7 @@ pub struct SearchResultTest {
     search,
     case(vec![
         SongTest {
-            title: Some("asdf"), 
+            title: Some("asdf"),
             ..Default::default()
         }],
         vec![SearchResultTest {entry: "asdf", correlation_ids: vec![1]}],

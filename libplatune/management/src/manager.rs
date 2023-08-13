@@ -1,19 +1,17 @@
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+use normpath::PathExt;
+use thiserror::Error;
+
+use crate::config::Config;
+use crate::database::{Database, DeletedEntry, LookupEntry};
+use crate::db_error::DbError;
 pub use crate::entry_type::EntryType;
+use crate::path_util::{clean_file_path, update_path, PathMut};
 pub use crate::search::search_options::SearchOptions;
 pub use crate::search::search_result::SearchResult;
-use crate::{
-    config::Config,
-    database::{Database, DeletedEntry, LookupEntry},
-    db_error::DbError,
-    path_util::{clean_file_path, update_path, PathMut},
-    sync::progress_stream::ProgressStream,
-};
-use normpath::PathExt;
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
-use thiserror::Error;
+use crate::sync::progress_stream::ProgressStream;
 
 #[derive(Error, Debug)]
 pub enum ManagerError {

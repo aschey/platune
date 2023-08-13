@@ -1,21 +1,19 @@
-use crate::management_server::Management;
-use crate::rpc::*;
+use std::pin::Pin;
+use std::time::Duration;
 
-use daemon_slayer::server::Signal;
-use daemon_slayer::server::{BroadcastEventStore, EventStore};
+use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::{Stream, StreamExt};
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use libplatune_management::{database, manager};
 use prost_types::Timestamp;
-use std::pin::Pin;
-use std::time::Duration;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{mpsc, RwLockReadGuard};
-use tonic::Request;
-use tonic::Streaming;
-use tonic::{Response, Status};
+use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, warn};
+
+use crate::management_server::Management;
+use crate::rpc::*;
 
 pub struct ManagementImpl {
     manager: FileWatchManager,
@@ -60,7 +58,7 @@ fn map_lookup_entry(
                     return Err(format_error(format!(
                         "Unable to find folder for path {}",
                         entry.path
-                    )))
+                    )));
                 }
             };
             entry.path.replacen(folder, local_addr, 1)
@@ -395,7 +393,7 @@ impl Management for ManagementImpl {
                         Ok(Some(e)) => {
                             return Ok(Response::new(SongResponse {
                                 song: Some(map_lookup_entry(e, &connection_type)?),
-                            }))
+                            }));
                         }
                         Err(e) => return Err(format_error(format!("Error getting track {e:?}"))),
                         _ => {}

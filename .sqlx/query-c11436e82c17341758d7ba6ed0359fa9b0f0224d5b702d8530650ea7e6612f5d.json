@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT OR IGNORE INTO album(album_name, artist_id, created_date)\n        values(?, (SELECT artist_id FROM artist WHERE artist_name = ?), ?);",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "c11436e82c17341758d7ba6ed0359fa9b0f0224d5b702d8530650ea7e6612f5d"
+}

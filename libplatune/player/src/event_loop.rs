@@ -1,27 +1,24 @@
-use crate::{
-    audio_processor::{AudioProcessor, InputResult},
-    dto::{
-        command::Command,
-        decoder_command::DecoderCommand,
-        decoder_response::DecoderResponse,
-        player_response::PlayerResponse,
-        processor_error::ProcessorError,
-        queue_source::{QueueSource, QueueStartMode},
-    },
-    platune_player::PlayerEvent,
-    player::Player,
-    two_way_channel::{TwoWayReceiver, TwoWaySender},
-};
 use std::time::Duration;
 
-use decal::{
-    decoder::{Decoder, DecoderError, DecoderResult, DecoderSettings, ResamplerSettings, Source},
-    output::{AudioBackend, OutputBuilder, OutputSettings},
-    AudioManager, WriteOutputError,
+use decal::decoder::{
+    Decoder, DecoderError, DecoderResult, DecoderSettings, ResamplerSettings, Source,
 };
+use decal::output::{AudioBackend, OutputBuilder, OutputSettings};
+use decal::{AudioManager, WriteOutputError};
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
 use tracing::{error, info, warn};
+
+use crate::audio_processor::{AudioProcessor, InputResult};
+use crate::dto::command::Command;
+use crate::dto::decoder_command::DecoderCommand;
+use crate::dto::decoder_response::DecoderResponse;
+use crate::dto::player_response::PlayerResponse;
+use crate::dto::processor_error::ProcessorError;
+use crate::dto::queue_source::{QueueSource, QueueStartMode};
+use crate::platune_player::PlayerEvent;
+use crate::player::Player;
+use crate::two_way_channel::{TwoWayReceiver, TwoWaySender};
 
 pub(crate) fn decode_loop<B: AudioBackend>(
     queue_rx: Receiver<QueueSource>,

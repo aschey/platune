@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO song(\n            song_path,\n            modified_date,\n            created_date,\n            last_scanned_date,\n            artist_id,\n            song_title,\n            album_id,\n            track_number,\n            disc_number,\n            song_year,\n            song_month,\n            song_day,\n            duration,\n            sample_rate,\n            bit_rate,\n            file_size,\n            album_art_path,\n            fingerprint\n            )\n            values\n            (\n                ?, ?, ?, ?,\n                (SELECT artist_id FROM artist WHERE artist_name = ?),\n                ?,\n                (\n                    SELECT album_id FROM album al\n                    INNER JOIN artist ar ON ar.artist_id = al.artist_id\n                    WHERE al.album_name = ? AND ar.artist_name = ?\n                ),\n                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?\n            )\n            ON CONFLICT(song_path) DO UPDATE\n            SET last_scanned_date = ?;\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 20
+    },
+    "nullable": []
+  },
+  "hash": "a5c84b7f3ce81d04df5373c4865dab5dd46a35df982e231983449d46f730ab23"
+}

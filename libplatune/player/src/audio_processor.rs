@@ -1,20 +1,17 @@
-use crate::{
-    dto::{
-        decoder_command::DecoderCommand, decoder_response::DecoderResponse,
-        processor_error::ProcessorError,
-    },
-    platune_player::PlayerEvent,
-    two_way_channel::TwoWayReceiver,
-};
-use decal::{
-    decoder::{Decoder, DecoderResult},
-    output::AudioBackend,
-    AudioManager,
-};
-use flume::TryRecvError;
 use std::time::Duration;
+
+use decal::decoder::{Decoder, DecoderResult};
+use decal::output::AudioBackend;
+use decal::AudioManager;
+use flume::TryRecvError;
 use tap::TapFallible;
 use tracing::{error, info};
+
+use crate::dto::decoder_command::DecoderCommand;
+use crate::dto::decoder_response::DecoderResponse;
+use crate::dto::processor_error::ProcessorError;
+use crate::platune_player::PlayerEvent;
+use crate::two_way_channel::TwoWayReceiver;
 
 pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
     cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,

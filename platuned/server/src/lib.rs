@@ -1,12 +1,8 @@
 use clap::builder::styling;
-use daemon_slayer::{
-    build_info::{
-        self,
-        cli::BuildInfoCliProvider,
-        vergen_pretty::{self, vergen_pretty_env, PrettyBuilder},
-    },
-    core::Label,
-};
+use daemon_slayer::build_info::cli::BuildInfoCliProvider;
+use daemon_slayer::build_info::vergen_pretty::{self, vergen_pretty_env, PrettyBuilder};
+use daemon_slayer::build_info::{self};
+use daemon_slayer::core::Label;
 
 pub const MAIN_SERVER_PORT: usize = 50051;
 

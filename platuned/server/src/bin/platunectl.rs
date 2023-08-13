@@ -1,25 +1,24 @@
-use daemon_slayer::{
-    cli::Cli,
-    client::{
-        self,
-        cli::ClientCliProvider,
-        config::{
-            systemd::SystemdConfig,
-            windows::{ServiceAccess, Trustee, WindowsConfig},
-            Level,
-        },
-    },
-    console::{cli::ConsoleCliProvider, Console, LogSource},
-    core::BoxedError,
-    error_handler::{cli::ErrorHandlerCliProvider, color_eyre::eyre, ErrorSink},
-    health_check::{cli::HealthCheckCliProvider, GrpcHealthCheck},
-    logging::{
-        cli::LoggingCliProvider, tracing_subscriber::util::SubscriberInitExt, LoggerBuilder,
-    },
-    process::cli::ProcessCliProvider,
-};
-use platuned::{build_info, clap_base_command, service_label, MAIN_SERVER_PORT};
 use std::env::current_exe;
+
+use daemon_slayer::cli::Cli;
+use daemon_slayer::client::cli::ClientCliProvider;
+use daemon_slayer::client::config::systemd::SystemdConfig;
+use daemon_slayer::client::config::windows::{ServiceAccess, Trustee, WindowsConfig};
+use daemon_slayer::client::config::Level;
+use daemon_slayer::client::{self};
+use daemon_slayer::console::cli::ConsoleCliProvider;
+use daemon_slayer::console::{Console, LogSource};
+use daemon_slayer::core::BoxedError;
+use daemon_slayer::error_handler::cli::ErrorHandlerCliProvider;
+use daemon_slayer::error_handler::color_eyre::eyre;
+use daemon_slayer::error_handler::ErrorSink;
+use daemon_slayer::health_check::cli::HealthCheckCliProvider;
+use daemon_slayer::health_check::GrpcHealthCheck;
+use daemon_slayer::logging::cli::LoggingCliProvider;
+use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
+use daemon_slayer::logging::LoggerBuilder;
+use daemon_slayer::process::cli::ProcessCliProvider;
+use platuned::{build_info, clap_base_command, service_label, MAIN_SERVER_PORT};
 
 #[tokio::main]
 async fn main() -> Result<(), ErrorSink> {

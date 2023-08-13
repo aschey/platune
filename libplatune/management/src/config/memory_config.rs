@@ -1,7 +1,10 @@
-use super::Config;
+use std::cell::RefCell;
+use std::sync::Mutex;
+
 use eyre::Result;
-use std::{cell::RefCell, sync::Mutex};
 use uuid::Uuid;
+
+use super::Config;
 
 pub struct MemoryConfig {
     drive_id: Mutex<RefCell<Option<Uuid>>>,

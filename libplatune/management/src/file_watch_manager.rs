@@ -1,19 +1,20 @@
-use crate::manager::Manager;
-use crate::sync::progress_stream::ProgressStream;
-use crate::{db_error::DbError, manager::ManagerError};
-use futures::StreamExt;
-use notify::{
-    event::{EventKind, ModifyKind, RenameMode},
-    RecommendedWatcher, RecursiveMode, Watcher,
-};
 use std::ops::Deref;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::{path::PathBuf, sync::Arc, time::Duration};
+use std::sync::Arc;
+use std::time::Duration;
+
+use futures::StreamExt;
+use notify::event::{EventKind, ModifyKind, RenameMode};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use tap::TapFallible;
 use thiserror::Error;
 use tokio::sync::{broadcast, mpsc, Mutex, RwLock};
 use tracing::{error, info, warn};
+
+use crate::db_error::DbError;
+use crate::manager::{Manager, ManagerError};
+use crate::sync::progress_stream::ProgressStream;
 
 #[derive(Debug)]
 pub(crate) enum SyncMessage {
@@ -174,8 +175,9 @@ impl FileWatchManager {
                             .await
                             .tap_err(|e| error!("Error renaming path: {e:?}"));
 
-                        // Add new path to sync list in case the new path maps to paths that are currently marked as deleted
-                        // So we need to now mark them as un-deleted
+                        // Add new path to sync list in case the new path maps to paths that are
+                        // currently marked as deleted So we need to now
+                        // mark them as un-deleted
                         paths = Self::normalize_paths(paths, to);
                     }
                     Ok(None) => {
@@ -193,7 +195,8 @@ impl FileWatchManager {
 
                         let folders = if cfg!(target_os = "macos") {
                             info!("Syncing all folders");
-                            // Force sync all folders on mac because fsevents doesn't always track all events by design
+                            // Force sync all folders on mac because fsevents doesn't always track
+                            // all events by design
                             None
                         } else {
                             let folders = paths
@@ -261,7 +264,8 @@ impl FileWatchManager {
         let mut new_paths = vec![];
         let mut add_new_path = true;
         // Only need to sync paths that are mutually exclusive
-        // i.e. we don't need to sync /test/dir and /test/dir/1 separately because the second is a subset of the first
+        // i.e. we don't need to sync /test/dir and /test/dir/1 separately because the second is a
+        // subset of the first
         for path in paths.into_iter() {
             // Keep the path if the new path is not an ancestor of this path
             if !path.starts_with(&new_path) || path == new_path {

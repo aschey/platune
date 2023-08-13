@@ -1,12 +1,12 @@
-use super::{
-    progress_stream::ProgressStream,
-    sync_engine::{SyncEngine, SyncError},
-};
-use daemon_slayer::{core::notify::AsyncNotification, notify::notification::Notification};
+use daemon_slayer::core::notify::AsyncNotification;
+use daemon_slayer::notify::notification::Notification;
 use sqlx::{Pool, Sqlite};
 use tap::TapFallible;
 use tokio::sync::{broadcast, oneshot};
 use tracing::{error, info, warn};
+
+use super::progress_stream::ProgressStream;
+use super::sync_engine::{SyncEngine, SyncError};
 
 pub(crate) struct SyncController {
     write_pool: Pool<Sqlite>,
@@ -28,7 +28,8 @@ impl SyncController {
         mount: Option<String>,
         finished_callback: Box<dyn Fn() + Send>,
     ) -> ProgressStream {
-        // If sync is currently running, subscribe to the current stream instead of starting another one
+        // If sync is currently running, subscribe to the current stream instead of starting another
+        // one
         if let Some(finished_rx) = &mut self.finished_rx {
             // If the finished channel has a value, the last sync finished so we should restart
             // Otherwise, the sync is curently in progress

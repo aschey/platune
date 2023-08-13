@@ -1,10 +1,10 @@
 use decal::decoder::{ReadSeekSource, Source};
 use eyre::{Context, Result};
+use stream_download::http::HttpStream;
+use stream_download::reqwest::client::Client;
+use stream_download::source::SourceStream;
+use stream_download::{Settings, StreamDownload};
 use tracing::info;
-
-use stream_download::{
-    http::HttpStream, reqwest::client::Client, source::SourceStream, Settings, StreamDownload,
-};
 
 #[derive(Debug)]
 pub(crate) struct HttpStreamReader {

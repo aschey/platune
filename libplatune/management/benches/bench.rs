@@ -1,7 +1,6 @@
 use std::time::Duration;
 
-use criterion::Criterion;
-use criterion::{criterion_group, criterion_main};
+use criterion::{criterion_group, criterion_main, Criterion};
 
 fn from_elem(c: &mut Criterion) {
     let mut group = c.benchmark_group("default");

@@ -1,13 +1,14 @@
-use super::Manager;
-use crate::{config::MemoryConfig, database::Database};
+use std::fs;
+use std::path::{PathBuf, MAIN_SEPARATOR};
+use std::sync::Arc;
+
 use normpath::PathExt;
 use pretty_assertions::assert_eq;
-use std::{
-    fs,
-    path::{PathBuf, MAIN_SEPARATOR},
-    sync::Arc,
-};
 use tempfile::{tempdir, TempDir};
+
+use super::Manager;
+use crate::config::MemoryConfig;
+use crate::database::Database;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_add_folders() {

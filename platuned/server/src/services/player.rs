@@ -1,14 +1,18 @@
-use crate::player_server::Player;
-use crate::rpc::event_response::*;
-use crate::rpc::*;
-use std::{pin::Pin, sync::Arc, time::Duration};
+use std::pin::Pin;
+use std::sync::Arc;
+use std::time::Duration;
 
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
-use libplatune_player::{platune_player::*, CpalOutput};
+use libplatune_player::platune_player::*;
+use libplatune_player::CpalOutput;
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
+
+use crate::player_server::Player;
+use crate::rpc::event_response::*;
+use crate::rpc::*;
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer<CpalOutput>>,
@@ -232,8 +236,10 @@ impl Player for PlayerImpl {
         let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         tokio::spawn(async move {
-            while let Ok(msg) = tokio::select! { val = ended_rx.recv() => val, _ = shutdown_rx.next() => Err(RecvError::Closed) }
-            {
+            while let Ok(msg) = tokio::select! {
+                val = ended_rx.recv() => val,
+                _ = shutdown_rx.next() => Err(RecvError::Closed)
+            } {
                 info!("Server received event {:?}", msg);
                 let msg = map_response(msg);
 

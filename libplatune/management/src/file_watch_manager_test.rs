@@ -1,17 +1,20 @@
-use super::{FileWatchManager, Progress};
-use crate::{config::MemoryConfig, database::Database, manager::Manager};
+use std::fs::{self, create_dir_all};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
+
 use itertools::Itertools;
 use pretty_assertions::assert_eq;
 use rstest::*;
-use std::{
-    fs::{self, create_dir_all},
-    path::PathBuf,
-    sync::Arc,
-    time::Duration,
-};
 use tempfile::{tempdir, TempDir};
-use tokio::{sync::mpsc, time::timeout};
+use tokio::sync::mpsc;
+use tokio::time::timeout;
 use tracing::Level;
+
+use super::{FileWatchManager, Progress};
+use crate::config::MemoryConfig;
+use crate::database::Database;
+use crate::manager::Manager;
 
 #[ctor::ctor]
 fn init() {

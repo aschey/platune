@@ -93,13 +93,8 @@
 
 // async fn init_player(
 //     num_songs: usize,
-// ) -> (
-//     PlatunePlayer,
-//     broadcast::Receiver<PlayerEvent>,
-//     Vec<SongInfo>,
-// ) {
-//     let player = PlatunePlayer::new(Default::default());
-//     let mut receiver = player.subscribe();
+// ) -> ( PlatunePlayer, broadcast::Receiver<PlayerEvent>, Vec<SongInfo>,
+// ) { let player = PlatunePlayer::new(Default::default()); let mut receiver = player.subscribe();
 
 //     let songs = get_test_files(num_songs);
 //     let song_queue = songs.get_paths();
@@ -117,17 +112,9 @@
 //     out_channels: usize,
 //     sample_rate_out: usize,
 //     resample_chunk_size: usize,
-// ) -> Vec<f32> {
-//     let mut all_samples = vec![];
-//     let mut cur_sample_rate = 44_100;
-//     let mut resampler = FftFixedInOut::<f32>::new(
-//         cur_sample_rate,
-//         sample_rate_out,
-//         resample_chunk_size,
-//         out_channels,
-//     )
-//     .unwrap();
-//     let len = paths.len();
+// ) -> Vec<f32> { let mut all_samples = vec![]; let mut cur_sample_rate = 44_100; let mut resampler
+//   = FftFixedInOut::<f32>::new( cur_sample_rate, sample_rate_out, resample_chunk_size,
+//   out_channels, ) .unwrap(); let len = paths.len();
 
 //     let mut n_frames = resampler.input_frames_next();
 //     let mut resampler_index = 0;
@@ -340,8 +327,8 @@
 //     for i in 0..num_songs {
 //         if i == seek_index {
 //             player.seek(seek_time).await.unwrap();
-//             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(_,millis)) if millis == seek_time);
-//         }
+//             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Seek(_,millis)) if
+// millis == seek_time);         }
 //         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
 //     }
 
@@ -370,8 +357,8 @@
 //         if i == next_index {
 //             player.next().await.unwrap();
 //             if next_index < num_songs - 1 {
-//                 assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Next(PlayerState {queue_position, ..})) if queue_position == i + 1);
-//             }
+//                 assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Next(PlayerState
+// {queue_position, ..})) if queue_position == i + 1);             }
 //         }
 //         if next_index == num_songs - 1 || i < num_songs - 1 {
 //             assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
@@ -403,7 +390,8 @@
 //         if i == prev_index {
 //             player.previous().await.unwrap();
 //             if prev_index > 0 {
-//                 assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Previous(PlayerState {queue_position, ..})) if queue_position == i - 1);
+//                 assert_matches!(receiver.timed_recv().await,
+// Some(PlayerEvent::Previous(PlayerState {queue_position, ..})) if queue_position == i - 1);
 //             }
 //         }
 //         assert_matches!(receiver.timed_recv().await, Some(PlayerEvent::Ended(_)));
@@ -433,14 +421,8 @@
 //     #[values(1, 2)] out_channels: usize,
 //     #[values(44_100, 48_000)] sample_rate_out: u32,
 //     #[values(1024, 666)] resample_chunk_size: usize,
-// ) {
-//     let host = Host::new_with_options(
-//         Duration::from_millis(1),
-//         sample_rate_out,
-//         out_channels as u16,
-//     )
-//     .unwrap();
-//     let mut data_rx = host.default_output_device().unwrap().subscribe_data();
+// ) { let host = Host::new_with_options( Duration::from_millis(1), sample_rate_out, out_channels as
+//   u16, ) .unwrap(); let mut data_rx = host.default_output_device().unwrap().subscribe_data();
 
 //     let player = PlatunePlayer::new_with_host(
 //         Settings {

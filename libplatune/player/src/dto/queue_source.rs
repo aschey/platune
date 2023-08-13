@@ -1,5 +1,6 @@
-use crate::settings::Settings;
 use decal::decoder::Source;
+
+use crate::settings::Settings;
 
 #[derive(Debug)]
 pub(crate) struct QueueSource {

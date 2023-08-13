@@ -4,23 +4,24 @@ mod server;
 mod services;
 mod startup;
 
-use crate::startup::ServiceHandler;
+use daemon_slayer::cli::Cli;
+use daemon_slayer::core::BoxedError;
+use daemon_slayer::error_handler::cli::ErrorHandlerCliProvider;
+use daemon_slayer::error_handler::color_eyre::eyre;
+use daemon_slayer::error_handler::ErrorSink;
+use daemon_slayer::logging::cli::LoggingCliProvider;
 #[cfg(feature = "tokio-console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
-use daemon_slayer::{
-    cli::Cli,
-    core::BoxedError,
-    error_handler::{cli::ErrorHandlerCliProvider, color_eyre::eyre, ErrorSink},
-    logging::{
-        self, cli::LoggingCliProvider, tracing_subscriber::util::SubscriberInitExt, LogLevel,
-        LoggerBuilder,
-    },
-    notify::notification::Notification,
-    server::{cli::ServerCliProvider, Handler},
-};
+use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
+use daemon_slayer::logging::{self, LogLevel, LoggerBuilder};
+use daemon_slayer::notify::notification::Notification;
+use daemon_slayer::server::cli::ServerCliProvider;
+use daemon_slayer::server::Handler;
 use dotenvy::dotenv;
 use platuned::{build_info, clap_base_command};
 use rpc::*;
+
+use crate::startup::ServiceHandler;
 
 #[tokio::main]
 async fn main() -> Result<(), ErrorSink> {

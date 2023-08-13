@@ -1,4 +1,5 @@
-use std::{fmt::Debug, time::Duration};
+use std::fmt::Debug;
+use std::time::Duration;
 
 #[derive(Clone, Debug)]
 pub(crate) enum Command {

@@ -1,23 +1,26 @@
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::Duration;
+
+use log::LevelFilter;
+use regex::Regex;
+use rust_embed::RustEmbed;
+use slite::{Connection, Migrator};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode};
+use sqlx::{ConnectOptions, Pool, Sqlite, SqlitePool};
+use tokio::sync::Mutex;
+use tracing::info;
+use uuid::Uuid;
+
+use crate::db_error::DbError;
+use crate::entry_type::EntryType;
 use crate::path_util::PathMut;
 use crate::search::search_engine::SearchEngine;
 use crate::search::search_options::SearchOptions;
 use crate::search::search_result::SearchResult;
 use crate::sync::progress_stream::ProgressStream;
 use crate::sync::sync_controller::SyncController;
-use crate::{db_error::DbError, entry_type::EntryType};
-use log::LevelFilter;
-use regex::Regex;
-use rust_embed::RustEmbed;
-use slite::{Connection, Migrator};
-use sqlx::sqlite::SqliteJournalMode;
-use sqlx::{sqlite::SqliteConnectOptions, ConnectOptions, Pool, Sqlite, SqlitePool};
-use std::path::PathBuf;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::{path::Path, time::Duration};
-use tokio::sync::Mutex;
-use tracing::info;
-use uuid::Uuid;
 
 #[derive(RustEmbed)]
 #[folder = "db/schema"]
@@ -76,7 +79,8 @@ impl Database {
     pub async fn connect(path: impl AsRef<Path>, create_if_missing: bool) -> Result<Self, DbError> {
         // Per https://github.com/launchbadge/sqlx/issues/451#issuecomment-649866619,
         // it is recommended to use a separate reader and writer pool.
-        // The writer pool should have 1 connection to avoid db locks and the reader pool should set readonly=true
+        // The writer pool should have 1 connection to avoid db locks and the reader pool should set
+        // readonly=true
         let reader_opts = SqliteConnectOptions::new()
             .filename(path.as_ref())
             .create_if_missing(create_if_missing)
@@ -263,7 +267,8 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
+             duration_millis,
             al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
@@ -283,7 +288,8 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
+             duration_millis,
             al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM artist ar
             INNER JOIN song s ON s.artist_id = ar.artist_id
@@ -303,8 +309,9 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
-            al.album_name album, aa.artist_name album_artist, s.track_number track 
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
+             duration_millis,
+            al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM album al
             INNER JOIN artist aa ON aa.artist_id = al.artist_id
             INNER JOIN song s ON s.album_id = al.album_id
@@ -323,7 +330,8 @@ impl Database {
         sqlx::query_as!(
             LookupEntry,
             "
-            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration duration_millis,
+            SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
+             duration_millis,
             al.album_name album, aa.artist_name album_artist, s.track_number track
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
@@ -346,7 +354,8 @@ impl Database {
         sqlx::query_as!(
             Album,
             "
-            SELECT al.album_name album, al.album_id, aa.artist_name album_artist, aa.artist_id album_artist_id
+            SELECT al.album_name album, al.album_id, aa.artist_name album_artist, aa.artist_id \
+             album_artist_id
             FROM album al
             INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE aa.artist_id = ?

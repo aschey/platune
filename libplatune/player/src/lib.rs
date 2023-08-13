@@ -8,27 +8,29 @@ mod two_way_channel;
 pub use decal::output::{AudioBackend, CpalOutput, MockOutput};
 
 pub mod platune_player {
+    use std::fs::remove_file;
+    use std::thread;
+    use std::time::Duration;
+
+    use decal::output::{AudioBackend, DeviceTrait, HostTrait};
+    use derivative::Derivative;
+    use tap::TapFallible;
+    use thiserror::Error;
+    use tokio::sync::broadcast;
+    use tracing::{error, info, warn};
+
     pub use crate::dto::audio_status::AudioStatus;
+    use crate::dto::command::Command;
     use crate::dto::decoder_command::DecoderCommand;
     use crate::dto::decoder_response::DecoderResponse;
     pub use crate::dto::player_event::PlayerEvent;
     use crate::dto::player_response::PlayerResponse;
     pub use crate::dto::player_state::PlayerState;
     pub use crate::dto::player_status::PlayerStatus;
-    use crate::event_loop::decode_loop;
+    use crate::event_loop::{decode_loop, main_loop};
     use crate::player::Player;
     pub use crate::settings::Settings;
     use crate::two_way_channel::{two_way_channel, TwoWaySender};
-    use crate::{dto::command::Command, event_loop::main_loop};
-    use decal::output::{AudioBackend, DeviceTrait, HostTrait};
-    use derivative::Derivative;
-    use std::fs::remove_file;
-    use std::thread;
-    use std::time::Duration;
-    use tap::TapFallible;
-    use thiserror::Error;
-    use tokio::sync::broadcast;
-    use tracing::{error, info, warn};
 
     #[derive(Debug, Clone, Error)]
     #[error("{0}")]

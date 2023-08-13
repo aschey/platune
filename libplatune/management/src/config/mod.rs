@@ -2,10 +2,9 @@ mod config_error;
 mod file_config;
 mod memory_config;
 
+use eyre::Result;
 pub use file_config::*;
 pub use memory_config::*;
-
-use eyre::Result;
 use uuid::Uuid;
 
 pub trait Config {

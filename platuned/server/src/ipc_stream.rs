@@ -1,10 +1,9 @@
+use std::io::{self};
+use std::pin::Pin;
+use std::task::{Context as TaskContext, Poll};
+
 use futures::{Stream, StreamExt};
 use parity_tokio_ipc::Endpoint;
-use std::{
-    io::{self},
-    pin::Pin,
-    task::{Context as TaskContext, Poll},
-};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tonic::transport::server::Connected;
 

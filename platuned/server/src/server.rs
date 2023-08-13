@@ -1,13 +1,10 @@
-use crate::ipc_stream::IpcStream;
+use std::env;
+use std::net::SocketAddr;
+use std::path::PathBuf;
+use std::sync::Arc;
 #[cfg(feature = "management")]
-use crate::management_server::ManagementServer;
-#[cfg(feature = "player")]
-use crate::player_server::PlayerServer;
-use crate::rpc;
-#[cfg(feature = "management")]
-use crate::services::management::ManagementImpl;
-#[cfg(feature = "player")]
-use crate::services::player::PlayerImpl;
+use std::time::Duration;
+
 #[cfg(unix)]
 use daemon_slayer::error_handler::color_eyre::eyre::eyre;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
@@ -27,17 +24,22 @@ use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
 use libplatune_player::CpalOutput;
 use platuned::MAIN_SERVER_PORT;
-use std::env;
-use std::net::SocketAddr;
-use std::path::PathBuf;
-use std::sync::Arc;
-#[cfg(feature = "management")]
-use std::time::Duration;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 #[cfg(feature = "management")]
 use tower_http::services::ServeDir;
 use tracing::info;
+
+use crate::ipc_stream::IpcStream;
+#[cfg(feature = "management")]
+use crate::management_server::ManagementServer;
+#[cfg(feature = "player")]
+use crate::player_server::PlayerServer;
+use crate::rpc;
+#[cfg(feature = "management")]
+use crate::services::management::ManagementImpl;
+#[cfg(feature = "player")]
+use crate::services::player::PlayerImpl;
 
 enum Transport {
     Http(SocketAddr),

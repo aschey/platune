@@ -1,13 +1,14 @@
 use std::error::Error;
 
-use crate::server;
-use daemon_slayer::{
-    core::{BoxedError, Label},
-    server::{BroadcastEventStore, Handler, Service, ServiceContext, Signal, SignalHandler},
-    signals::SignalListener,
+use daemon_slayer::core::{BoxedError, Label};
+use daemon_slayer::server::{
+    BroadcastEventStore, Handler, Service, ServiceContext, Signal, SignalHandler,
 };
+use daemon_slayer::signals::SignalListener;
 use platuned::service_label;
 use tracing::info;
+
+use crate::server;
 
 #[derive(Service)]
 pub struct ServiceHandler {

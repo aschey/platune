@@ -1,30 +1,25 @@
-use std::{
-    collections::HashMap,
-    str::FromStr,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::collections::HashMap;
+use std::str::FromStr;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-use super::{
-    queries::{clean_query, combine_spellfix_results, get_search_query, replace_ampersand},
-    search_options::SearchOptions,
-    search_result::SearchResult,
-};
-use crate::{
-    consts::{END_MATCH_TEXT, START_MATCH_TEXT},
-    db_error::DbError,
-    entry_type::EntryType,
-    search::{
-        queries::get_full_spellfix_query, search_entry::SearchEntry,
-        spellfix_result::SpellfixResult,
-    },
-};
 use concread::arcache::{ARCache, ARCacheBuilder};
 use itertools::Itertools;
 use regex::Regex;
-use sqlx::{pool::PoolConnection, Pool, Row, Sqlite};
+use sqlx::pool::PoolConnection;
+use sqlx::{Pool, Row, Sqlite};
 use tap::Tap;
 use tracing::{info, warn};
+
+use super::queries::{clean_query, combine_spellfix_results, get_search_query, replace_ampersand};
+use super::search_options::SearchOptions;
+use super::search_result::SearchResult;
+use crate::consts::{END_MATCH_TEXT, START_MATCH_TEXT};
+use crate::db_error::DbError;
+use crate::entry_type::EntryType;
+use crate::search::queries::get_full_spellfix_query;
+use crate::search::search_entry::SearchEntry;
+use crate::search::spellfix_result::SpellfixResult;
 
 #[derive(Clone)]
 pub(crate) struct SearchEngine {

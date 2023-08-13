@@ -1,4 +1,5 @@
-use std::{cmp::Ordering, iter::Sum};
+use std::cmp::Ordering;
+use std::iter::Sum;
 
 #[derive(Debug)]
 pub(crate) struct ResultScore {
