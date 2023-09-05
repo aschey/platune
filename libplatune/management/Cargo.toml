@@ -28,7 +28,7 @@ notify = { version = "6", default-features = false, features = [
 ] }
 num_cpus = "1"
 regex = "1"
-rust-embed = "6"
+rust-embed = "8"
 slite = { git = "https://github.com/aschey/slite", rev = "3831bd9fa158723a7511ef22ec67cdd4451b4383", default-features = false, features = [
     "read-files",
 ] }
@@ -38,7 +38,7 @@ sqlx = { version = "0.7", default-features = false, features = [
     "macros",
     "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "29211232215525fe6d898ebaafae167b777879cc", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "5dbe48857cff5c6304557318ee406366e3216d18", features = [
     "native-notification",
 ] }
 strum = { version = "0.25", features = ["derive"] }
@@ -54,6 +54,6 @@ walkdir = "2"
 criterion = { version = "0.5.1", features = ["async_tokio"] }
 ctor = "0.2.4"
 pretty_assertions = "1.4.0"
-rstest = "0.18.1"
-tempfile = "3.7.1"
+rstest = "0.18.2"
+tempfile = "3.8.0"
 tracing-subscriber = "0.3.17"

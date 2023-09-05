@@ -254,7 +254,7 @@ impl Management for ManagementImpl {
         let lookup_result = match manager
             .lookup(
                 request.correlation_ids,
-                match EntryType::from_i32(request.entry_type).unwrap() {
+                match EntryType::try_from(request.entry_type).unwrap() {
                     EntryType::Song => manager::EntryType::Song,
                     EntryType::Album => manager::EntryType::Album,
                     EntryType::Artist => manager::EntryType::Artist,

@@ -1,14 +1,18 @@
+use std::num::NonZeroUsize;
+
 use decal::decoder::{ReadSeekSource, Source};
 use eyre::{Context, Result};
+use stream_download::http::reqwest::Client;
 use stream_download::http::HttpStream;
-use stream_download::reqwest::client::Client;
 use stream_download::source::SourceStream;
+use stream_download::storage::adaptive::AdaptiveStorageProvider;
+use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
 use tracing::info;
 
 #[derive(Debug)]
 pub(crate) struct HttpStreamReader {
-    downloader: StreamDownload,
+    downloader: StreamDownload<AdaptiveStorageProvider<TempStorageProvider>>,
     url: String,
     file_len: Option<u64>,
 }
@@ -19,10 +23,20 @@ impl HttpStreamReader {
             .await
             .wrap_err_with(|| "Error creating http stream")?;
         let file_len = stream.content_length();
+        let settings = Settings::default();
         Ok(Self {
             url: url.clone(),
-            downloader: StreamDownload::from_stream(stream, Settings::default())
-                .wrap_err_with(|| "Error creating stream downloader")?,
+            downloader: StreamDownload::from_stream(
+                stream,
+                // store 512 kb of audio when the content length is not known
+                AdaptiveStorageProvider::new(
+                    TempStorageProvider::default(),
+                    NonZeroUsize::new(1024 * 512).expect("nonzero"),
+                ),
+                settings,
+            )
+            .await
+            .wrap_err_with(|| "Error creating stream downloader")?,
             file_len,
         })
     }

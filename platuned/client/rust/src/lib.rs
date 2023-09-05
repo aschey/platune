@@ -56,7 +56,7 @@ async fn get_ipc_channel() -> Result<Channel, Box<dyn Error>> {
                 };
                 Path::new(&socket_base).join("platuned/platuned.sock")
             } else {
-                PathBuf::from(r#"\\.\pipe\platuned"#)
+                PathBuf::from(r"\\.\pipe\platuned")
             };
             parity_tokio_ipc::Endpoint::connect(socket_path)
         }))

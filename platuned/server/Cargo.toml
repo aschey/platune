@@ -9,11 +9,11 @@ path = "src/lib.rs"
 
 [dependencies]
 async-trait = "0.1.73"
-clap = { version = "4.3.21", features = ["unstable-styles"] }
+clap = { version = "4.4.2", features = ["unstable-styles"] }
 console-subscriber = { version = "0.1.10", features = [
     "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "29211232215525fe6d898ebaafae167b777879cc", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "5dbe48857cff5c6304557318ee406366e3216d18", features = [
     "client-standard",
     "server-standard",
     "notify",
@@ -28,16 +28,16 @@ hyper = { version = "0.14.27", optional = true }
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
 parity-tokio-ipc = "0.9.0"
-prost = "0.11.9"
-prost-types = "0.11.9"
+prost = "0.12.0"
+prost-types = "0.12.0"
 rcgen = { version = "0.11.1", features = ["x509-parser"] }
-tokio = { version = "1.31.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.14", features = ["net"] }
-tonic = { version = "0.9.2", features = ["tls"] }
-tonic-health = "0.9.2"
-tonic-reflection = "0.9.2"
+tonic = { version = "0.10.0", features = ["tls"] }
+tonic-health = "0.10.0"
+tonic-reflection = "0.10.0"
 tower = { version = "0.4.13", optional = true }
-tower-http = { version = "0.4.3", features = ["fs"], optional = true }
+tower-http = { version = "0.4.4", features = ["fs"], optional = true }
 tracing = "0.1.37"
 uuid = { version = "1.4.1", features = ["v4"] }
 
@@ -48,8 +48,8 @@ player = ["libplatune-player"]
 tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
-tonic-build = { version = "0.9.2", features = ["prost"] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "29211232215525fe6d898ebaafae167b777879cc", features = [
+tonic-build = { version = "0.10.0", features = ["prost"] }
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "5dbe48857cff5c6304557318ee406366e3216d18", features = [
     "build-info",
     "build-info-build",
     "build-info-cargo",
