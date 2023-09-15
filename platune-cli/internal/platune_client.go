@@ -35,10 +35,11 @@ func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
 		os.Exit(1)
 	}
 	var managementConn *grpc.ClientConn
-	managementUrls := os.Getenv("PLATUNE_MANAGEMENT_URL")
-	if managementUrls != "" {
+	managementUrl := os.Getenv("PLATUNE_MANAGEMENT_URL")
+	if managementUrl != "" {
+		managementUrls := strings.Split(managementUrl, ",")
 		numUrls := len(managementUrls)
-		for i, managementUrl := range strings.Split(managementUrls, ",") {
+		for i, managementUrl := range managementUrls {
 			managementConn, err = platune.GetHttpClient(managementUrl)
 			if err == nil {
 				break
