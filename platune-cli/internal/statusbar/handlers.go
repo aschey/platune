@@ -26,11 +26,20 @@ func (s *StatusBar) handlePlayerEvent(
 		state := msg.GetState()
 		res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
 		timer.setTime(0)
-		return playerEvent{
-			icon:    "",
-			color:   "14",
-			newSong: res.Song,
+		if res != nil {
+			return playerEvent{
+				icon:    "",
+				color:   "14",
+				newSong: res.Song,
+			}
+		} else {
+			return playerEvent{
+				icon:    "",
+				color:   "14",
+				newSong: nil,
+			}
 		}
+
 	case platune.Event_SEEK:
 		timer.setTime(int64(msg.GetSeekData().SeekMillis))
 		return playerEvent{
