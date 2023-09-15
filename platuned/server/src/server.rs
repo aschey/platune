@@ -115,7 +115,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
         path
     };
     #[cfg(windows)]
-    let socket_path = PathBuf::from(r#"\\.\pipe\platuned"#);
+    let socket_path = PathBuf::from(r"\\.\pipe\platuned");
 
     let ipc_server = run_server(
         shutdown_rx.clone(),
