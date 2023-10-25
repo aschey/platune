@@ -16,7 +16,7 @@ require (
 	github.com/superhawk610/bar v0.0.2
 	go.uber.org/fx v1.19.2
 	go.uber.org/zap v1.24.0
-	google.golang.org/grpc v1.54.0
+	google.golang.org/grpc v1.56.3
 	google.golang.org/protobuf v1.30.0
 )
 
