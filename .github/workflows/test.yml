@@ -31,7 +31,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: apt-get update
         if: matrix.os == 'ubuntu-latest'
         # act doesn't have sudo installed but it's required on the real actions runner
@@ -88,7 +88,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Setup go
         uses: actions/setup-go@v3
         with:
