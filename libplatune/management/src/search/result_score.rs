@@ -39,20 +39,31 @@ impl PartialEq for ResultScore {
     }
 }
 
-impl PartialOrd for ResultScore {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+impl Eq for ResultScore {}
+
+impl Ord for ResultScore {
+    fn cmp(&self, other: &Self) -> Ordering {
         let weighted_ord = self.weighted_score.partial_cmp(&other.weighted_score);
-        if weighted_ord != Some(Ordering::Equal) && weighted_ord.is_some() {
-            return weighted_ord;
+        if let Some(weighted_ord) = weighted_ord {
+            if weighted_ord != Ordering::Equal {
+                return weighted_ord;
+            }
         }
+
         let len_ord = self.match_len_score.cmp(&other.match_len_score);
         if len_ord != Ordering::Equal {
-            return Some(len_ord);
+            return len_ord;
         }
         let full_len_ord = self.full_len_score.cmp(&other.full_len_score);
         if full_len_ord != Ordering::Equal {
-            return Some(full_len_ord);
+            return full_len_ord;
         }
-        self.full_entry.partial_cmp(&other.full_entry)
+        self.full_entry.cmp(&other.full_entry)
+    }
+}
+
+impl PartialOrd for ResultScore {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }

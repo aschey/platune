@@ -8,12 +8,13 @@ version = "0.1.0"
 path = "src/lib.rs"
 
 [dependencies]
-async-trait = "0.1.73"
-clap = { version = "4.4.2", features = ["unstable-styles"] }
-console-subscriber = { version = "0.1.10", features = [
+async-trait = "0.1.77"
+axum = { version = "0.7.4", optional = true }
+clap = { version = "4.5.2", features = ["unstable-styles"] }
+console-subscriber = { version = "0.2.0", features = [
     "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "5dbe48857cff5c6304557318ee406366e3216d18", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "23659b534dbb46eb4d9b7d251037a9a67a6ce50e", features = [
     "client-standard",
     "server-standard",
     "notify",
@@ -23,33 +24,32 @@ daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "5dbe48
     "build-info",
 ] }
 dotenvy = "0.15.7"
-futures = "0.3.28"
-hyper = { version = "0.14.27", optional = true }
+futures = "0.3.30"
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
-parity-tokio-ipc = "0.9.0"
-prost = "0.12.0"
-prost-types = "0.12.0"
-rcgen = { version = "0.11.1", features = ["x509-parser"] }
-tokio = { version = "1.32.0", features = ["rt-multi-thread", "macros"] }
+parity-tokio-ipc = { git = "https://github.com/aschey/parity-tokio-ipc", rev = "588198a0abb32a79f6f3e656ff0472008e4ba9b8" }
+prost = "0.12.3"
+prost-types = "0.12.3"
+rcgen = { version = "0.12.1", features = ["x509-parser"] }
+tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.14", features = ["net"] }
-tonic = { version = "0.10.0", features = ["tls"] }
-tonic-health = "0.10.0"
-tonic-reflection = "0.10.0"
+tonic = { version = "0.11.0", features = ["tls"] }
+tonic-health = "0.11.0"
+tonic-reflection = "0.11.0"
 tower = { version = "0.4.13", optional = true }
-tower-http = { version = "0.4.4", features = ["fs"], optional = true }
-tracing = "0.1.37"
-uuid = { version = "1.4.1", features = ["v4"] }
+tower-http = { version = "0.5.2", features = ["fs"], optional = true }
+tracing = "0.1.40"
+uuid = { version = "1.7.0", features = ["v4"] }
 
 [features]
 default = ["management", "player"]
-management = ["libplatune-management", "tower", "tower-http", "hyper"]
+management = ["libplatune-management", "tower", "tower-http", "axum"]
 player = ["libplatune-player"]
 tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
-tonic-build = { version = "0.10.0", features = ["prost"] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "5dbe48857cff5c6304557318ee406366e3216d18", features = [
+tonic-build = { version = "0.11.0", features = ["prost"] }
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "23659b534dbb46eb4d9b7d251037a9a67a6ce50e", features = [
     "build-info",
     "build-info-build",
     "build-info-cargo",

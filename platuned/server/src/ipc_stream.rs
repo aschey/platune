@@ -1,9 +1,10 @@
 use std::io::{self};
+use std::path::PathBuf;
 use std::pin::Pin;
 use std::task::{Context as TaskContext, Poll};
 
 use futures::{Stream, StreamExt};
-use parity_tokio_ipc::Endpoint;
+use parity_tokio_ipc::{Endpoint, IpcEndpoint, OnConflict};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tonic::transport::server::Connected;
 
@@ -15,9 +16,9 @@ pub struct IpcStream(Pin<Box<dyn ReadWrite + Send>>);
 
 impl IpcStream {
     pub fn get_async_stream(
-        path: impl Into<String>,
+        path: impl Into<PathBuf>,
     ) -> io::Result<impl Stream<Item = io::Result<IpcStream>>> {
-        let stream = Endpoint::new(path.into()).incoming()?;
+        let stream = Endpoint::new(path.into(), OnConflict::Overwrite)?.incoming()?;
         Ok(stream.map(|next| next.map(|s| IpcStream(Box::pin(s)))))
     }
 }

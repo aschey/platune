@@ -96,16 +96,16 @@ impl SearchEntry {
 
 impl Ord for SearchEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
+        let self_score = self.score_match();
+        let other_score = other.score_match();
+
+        self_score.cmp(&other_score)
     }
 }
 
 impl PartialOrd for SearchEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        let self_score = self.score_match();
-        let other_score = other.score_match();
-
-        self_score.partial_cmp(&other_score)
+        Some(self.cmp(other))
     }
 }
 

@@ -126,7 +126,9 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     #[cfg(feature = "management")]
     {
         let folders = services.manager.read().await.get_all_folders().await?;
-        servers.push(tokio::spawn(run_file_service(folders, shutdown_rx)));
+        if !folders.is_empty() {
+            servers.push(tokio::spawn(run_file_service(folders, shutdown_rx)));
+        }
     }
 
     let _: Vec<_> = servers.collect().await;
@@ -146,35 +148,22 @@ async fn run_file_service(
     folders: Vec<String>,
     shutdown_rx: BroadcastEventStore<Signal>,
 ) -> Result<()> {
-    let addr = "0.0.0.0:50050".parse().expect("failed to parse address");
+    let addr: SocketAddr = "0.0.0.0:50050".parse().expect("failed to parse address");
     info!("Running file server on {addr}");
     let mut shutdown_rx = shutdown_rx.subscribe_events();
-    match folders.as_slice() {
-        [folder] => {
-            let service = ServeDir::new(folder);
-            let server = hyper::Server::try_bind(&addr)
-                .wrap_err(format!("Failed to bind to {addr}"))?
-                .serve(tower::make::Shared::new(service))
-                .with_graceful_shutdown(async {
-                    shutdown_rx.next().await;
-                });
-            server.await.wrap_err("Error running file server")?;
-        }
-        [first, second, rest @ ..] => {
-            let mut service = ServeDir::new(first).fallback(ServeDir::new(second));
-            for folder in rest {
-                service = service.fallback(ServeDir::new(folder));
-            }
-            let server = hyper::Server::try_bind(&addr)
-                .wrap_err(format!("Failed to bind to {addr}"))?
-                .serve(tower::make::Shared::new(service))
-                .with_graceful_shutdown(async {
-                    shutdown_rx.next().await;
-                });
-            server.await.wrap_err("Error running file server")?;
-        }
-        _ => {}
+
+    let mut app = axum::Router::new();
+    for folder in folders {
+        app = app.nest_service(&format!("/{folder}"), ServeDir::new(folder));
     }
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .wrap_err(format!("Failed to bind to {addr}"))?;
+    let server = axum::serve(listener, app).with_graceful_shutdown(async move {
+        shutdown_rx.next().await;
+    });
+    server.await.wrap_err("Error running file server")?;
+
     Ok(())
 }
 
