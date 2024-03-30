@@ -89,17 +89,6 @@ checksum = "4b46cbb362ab8752921c97e041f5e366ee6297bd428a31275b9fcf1e380f7299"
 
 [[package]]
 name = "ansi-to-tui"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "157b8ef4c7fba7b84d87853fae0de026f1856e69dbf8b8247fd6c526a4b78350"
-dependencies = [
- "nom",
- "thiserror",
- "tui",
-]
-
-[[package]]
-name = "ansi-to-tui"
 version = "4.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8438af3d7e7dccdb98eff55e5351587d9bec2294daff505fc9a061bd14d22db0"
@@ -179,12 +168,6 @@ name = "arc-swap"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b3d0060af21e8d11a926981cc00c6c1541aa91dd64b9f881985c3da1094425f"
-
-[[package]]
-name = "arrayvec"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
 
 [[package]]
 name = "asn1-rs"
@@ -1987,7 +1970,7 @@ checksum = "7e962a19be5cfc3f3bf6dd8f61eb50107f356ad6270fbb3ed41476571db78be5"
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=49c26561f7ea9a4f783e1d87121102ee411f67a0#49c26561f7ea9a4f783e1d87121102ee411f67a0"
+source = "git+https://github.com/aschey/decal?rev=44d9826ab22ffd2fcb804bf188ff5747c06a607e#44d9826ab22ffd2fcb804bf188ff5747c06a607e"
 dependencies = [
  "cpal",
  "dasp",
@@ -5633,9 +5616,9 @@ dependencies = [
 
 [[package]]
 name = "rubato"
-version = "0.14.1"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6dd52e80cfc21894deadf554a5673002938ae4625f7a283e536f9cf7c17b0d5"
+checksum = "b5d18b486e7d29a408ef3f825bc1327d8f87af091c987ca2f5b734625940e234"
 dependencies = [
  "num-complex",
  "num-integer",
@@ -6100,9 +6083,9 @@ dependencies = [
 [[package]]
 name = "slite"
 version = "0.0.1-dev"
-source = "git+https://github.com/aschey/slite?rev=3831bd9fa158723a7511ef22ec67cdd4451b4383#3831bd9fa158723a7511ef22ec67cdd4451b4383"
+source = "git+https://github.com/aschey/slite?rev=19877fef49a0850ec0d1b597c2ef9b744130a177#19877fef49a0850ec0d1b597c2ef9b744130a177"
 dependencies = [
- "ansi-to-tui 2.0.2",
+ "ansi-to-tui",
  "content_inspector",
  "ignore",
  "once_cell",
@@ -6513,8 +6496,7 @@ dependencies = [
 [[package]]
 name = "symphonia"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "815c942ae7ee74737bb00f965fa5b5a2ac2ce7b6c01c0cc169bbeaf7abd5f5a9"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
@@ -6534,8 +6516,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-flac"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72e34f34298a7308d4397a6c7fbf5b84c5d491231ce3dd379707ba673ab3bd97"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "log",
  "symphonia-core",
@@ -6546,8 +6527,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-mp3"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c01c2aae70f0f1fb096b6f0ff112a930b1fb3626178fba3ae68b09dce71706d4"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "lazy_static",
  "log",
@@ -6558,8 +6538,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-aac"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdbf25b545ad0d3ee3e891ea643ad115aff4ca92f6aec472086b957a58522f70"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "lazy_static",
  "log",
@@ -6569,8 +6548,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-adpcm"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c94e1feac3327cd616e973d5be69ad36b3945f16b06f19c6773fc3ac0b426a0f"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "log",
  "symphonia-core",
@@ -6579,8 +6557,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-pcm"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f395a67057c2ebc5e84d7bb1be71cce1a7ba99f64e0f0f0e303a03f79116f89b"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "log",
  "symphonia-core",
@@ -6589,8 +6566,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-vorbis"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a98765fb46a0a6732b007f7e2870c2129b6f78d87db7987e6533c8f164a9f30"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "log",
  "symphonia-core",
@@ -6600,21 +6576,19 @@ dependencies = [
 [[package]]
 name = "symphonia-core"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "798306779e3dc7d5231bd5691f5a813496dc79d3f56bf82e25789f2094e022c3"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
- "arrayvec",
- "bitflags 1.3.2",
+ "bitflags 2.4.2",
  "bytemuck",
  "lazy_static",
  "log",
+ "smallvec",
 ]
 
 [[package]]
 name = "symphonia-format-isomp4"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abfdf178d697e50ce1e5d9b982ba1b94c47218e03ec35022d9f0e071a16dc844"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "encoding_rs",
  "log",
@@ -6626,8 +6600,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-mkv"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bb43471a100f7882dc9937395bd5ebee8329298e766250b15b3875652fe3d6f"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "lazy_static",
  "log",
@@ -6639,8 +6612,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-ogg"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ada3505789516bcf00fc1157c67729eded428b455c27ca370e41f4d785bfa931"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "log",
  "symphonia-core",
@@ -6651,8 +6623,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-riff"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05f7be232f962f937f4b7115cbe62c330929345434c834359425e043bfd15f50"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "extended",
  "log",
@@ -6663,8 +6634,7 @@ dependencies = [
 [[package]]
 name = "symphonia-metadata"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc622b9841a10089c5b18e99eb904f4341615d5aa55bbf4eedde1be721a4023c"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "encoding_rs",
  "lazy_static",
@@ -6675,8 +6645,7 @@ dependencies = [
 [[package]]
 name = "symphonia-utils-xiph"
 version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "484472580fa49991afda5f6550ece662237b00c6f562c7d9638d1b086ed010fe"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
 dependencies = [
  "symphonia-core",
  "symphonia-metadata",
@@ -6888,7 +6857,7 @@ name = "tilia-widget"
 version = "0.1.0"
 source = "git+https://github.com/aschey/tilia?rev=6dd5ae029904aa95e711670853f9700738f9da97#6dd5ae029904aa95e711670853f9700738f9da97"
 dependencies = [
- "ansi-to-tui 4.0.1",
+ "ansi-to-tui",
  "crossterm",
  "futures",
  "ratatui",
@@ -7430,18 +7399,6 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
-
-[[package]]
-name = "tui"
-version = "0.19.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccdd26cbd674007e649a272da4475fb666d3aa0ad0531da7136db6fab0e5bad1"
-dependencies = [
- "bitflags 1.3.2",
- "cassowary",
- "unicode-segmentation",
- "unicode-width",
-]
 
 [[package]]
 name = "typenum"

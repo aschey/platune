@@ -20,7 +20,7 @@ tap = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
-decal = { git = "https://github.com/aschey/decal", rev = "49c26561f7ea9a4f783e1d87121102ee411f67a0" }
+decal = { git = "https://github.com/aschey/decal", rev = "44d9826ab22ffd2fcb804bf188ff5747c06a607e" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

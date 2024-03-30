@@ -29,7 +29,7 @@ notify = { version = "6", default-features = false, features = [
 num_cpus = "1"
 regex = "1"
 rust-embed = "8"
-slite = { git = "https://github.com/aschey/slite", rev = "3831bd9fa158723a7511ef22ec67cdd4451b4383", default-features = false, features = [
+slite = { git = "https://github.com/aschey/slite", rev = "19877fef49a0850ec0d1b597c2ef9b744130a177", default-features = false, features = [
     "read-files",
 ] }
 sqlx = { version = "0.7", default-features = false, features = [
