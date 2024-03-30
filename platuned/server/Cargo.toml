@@ -8,9 +8,9 @@ version = "0.1.0"
 path = "src/lib.rs"
 
 [dependencies]
-async-trait = "0.1.77"
-axum = { version = "0.7.4", optional = true }
-clap = { version = "4.5.2", features = ["unstable-styles"] }
+async-trait = "0.1.79"
+axum = { version = "0.7.5", optional = true }
+clap = { version = "4.5.4", features = ["unstable-styles"] }
 console-subscriber = { version = "0.2.0", features = [
     "parking_lot",
 ], optional = true }
@@ -30,16 +30,16 @@ libplatune-player = { path = "../../libplatune/player", optional = true }
 parity-tokio-ipc = { git = "https://github.com/aschey/parity-tokio-ipc", rev = "588198a0abb32a79f6f3e656ff0472008e4ba9b8" }
 prost = "0.12.3"
 prost-types = "0.12.3"
-rcgen = { version = "0.12.1", features = ["x509-parser"] }
-tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros"] }
-tokio-stream = { version = "0.1.14", features = ["net"] }
+rcgen = { version = "0.13.0", features = ["x509-parser"] }
+tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros"] }
+tokio-stream = { version = "0.1.15", features = ["net"] }
 tonic = { version = "0.11.0", features = ["tls"] }
 tonic-health = "0.11.0"
 tonic-reflection = "0.11.0"
 tower = { version = "0.4.13", optional = true }
 tower-http = { version = "0.5.2", features = ["fs"], optional = true }
 tracing = "0.1.40"
-uuid = { version = "1.7.0", features = ["v4"] }
+uuid = { version = "1.8.0", features = ["v4"] }
 
 [features]
 default = ["management", "player"]

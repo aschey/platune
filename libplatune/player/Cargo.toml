@@ -10,12 +10,11 @@ name = "libplatune_player"
 path = "src/lib.rs"
 
 [dependencies]
-cpal = "0.15"
 derivative = "2"
 eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
-stream-download = { version = "0.4.2", features = ["reqwest-rustls"] }
+stream-download = { version = "0.5.0", features = ["reqwest-rustls"] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"
 thiserror = "1"
@@ -25,7 +24,7 @@ decal = { git = "https://github.com/aschey/decal", rev = "49c26561f7ea9a4f783e1d
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.77"
+async-trait = "0.1.79"
 ctor = "0.2.7"
 futures = "0.3.30"
 pretty_assertions = "1.4.0"

@@ -41,7 +41,10 @@ async fn run() -> Result<(), BoxedError> {
     let logger_builder =
         LoggerBuilder::new(ServiceHandler::label()).with_config(logging::UserConfig {
             log_level: LogLevel(default_level),
-        });
+        })
+        // Lofty spams warning logs for metadata parsing issues
+        // TODO: make a setting to control this
+        .with_env_filter_directive("lofty=error".parse()?);
 
     let mut cli = Cli::builder()
         .with_base_command(clap_base_command())

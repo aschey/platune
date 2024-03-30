@@ -13,14 +13,14 @@ harness = false
 name = "bench"
 
 [dependencies]
-concread = { version = "0.4", default-features = false, features = ["arcache"] }
+concread = { version = "0.5", default-features = false, features = ["arcache"] }
 directories = "5"
 eyre = "0.6"
 futures = "0.3"
 ignore = "0.4"
 itertools = "0.12"
 lazy_static = "1"
-lofty = { git = "https://github.com/aschey/lofty-rs", rev = "48aac90bb18b626c61bbeed29eeb4bc5be1d4871" }
+lofty = "0.18.2"
 log = "0.4"
 normpath = "1"
 notify = { version = "6", default-features = false, features = [
