@@ -1032,6 +1032,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8191fa7302e03607ff0e237d4246cc043ff5b3cb9409d995172ba3bea16b807"
 
 [[package]]
+name = "cmake"
+version = "0.1.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a31c789563b815f77f4250caee12365734369f942439b7defd71e18a48197130"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "color-eyre"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1447,6 +1456,35 @@ checksum = "ad291aa74992b9b7a7e88c38acbbf6ad7e107f1d90ee8775b7bc1fc3394f485c"
 dependencies = [
  "quote",
  "syn 2.0.52",
+]
+
+[[package]]
+name = "cubeb"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6db57570f2617f0214c11721e8d2325816d9dc936c2c472661ac5d90a30fba98"
+dependencies = [
+ "cubeb-core",
+]
+
+[[package]]
+name = "cubeb-core"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2380c03a7df0ea3744f6a210d6340f423935e53cbf2fd68ada84b5e808e46ac7"
+dependencies = [
+ "bitflags 1.3.2",
+ "cubeb-sys",
+]
+
+[[package]]
+name = "cubeb-sys"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c20c457d7b34dad6e0c1a9c759c96b4420b9e9917a572998b81835799a07e1d"
+dependencies = [
+ "cmake",
+ "pkg-config",
 ]
 
 [[package]]
@@ -1960,9 +1998,11 @@ checksum = "7e962a19be5cfc3f3bf6dd8f61eb50107f356ad6270fbb3ed41476571db78be5"
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=44d9826ab22ffd2fcb804bf188ff5747c06a607e#44d9826ab22ffd2fcb804bf188ff5747c06a607e"
+source = "git+https://github.com/aschey/decal?rev=0c2313a0f70d6fa78568ebac0146df6c0e95b450#0c2313a0f70d6fa78568ebac0146df6c0e95b450"
 dependencies = [
  "cpal",
+ "cubeb",
+ "cubeb-core",
  "dasp",
  "rb",
  "rubato",

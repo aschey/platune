@@ -1,11 +1,12 @@
 #![no_main]
-use libfuzzer_sys::{arbitrary::Arbitrary, fuzz_target};
-use libplatune_player::{
-    platune_player::{PlatunePlayer, Settings},
-    CpalOutput,
-};
+use std::env::current_dir;
+use std::time::Duration;
+
+use libfuzzer_sys::arbitrary::Arbitrary;
+use libfuzzer_sys::fuzz_target;
+use libplatune_player::platune_player::{PlatunePlayer, Settings};
+use libplatune_player::CpalOutput;
 use once_cell::sync::Lazy;
-use std::{env::current_dir, time::Duration};
 use tokio::runtime::Runtime;
 
 #[derive(Arbitrary, Debug)]

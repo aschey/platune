@@ -5,14 +5,14 @@ mod http_stream_reader;
 mod player;
 mod settings;
 mod two_way_channel;
-pub use decal::output::{AudioBackend, CpalOutput, MockOutput};
+pub use decal::output::{AudioBackend, CubebOutput, MockOutput};
 
 pub mod platune_player {
     use std::fs::remove_file;
     use std::thread;
     use std::time::Duration;
 
-    use decal::output::{AudioBackend, DeviceTrait, HostTrait};
+    use decal::output::{AudioBackend, Device, Host};
     use derivative::Derivative;
     use tap::TapFallible;
     use thiserror::Error;
