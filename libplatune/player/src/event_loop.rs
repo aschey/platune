@@ -3,7 +3,7 @@ use std::time::Duration;
 use decal::decoder::{
     Decoder, DecoderError, DecoderResult, DecoderSettings, ResamplerSettings, Source,
 };
-use decal::output::{AudioBackend, OutputBuilder, OutputSettings};
+use decal::output::{AudioBackend, OutputBuilder, OutputSettings, WriteBlockingError};
 use decal::{AudioManager, WriteOutputError};
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
@@ -127,13 +127,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         // because we don't want to initialize the next track
                         break;
                     }
-                    Ok((_, DecoderResult::Unfinished))
-                    | Err(ProcessorError::WriteOutputError(
-                        WriteOutputError::WriteBlockingError {
-                            decoder_result: DecoderResult::Unfinished,
-                            error: _,
-                        },
-                    )) => {}
+                    Ok((_, DecoderResult::Unfinished)) => {}
                     Ok((_, DecoderResult::Finished))
                     | Err(ProcessorError::WriteOutputError(
                         WriteOutputError::WriteBlockingError {
@@ -148,9 +142,13 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                             .ok();
                         break;
                     }
-                    Err(ProcessorError::WriteOutputError(WriteOutputError::DecoderError(
-                        DecoderError::ResetRequired,
-                    ))) => {
+                    Err(ProcessorError::WriteOutputError(
+                        WriteOutputError::DecoderError(DecoderError::ResetRequired)
+                        | WriteOutputError::WriteBlockingError {
+                            decoder_result: _,
+                            error: WriteBlockingError::OutputStalled,
+                        },
+                    )) => {
                         player_cmd_tx
                             .send(Command::Reset)
                             .tap_err(|e| error!("Error sending reset command: {e}"))
