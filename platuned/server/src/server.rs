@@ -149,13 +149,30 @@ async fn run_file_service(
     shutdown_rx: BroadcastEventStore<Signal>,
 ) -> Result<()> {
     let addr: SocketAddr = "0.0.0.0:50050".parse().expect("failed to parse address");
-    info!("Running file server on {addr}");
     let mut shutdown_rx = shutdown_rx.subscribe_events();
-
+    info!("Running file server on {addr}");
     let mut app = axum::Router::new();
-    for folder in folders {
-        app = app.nest_service(&format!("/{folder}"), ServeDir::new(folder));
+    let root_path = "/";
+    match &folders[..] {
+        [] => {}
+        [folder] => {
+            app = app.nest_service(root_path, ServeDir::new(folder));
+        }
+        [folder, fallback] => {
+            app = app.nest_service(
+                root_path,
+                ServeDir::new(folder).fallback(ServeDir::new(fallback)),
+            );
+        }
+        [first, second, rest @ ..] => {
+            let mut serve_dir = ServeDir::new(first).fallback(ServeDir::new(second));
+            for folder in rest {
+                serve_dir = serve_dir.fallback(ServeDir::new(folder));
+            }
+            app = app.nest_service(root_path, serve_dir);
+        }
     }
+
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .wrap_err(format!("Failed to bind to {addr}"))?;
