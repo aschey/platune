@@ -14,7 +14,7 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
-stream-download = { version = "0.5.1", features = ["reqwest-rustls"] }
+stream-download = { version = "0.5.2", features = ["reqwest-rustls"] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"
 thiserror = "1"

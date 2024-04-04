@@ -5,7 +5,7 @@ use std::time::Duration;
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
 use libplatune_player::platune_player::*;
-use libplatune_player::CubebOutput;
+use libplatune_player::CpalOutput;
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
@@ -15,13 +15,13 @@ use crate::rpc::event_response::*;
 use crate::rpc::*;
 
 pub struct PlayerImpl {
-    player: Arc<PlatunePlayer<CubebOutput>>,
+    player: Arc<PlatunePlayer<CpalOutput>>,
     shutdown_rx: BroadcastEventStore<Signal>,
 }
 
 impl PlayerImpl {
     pub fn new(
-        player: Arc<PlatunePlayer<CubebOutput>>,
+        player: Arc<PlatunePlayer<CpalOutput>>,
         shutdown_rx: BroadcastEventStore<Signal>,
     ) -> Self {
         PlayerImpl {

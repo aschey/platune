@@ -22,7 +22,7 @@ use libplatune_management::manager::Manager;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
-use libplatune_player::CubebOutput;
+use libplatune_player::CpalOutput;
 use platuned::MAIN_SERVER_PORT;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
@@ -49,7 +49,7 @@ enum Transport {
 #[derive(Clone)]
 struct Services {
     #[cfg(feature = "player")]
-    player: Arc<PlatunePlayer<CubebOutput>>,
+    player: Arc<PlatunePlayer<CpalOutput>>,
     #[cfg(feature = "management")]
     manager: FileWatchManager,
 }
