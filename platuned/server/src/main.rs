@@ -1,3 +1,4 @@
+#![feature(ip)]
 mod cert_gen;
 mod ipc_stream;
 mod rpc;

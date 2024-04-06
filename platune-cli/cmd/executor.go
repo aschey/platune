@@ -193,6 +193,7 @@ func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode mo
 			state.currentQueue = append(state.currentQueue, lookupResult.Entries...)
 		}
 	} else {
+		state.mode.Set(defaultMode)
 		path := selected.Metadata.(string)
 		state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: path})
 	}

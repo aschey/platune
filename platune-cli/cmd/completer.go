@@ -12,8 +12,10 @@ import (
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
-const selectAll = "(Select All)"
-const back = "(Back)"
+const (
+	selectAll = "(Select All)"
+	back      = "(Back)"
+)
 
 var filePathCompleter = internal.FilePathCompleter{
 	IgnoreCase: true,
@@ -73,7 +75,8 @@ func (state *cmdState) completerMode(in prompt.Document, returnChan chan []promp
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:           r.Song,
 				CompletionText: completionText,
-				Metadata:       r})
+				Metadata:       r,
+			})
 		}
 		returnChan <- prompt.FilterHasPrefix(suggestions, in.CurrentLineBeforeCursor(), true)
 	}
@@ -93,7 +96,7 @@ func (state *cmdState) completerCmd(in prompt.Document, before []string, returnC
 	}
 }
 
-func (state *cmdState) updateMaxWidths(in prompt.Document, titleRatio float32) {
+func (state *cmdState) updateMaxWidths(titleRatio float32) {
 	size, _ := consolesize.GetConsoleSize()
 	base := float32(size)
 
@@ -132,7 +135,7 @@ func (state *cmdState) completerDefault(in prompt.Document, returnChan chan []pr
 }
 
 func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkipFirst bool, returnChan chan []prompt.Suggest) []prompt.Suggest {
-	state.updateMaxWidths(in, 1./3)
+	state.updateMaxWidths(1. / 3)
 
 	suggestions := filePathCompleter.Complete(in, filePathSkipFirst)
 	if len(suggestions) > 0 && strings.ContainsAny(rest, "/\\") {

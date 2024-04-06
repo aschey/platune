@@ -14,7 +14,7 @@ clap = { version = "4.5.4", features = ["unstable-styles"] }
 console-subscriber = { version = "0.2.0", features = [
     "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "23659b534dbb46eb4d9b7d251037a9a67a6ce50e", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "4a26cca8ae2599596dabdd626409c960b7423b8f", features = [
     "client-standard",
     "server-standard",
     "notify",
@@ -51,7 +51,7 @@ tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
 tonic-build = { version = "0.11.0", features = ["prost"] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "23659b534dbb46eb4d9b7d251037a9a67a6ce50e", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "4a26cca8ae2599596dabdd626409c960b7423b8f", features = [
     "build-info",
     "build-info-build",
     "build-info-cargo",

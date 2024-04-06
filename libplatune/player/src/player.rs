@@ -67,7 +67,7 @@ impl Player {
     }
 
     async fn get_source(&self, path: String) -> Option<Box<dyn Source>> {
-        if path.starts_with("http") {
+        if path.starts_with("http://") || path.starts_with("https://") {
             info!("Creating http stream");
 
             HttpStreamReader::new(path.to_owned())

@@ -30,7 +30,7 @@ impl From<TaggedFile> for Tag {
                 let artists = tag.get_strings(&ItemKey::TrackArtist).join("/");
                 let mut album_artists = tag.get_strings(&ItemKey::AlbumArtist).join("/");
                 if album_artists.is_empty() {
-                    album_artists = artists.clone();
+                    album_artists.clone_from(&artists);
                 }
                 Tag {
                     title: tag.title().unwrap_or_default().into_owned(),

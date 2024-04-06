@@ -55,14 +55,15 @@ async fn run() -> Result<(), BoxedError> {
     .with_arg(&"run".parse()?);
 
     if let Ok(()) = dotenvy::from_path("./.env") {
-        if let Ok(database_url) = std::env::var("DATABASE_URL") {
-            manager_builder =
-                manager_builder.with_environment_variable("DATABASE_URL", database_url);
-        }
-        if let Ok(spellfix_lib) = std::env::var("SPELLFIX_LIB") {
-            manager_builder =
-                manager_builder.with_environment_variable("SPELLFIX_LIB", spellfix_lib);
-        }
+        manager_builder = manager_builder
+            .with_environment_variable_if_exists("DATABASE_URL")
+            .with_environment_variable_if_exists("SPELLFIX_LIB")
+            .with_environment_variable_if_exists("PLATUNE_ENABLE_TLS")
+            .with_environment_variable_if_exists("PLATUNE_HOSTS")
+            .with_environment_variable_if_exists("PLATUNE_GLOBAL_FILE_URL")
+            .with_environment_variable_if_exists("PLATUNE_IP_HEADER")
+            .with_environment_variable_if_exists("PLATUNE_MTLS_CLIENT_CERT_PATH")
+            .with_environment_variable_if_exists("PLATUNE_MTLS_CLIENT_KEY_PATH");
     }
     let manager = manager_builder.build().await.unwrap();
     let logger_builder = LoggerBuilder::new(label.clone());

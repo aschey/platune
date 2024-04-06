@@ -1,8 +1,9 @@
 use std::num::NonZeroUsize;
+use std::{env, fs};
 
 use decal::decoder::{ReadSeekSource, Source};
 use eyre::{Context, Result};
-use stream_download::http::reqwest::Client;
+use stream_download::http::reqwest::{Client, Identity};
 use stream_download::http::HttpStream;
 use stream_download::source::SourceStream;
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
@@ -19,7 +20,18 @@ pub(crate) struct HttpStreamReader {
 
 impl HttpStreamReader {
     pub async fn new(url: String) -> Result<Self> {
-        let stream = HttpStream::<Client>::create(url.parse()?)
+        let mut client_builder = Client::builder();
+        if url.starts_with("https://") {
+            let mtls_cert = env::var("PLATUNE_MTLS_CLIENT_CERT_PATH");
+            let mtls_key = env::var("PLATUNE_MTLS_CLIENT_KEY_PATH");
+            if let (Ok(mtls_cert), Ok(mtls_key)) = (mtls_cert, mtls_key) {
+                let mut cert = fs::read(mtls_cert).wrap_err_with(|| "mtls cert path invalid")?;
+                let mut key = fs::read(mtls_key).wrap_err_with(|| "mtls key path invalid")?;
+                cert.append(&mut key);
+                client_builder = client_builder.identity(Identity::from_pem(&cert)?);
+            }
+        }
+        let stream = HttpStream::new(client_builder.build()?, url.parse()?)
             .await
             .wrap_err_with(|| "Error creating http stream")?;
         let file_len = stream.content_length();

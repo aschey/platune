@@ -211,7 +211,7 @@ impl SearchEngine {
             .await?;
 
         for r in &mut search_entries {
-            r.weights = weights.clone();
+            r.weights.clone_from(&weights)
         }
         search_entries.extend(rest);
         let search_entries = search_entries

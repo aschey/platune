@@ -1,3 +1,5 @@
+use std::env;
+use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::time::Duration;
 
@@ -11,7 +13,7 @@ use prost_types::Timestamp;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{mpsc, RwLockReadGuard};
 use tonic::{Request, Response, Status, Streaming};
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::management_server::Management;
 use crate::rpc::*;
@@ -84,11 +86,22 @@ async fn get_connection_type<T>(
     request: &Request<T>,
     manager: &RwLockReadGuard<'_, Manager>,
 ) -> Result<ConnectionType, Status> {
-    let is_remote = if let Some(addr) = request.remote_addr() {
-        !addr.ip().is_loopback()
+    let remote_addr = if let Some(addr) = request.remote_addr() {
+        if let Ok(header) = env::var("PLATUNE_IP_HEADER") {
+            let ip = request
+                .metadata()
+                .get(&header)
+                .map(|ip| ip.to_str().unwrap().parse::<IpAddr>());
+            info!("Using custom header for source IP {header}: {ip:?}");
+            if let Some(Ok(ip)) = ip { ip } else { addr.ip() }
+        } else {
+            addr.ip()
+        }
     } else {
-        false
+        return Ok(ConnectionType::Local);
     };
+    info!("Remote addr {remote_addr:?}");
+    let is_remote = !remote_addr.is_loopback();
 
     if is_remote {
         let folders = manager
@@ -105,12 +118,23 @@ async fn get_connection_type<T>(
             })
             .collect();
 
+        if remote_addr.is_global() {
+            if let Ok(mut global_addr) = env::var("PLATUNE_GLOBAL_FILE_URL") {
+                if !global_addr.ends_with('/') {
+                    global_addr.push('/');
+                }
+                return Ok(ConnectionType::Remote {
+                    folders,
+                    local_addr: global_addr,
+                });
+            }
+        }
         let local_addr = match request
             .local_addr()
             .ok_or_else(|| format_error("Local address missing".to_string()))?
         {
-            std::net::SocketAddr::V4(addr) => addr.ip().to_string(),
-            std::net::SocketAddr::V6(addr) => format!("[{}]", addr.ip()),
+            SocketAddr::V4(addr) => addr.ip().to_string(),
+            SocketAddr::V6(addr) => format!("[{}]", addr.ip()),
         };
         Ok(ConnectionType::Remote {
             folders,

@@ -31,7 +31,7 @@ impl futures::Stream for ProgressStream {
                 None => Poll::Ready(None),
                 Some(progress_val_result) => match progress_val_result {
                     Ok(progress_val) => {
-                        self.last_val = progress_val.clone();
+                        self.last_val.clone_from(&progress_val);
                         Poll::Ready(progress_val)
                     }
                     Err(BroadcastStreamRecvError::Lagged(_)) => Poll::Ready(self.last_val.clone()),
