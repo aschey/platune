@@ -1,10 +1,28 @@
+use std::env;
+use std::num::ParseIntError;
+
 use clap::builder::styling;
 use daemon_slayer::build_info::cli::BuildInfoCliProvider;
 use daemon_slayer::build_info::vergen_pretty::{self, vergen_pretty_env, PrettyBuilder};
 use daemon_slayer::build_info::{self};
 use daemon_slayer::core::Label;
 
-pub const MAIN_SERVER_PORT: usize = 50051;
+const DEFAULT_MAIN_SERVER_PORT: usize = 50051;
+const DEFAULT_FILE_SERVER_PORT: usize = 50050;
+
+pub fn main_server_port() -> Result<usize, ParseIntError> {
+    Ok(match env::var("PLATUNE_SERVER_PORT") {
+        Ok(port) => port.parse()?,
+        Err(_) => DEFAULT_MAIN_SERVER_PORT,
+    })
+}
+
+pub fn file_server_port() -> Result<usize, ParseIntError> {
+    Ok(match env::var("PLATUNE_FILE_SERVER_PORT") {
+        Ok(port) => port.parse()?,
+        Err(_) => DEFAULT_FILE_SERVER_PORT,
+    })
+}
 
 pub fn clap_base_command() -> clap::Command {
     clap::Command::default().styles(

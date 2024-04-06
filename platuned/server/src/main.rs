@@ -1,3 +1,4 @@
+mod cert_gen;
 mod ipc_stream;
 mod rpc;
 mod server;
@@ -33,13 +34,15 @@ async fn main() -> Result<(), ErrorSink> {
 
 async fn run() -> Result<(), BoxedError> {
     let default_level = if cfg!(feature = "tokio-console") {
+        // TODO: get rid of long spam in our normal log targets when enabling this
+        // we should only send the spammy logs to the tokio console
         tracing::Level::TRACE
     } else {
         tracing::Level::INFO
     };
 
-    let logger_builder =
-        LoggerBuilder::new(ServiceHandler::label()).with_config(logging::UserConfig {
+    let logger_builder = LoggerBuilder::new(ServiceHandler::label())
+        .with_config(logging::UserConfig {
             log_level: LogLevel(default_level),
         })
         // Lofty spams warning logs for metadata parsing issues

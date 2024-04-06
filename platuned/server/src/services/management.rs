@@ -6,6 +6,7 @@ use futures::{Stream, StreamExt};
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use libplatune_management::{database, manager};
+use platuned::file_server_port;
 use prost_types::Timestamp;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{mpsc, RwLockReadGuard};
@@ -113,7 +114,7 @@ async fn get_connection_type<T>(
         };
         Ok(ConnectionType::Remote {
             folders,
-            local_addr: format!("http://{local_addr}:50050/"),
+            local_addr: format!("http://{local_addr}:{}/", file_server_port().unwrap()),
         })
     } else {
         Ok(ConnectionType::Local)

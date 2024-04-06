@@ -18,7 +18,7 @@ use daemon_slayer::logging::cli::LoggingCliProvider;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
 use daemon_slayer::logging::LoggerBuilder;
 use daemon_slayer::process::cli::ProcessCliProvider;
-use platuned::{build_info, clap_base_command, service_label, MAIN_SERVER_PORT};
+use platuned::{build_info, clap_base_command, main_server_port, service_label};
 
 #[tokio::main]
 async fn main() -> Result<(), ErrorSink> {
@@ -67,7 +67,8 @@ async fn run() -> Result<(), BoxedError> {
     let manager = manager_builder.build().await.unwrap();
     let logger_builder = LoggerBuilder::new(label.clone());
 
-    let health_check = GrpcHealthCheck::new(format!("http://[::1]:{MAIN_SERVER_PORT}")).unwrap();
+    let health_check =
+        GrpcHealthCheck::new(format!("http://[::1]:{}", main_server_port()?)).unwrap();
 
     let console = Console::new(manager.clone(), LogSource::Ipc)
         .await

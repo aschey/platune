@@ -4967,6 +4967,7 @@ dependencies = [
  "clap 4.5.4",
  "console-subscriber",
  "daemon-slayer",
+ "directories",
  "dotenvy",
  "futures",
  "libplatune-management",
@@ -4975,6 +4976,7 @@ dependencies = [
  "prost",
  "prost-types",
  "rcgen",
+ "time",
  "tokio",
  "tokio-stream",
  "tonic 0.11.0",
@@ -5376,9 +5378,9 @@ checksum = "56cf8381505b60ae18a4097f1d0be093287ca3bf4fbb23d36ac5ad3bba335daa"
 
 [[package]]
 name = "rcgen"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa96feb4d337a43eae1b39b6d4cafc2860a46cf9cec6f1e65294244ece65e348"
+checksum = "54077e1872c46788540de1ea3d7f4ccb1983d12f9aa909b234468676c1a36779"
 dependencies = [
  "pem",
  "ring",

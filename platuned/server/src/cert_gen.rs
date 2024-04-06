@@ -1,53 +1,95 @@
+use std::path::Path;
+use std::{env, fs};
+
 use rcgen::{
-    BasicConstraints, Certificate, CertificateParams, CertificateSigningRequest, DistinguishedName,
-    DnType, ExtendedKeyUsagePurpose, IsCa, KeyUsagePurpose, RcgenError, SanType,
+    BasicConstraints, Certificate, CertificateParams, DistinguishedName, DnType,
+    ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
 };
-use tonic::transport::{ClientTlsConfig, Identity, ServerTlsConfig};
+use time::OffsetDateTime;
+use tonic::transport::{Identity, ServerTlsConfig};
 use uuid::Uuid;
 
-fn test() -> Result<(), Box<dyn std::error::Error>> {
-    let server_ca = gen_cert_for_ca()?;
-    let client_ca = gen_cert_for_ca()?;
+pub(crate) struct TlsConfig {
+    pub(crate) ca: Certificate,
+    pub(crate) cert: ServerCertificate,
+}
 
-    let host_cert = gen_cert_for_server(&server_ca, "test".to_owned())?;
-    let client_cert = gen_cert_for_server(&client_ca, "test".to_owned())?;
-    let client_ca_pem = tonic::transport::Certificate::from_pem(client_ca.serialize_pem()?);
-
-    let server_identity =
-        Identity::from_pem(host_cert.signed_certificate_pem, host_cert.private_key_pem);
-    let client_identity = Identity::from_pem(
-        client_cert.signed_certificate_pem,
-        client_cert.private_key_pem,
+pub(crate) fn get_tonic_tls_config(
+    server_tls: TlsConfig,
+    client_tls: Option<TlsConfig>,
+) -> ServerTlsConfig {
+    let server_identity = Identity::from_pem(
+        server_tls.cert.signed_certificate_pem,
+        server_tls.cert.private_key_pem,
     );
 
-    let ca = tonic::transport::Certificate::from_pem(server_ca.serialize_pem().unwrap());
-    let client_tls = ClientTlsConfig::new()
-        .ca_certificate(ca)
-        .identity(client_identity)
-        .domain_name("test");
-    let server_tls = ServerTlsConfig::new()
-        .identity(server_identity)
-        .client_ca_root(client_ca_pem);
-    Ok(())
+    let server_tls_config = ServerTlsConfig::new().identity(server_identity);
+    if let Some(client_tls) = client_tls {
+        let client_ca_pem = tonic::transport::Certificate::from_pem(client_tls.ca.pem());
+        server_tls_config.client_ca_root(client_ca_pem)
+    } else {
+        server_tls_config
+    }
 }
 
-fn gen_cert_for_ca() -> Result<Certificate, RcgenError> {
-    let mut dn = DistinguishedName::new();
-    dn.push(DnType::CountryName, "USA");
-    dn.push(DnType::CommonName, "Auto-Generated CA");
+pub(crate) async fn get_tls_config(path: &Path) -> Result<TlsConfig, rcgen::Error> {
+    if path.join("ca.pem").exists()
+        && path.join("cert.pem").exists()
+        && path.join("cert.key").exists()
+    {
+        let ca_params =
+            CertificateParams::from_ca_cert_pem(&fs::read_to_string(path.join("ca.pem")).unwrap())?;
+        let key = fs::read_to_string(path.join("cert.key")).unwrap();
+        let key_pair = KeyPair::from_pem(&key)?;
+        return Ok(TlsConfig {
+            ca: ca_params.self_signed(&key_pair)?,
+            cert: ServerCertificate {
+                private_key_pem: key,
+                signed_certificate_pem: fs::read_to_string(path.join("cert.pem")).unwrap(),
+            },
+        });
+    }
+    let path = path.to_owned();
+    let res = tokio::task::spawn_blocking(move || {
+        let (ca, server_key_pair) = gen_cert_for_ca()?;
 
-    let mut params = CertificateParams::default();
+        let cert = gen_cert_for_server(&ca, &server_key_pair)?;
+
+        fs::create_dir_all(&path).unwrap();
+        fs::write(path.join("ca.pem"), ca.pem()).unwrap();
+        fs::write(path.join("cert.pem"), &cert.signed_certificate_pem).unwrap();
+        fs::write(path.join("cert.key"), &cert.private_key_pem).unwrap();
+        Ok(TlsConfig { ca, cert })
+    });
+    res.await.unwrap()
+}
+
+fn gen_cert_for_ca() -> Result<(Certificate, KeyPair), rcgen::Error> {
+    let mut params = CertificateParams::new(Vec::default()).unwrap();
 
     params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
-    params.distinguished_name = dn;
 
-    params.key_usages = vec![KeyUsagePurpose::KeyCertSign, KeyUsagePurpose::CrlSign];
+    params
+        .distinguished_name
+        .push(DnType::CommonName, "Platune");
 
-    Certificate::from_params(params)
+    params.not_before = OffsetDateTime::now_utc()
+        .checked_sub(time::Duration::days(365))
+        .unwrap();
+    params.not_after = OffsetDateTime::now_utc()
+        .checked_add(time::Duration::days(365 * 10))
+        .unwrap();
+    params.key_usages.push(KeyUsagePurpose::KeyCertSign);
+    params.key_usages.push(KeyUsagePurpose::CrlSign);
+    params.key_usages.push(KeyUsagePurpose::DigitalSignature);
+
+    let key_pair = KeyPair::generate()?;
+    let cert = params.self_signed(&key_pair)?;
+
+    Ok((cert, key_pair))
 }
 
-struct ServerCertificate {
+pub(crate) struct ServerCertificate {
     private_key_pem: String,
 
     // Server certificate only; does not include complete certificate chain.
@@ -56,31 +98,40 @@ struct ServerCertificate {
 
 fn gen_cert_for_server(
     ca: &Certificate,
-    dns_name: String,
-) -> Result<ServerCertificate, RcgenError> {
+    ca_key: &KeyPair,
+) -> Result<ServerCertificate, rcgen::Error> {
     let mut dn = DistinguishedName::new();
     dn.push(DnType::OrganizationName, "Platune");
     dn.push(DnType::OrganizationalUnitName, "Platune Music Server");
     dn.push(DnType::CommonName, Uuid::new_v4().to_string());
 
-    let mut params = CertificateParams::default();
-
+    let hosts: Vec<_> = env::var("PLATUNE_HOSTS")
+        .unwrap()
+        .split(',')
+        .map(|s| s.to_string())
+        .collect();
+    let mut params = CertificateParams::new(hosts).unwrap();
+    params.use_authority_key_identifier_extension = true;
     params.is_ca = IsCa::NoCa;
-    params.alg = &rcgen::PKCS_ECDSA_P256_SHA256;
+
     params.distinguished_name = dn;
-    params.subject_alt_names = vec![SanType::DnsName(dns_name)];
-    params.extended_key_usages = vec![ExtendedKeyUsagePurpose::ServerAuth];
 
-    let unsigned = Certificate::from_params(params)?;
+    params.not_before = OffsetDateTime::now_utc()
+        .checked_sub(time::Duration::days(1))
+        .unwrap();
+    params.not_after = OffsetDateTime::now_utc()
+        .checked_add(time::Duration::days(365 * 10))
+        .unwrap();
+    params
+        .extended_key_usages
+        .push(ExtendedKeyUsagePurpose::ServerAuth);
+    params.key_usages.push(KeyUsagePurpose::DigitalSignature);
 
-    let request_pem = unsigned.serialize_request_pem()?;
-
-    let csr = CertificateSigningRequest::from_pem(&request_pem)?;
-
-    let signed_pem = csr.serialize_pem_with_signer(ca)?;
+    let key_pair = KeyPair::generate()?;
+    let signed_pem = params.signed_by(&key_pair, ca, ca_key)?;
 
     Ok(ServerCertificate {
-        private_key_pem: unsigned.serialize_private_key_pem(),
-        signed_certificate_pem: signed_pem,
+        private_key_pem: key_pair.serialize_pem(),
+        signed_certificate_pem: signed_pem.pem(),
     })
 }

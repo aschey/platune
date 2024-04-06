@@ -1,6 +1,6 @@
 use std::fs::{create_dir_all, File};
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use eyre::{Context, Result};
 use uuid::Uuid;
@@ -15,12 +15,15 @@ pub struct FileConfig {
     config_path: String,
 }
 
+pub fn config_dir() -> Result<PathBuf, ConfigError> {
+    let proj_dirs =
+        directories::ProjectDirs::from("", "", "platune").ok_or(ConfigError::NoHomeDir)?;
+    Ok(proj_dirs.config_dir().to_path_buf())
+}
+
 impl FileConfig {
     pub fn try_new() -> Result<Box<dyn Config + Send + Sync>, ConfigError> {
-        let proj_dirs =
-            directories::ProjectDirs::from("", "", "platune").ok_or(ConfigError::NoHomeDir)?;
-        let config_dir = proj_dirs.config_dir();
-        FileConfig::new_from_path(config_dir.join(CONFIG_FILE))
+        FileConfig::new_from_path(config_dir()?.join(CONFIG_FILE))
     }
 
     pub fn new_from_path<P: AsRef<Path>>(

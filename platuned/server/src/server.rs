@@ -12,6 +12,8 @@ use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 #[cfg(feature = "management")]
+use libplatune_management::config::config_dir;
+#[cfg(feature = "management")]
 use libplatune_management::config::FileConfig;
 #[cfg(feature = "management")]
 use libplatune_management::database::Database;
@@ -23,13 +25,14 @@ use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
 use libplatune_player::CpalOutput;
-use platuned::MAIN_SERVER_PORT;
+use platuned::{file_server_port, main_server_port};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 #[cfg(feature = "management")]
 use tower_http::services::ServeDir;
 use tracing::info;
 
+use crate::cert_gen::{get_tls_config, get_tonic_tls_config};
 use crate::ipc_stream::IpcStream;
 #[cfg(feature = "management")]
 use crate::management_server::ManagementServer;
@@ -69,6 +72,13 @@ impl Services {
     }
 }
 
+#[cfg(not(feature = "management"))]
+pub fn config_dir() -> Result<PathBuf> {
+    let proj_dirs =
+        directories::ProjectDirs::from("", "", "platune").ok_or_else(|| eyre!("No home dir"))?;
+    Ok(proj_dirs.config_dir().to_path_buf())
+}
+
 #[cfg(unix)]
 fn create_socket_path(path: &std::path::Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
@@ -93,11 +103,12 @@ fn create_socket_path(path: &std::path::Path) -> Result<()> {
 pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     let services = Services::new().await?;
     let servers = FuturesUnordered::new();
+    let port = main_server_port()?;
     let http_server = run_server(
         shutdown_rx.clone(),
         services.clone(),
         Transport::Http(
-            format!("0.0.0.0:{MAIN_SERVER_PORT}")
+            format!("0.0.0.0:{port}")
                 .parse()
                 .expect("failed to parse address"),
         ),
@@ -148,7 +159,9 @@ async fn run_file_service(
     folders: Vec<String>,
     shutdown_rx: BroadcastEventStore<Signal>,
 ) -> Result<()> {
-    let addr: SocketAddr = "0.0.0.0:50050".parse().expect("failed to parse address");
+    let addr: SocketAddr = format!("0.0.0.0:{}", file_server_port()?)
+        .parse()
+        .expect("failed to parse address");
     let mut shutdown_rx = shutdown_rx.subscribe_events();
     info!("Running file server on {addr}");
     let mut app = axum::Router::new();
@@ -223,7 +236,28 @@ async fn run_server(
         .set_serving::<ManagementServer<ManagementImpl>>()
         .await;
 
-    let builder = Server::builder()
+    let mut builder = Server::builder();
+    if matches!(transport, Transport::Http(_))
+        && matches!(
+            std::env::var("PLATUNE_ENABLE_TLS").as_deref(),
+            Ok("1" | "true")
+        )
+    {
+        let config_dir = config_dir()?;
+        let server_tls = get_tls_config(&config_dir.join("server")).await?;
+        let client_tls = if matches!(
+            std::env::var("PLATUNE_ENABLE_CLIENT_TLS").as_deref(),
+            Ok("1" | "true")
+        ) {
+            Some(get_tls_config(&config_dir.join("client")).await?)
+        } else {
+            None
+        };
+        let server_tls_config = get_tonic_tls_config(server_tls, client_tls);
+        builder = builder.tls_config(server_tls_config)?;
+    }
+
+    let builder = builder
         .add_service(reflection_service)
         .add_service(health_service);
     #[cfg(feature = "player")]
