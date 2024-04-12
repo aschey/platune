@@ -1,7 +1,6 @@
-use std::env;
 use std::error::Error;
-use std::path::{Path, PathBuf};
 
+use parity_tokio_ipc::{IpcEndpoint, ServerId};
 use rpc::*;
 use tonic::codegen::StdError;
 use tonic::transport::{Channel, Endpoint, Uri};
@@ -48,16 +47,7 @@ pub async fn connect_management_ipc() -> Result<ManagementClient<Channel>, Box<d
 async fn get_ipc_channel() -> Result<Channel, Box<dyn Error>> {
     let channel = tonic::transport::Endpoint::try_from("http://dummy")?
         .connect_with_connector(service_fn(|_: Uri| {
-            let socket_path = if cfg!(unix) {
-                let socket_base = match env::var("XDG_RUNTIME_DIR") {
-                    Ok(socket_base) => socket_base,
-                    Err(_) => "/tmp".to_owned(),
-                };
-                Path::new(&socket_base).join("platuned/platuned.sock")
-            } else {
-                PathBuf::from(r"\\.\pipe\platuned")
-            };
-            parity_tokio_ipc::Endpoint::connect(socket_path)
+            parity_tokio_ipc::Endpoint::connect(ServerId("platune/platuned"))
         }))
         .await?;
     Ok(channel)

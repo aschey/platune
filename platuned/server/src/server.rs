@@ -1,12 +1,9 @@
 use std::env;
 use std::net::SocketAddr;
-use std::path::PathBuf;
 use std::sync::Arc;
 #[cfg(feature = "management")]
 use std::time::Duration;
 
-#[cfg(unix)]
-use daemon_slayer::error_handler::color_eyre::eyre::eyre;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::stream::FuturesUnordered;
@@ -46,7 +43,7 @@ use crate::services::player::PlayerImpl;
 
 enum Transport {
     Http(SocketAddr),
-    Ipc(PathBuf),
+    Ipc(&'static str),
 }
 
 #[derive(Clone)]
@@ -79,27 +76,6 @@ pub fn config_dir() -> Result<PathBuf> {
     Ok(proj_dirs.config_dir().to_path_buf())
 }
 
-#[cfg(unix)]
-fn create_socket_path(path: &std::path::Path) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-    let parent_dir = path
-        .parent()
-        .ok_or_else(|| eyre!("Socket path should have a parent directory"))?;
-    if let Err(e) = std::fs::remove_file(path) {
-        if e.kind() != std::io::ErrorKind::NotFound {
-            return Err(e).wrap_err("Unable to delete old Unix socket");
-        }
-    }
-
-    std::fs::create_dir_all(parent_dir).wrap_err("Unable to create Unix socket directory")?;
-    let mut perms = parent_dir
-        .metadata()
-        .wrap_err("Error setting socket directory metadata")?
-        .permissions();
-    perms.set_mode(0o644);
-    Ok(())
-}
-
 pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     let services = Services::new().await?;
     let servers = FuturesUnordered::new();
@@ -115,23 +91,10 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     );
     servers.push(tokio::spawn(http_server));
 
-    #[cfg(unix)]
-    let socket_path = {
-        let socket_base = match env::var("XDG_RUNTIME_DIR") {
-            Ok(socket_base) => socket_base,
-            Err(_) => "/tmp".to_owned(),
-        };
-        let path = std::path::Path::new(&socket_base).join("platuned/platuned.sock");
-        create_socket_path(&path)?;
-        path
-    };
-    #[cfg(windows)]
-    let socket_path = PathBuf::from(r"\\.\pipe\platuned");
-
     let ipc_server = run_server(
         shutdown_rx.clone(),
         services.clone(),
-        Transport::Ipc(socket_path),
+        Transport::Ipc("platune/platuned"),
     );
     servers.push(tokio::spawn(ipc_server));
     #[cfg(feature = "management")]
@@ -286,12 +249,9 @@ async fn run_server(
         Transport::Ipc(path) => {
             info!("Running IPC server on {path:?}");
             builder
-                .serve_with_incoming_shutdown(
-                    IpcStream::get_async_stream(path.to_string_lossy().to_string())?,
-                    async {
-                        shutdown_rx.next().await;
-                    },
-                )
+                .serve_with_incoming_shutdown(IpcStream::get_async_stream(path)?, async {
+                    shutdown_rx.next().await;
+                })
                 .await
                 .wrap_err("Error running IPC server")
         }
