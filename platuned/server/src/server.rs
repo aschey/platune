@@ -70,7 +70,8 @@ impl Services {
 }
 
 #[cfg(not(feature = "management"))]
-pub fn config_dir() -> Result<PathBuf> {
+pub fn config_dir() -> Result<std::path::PathBuf> {
+    use daemon_slayer::error_handler::color_eyre::eyre;
     let proj_dirs =
         directories::ProjectDirs::from("", "", "platune").ok_or_else(|| eyre!("No home dir"))?;
     Ok(proj_dirs.config_dir().to_path_buf())
