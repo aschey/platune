@@ -22,6 +22,7 @@ use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
 use libplatune_player::CpalOutput;
+use parity_tokio_ipc::{IntoIpcPath, ServerId};
 use platuned::{file_server_port, main_server_port};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
@@ -248,9 +249,10 @@ async fn run_server(
         }
 
         Transport::Ipc(path) => {
-            info!("Running IPC server on {path:?}");
+           let ipc_path = ServerId(path).into_ipc_path()?;
+            info!("Running IPC server on {}", ipc_path.display());
             builder
-                .serve_with_incoming_shutdown(IpcStream::get_async_stream(path)?, async {
+                .serve_with_incoming_shutdown(IpcStream::get_async_stream(ipc_path)?, async {
                     shutdown_rx.next().await;
                 })
                 .await

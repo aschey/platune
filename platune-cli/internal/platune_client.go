@@ -296,7 +296,7 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 
 	searchClient := *p.searchClient
 	if searchClient == nil {
-		return nil, fmt.Errorf("Not connected")
+		return nil, fmt.Errorf("not connected")
 	}
 	if err := searchClient.Send(req); err != nil {
 		return nil, err
