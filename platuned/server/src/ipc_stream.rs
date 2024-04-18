@@ -15,7 +15,7 @@ pub struct IpcStream(Pin<Box<dyn ReadWrite + Send>>);
 
 impl IpcStream {
     pub fn get_async_stream(
-        path: impl IntoIpcPath + Send,
+        path: impl IntoIpcPath,
     ) -> io::Result<impl Stream<Item = io::Result<IpcStream>>> {
         let stream = Endpoint::new(path, OnConflict::Overwrite)?.incoming()?;
         Ok(stream.map(|next| next.map(|s| IpcStream(Box::pin(s)))))
