@@ -59,6 +59,7 @@ async fn run() -> Result<(), BoxedError> {
             .with_environment_variable_if_exists("DATABASE_URL")
             .with_environment_variable_if_exists("SPELLFIX_LIB")
             .with_environment_variable_if_exists("PLATUNE_ENABLE_TLS")
+            .with_environment_variable_if_exists("PLATUNE_ENABLE_CLIENT_TLS")
             .with_environment_variable_if_exists("PLATUNE_HOSTS")
             .with_environment_variable_if_exists("PLATUNE_GLOBAL_FILE_URL")
             .with_environment_variable_if_exists("PLATUNE_IP_HEADER")
