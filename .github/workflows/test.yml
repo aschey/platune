@@ -9,7 +9,7 @@ jobs:
   rust:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-13]
         include:
           - os: macos-latest
             protoc-target: osx-x86_64
