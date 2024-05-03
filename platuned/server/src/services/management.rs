@@ -123,6 +123,7 @@ async fn get_connection_type<T>(
                 if !global_addr.ends_with('/') {
                     global_addr.push('/');
                 }
+                info!("Using global file URL {global_addr}");
                 return Ok(ConnectionType::Remote {
                     folders,
                     local_addr: global_addr,

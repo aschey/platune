@@ -22,12 +22,15 @@ impl HttpStreamReader {
     pub async fn new(url: String) -> Result<Self> {
         let mut client_builder = Client::builder();
         if url.starts_with("https://") {
-            let mtls_cert = env::var("PLATUNE_MTLS_CLIENT_CERT_PATH");
-            let mtls_key = env::var("PLATUNE_MTLS_CLIENT_KEY_PATH");
-            if let (Ok(mtls_cert), Ok(mtls_key)) = (mtls_cert, mtls_key) {
-                let mut cert = fs::read(mtls_cert).wrap_err_with(|| "mtls cert path invalid")?;
-                let mut key = fs::read(mtls_key).wrap_err_with(|| "mtls key path invalid")?;
+            let mtls_cert_path = env::var("PLATUNE_MTLS_CLIENT_CERT_PATH");
+            let mtls_key_path = env::var("PLATUNE_MTLS_CLIENT_KEY_PATH");
+            if let (Ok(mtls_cert_path), Ok(mtls_key_path)) = (mtls_cert_path, mtls_key_path) {
+                info!("Using cert paths: {mtls_cert_path} {mtls_key_path}");
+                let mut cert =
+                    fs::read(mtls_cert_path).wrap_err_with(|| "mtls cert path invalid")?;
+                let mut key = fs::read(mtls_key_path).wrap_err_with(|| "mtls key path invalid")?;
                 cert.append(&mut key);
+
                 client_builder = client_builder.identity(Identity::from_pem(&cert)?);
             }
         }

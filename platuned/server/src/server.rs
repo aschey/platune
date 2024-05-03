@@ -208,12 +208,14 @@ async fn run_server(
             Ok("1" | "true")
         )
     {
+        info!("Enabling TLS");
         let config_dir = config_dir()?;
         let server_tls = get_tls_config(&config_dir.join("server")).await?;
         let client_tls = if matches!(
             std::env::var("PLATUNE_ENABLE_CLIENT_TLS").as_deref(),
             Ok("1" | "true")
         ) {
+            info!("Enabling client TLS");
             Some(get_tls_config(&config_dir.join("client")).await?)
         } else {
             None
@@ -249,7 +251,7 @@ async fn run_server(
         }
 
         Transport::Ipc(path) => {
-           let ipc_path = ServerId(path).into_ipc_path()?;
+            let ipc_path = ServerId(path).into_ipc_path()?;
             info!("Running IPC server on {}", ipc_path.display());
             builder
                 .serve_with_incoming_shutdown(IpcStream::get_async_stream(ipc_path)?, async {

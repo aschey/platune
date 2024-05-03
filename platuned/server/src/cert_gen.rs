@@ -7,6 +7,7 @@ use rcgen::{
 };
 use time::OffsetDateTime;
 use tonic::transport::{Identity, ServerTlsConfig};
+use tracing::info;
 use uuid::Uuid;
 
 pub(crate) struct TlsConfig {
@@ -49,6 +50,8 @@ pub(crate) async fn get_tls_config(path: &Path) -> Result<TlsConfig, rcgen::Erro
             },
         });
     }
+
+    info!("Generating TLS certs");
     let path = path.to_owned();
     let res = tokio::task::spawn_blocking(move || {
         let (ca, server_key_pair) = gen_cert_for_ca()?;
