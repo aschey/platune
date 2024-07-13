@@ -12,7 +12,7 @@ pub mod platune_player {
     use std::thread;
     use std::time::Duration;
 
-    use decal::output::{AudioBackend, Device, Host};
+    use decal::output::{AudioBackend, DeviceTrait, HostTrait};
     use derivative::Derivative;
     use tap::TapFallible;
     use thiserror::Error;

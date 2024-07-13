@@ -22,8 +22,8 @@ use libplatune_management::manager::Manager;
 use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
 use libplatune_player::CpalOutput;
-use parity_tokio_ipc::{IntoIpcPath, ServerId};
 use platuned::{file_server_port, main_server_port};
+use tipsy::{IntoIpcPath, ServerId};
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 #[cfg(feature = "management")]

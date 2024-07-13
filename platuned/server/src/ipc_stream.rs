@@ -3,7 +3,7 @@ use std::pin::Pin;
 use std::task::{Context as TaskContext, Poll};
 
 use futures::{Stream, StreamExt};
-use parity_tokio_ipc::{Endpoint, IntoIpcPath, IpcEndpoint, OnConflict};
+use tipsy::{Endpoint, IntoIpcPath, OnConflict};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tonic::transport::server::Connected;
 

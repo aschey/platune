@@ -14,21 +14,21 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
-stream-download = { version = "0.5.2", features = ["reqwest-rustls"] }
+stream-download = { version = "0.6.0", features = ["reqwest-rustls"] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
-decal = { git = "https://github.com/aschey/decal", rev = "ee0b1ba9456b7bf24b013fc90d008637f54d1e8d" }
+decal = { git = "https://github.com/aschey/decal", rev = "44d9826ab22ffd2fcb804bf188ff5747c06a607e" }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.80"
-ctor = "0.2.7"
+async-trait = "0.1.81"
+ctor = "0.2.8"
 futures = "0.3.30"
 pretty_assertions = "1.4.0"
-rstest = "0.19.0"
+rstest = "0.21.0"
 spin_sleep = "1.2.0"
 tracing-appender = "0.2.3"
 tracing-subscriber = "0.3.18"

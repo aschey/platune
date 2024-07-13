@@ -4,7 +4,6 @@ use std::num::ParseIntError;
 use clap::builder::styling;
 use daemon_slayer::build_info::cli::BuildInfoCliProvider;
 use daemon_slayer::build_info::vergen_pretty::{self, vergen_pretty_env, PrettyBuilder};
-use daemon_slayer::build_info::{self};
 use daemon_slayer::core::Label;
 
 const DEFAULT_MAIN_SERVER_PORT: usize = 50051;
@@ -41,7 +40,7 @@ pub fn build_info() -> BuildInfoCliProvider {
         .env(vergen_pretty_env!())
         .key_style(
             vergen_pretty::Style::default()
-                .fg(build_info::Color::Cyan)
+                .fg(console::Color::Cyan)
                 .bold(),
         )
         .value_style(vergen_pretty::Style::default())

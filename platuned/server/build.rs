@@ -2,7 +2,7 @@ use std::env;
 use std::error::Error;
 use std::path::PathBuf;
 
-use daemon_slayer::build_info::vergen::EmitBuilder;
+use vergen_gix::{BuildBuilder, CargoBuilder, Emitter, GixBuilder, RustcBuilder, SysinfoBuilder};
 
 fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -14,17 +14,20 @@ fn main() -> Result<(), Box<dyn Error>> {
             &["../proto/"],
         )?;
 
-    EmitBuilder::builder()
-        .build_timestamp()
-        .cargo_debug()
-        .cargo_target_triple()
-        .git_branch()
-        .git_commit_count()
-        .git_commit_timestamp()
-        .git_describe(true, true, None)
-        .git_sha(false)
-        .rustc_semver()
-        .sysinfo_os_version()
+    Emitter::default()
+        .add_instructions(&BuildBuilder::default().build_timestamp(true).build()?)?
+        .add_instructions(&CargoBuilder::default().target_triple(true).build()?)?
+        .add_instructions(
+            &GixBuilder::default()
+                .branch(true)
+                .commit_count(true)
+                .commit_timestamp(true)
+                .sha(false)
+                .describe(true, true, None)
+                .build()?,
+        )?
+        .add_instructions(&RustcBuilder::default().semver(true).build()?)?
+        .add_instructions(&SysinfoBuilder::default().os_version(true).build()?)?
         .emit()?;
     Ok(())
 }

@@ -1,7 +1,8 @@
 use std::error::Error;
 
-use parity_tokio_ipc::{IpcEndpoint, ServerId};
+use hyper_util::rt::TokioIo;
 use rpc::*;
+use tipsy::ServerId;
 use tonic::codegen::StdError;
 use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
@@ -45,10 +46,14 @@ pub async fn connect_management_ipc() -> Result<ManagementClient<Channel>, Box<d
 }
 
 async fn get_ipc_channel() -> Result<Channel, Box<dyn Error>> {
-    let channel = tonic::transport::Endpoint::try_from("http://dummy")?
-        .connect_with_connector(service_fn(|_: Uri| {
-            parity_tokio_ipc::Endpoint::connect(ServerId("platune/platuned"))
+    let endpoint = tonic::transport::Endpoint::try_from("http://dummy")?;
+    let channel = endpoint
+        .connect_with_connector(service_fn(|_: Uri| async move {
+            Ok::<_, Box<dyn Error + Send + Sync>>(TokioIo::new(
+                tipsy::Endpoint::connect(ServerId("platune/platuned")).await?,
+            ))
         }))
         .await?;
+
     Ok(channel)
 }

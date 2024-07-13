@@ -9,11 +9,12 @@ name = "platuned_client"
 path = "src/lib.rs"
 
 [dependencies]
-parity-tokio-ipc = { git = "https://github.com/aschey/parity-tokio-ipc", rev = "feb8297ed586862034faed03794d5d46519cd064" }
-prost = "0.12"
-prost-types = "0.12"
-tonic = "0.11"
+tipsy = "0.2"
+hyper-util = "0.1.6"
+prost = "0.13"
+prost-types = "0.13"
+tonic = "0.12"
 tower = "0.4.13"
 
 [build-dependencies]
-tonic-build = { version = "0.11", features = ["prost"] }
+tonic-build = { version = "0.12", features = ["prost"] }

@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use ignore::{WalkBuilder, WalkState};
 use itertools::Itertools;
-use lofty::Probe;
+use lofty::probe::Probe;
 use regex::Regex;
 use sqlx::{Pool, Sqlite};
 use tap::TapFallible;

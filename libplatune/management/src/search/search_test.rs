@@ -2,7 +2,10 @@ use std::fs::{self, create_dir_all};
 use std::sync::Arc;
 
 use futures::StreamExt;
-use lofty::{Accessor, ItemKey, Probe, TagExt, TaggedFileExt};
+use lofty::config::WriteOptions;
+use lofty::file::TaggedFileExt;
+use lofty::probe::Probe;
+use lofty::tag::{Accessor, ItemKey, TagExt};
 use pretty_assertions::assert_eq;
 use rstest::*;
 use tempfile::TempDir;
@@ -537,7 +540,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         if let Some(album) = song.album {
             tag.set_album(album.to_owned());
         }
-        tag.save_to_path(song_path).unwrap();
+        tag.save_to_path(song_path, WriteOptions::new()).unwrap();
     }
 
     manager

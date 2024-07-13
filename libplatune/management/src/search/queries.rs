@@ -88,7 +88,7 @@ pub(crate) fn combine_spellfix_results(spellfix_results: Vec<SpellfixResult>) ->
     // Group spellfix results by their correpsonding search input
     let spellfix_groups = spellfix_results
         .into_iter()
-        .group_by(|row| row.search.to_owned())
+        .chunk_by(|row| row.search.to_owned())
         .into_iter()
         .map(|(_, val)| val.map(|v| v.word + " ").collect_vec())
         .collect_vec();

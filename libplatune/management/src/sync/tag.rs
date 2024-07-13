@@ -1,5 +1,6 @@
 use itertools::Itertools;
-use lofty::{Accessor, AudioFile, ItemKey, TaggedFile, TaggedFileExt};
+use lofty::file::{AudioFile, TaggedFile, TaggedFileExt};
+use lofty::tag::{Accessor, ItemKey};
 
 #[derive(Debug, Hash, Default)]
 pub(crate) struct Tag {

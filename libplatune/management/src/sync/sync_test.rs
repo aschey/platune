@@ -5,7 +5,10 @@ use std::time::Duration;
 
 use futures::StreamExt;
 use itertools::Itertools;
-use lofty::{Accessor, ItemKey, Probe, TagExt, TaggedFileExt};
+use lofty::config::WriteOptions;
+use lofty::file::TaggedFileExt;
+use lofty::probe::Probe;
+use lofty::tag::{Accessor, ItemKey, TagExt};
 use normpath::PathExt;
 use pretty_assertions::assert_eq;
 use rstest::*;
@@ -261,7 +264,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
         tag1.set_album("album".to_owned());
         tag1.insert_text(ItemKey::AlbumArtist, "artist1".to_owned());
         tag1.set_title("track1".to_owned());
-        tag1.save_to_path(&song1_path).unwrap();
+        tag1.save_to_path(&song1_path, WriteOptions::new()).unwrap();
     }
 
     {
@@ -275,7 +278,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
         }
 
         tag2.set_title("track2".to_owned());
-        tag2.save_to_path(&song2_path).unwrap();
+        tag2.save_to_path(&song2_path, WriteOptions::new()).unwrap();
     }
 
     manager
@@ -291,7 +294,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
             let mut track2 = Probe::open(&song2_path).unwrap().read().unwrap();
             let tag2 = track2.primary_tag_mut().unwrap();
             tag2.insert_text(ItemKey::AlbumArtist, "artist2".to_owned());
-            tag2.save_to_path(&song2_path).unwrap();
+            tag2.save_to_path(&song2_path, WriteOptions::new()).unwrap();
         }
 
         let mut receiver = manager.sync(None).await.unwrap();

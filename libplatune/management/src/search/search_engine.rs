@@ -277,7 +277,7 @@ impl SearchEngine {
         search_entries
             .tap_mut(|s| s.sort())
             .into_iter()
-            .group_by(|key| (key.get_formatted_entry(), key.get_description()))
+            .chunk_by(|key| (key.get_formatted_entry(), key.get_description()))
             .into_iter()
             .map(|(key, group)| {
                 let group = group.collect_vec();
