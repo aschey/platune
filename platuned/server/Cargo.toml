@@ -13,7 +13,7 @@ clap = { version = "4.5.9", features = ["unstable-styles"] }
 console-subscriber = { version = "0.3.0", features = [
     "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "60a364246800d9ef5a2df4ba3f8dd14f342bcebc", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "bf481c9d4ef95ec0ce71ffbecc14203f478e252b", features = [
     "client-standard",
     "server-standard",
     "notify",
@@ -27,12 +27,12 @@ dotenvy = "0.15.7"
 futures = "0.3.30"
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
-tipsy = "0.2"
+tipsy = "0.3"
 prost = "0.13.1"
 prost-types = "0.13.1"
 rcgen = { version = "0.13.1", features = ["x509-parser", "pem"] }
 time = "0.3.36"
-tokio = { version = "1.38.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.38.1", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.15", features = ["net"] }
 tonic = { version = "0.12.0", features = ["tls"] }
 tonic-health = "0.12.0"

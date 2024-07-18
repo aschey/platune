@@ -251,7 +251,7 @@ async fn run_server(
         }
 
         Transport::Ipc(path) => {
-            let ipc_path = ServerId(path).into_ipc_path()?;
+            let ipc_path = ServerId::new(path).parent_folder("/tmp").into_ipc_path()?;
             info!("Running IPC server on {}", ipc_path.display());
             builder
                 .serve_with_incoming_shutdown(IpcStream::get_async_stream(ipc_path)?, async {

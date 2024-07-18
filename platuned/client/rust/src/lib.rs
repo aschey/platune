@@ -50,7 +50,8 @@ async fn get_ipc_channel() -> Result<Channel, Box<dyn Error>> {
     let channel = endpoint
         .connect_with_connector(service_fn(|_: Uri| async move {
             Ok::<_, Box<dyn Error + Send + Sync>>(TokioIo::new(
-                tipsy::Endpoint::connect(ServerId("platune/platuned")).await?,
+                tipsy::Endpoint::connect(ServerId::new("platune/platuned").parent_folder("/tmp"))
+                    .await?,
             ))
         }))
         .await?;
