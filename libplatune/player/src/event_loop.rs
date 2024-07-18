@@ -40,7 +40,16 @@ pub(crate) fn decode_loop<B: AudioBackend>(
         },
         |err| error!("Output error: {err}"),
     );
-    let mut manager = AudioManager::<f32, _>::new(output_builder, ResamplerSettings::default());
+    let mut manager = loop {
+        if let Ok(manager) =
+            AudioManager::<f32, _>::new(output_builder.clone(), ResamplerSettings::default())
+                .tap_err(|e| error!("Error creating audio manager: {e:?}"))
+        {
+            break manager;
+        } else {
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    };
     manager.set_volume(volume);
     let mut last_stop_position = Duration::default();
 
@@ -54,28 +63,48 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     QueueStartMode::ForceRestart {
                         device_name,
                         paused,
-                    } => handle_force_restart(
-                        &mut manager,
-                        device_name,
-                        queue_source.source,
-                        last_stop_position,
-                        paused,
-                    ),
-                    QueueStartMode::Normal => {
-                        let mut decoder = manager.init_decoder(
+                    } => {
+                        if let Ok(decoder) = handle_force_restart(
+                            &mut manager,
+                            device_name,
                             queue_source.source,
-                            DecoderSettings {
-                                enable_gapless: true,
-                            },
-                        );
-                        manager.initialize(&mut decoder).ok();
+                            last_stop_position,
+                            paused,
+                        )
+                        .tap_err(|e| error!("Error during force restart {e:?}"))
+                        {
+                            decoder
+                        } else {
+                            continue;
+                        }
+                    }
+                    QueueStartMode::Normal => {
+                        if let Ok(decoder) = manager
+                            .init_decoder(
+                                queue_source.source,
+                                DecoderSettings {
+                                    enable_gapless: true,
+                                },
+                            )
+                            .tap_err(|e| error!("Error initializing decoder {e:?}"))
+                        {
+                            decoder
+                        } else {
+                            continue;
+                        }
+
+                        let _ = manager
+                            .initialize(&mut decoder)
+                            .tap_err(|e| error!("error initializing decoder {e:?}"));
                         decoder
                     }
                 }
             }
             Err(TryRecvError::Empty) => {
                 info!("No sources on initial attempt, waiting");
-                manager.flush().ok();
+                let _ = manager
+                    .flush()
+                    .tap_err(|e| error!("Error flushing output: {e:?}"));
                 match queue_rx.recv() {
                     Ok(queue_source) => {
                         info!("Got source after waiting");
@@ -85,20 +114,35 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                             QueueStartMode::ForceRestart {
                                 device_name,
                                 paused,
-                            } => handle_force_restart(
-                                &mut manager,
-                                device_name,
-                                queue_source.source,
-                                last_stop_position,
-                                paused,
-                            ),
-                            QueueStartMode::Normal => {
-                                let mut decoder = manager.init_decoder(
+                            } => {
+                                if let Ok(decoder) = handle_force_restart(
+                                    &mut manager,
+                                    device_name,
                                     queue_source.source,
-                                    DecoderSettings {
-                                        enable_gapless: true,
-                                    },
-                                );
+                                    last_stop_position,
+                                    paused,
+                                )
+                                .tap_err(|e| error!("Error handling force restart: {e:?}"))
+                                {
+                                    decoder
+                                } else {
+                                    continue;
+                                }
+                            }
+                            QueueStartMode::Normal => {
+                                if let Ok(mut decoder) = manager
+                                    .init_decoder(
+                                        queue_source.source,
+                                        DecoderSettings {
+                                            enable_gapless: true,
+                                        },
+                                    )
+                                    .tap_err(|e| error!("Error initializing decoder {e:?}"))
+                                {
+                                    decoder
+                                } else {
+                                    continue;
+                                }
                                 manager.reset(&mut decoder).ok();
                                 decoder
                             }
@@ -181,15 +225,15 @@ fn handle_force_restart<B: AudioBackend>(
     source: Box<dyn Source>,
     last_stop_position: Duration,
     paused: bool,
-) -> Decoder<f32> {
-    info!("Force restarting");
+) -> Result<Decoder<f32>, DecoderError> {
+    info!("Force restarting. Paused={paused}, last_stop_position={last_stop_position:?}");
     manager.set_device(device_name);
     let mut decoder = manager.init_decoder(
         source,
         DecoderSettings {
             enable_gapless: true,
         },
-    );
+    )?;
 
     decoder
         .seek(last_stop_position)
@@ -200,13 +244,14 @@ fn handle_force_restart<B: AudioBackend>(
         decoder.pause();
     }
     manager.reset(&mut decoder).ok();
-    decoder
+    Ok(decoder)
 }
 
 pub(crate) async fn main_loop(
     mut receiver: TwoWayReceiver<Command, PlayerResponse>,
     mut player: Player,
 ) -> Result<(), String> {
+    // TODO send something to tell clients to clear their state on server restart
     while let Ok(next_command) = receiver.recv_async().await {
         info!("Got command {:?}", next_command);
         match next_command {

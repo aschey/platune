@@ -167,7 +167,7 @@ impl Player {
                                 Err(_),
                             ) => QueueStartMode::ForceRestart {
                                 device_name: device_name.to_owned(),
-                                paused: *paused && success.is_err(),
+                                paused: *paused,
                             },
                             _ => QueueStartMode::Normal,
                         };
@@ -190,7 +190,14 @@ impl Player {
         if success.is_ok()
             && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded
         {
-            self.audio_status = AudioStatus::Playing;
+            if matches!(
+                queue_start_mode,
+                QueueStartMode::ForceRestart { paused: true, .. }
+            ) {
+                self.audio_status = AudioStatus::Paused;
+            } else {
+                self.audio_status = AudioStatus::Playing;
+            }
         }
 
         success

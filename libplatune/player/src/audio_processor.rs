@@ -78,8 +78,6 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
                             .tap_err(|e| error!("Error sending stopped response: {e:?}"))?;
                     }
                     DecoderCommand::Stop => {
-                        info!("Completed decoder command");
-
                         self.cmd_rx
                             .respond(DecoderResponse::Received)
                             .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
@@ -133,7 +131,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             }
             Err(TryRecvError::Empty) => {
                 let position = self.decoder.current_position();
-                // if position.postition < last_send_time, we just seeked backwards
+                // if position.position < last_send_time, we just seeked backwards
                 if position.position < self.last_send_time
                     || position.position - self.last_send_time >= Duration::from_secs(10)
                 {
