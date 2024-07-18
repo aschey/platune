@@ -79,7 +79,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         }
                     }
                     QueueStartMode::Normal => {
-                        if let Ok(decoder) = manager
+                        if let Ok(mut decoder) = manager
                             .init_decoder(
                                 queue_source.source,
                                 DecoderSettings {
@@ -88,15 +88,13 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                             )
                             .tap_err(|e| error!("Error initializing decoder {e:?}"))
                         {
+                            let _ = manager
+                                .initialize(&mut decoder)
+                                .tap_err(|e| error!("error initializing decoder {e:?}"));
                             decoder
                         } else {
                             continue;
                         }
-
-                        let _ = manager
-                            .initialize(&mut decoder)
-                            .tap_err(|e| error!("error initializing decoder {e:?}"));
-                        decoder
                     }
                 }
             }
@@ -139,12 +137,13 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                                     )
                                     .tap_err(|e| error!("Error initializing decoder {e:?}"))
                                 {
+                                    let _ = manager
+                                        .reset(&mut decoder)
+                                        .tap_err(|e| error!("Error resetting decoder: {e:?}"));
                                     decoder
                                 } else {
                                     continue;
                                 }
-                                manager.reset(&mut decoder).ok();
-                                decoder
                             }
                         }
                     }
