@@ -15,7 +15,7 @@ var (
 	defaultStyle  = lipgloss.NewStyle().Background(lipgloss.Color("8"))
 	infoIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color("14"))
 	textStyle     = defaultStyle.Copy().Foreground(lipgloss.Color("15"))
-	separator     = defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render(" ⸽ ")
+	separator     = defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render(" | ")
 	songIcon      = ""
 	albumIcon     = "󰀥"
 	artistIcon    = ""
