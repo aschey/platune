@@ -11,7 +11,7 @@
       {
         "name": "album_id",
         "ordinal": 1,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "album_artist",
@@ -21,7 +21,7 @@
       {
         "name": "album_artist_id",
         "ordinal": 3,
-        "type_info": "Int64"
+        "type_info": "Integer"
       }
     ],
     "parameters": {

@@ -21,7 +21,7 @@
       {
         "name": "duration_millis",
         "ordinal": 3,
-        "type_info": "Int64"
+        "type_info": "Integer"
       },
       {
         "name": "album",
@@ -36,7 +36,7 @@
       {
         "name": "track",
         "ordinal": 6,
-        "type_info": "Int64"
+        "type_info": "Integer"
       }
     ],
     "parameters": {

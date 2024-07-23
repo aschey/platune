@@ -24,7 +24,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
 dependencies = [
  "cfg-if",
- "getrandom",
  "once_cell",
  "version_check",
  "zerocopy",
@@ -103,7 +102,8 @@ dependencies = [
 [[package]]
 name = "ansi-to-tui"
 version = "5.0.0-rc.1"
-source = "git+https://github.com/uttarayan21/ansi-to-tui?branch=bump-version-req#bdac6f6bed25c178f34b9aa362e5209b905810db"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "428c2992b874104caf39204b05bf89eab4ceefdd4fcb26caa6759906f547f8e8"
 dependencies = [
  "nom",
  "ratatui",
@@ -1433,7 +1433,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "daemon-slayer-build-info",
  "daemon-slayer-cli",
@@ -1454,7 +1454,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-build-info"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "console",
@@ -1465,7 +1465,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "clap 4.5.9",
  "daemon-slayer-core",
@@ -1475,7 +1475,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1506,7 +1506,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-config"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1526,7 +1526,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "confique",
@@ -1544,7 +1544,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "arc-swap",
  "async-stream",
@@ -1579,7 +1579,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "color-eyre",
@@ -1593,7 +1593,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "daemon-slayer-core",
  "notify",
@@ -1606,7 +1606,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1618,7 +1618,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "confique",
@@ -1642,7 +1642,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
@@ -1653,7 +1653,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-network"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1679,7 +1679,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-notify"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1692,7 +1692,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-process"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "bytesize",
@@ -1708,7 +1708,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1726,7 +1726,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=bf481c9d4ef95ec0ce71ffbecc14203f478e252b#bf481c9d4ef95ec0ce71ffbecc14203f478e252b"
+source = "git+https://github.com/aschey/daemon-slayer?rev=88a417a8576ec21ba2ffd2df4bd21b90be0abc4b#88a417a8576ec21ba2ffd2df4bd21b90be0abc4b"
 dependencies = [
  "daemon-slayer-core",
  "futures",
@@ -2352,9 +2352,9 @@ dependencies = [
 
 [[package]]
 name = "fallible-iterator"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4443176a9f2c162692bd3d352d745ef9413eec5782a80d8fd6f8a1ac692a07f7"
+checksum = "2acce4a10f12dc2fb14a218589d4f1f62ef011b2d0cc4b3cb1bba8e94da14649"
 
 [[package]]
 name = "fallible-streaming-iterator"
@@ -3237,9 +3237,9 @@ dependencies = [
 
 [[package]]
 name = "hashlink"
-version = "0.8.4"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8094feaf31ff591f651a2664fb9cfd92bba7a60ce3197265e9482ebe753c8f7"
+checksum = "6ba4ff7128dee98c7dc9794b6a411377e1404dba1c97deb8d1a55297bd25d8af"
 dependencies = [
  "hashbrown 0.14.5",
 ]
@@ -3262,15 +3262,6 @@ name = "heck"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
-dependencies = [
- "unicode-segmentation",
-]
-
-[[package]]
-name = "heck"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -3951,9 +3942,9 @@ dependencies = [
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.26.0"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "afc22eff61b133b115c6e8c74e818c628d6d5e7a502afea6f64dee076dd94326"
+checksum = "0c10584274047cb335c23d3e61bcef8e323adae7c5c8c760540f73610177fc3f"
 dependencies = [
  "cc",
  "pkg-config",
@@ -5653,9 +5644,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.29.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "549b9d036d571d42e6e85d1c1425e2ac83491075078ca9a15be021c56b1641f2"
+checksum = "b838eba278d213a8beaf485bd313fd580ca4505a00d5871caeb1457c55322cae"
 dependencies = [
  "bitflags 2.6.0",
  "fallible-iterator",
@@ -6062,7 +6053,6 @@ dependencies = [
 [[package]]
 name = "slite"
 version = "0.0.1-dev"
-source = "git+https://github.com/aschey/slite?rev=19877fef49a0850ec0d1b597c2ef9b744130a177#19877fef49a0850ec0d1b597c2ef9b744130a177"
 dependencies = [
  "ansi-to-tui 4.0.1",
  "content_inspector",
@@ -6079,6 +6069,9 @@ name = "smallvec"
 version = "1.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "socket2"
@@ -6157,9 +6150,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e50c216e3624ec8e7ecd14c6a6a6370aad6ee5d8cfc3ab30b5162eeeef2ed33"
+checksum = "27144619c6e5802f1380337a209d2ac1c431002dd74c6e60aebff3c506dc4f0c"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -6170,24 +6163,23 @@ dependencies = [
 
 [[package]]
 name = "sqlx-core"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d6753e460c998bbd4cd8c6f0ed9a64346fcca0723d6e75e52fdc351c5d2169d"
+checksum = "a999083c1af5b5d6c071d34a708a19ba3e02106ad82ef7bbd69f5e48266b613b"
 dependencies = [
- "ahash",
  "atoi",
  "byteorder",
  "bytes",
  "crc",
  "crossbeam-queue",
- "dotenvy",
  "either",
- "event-listener 2.5.3",
+ "event-listener 5.3.1",
  "futures-channel",
  "futures-core",
  "futures-intrusive",
  "futures-io",
  "futures-util",
+ "hashbrown 0.14.5",
  "hashlink",
  "hex",
  "indexmap 2.2.6",
@@ -6210,26 +6202,26 @@ dependencies = [
 
 [[package]]
 name = "sqlx-macros"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a793bb3ba331ec8359c1853bd39eed32cdd7baaf22c35ccf5c92a7e8d1189ec"
+checksum = "a23217eb7d86c584b8cbe0337b9eacf12ab76fe7673c513141ec42565698bb88"
 dependencies = [
  "proc-macro2",
  "quote",
  "sqlx-core",
  "sqlx-macros-core",
- "syn 1.0.109",
+ "syn 2.0.70",
 ]
 
 [[package]]
 name = "sqlx-macros-core"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a4ee1e104e00dedb6aa5ffdd1343107b0a4702e862a84320ee7cc74782d96fc"
+checksum = "1a099220ae541c5db479c6424bdf1b200987934033c2584f79a0e1693601e776"
 dependencies = [
  "dotenvy",
  "either",
- "heck 0.4.1",
+ "heck 0.5.0",
  "hex",
  "once_cell",
  "proc-macro2",
@@ -6239,7 +6231,7 @@ dependencies = [
  "sha2",
  "sqlx-core",
  "sqlx-sqlite",
- "syn 1.0.109",
+ "syn 2.0.70",
  "tempfile",
  "tokio",
  "url",
@@ -6247,12 +6239,12 @@ dependencies = [
 
 [[package]]
 name = "sqlx-mysql"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "864b869fdf56263f4c95c45483191ea0af340f9f3e3e7b4d57a61c7c87a970db"
+checksum = "5afe4c38a9b417b6a9a5eeffe7235d0a106716495536e7727d1c7f4b1ff3eba6"
 dependencies = [
  "atoi",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bitflags 2.6.0",
  "byteorder",
  "bytes",
@@ -6288,12 +6280,12 @@ dependencies = [
 
 [[package]]
 name = "sqlx-postgres"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb7ae0e6a97fb3ba33b23ac2671a5ce6e3cabe003f451abd5a56e7951d975624"
+checksum = "b1dbb157e65f10dbe01f729339c06d239120221c9ad9fa0ba8408c4cc18ecf21"
 dependencies = [
  "atoi",
- "base64 0.21.7",
+ "base64 0.22.1",
  "bitflags 2.6.0",
  "byteorder",
  "crc",
@@ -6315,7 +6307,6 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "sha1",
  "sha2",
  "smallvec",
  "sqlx-core",
@@ -6327,9 +6318,9 @@ dependencies = [
 
 [[package]]
 name = "sqlx-sqlite"
-version = "0.7.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d59dc83cf45d89c555a577694534fcd1b55c545a816c816ce51f20bbe56a4f3f"
+checksum = "9b2cdd83c008a622d94499c0006d8ee5f821f36c89b7d625c900e5dc30b5c5ee"
 dependencies = [
  "atoi",
  "flume",
@@ -6342,6 +6333,7 @@ dependencies = [
  "log",
  "percent-encoding",
  "serde",
+ "serde_urlencoded",
  "sqlx-core",
  "tracing",
  "url",
@@ -6781,7 +6773,7 @@ dependencies = [
 [[package]]
 name = "tilia"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tilia?rev=f817ef18f765dabaf209bd6f6d0713c434f3c11f#f817ef18f765dabaf209bd6f6d0713c434f3c11f"
+source = "git+https://github.com/aschey/tilia?rev=9aa29cd4f2966fddec1ab2f233cb1f8c4a668bfc#9aa29cd4f2966fddec1ab2f233cb1f8c4a668bfc"
 dependencies = [
  "background-service",
  "bollard",
@@ -6800,7 +6792,7 @@ dependencies = [
 [[package]]
 name = "tilia-widget"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tilia?rev=f817ef18f765dabaf209bd6f6d0713c434f3c11f#f817ef18f765dabaf209bd6f6d0713c434f3c11f"
+source = "git+https://github.com/aschey/tilia?rev=9aa29cd4f2966fddec1ab2f233cb1f8c4a668bfc#9aa29cd4f2966fddec1ab2f233cb1f8c4a668bfc"
 dependencies = [
  "ansi-to-tui 5.0.0-rc.1",
  "crossterm",
