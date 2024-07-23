@@ -6053,6 +6053,7 @@ dependencies = [
 [[package]]
 name = "slite"
 version = "0.0.1-dev"
+source = "git+https://github.com/aschey/slite?rev=0809a9e913183f0d784aa24416e0af08a440eb3b#0809a9e913183f0d784aa24416e0af08a440eb3b"
 dependencies = [
  "ansi-to-tui 4.0.1",
  "content_inspector",
