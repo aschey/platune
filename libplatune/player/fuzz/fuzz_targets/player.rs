@@ -1,12 +1,12 @@
 #![no_main]
 use std::env::current_dir;
+use std::sync::LazyLock;
 use std::time::Duration;
 
 use libfuzzer_sys::arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 use libplatune_player::platune_player::{PlatunePlayer, Settings};
 use libplatune_player::CpalOutput;
-use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
 
 #[derive(Arbitrary, Debug)]
@@ -31,10 +31,10 @@ enum Input {
     Resume,
 }
 
-static PLAYER: Lazy<PlatunePlayer<CpalOutput>> =
-    Lazy::new(|| PlatunePlayer::new(CpalOutput::default(), Settings::default()));
+static PLAYER: LazyLock<PlatunePlayer<CpalOutput>> =
+    LazyLock::new(|| PlatunePlayer::new(CpalOutput::default(), Settings::default()));
 
-static RUNTIME: Lazy<Runtime> = Lazy::new(|| Runtime::new().unwrap());
+static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
 fn get_path(song: &str) -> String {
     let dir = current_dir().unwrap().to_str().unwrap().to_owned();
