@@ -98,6 +98,7 @@ func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *platune.EventRespons
 
 		msg, err := (*p.playerEventClient).Recv()
 		if err == io.EOF {
+			// Retry if we received an EOF
 			p.ResetStreams()
 			msg, err = (*p.playerEventClient).Recv()
 		}
@@ -303,16 +304,19 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 	if searchClient == nil {
 		return nil, fmt.Errorf("not connected")
 	}
-	if err := searchClient.Send(req); err != nil {
+	err := searchClient.Send(req)
+
+	// Retry if we received an EOF
+	if err == io.EOF {
+		p.ResetStreams()
+		err = searchClient.Send(req)
+	}
+
+	if err != nil {
 		return nil, err
 	}
 
-	res, err := searchClient.Recv()
-	if err == io.EOF {
-		p.ResetStreams()
-		res, err = searchClient.Recv()
-	}
-	return res, err
+	return searchClient.Recv()
 }
 
 func (p *PlatuneClient) Lookup(
