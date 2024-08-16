@@ -300,23 +300,22 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 		}
 	}
 
-	searchClient := *p.searchClient
-	if searchClient == nil {
+	if *p.searchClient == nil {
 		return nil, fmt.Errorf("not connected")
 	}
-	err := searchClient.Send(req)
+	err := (*p.searchClient).Send(req)
 
 	// Retry if we received an EOF
 	if err == io.EOF {
 		p.ResetStreams()
-		err = searchClient.Send(req)
+		err = (*p.searchClient).Send(req)
 	}
 
 	if err != nil {
 		return nil, err
 	}
 
-	return searchClient.Recv()
+	return (*p.searchClient).Recv()
 }
 
 func (p *PlatuneClient) Lookup(
