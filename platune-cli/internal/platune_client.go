@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"strconv"
@@ -96,6 +97,10 @@ func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *platune.EventRespons
 		}
 
 		msg, err := (*p.playerEventClient).Recv()
+		if err == io.EOF {
+			p.ResetStreams()
+			msg, err = (*p.playerEventClient).Recv()
+		}
 		if err == nil {
 			eventCh <- msg
 		}
@@ -302,7 +307,12 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 		return nil, err
 	}
 
-	return searchClient.Recv()
+	res, err := searchClient.Recv()
+	if err == io.EOF {
+		p.ResetStreams()
+		res, err = searchClient.Recv()
+	}
+	return res, err
 }
 
 func (p *PlatuneClient) Lookup(

@@ -46,7 +46,7 @@ func newRootCmd() *cobra.Command {
 			if interactive {
 				exitCode := state.RunInteractive()
 				if exitCode != 0 {
-					return fmt.Errorf("Prompt exited with code %d", exitCode)
+					return fmt.Errorf("prompt exited with code %d", exitCode)
 				} else {
 					return nil
 				}

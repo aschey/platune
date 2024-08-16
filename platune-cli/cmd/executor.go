@@ -217,7 +217,7 @@ func expandFile(song string) (string, error) {
 	full, stat, err := expandPath(song)
 
 	if stat != nil && stat.Mode().IsDir() {
-		return "", fmt.Errorf("Cannot add a directory")
+		return "", fmt.Errorf("cannot add a directory")
 	}
 	return full, err
 }
@@ -226,7 +226,7 @@ func expandFolder(song string) (string, error) {
 	full, stat, err := expandPath(song)
 
 	if stat != nil && !stat.Mode().IsDir() {
-		return "", fmt.Errorf("Cannot add a file")
+		return "", fmt.Errorf("cannot add a file")
 	}
 	return full, err
 }
