@@ -264,16 +264,22 @@ func (p *PlatuneClient) Seek(seekTime string) {
 func (p *PlatuneClient) initPlayerEventClient() error {
 	ctx := context.Background()
 	events, err := p.playerClient.SubscribeEvents(ctx, &emptypb.Empty{})
+	// prevent null reference if an error occurs
+	if events != nil {
+		p.playerEventClient = &events
+	}
 
-	p.playerEventClient = &events
 	return err
 }
 
 func (p *PlatuneClient) initManagementEventClient() error {
 	ctx := context.Background()
 	events, err := p.managementClient.SubscribeEvents(ctx, &emptypb.Empty{})
+	// prevent null reference if an error occurs
+	if events != nil {
+		p.managementEventClient = &events
+	}
 
-	p.managementEventClient = &events
 	return err
 }
 
