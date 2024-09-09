@@ -2,10 +2,10 @@ use std::num::NonZeroUsize;
 use std::{env, fs};
 
 use decal::decoder::{ReadSeekSource, Source};
-use eyre::{Context, Result};
+use eyre::{eyre, Context, Result};
 use stream_download::http::reqwest::{Client, Identity};
 use stream_download::http::HttpStream;
-use stream_download::source::SourceStream;
+use stream_download::source::{DecodeError, SourceStream};
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
 use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
@@ -34,9 +34,15 @@ impl HttpStreamReader {
                 client_builder = client_builder.identity(Identity::from_pem(&cert)?);
             }
         }
-        let stream = HttpStream::new(client_builder.build()?, url.parse()?)
-            .await
-            .wrap_err_with(|| "Error creating http stream")?;
+        let stream = match HttpStream::new(client_builder.build()?, url.parse()?).await {
+            Ok(stream) => stream,
+            Err(e) => {
+                return Err(eyre!(
+                    "Error creatting http stream: {}",
+                    e.decode_error().await
+                ));
+            }
+        };
         let file_len = stream.content_length();
         let settings = Settings::default();
         Ok(Self {

@@ -10,10 +10,10 @@ path = "src/lib.rs"
 [dependencies]
 axum = { version = "0.7.5", optional = true }
 clap = { version = "4.5.9", features = ["unstable-styles"] }
-console-subscriber = { version = "0.3.0", features = [
+console-subscriber = { version = "0.4.0", features = [
     "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "88a417a8576ec21ba2ffd2df4bd21b90be0abc4b", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "a8f3fb3b4c21fe935e84448d0f328036704007ea", features = [
     "client-standard",
     "server-standard",
     "notify",
@@ -28,20 +28,20 @@ futures = "0.3.30"
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
 tipsy = "0.3"
-prost = "0.13.1"
-prost-types = "0.13.1"
+prost = "0.13.2"
+prost-types = "0.13.2"
 rcgen = { version = "0.13.1", features = ["x509-parser", "pem"] }
 time = "0.3.36"
-tokio = { version = "1.38.1", features = ["rt-multi-thread", "macros"] }
-tokio-stream = { version = "0.1.15", features = ["net"] }
-tonic = { version = "0.12.0", features = ["tls"] }
-tonic-health = "0.12.0"
-tonic-reflection = "0.12.0"
-tower = { version = "0.4.13", optional = true }
+tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
+tokio-stream = { version = "0.1.16", features = ["net"] }
+tonic = { version = "0.12.2", features = ["tls"] }
+tonic-health = "0.12.2"
+tonic-reflection = "0.12.2"
+tower = { version = "0.5.0", optional = true }
 tower-http = { version = "0.5.2", features = ["fs"], optional = true }
 tracing = "0.1.40"
 uuid = { version = "1.10.0", features = ["v4"] }
-vergen-gix = { version = "1.0.0" }
+vergen-gix = { version = "1.0.1" }
 console = "0.15.8"
 
 [features]
@@ -51,5 +51,5 @@ player = ["libplatune-player"]
 tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
-tonic-build = { version = "0.12.0", features = ["prost"] }
-vergen-gix = { version = "1.0.0", features = ["build", "cargo", "rustc", "si"] }
+tonic-build = { version = "0.12.2", features = ["prost"] }
+vergen-gix = { version = "1.0.1", features = ["build", "cargo", "rustc", "si"] }

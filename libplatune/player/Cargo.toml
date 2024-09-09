@@ -14,7 +14,7 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
-stream-download = { version = "0.6.0", features = ["reqwest-rustls"] }
+stream-download = { version = "0.8.0", features = ["reqwest-rustls"] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"
 thiserror = "1"
@@ -28,7 +28,7 @@ async-trait = "0.1.81"
 ctor = "0.2.8"
 futures = "0.3.30"
 pretty_assertions = "1.4.0"
-rstest = "0.21.0"
+rstest = "0.22.0"
 spin_sleep = "1.2.0"
 tracing-appender = "0.2.3"
 tracing-subscriber = "0.3.18"

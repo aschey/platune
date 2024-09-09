@@ -186,7 +186,7 @@ async fn run_server(
 ) -> Result<()> {
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
-        .build()
+        .build_v1()
         .wrap_err("Error building tonic server")?;
 
     let (mut health_reporter, health_service) = tonic_health::server::health_reporter();

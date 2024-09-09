@@ -23,7 +23,7 @@ futures = "0.3"
 ignore = "0.4"
 itertools = "0.13"
 lazy_static = "1"
-lofty = "0.20.1"
+lofty = "0.21.1"
 log = "0.4"
 normpath = "1"
 notify = { version = "6", default-features = false, features = [
@@ -41,7 +41,7 @@ sqlx = { version = "0.8", default-features = false, features = [
     "macros",
     "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "88a417a8576ec21ba2ffd2df4bd21b90be0abc4b", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "a8f3fb3b4c21fe935e84448d0f328036704007ea", features = [
     "native-notification",
 ] }
 strum = { version = "0.26", features = ["derive"] }
@@ -57,6 +57,6 @@ walkdir = "2"
 criterion = { version = "0.5.1", features = ["async_tokio"] }
 ctor = "0.2.8"
 pretty_assertions = "1.4.0"
-rstest = "0.21.0"
+rstest = "0.22.0"
 tempfile = "3.10.1"
 tracing-subscriber = "0.3.18"
