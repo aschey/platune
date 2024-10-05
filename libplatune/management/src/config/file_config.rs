@@ -1,12 +1,12 @@
-use std::fs::{create_dir_all, File};
+use std::fs::{File, create_dir_all};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
 use eyre::{Context, Result};
 use uuid::Uuid;
 
-use super::config_error::ConfigError;
 use super::Config;
+use super::config_error::ConfigError;
 
 static CONFIG_FILE: &str = "drive_id";
 

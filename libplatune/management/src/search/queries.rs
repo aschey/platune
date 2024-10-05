@@ -128,7 +128,7 @@ pub(crate) fn replace_ampersand(string: &str) -> String {
 fn replace_special_chars(query: &str) -> String {
     // Replace all special characters with whitespace because they cause sqlite to error
     let special_chars = Regex::new(r"[^A-Za-z0-9&\*\s]").unwrap();
-    return special_chars.replace_all(query, " ").trim().to_owned();
+    special_chars.replace_all(query, " ").trim().to_owned()
 }
 
 fn get_spellfix_query(index: usize) -> String {

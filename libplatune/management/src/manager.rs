@@ -8,7 +8,7 @@ use crate::config::Config;
 use crate::database::{Database, DeletedEntry, LookupEntry};
 use crate::db_error::DbError;
 pub use crate::entry_type::EntryType;
-use crate::path_util::{clean_file_path, update_path, PathMut};
+use crate::path_util::{PathMut, clean_file_path, update_path};
 pub use crate::search::search_options::SearchOptions;
 pub use crate::search::search_result::SearchResult;
 use crate::sync::progress_stream::ProgressStream;

@@ -3,8 +3,8 @@ use std::task::{Context, Poll};
 
 use futures::StreamExt;
 use tokio::sync::broadcast;
-use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 use tokio_stream::wrappers::BroadcastStream;
+use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 
 use super::sync_engine::SyncError;
 

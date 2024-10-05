@@ -30,7 +30,7 @@ pub mod platune_player {
     use crate::event_loop::{decode_loop, main_loop};
     use crate::player::Player;
     pub use crate::settings::Settings;
-    use crate::two_way_channel::{two_way_channel, TwoWaySender};
+    use crate::two_way_channel::{TwoWaySender, two_way_channel};
 
     #[derive(Debug, Clone, Error)]
     #[error("{0}")]

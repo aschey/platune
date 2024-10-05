@@ -6,12 +6,12 @@ use std::time::Duration;
 
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
-use futures::stream::FuturesUnordered;
 use futures::StreamExt;
-#[cfg(feature = "management")]
-use libplatune_management::config::config_dir;
+use futures::stream::FuturesUnordered;
 #[cfg(feature = "management")]
 use libplatune_management::config::FileConfig;
+#[cfg(feature = "management")]
+use libplatune_management::config::config_dir;
 #[cfg(feature = "management")]
 use libplatune_management::database::Database;
 #[cfg(feature = "management")]
@@ -19,9 +19,9 @@ use libplatune_management::file_watch_manager::FileWatchManager;
 #[cfg(feature = "management")]
 use libplatune_management::manager::Manager;
 #[cfg(feature = "player")]
-use libplatune_player::platune_player::PlatunePlayer;
-#[cfg(feature = "player")]
 use libplatune_player::CpalOutput;
+#[cfg(feature = "player")]
+use libplatune_player::platune_player::PlatunePlayer;
 use platuned::{file_server_port, main_server_port};
 use tipsy::{IntoIpcPath, ServerId};
 use tonic::transport::Server;

@@ -6,7 +6,7 @@ use std::time::Duration;
 use itertools::Itertools;
 use pretty_assertions::assert_eq;
 use rstest::*;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 use tokio::sync::mpsc;
 use tokio::time::timeout;
 use tracing::Level;

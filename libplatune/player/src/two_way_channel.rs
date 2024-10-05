@@ -1,5 +1,5 @@
 use flume::{Receiver, RecvError, SendError, Sender, TryRecvError};
-use tokio::sync::oneshot::{channel as oneshot_channel, Sender as OneShotSender};
+use tokio::sync::oneshot::{Sender as OneShotSender, channel as oneshot_channel};
 
 pub(crate) fn two_way_channel<TIn, TOut>() -> (TwoWaySender<TIn, TOut>, TwoWayReceiver<TIn, TOut>) {
     let (main_tx, main_rx) = flume::unbounded();

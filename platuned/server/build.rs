@@ -9,7 +9,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     tonic_build::configure()
         .file_descriptor_set_path(out_dir.join("rpc_descriptor.bin"))
-        .compile(
+        .compile_protos(
             &["../proto/player_rpc.proto", "../proto/management_rpc.proto"],
             &["../proto/"],
         )?;

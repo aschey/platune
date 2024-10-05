@@ -80,12 +80,9 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     }
                     QueueStartMode::Normal => {
                         if let Ok(mut decoder) = manager
-                            .init_decoder(
-                                queue_source.source,
-                                DecoderSettings {
-                                    enable_gapless: true,
-                                },
-                            )
+                            .init_decoder(queue_source.source, DecoderSettings {
+                                enable_gapless: true,
+                            })
                             .tap_err(|e| error!("Error initializing decoder {e:?}"))
                         {
                             let _ = manager
@@ -129,12 +126,9 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                             }
                             QueueStartMode::Normal => {
                                 if let Ok(mut decoder) = manager
-                                    .init_decoder(
-                                        queue_source.source,
-                                        DecoderSettings {
-                                            enable_gapless: true,
-                                        },
-                                    )
+                                    .init_decoder(queue_source.source, DecoderSettings {
+                                        enable_gapless: true,
+                                    })
                                     .tap_err(|e| error!("Error initializing decoder {e:?}"))
                                 {
                                     let _ = manager
@@ -227,12 +221,9 @@ fn handle_force_restart<B: AudioBackend>(
 ) -> Result<Decoder<f32>, DecoderError> {
     info!("Force restarting. Paused={paused}, last_stop_position={last_stop_position:?}");
     manager.set_device(device_name);
-    let mut decoder = manager.init_decoder(
-        source,
-        DecoderSettings {
-            enable_gapless: true,
-        },
-    )?;
+    let mut decoder = manager.init_decoder(source, DecoderSettings {
+        enable_gapless: true,
+    })?;
 
     decoder
         .seek(last_stop_position)

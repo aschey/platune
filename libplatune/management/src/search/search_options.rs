@@ -5,7 +5,7 @@ pub struct SearchOptions<'a> {
     pub valid_entry_types: Vec<&'a str>,
 }
 
-impl<'a> Default for SearchOptions<'a> {
+impl Default for SearchOptions<'_> {
     fn default() -> Self {
         Self {
             start_highlight: "",

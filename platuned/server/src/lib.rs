@@ -3,7 +3,7 @@ use std::num::ParseIntError;
 
 use clap::builder::styling;
 use daemon_slayer::build_info::cli::BuildInfoCliProvider;
-use daemon_slayer::build_info::vergen_pretty::{self, vergen_pretty_env, PrettyBuilder};
+use daemon_slayer::build_info::vergen_pretty::{self, PrettyBuilder, vergen_pretty_env};
 use daemon_slayer::core::Label;
 
 const DEFAULT_MAIN_SERVER_PORT: usize = 50051;

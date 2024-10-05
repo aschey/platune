@@ -8,17 +8,17 @@ mod startup;
 
 use daemon_slayer::cli::Cli;
 use daemon_slayer::core::BoxedError;
+use daemon_slayer::error_handler::ErrorSink;
 use daemon_slayer::error_handler::cli::ErrorHandlerCliProvider;
 use daemon_slayer::error_handler::color_eyre::eyre;
-use daemon_slayer::error_handler::ErrorSink;
 use daemon_slayer::logging::cli::LoggingCliProvider;
 #[cfg(feature = "tokio-console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
 use daemon_slayer::logging::{self, LogLevel, LoggerBuilder};
 use daemon_slayer::notify::notification::Notification;
-use daemon_slayer::server::cli::ServerCliProvider;
 use daemon_slayer::server::Handler;
+use daemon_slayer::server::cli::ServerCliProvider;
 use dotenvy::dotenv;
 use platuned::{build_info, clap_base_command};
 use rpc::*;

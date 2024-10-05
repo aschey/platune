@@ -2,9 +2,9 @@ use std::num::NonZeroUsize;
 use std::{env, fs};
 
 use decal::decoder::{ReadSeekSource, Source};
-use eyre::{eyre, Context, Result};
-use stream_download::http::reqwest::{Client, Identity};
+use eyre::{Context, Result, eyre};
 use stream_download::http::HttpStream;
+use stream_download::http::reqwest::{Client, Identity};
 use stream_download::source::{DecodeError, SourceStream};
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
 use stream_download::storage::temp::TempStorageProvider;

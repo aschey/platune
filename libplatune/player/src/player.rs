@@ -190,10 +190,10 @@ impl Player {
         if success.is_ok()
             && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded
         {
-            if matches!(
-                queue_start_mode,
-                QueueStartMode::ForceRestart { paused: true, .. }
-            ) {
+            if matches!(queue_start_mode, QueueStartMode::ForceRestart {
+                paused: true,
+                ..
+            }) {
                 self.audio_status = AudioStatus::Paused;
             } else {
                 self.audio_status = AudioStatus::Playing;
@@ -390,14 +390,10 @@ impl Player {
     pub(crate) async fn reset(&mut self) -> Result<(), String> {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
-        self.set_queue_internal(
-            queue,
-            queue_position,
-            QueueStartMode::ForceRestart {
-                device_name: self.device_name.clone(),
-                paused: self.audio_status == AudioStatus::Paused,
-            },
-        )
+        self.set_queue_internal(queue, queue_position, QueueStartMode::ForceRestart {
+            device_name: self.device_name.clone(),
+            paused: self.audio_status == AudioStatus::Paused,
+        })
         .await?;
 
         Ok(())

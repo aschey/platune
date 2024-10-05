@@ -1,10 +1,10 @@
 use std::fs;
-use std::path::{PathBuf, MAIN_SEPARATOR};
+use std::path::{MAIN_SEPARATOR, PathBuf};
 use std::sync::Arc;
 
 use normpath::PathExt;
 use pretty_assertions::assert_eq;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 use super::Manager;
 use crate::config::MemoryConfig;

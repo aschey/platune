@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
-use libplatune_player::platune_player::*;
 use libplatune_player::CpalOutput;
+use libplatune_player::platune_player::*;
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};

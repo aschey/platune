@@ -9,7 +9,7 @@ use lofty::tag::{Accessor, ItemKey, TagExt};
 use pretty_assertions::assert_eq;
 use rstest::*;
 use tempfile::TempDir;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 use crate::config::MemoryConfig;
 use crate::database::Database;

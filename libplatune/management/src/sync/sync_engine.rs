@@ -12,7 +12,7 @@ use tap::TapFallible;
 use thiserror::Error;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::{self, Sender};
-use tokio::task::{spawn_blocking, JoinHandle};
+use tokio::task::{JoinHandle, spawn_blocking};
 use tracing::{error, info};
 use walkdir::WalkDir;
 

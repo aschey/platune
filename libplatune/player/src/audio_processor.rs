@@ -1,8 +1,8 @@
 use std::time::Duration;
 
+use decal::AudioManager;
 use decal::decoder::{Decoder, DecoderResult};
 use decal::output::AudioBackend;
-use decal::AudioManager;
 use flume::TryRecvError;
 use tap::TapFallible;
 use tracing::{error, info};
