@@ -9,30 +9,30 @@ path = "src/lib.rs"
 
 [dependencies]
 axum = { version = "0.7.7", optional = true }
-clap = { version = "4.5.19", features = ["unstable-styles"] }
-console-subscriber = { version = "0.4.0", features = [
-    "parking_lot",
+clap = { version = "4.5.20", features = ["unstable-styles"] }
+console-subscriber = { version = "0.4.1", features = [
+  "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "67e253fde032e626833230d14a86a172c805cec6", features = [
-    "client-standard",
-    "server-standard",
-    "notify",
-    "grpc-health-check",
-    "logging-ipc",
-    "native-notification",
-    "build-info",
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "74a20e64e02b0d00c12e79d65d5cd18a8625830a", features = [
+  "client-standard",
+  "server-standard",
+  "notify",
+  "grpc-health-check",
+  "logging-ipc",
+  "native-notification",
+  "build-info",
 ] }
 directories = "5.0.1"
 dotenvy = "0.15.7"
-futures = "0.3.30"
+futures = "0.3.31"
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
-tipsy = "0.3"
+tipsy = "0.3.1"
 prost = "0.13.3"
 prost-types = "0.13.3"
 rcgen = { version = "0.13.1", features = ["x509-parser", "pem"] }
 time = "0.3.36"
-tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.41.0", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.16", features = ["net"] }
 tonic = { version = "0.12.3", features = ["tls"] }
 tonic-health = "0.12.3"
@@ -40,7 +40,7 @@ tonic-reflection = "0.12.3"
 tower = { version = "0.5.1", optional = true }
 tower-http = { version = "0.6.1", features = ["fs"], optional = true }
 tracing = "0.1.40"
-uuid = { version = "1.10.0", features = ["v4"] }
+uuid = { version = "1.11.0", features = ["v4"] }
 vergen-gix = { version = "1.0.2" }
 console = "0.15.8"
 

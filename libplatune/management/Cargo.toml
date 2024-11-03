@@ -14,8 +14,8 @@ name = "bench"
 
 [dependencies]
 concread = { version = "0.5", default-features = false, features = [
-    "arcache",
-    "arcache-is-hashtrie",
+  "arcache",
+  "arcache-is-hashtrie",
 ] }
 directories = "5"
 eyre = "0.6"
@@ -26,23 +26,23 @@ lazy_static = "1"
 lofty = "0.21.1"
 log = "0.4"
 normpath = "1"
-notify = { version = "6", default-features = false, features = [
-    "macos_fsevent",
+notify = { version = "7", default-features = false, features = [
+  "macos_fsevent",
 ] }
 num_cpus = "1"
 regex = "1"
 rust-embed = "8"
 slite = { git = "https://github.com/aschey/slite", rev = "0809a9e913183f0d784aa24416e0af08a440eb3b", default-features = false, features = [
-    "read-files",
+  "read-files",
 ] }
 sqlx = { version = "0.8", default-features = false, features = [
-    "sqlite",
-    "any",
-    "macros",
-    "runtime-tokio",
+  "sqlite",
+  "any",
+  "macros",
+  "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "67e253fde032e626833230d14a86a172c805cec6", features = [
-    "native-notification",
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "74a20e64e02b0d00c12e79d65d5cd18a8625830a", features = [
+  "native-notification",
 ] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"

@@ -49,12 +49,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.92"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74f37166d7d48a0284b99dd824694c26119c700b53bf0d1540cdb147dbdaaf13"
+
+[[package]]
 name = "arbitrary"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d5a26814d8dcb93b0e5a0ff3c6d80a8843bafb21b39e8e18a6f05471870e110"
 dependencies = [
  "derive_arbitrary",
+]
+
+[[package]]
+name = "async-trait"
+version = "0.1.83"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "721cae7de5c34fbb2acd27e21e6d2cf7b886dce0c27388d46c4e6c47ea4318dd"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.79",
 ]
 
 [[package]]
@@ -372,7 +389,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=62c120870325d6b4631e418c35b6e58116999dcb#62c120870325d6b4631e418c35b6e58116999dcb"
+source = "git+https://github.com/aschey/decal?rev=c5aeea56f7823ca0eb38981cd8d43bd192101437#c5aeea56f7823ca0eb38981cd8d43bd192101437"
 dependencies = [
  "cpal",
  "dasp",
@@ -773,6 +790,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "instant"
+version = "0.1.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0242819d153cba4b4b05a5a8f2a7e9bbf97b6055b2a002b395c96b5ff3c0222"
+dependencies = [
+ "cfg-if",
+ "js-sys",
+ "wasm-bindgen",
+ "web-sys",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -891,6 +920,7 @@ dependencies = [
  "ctor",
  "libfuzzer-sys",
  "libplatune-player",
+ "reqwest-retry",
  "tokio",
  "tracing-subscriber",
 ]
@@ -1137,12 +1167,37 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "parking_lot"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d17b78036a60663b797adeaee46f5c9dfebb86948d1255007a1d6be0271ff99"
+dependencies = [
+ "instant",
+ "lock_api",
+ "parking_lot_core 0.8.6",
+]
+
+[[package]]
+name = "parking_lot"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1bf18183cf54e8d6059647fc3063646a1801cf30896933ec2311622cc4b9a27"
 dependencies = [
  "lock_api",
- "parking_lot_core",
+ "parking_lot_core 0.9.10",
+]
+
+[[package]]
+name = "parking_lot_core"
+version = "0.8.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60a2cfe6f0ad2bfc16aefa463b497d5c7a5ecd44a23efa72aa342d90177356dc"
+dependencies = [
+ "cfg-if",
+ "instant",
+ "libc",
+ "redox_syscall 0.2.16",
+ "smallvec",
+ "winapi",
 ]
 
 [[package]]
@@ -1153,7 +1208,7 @@ checksum = "1e401f977ab385c9e4e3ab30627d6f26d00e2c73eef317493c4ec6d468726cf8"
 dependencies = [
  "cfg-if",
  "libc",
- "redox_syscall",
+ "redox_syscall 0.5.7",
  "smallvec",
  "windows-targets 0.52.6",
 ]
@@ -1334,6 +1389,15 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb5a58c1855b4b6819d59012155603f0b22ad30cad752600aadfcb695265519a"
+dependencies = [
+ "bitflags 1.3.2",
+]
+
+[[package]]
+name = "redox_syscall"
 version = "0.5.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b6dfecf2c74bce2466cabf93f6664d6998a69eb21e39f4207930065b27b771f"
@@ -1415,6 +1479,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "reqwest-middleware"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "562ceb5a604d3f7c885a792d42c199fd8af239d0a51b2fa6a78aafa092452b04"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "http",
+ "reqwest",
+ "serde",
+ "thiserror",
+ "tower-service",
+]
+
+[[package]]
+name = "reqwest-retry"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a83df1aaec00176d0fabb65dea13f832d2a446ca99107afc17c5d2d4981221d0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "getrandom",
+ "http",
+ "hyper",
+ "parking_lot 0.11.2",
+ "reqwest",
+ "reqwest-middleware",
+ "retry-policies",
+ "tokio",
+ "tracing",
+ "wasm-timer",
+]
+
+[[package]]
+name = "retry-policies"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5875471e6cab2871bc150ecb8c727db5113c9338cc3354dc5ee3425b6aa40a1c"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1431,9 +1540,9 @@ dependencies = [
 
 [[package]]
 name = "rubato"
-version = "0.15.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5d18b486e7d29a408ef3f825bc1327d8f87af091c987ca2f5b734625940e234"
+checksum = "cdd96992d7e24b3d7f35fdfe02af037a356ac90d41b466945cf3333525a86eea"
 dependencies = [
  "num-complex",
  "num-integer",
@@ -1649,17 +1758,18 @@ dependencies = [
 
 [[package]]
 name = "stream-download"
-version = "0.9.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3477aa8f472c758e73aff6621f24bf5eb4caca3d12b64057e0d72827427e8785"
+checksum = "35c645211b6de578c343115d76a5e68e56b75c6f49834b687f90978b6a258e93"
 dependencies = [
  "bytes",
  "educe",
  "futures",
  "mediatype",
- "parking_lot",
+ "parking_lot 0.12.3",
  "rangemap",
  "reqwest",
+ "reqwest-middleware",
  "tap",
  "tempfile",
  "thiserror",
@@ -1705,7 +1815,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "symphonia"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
@@ -1725,7 +1835,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-flac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "log",
  "symphonia-core",
@@ -1736,7 +1846,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-mp3"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "lazy_static",
  "log",
@@ -1747,7 +1857,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-aac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "lazy_static",
  "log",
@@ -1757,7 +1867,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-adpcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "log",
  "symphonia-core",
@@ -1766,7 +1876,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-pcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "log",
  "symphonia-core",
@@ -1775,7 +1885,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-vorbis"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "log",
  "symphonia-core",
@@ -1785,19 +1895,20 @@ dependencies = [
 [[package]]
 name = "symphonia-core"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "bitflags 2.6.0",
  "bytemuck",
  "lazy_static",
  "log",
+ "num-complex",
  "smallvec",
 ]
 
 [[package]]
 name = "symphonia-format-isomp4"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "encoding_rs",
  "log",
@@ -1809,7 +1920,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-mkv"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "lazy_static",
  "log",
@@ -1821,7 +1932,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-ogg"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "log",
  "symphonia-core",
@@ -1832,7 +1943,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-riff"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "extended",
  "log",
@@ -1843,7 +1954,7 @@ dependencies = [
 [[package]]
 name = "symphonia-metadata"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "encoding_rs",
  "lazy_static",
@@ -1854,7 +1965,7 @@ dependencies = [
 [[package]]
 name = "symphonia-utils-xiph"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=7e73f3572511f18f270695e649db433f560aa278#7e73f3572511f18f270695e649db433f560aa278"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=0c9f1f79e609e59a0847f7ff7d844251e3fd7984#0c9f1f79e609e59a0847f7ff7d844251e3fd7984"
 dependencies = [
  "symphonia-core",
  "symphonia-metadata",
@@ -2252,6 +2363,21 @@ checksum = "4e072d4e72f700fb3443d8fe94a39315df013eef1104903cdb0a2abd322bbecd"
 dependencies = [
  "futures-util",
  "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "wasm-timer"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be0ecb0db480561e9a7642b5d3e4187c128914e58aa84330b9493e3eb68c5e7f"
+dependencies = [
+ "futures",
+ "js-sys",
+ "parking_lot 0.11.2",
+ "pin-utils",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",

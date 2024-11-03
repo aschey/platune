@@ -3,6 +3,8 @@ use std::{env, fs};
 
 use decal::decoder::{ReadSeekSource, Source};
 use eyre::{Context, Result, eyre};
+use reqwest_retry::RetryTransientMiddleware;
+use reqwest_retry::policies::ExponentialBackoff;
 use stream_download::http::HttpStream;
 use stream_download::http::reqwest::{Client, Identity};
 use stream_download::source::{DecodeError, SourceStream};
@@ -34,11 +36,15 @@ impl HttpStreamReader {
                 client_builder = client_builder.identity(Identity::from_pem(&cert)?);
             }
         }
-        let stream = match HttpStream::new(client_builder.build()?, url.parse()?).await {
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+        let client = reqwest_middleware::ClientBuilder::new(client_builder.build()?)
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
+        let stream = match HttpStream::new(client, url.parse()?).await {
             Ok(stream) => stream,
             Err(e) => {
                 return Err(eyre!(
-                    "Error creatting http stream: {}",
+                    "Error creating http stream: {}",
                     e.decode_error().await
                 ));
             }

@@ -14,13 +14,18 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
-stream-download = { version = "0.9.0", features = ["reqwest-rustls"] }
+stream-download = { version = "0.11.1", features = [
+  "reqwest-rustls",
+  "reqwest-middleware",
+] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
 decal = { git = "https://github.com/aschey/decal", rev = "c5aeea56f7823ca0eb38981cd8d43bd192101437" }
+reqwest-retry = "0.6.1"
+reqwest-middleware = "0.3.3"
 
 [dev-dependencies]
 assert_matches = "1.5.0"
