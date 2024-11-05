@@ -41,7 +41,7 @@ sqlx = { version = "0.8", default-features = false, features = [
   "macros",
   "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "041ae804351b10c98fbaf3100f41c7d122543836", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "37ab29be1006ad6dfc2d5652cd55842c02d0b092", features = [
   "native-notification",
 ] }
 strum = { version = "0.26", features = ["derive"] }
