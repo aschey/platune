@@ -96,7 +96,9 @@ impl FileWatchManager {
                 if let Ok(event) =
                     event.tap_err(|e| error!("Error received from file watcher: {e:?}"))
                 {
-                    info!("Received file watcher event {event:?}");
+                    if !matches!(event.kind, EventKind::Access(_)) {
+                        info!("Received file watcher event {event:?}");
+                    }
                     match event.kind {
                         EventKind::Modify(ModifyKind::Name(RenameMode::Both)) => {
                             let _ = sync_tx_
@@ -195,7 +197,7 @@ impl FileWatchManager {
 
                         let folders = if cfg!(target_os = "macos") {
                             info!("Syncing all folders");
-                            // Force sync all folders on mac because fsevents doesn't always track
+                            // Force sync all folders on mac because FSEvents doesn't always track
                             // all events by design
                             None
                         } else {
