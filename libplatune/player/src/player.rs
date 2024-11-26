@@ -82,7 +82,12 @@ impl Player {
     }
 
     async fn get_source(&mut self, input: Input) -> Option<Box<dyn Source>> {
-        let (reader, cancellation_token) = self.source_resolver.find_match(input).await?.ok()?;
+        let (reader, cancellation_token) = self
+            .source_resolver
+            .find_match(input)
+            .await?
+            .tap_err(|e| error!("error resolving source: {e:?}"))
+            .ok()?;
         self.stream_cancellation_tokens
             .push_back(cancellation_token);
         Some(reader)

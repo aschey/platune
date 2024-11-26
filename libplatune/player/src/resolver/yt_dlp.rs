@@ -93,7 +93,7 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
                 Ok(vec![input])
             }
             YoutubeDlOutput::Playlist(playlist) => {
-                info!("found playlist: {:?}", playlist);
+                info!("found playlist: {:?}", playlist.title);
                 Ok(playlist
                     .entries
                     .unwrap_or_default()
