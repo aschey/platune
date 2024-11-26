@@ -1,12 +1,13 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
+use std::collections::VecDeque;
 use std::time::Duration;
 
-use decal::decoder::{ReadSeekSource, Source};
+use decal::decoder::Source;
+use eyre::bail;
 use flume::{Receiver, Sender};
-use tap::{TapFallible, TapOptional};
+use stream_download::registry::{Input, Registry};
+use tap::TapFallible;
 use tokio::sync::broadcast;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::dto::audio_status::AudioStatus;
@@ -16,7 +17,10 @@ use crate::dto::player_event::PlayerEvent;
 use crate::dto::player_state::PlayerState;
 use crate::dto::player_status::TrackStatus;
 use crate::dto::queue_source::{QueueSource, QueueStartMode};
-use crate::http_stream_reader::HttpStreamReader;
+use crate::resolver::{
+    DefaultUrlResolver, FileSourceResolver, HttpSourceResolver, YtDlpSourceResolver,
+    YtDlpUrlResolver,
+};
 use crate::settings::Settings;
 use crate::two_way_channel::TwoWaySender;
 
@@ -37,6 +41,9 @@ pub(crate) struct Player {
     settings: Settings,
     pending_volume: Option<f32>,
     device_name: Option<String>,
+    url_resolver: Registry<eyre::Result<Vec<Input>>>,
+    source_resolver: Registry<eyre::Result<(Box<dyn Source>, CancellationToken)>>,
+    stream_cancellation_tokens: VecDeque<CancellationToken>,
 }
 
 impl Player {
@@ -63,54 +70,32 @@ impl Player {
             settings,
             pending_volume: None,
             device_name,
+            stream_cancellation_tokens: VecDeque::new(),
+            url_resolver: Registry::new()
+                .entry(YtDlpUrlResolver::new())
+                .entry(DefaultUrlResolver::new()),
+            source_resolver: Registry::new()
+                .entry(HttpSourceResolver::new())
+                .entry(FileSourceResolver::new())
+                .entry(YtDlpSourceResolver::new()),
         }
     }
 
-    async fn get_source(&self, path: String) -> Option<Box<dyn Source>> {
-        if path.starts_with("http://") || path.starts_with("https://") {
-            info!("Creating http stream");
-
-            HttpStreamReader::new(path.to_owned())
-                .await
-                .map(|r| r.into_source())
-                .tap_err(|e| error!("Error downloading http file {path} {e:?}"))
-                .ok()
-        } else {
-            let file = File::open(&path)
-                .tap_err(|e| error!("Error opening file {path} {e:?}"))
-                .ok()?;
-
-            let file_len = file
-                .metadata()
-                .map(|m| m.len())
-                .tap_err(|e| warn!("Error reading file metadata from {path}: {e:?}"))
-                .ok();
-
-            let extension = Path::new(&path)
-                .extension()
-                .and_then(|ext| ext.to_str())
-                .tap_none(|| {
-                    warn!(
-                        "File extension for {path} contains invalid unicode. Not using extension \
-                         hint"
-                    )
-                })
-                .map(|ext| ext.to_owned());
-
-            let reader = BufReader::new(file);
-
-            Some(Box::new(ReadSeekSource::new(reader, file_len, extension)) as Box<dyn Source>)
-        }
+    async fn get_source(&mut self, input: Input) -> Option<Box<dyn Source>> {
+        let (reader, cancellation_token) = self.source_resolver.find_match(input).await?.ok()?;
+        self.stream_cancellation_tokens
+            .push_back(cancellation_token);
+        Some(reader)
     }
 
     async fn append_file(
         &mut self,
-        path: String,
+        input: Input,
         queue_start_mode: QueueStartMode,
     ) -> Result<(), AppendError> {
-        match self.get_source(path.clone()).await {
+        match self.get_source(input.clone()).await {
             Some(source) => {
-                info!("Sending source {path}");
+                info!("Sending source {input:?}");
                 match self
                     .queue_tx
                     .send_async(QueueSource {
@@ -133,8 +118,9 @@ impl Player {
                 }
             }
             None => {
+                error!("source unavailable");
                 let queue = self.state.queue.clone();
-                self.state.queue = queue.into_iter().filter(|q| *q != path).collect();
+                self.state.queue = queue.into_iter().filter(|q| *q != input).collect();
                 Err(AppendError::SourceUnavailable)
             }
         }
@@ -323,13 +309,16 @@ impl Player {
     pub(crate) fn get_current_status(&self) -> TrackStatus {
         TrackStatus {
             status: self.audio_status.clone(),
-            current_song: self.get_current(),
+            current_song: self.get_current().map(|c| c.to_string()),
         }
     }
 
     async fn reset_queue(&mut self) -> Result<(), String> {
         // Get rid of any pending sources
         self.queue_rx.drain();
+        for token in self.stream_cancellation_tokens.drain(..) {
+            token.cancel();
+        }
         self.queued_count = 0;
         // If decoder is already stopped then sending additional stop events will cause the next
         // song to skip
@@ -348,6 +337,7 @@ impl Player {
     pub(crate) async fn on_ended(&mut self) {
         info!("Received ended event");
         self.queued_count -= 1;
+        self.stream_cancellation_tokens.pop_front();
         info!("Queued count {}", self.queued_count);
 
         if self.state.queue_position < self.state.queue.len() - 1 {
@@ -399,8 +389,27 @@ impl Player {
         Ok(())
     }
 
+    async fn find_urls(&mut self, item: &str) -> eyre::Result<Vec<Input>> {
+        let Some(items) = self.url_resolver.find_match(item).await else {
+            bail!("no resolver found for {item}");
+        };
+        items
+    }
+
     pub(crate) async fn set_queue(&mut self, queue: Vec<String>) -> Result<(), String> {
-        self.set_queue_internal(queue, 0, QueueStartMode::Normal)
+        let mut new_queue = Vec::new();
+        for item in queue {
+            if let Ok(mut items) = self
+                .find_urls(&item)
+                .await
+                .tap_err(|e| error!("error finding urls: {e:?}"))
+            {
+                info!("url resolver found {} items", items.len());
+                new_queue.append(&mut items);
+            }
+        }
+
+        self.set_queue_internal(new_queue, 0, QueueStartMode::Normal)
             .await?;
         self.event_tx
             .send(PlayerEvent::StartQueue(self.state.clone()))
@@ -411,7 +420,7 @@ impl Player {
 
     async fn set_queue_internal(
         &mut self,
-        queue: Vec<String>,
+        queue: Vec<Input>,
         start_position: usize,
         queue_start_mode: QueueStartMode,
     ) -> Result<(), String> {
@@ -419,7 +428,6 @@ impl Player {
         if self.queued_count > 0 {
             self.reset_queue().await?;
         }
-
         self.state.queue_position = start_position;
         self.state.queue = queue;
 
@@ -431,16 +439,29 @@ impl Player {
 
     pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) -> Result<(), String> {
         for song in songs {
-            self.add_one_to_queue(song).await?;
+            if let Ok(urls) = self
+                .find_urls(&song)
+                .await
+                .tap_err(|e| error!("error finding urls {e:?}"))
+            {
+                for item in urls {
+                    info!("url resolver found track: {item:?}");
+                    self.add_one_to_queue(item).await?;
+                }
+            }
         }
 
         Ok(())
     }
 
-    async fn add_one_to_queue(&mut self, song: String) -> Result<(), String> {
+    async fn add_one_to_queue(&mut self, song: Input) -> Result<(), String> {
         // Queue is not currently running, need to start it
         if self.queued_count == 0 {
-            self.set_queue(vec![song]).await?;
+            self.set_queue_internal(vec![song], 0, QueueStartMode::Normal)
+                .await?;
+            self.event_tx
+                .send(PlayerEvent::StartQueue(self.state.clone()))
+                .unwrap_or_default();
         } else {
             self.state.queue.push(song.clone());
             // Special case: if we started with only one song, then the new song will never get
@@ -459,16 +480,16 @@ impl Player {
         Ok(())
     }
 
-    fn get_current(&self) -> Option<String> {
+    fn get_current(&self) -> Option<Input> {
         self.get_position(self.state.queue_position)
     }
 
-    fn get_next(&self) -> Option<String> {
+    fn get_next(&self) -> Option<Input> {
         self.get_position(self.state.queue_position + 1)
     }
 
-    fn get_position(&self, position: usize) -> Option<String> {
-        self.state.queue.get(position).map(String::to_owned)
+    fn get_position(&self, position: usize) -> Option<Input> {
+        self.state.queue.get(position).cloned()
     }
 
     pub(crate) async fn go_next(&mut self) -> Result<(), String> {

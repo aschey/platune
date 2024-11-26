@@ -243,7 +243,8 @@ pub(crate) async fn main_loop(
 ) -> Result<(), String> {
     // TODO send something to tell clients to clear their state on server restart
     while let Ok(next_command) = receiver.recv_async().await {
-        info!("Got command {:?}", next_command);
+        let cmd_str = format!("{next_command:?}");
+        info!("Got command {cmd_str}");
         match next_command {
             Command::SetQueue(songs) => {
                 player.set_queue(songs).await?;
@@ -291,7 +292,7 @@ pub(crate) async fn main_loop(
                 return Ok(());
             }
         }
-        info!("Completed command");
+        info!("Completed command {cmd_str:?}");
     }
     info!("Request loop completed");
     Ok(())

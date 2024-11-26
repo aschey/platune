@@ -20,7 +20,7 @@ impl Handler for ServiceHandler {
     type InputData = ();
 
     async fn new(context: ServiceContext, _: Option<Self::InputData>) -> Result<Self, Self::Error> {
-        let signal_listener = SignalListener::all();
+        let signal_listener = SignalListener::termination();
         let signal_store = signal_listener.get_event_store();
         context.spawn(signal_listener);
 

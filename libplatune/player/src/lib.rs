@@ -1,10 +1,11 @@
 mod audio_processor;
 mod dto;
 mod event_loop;
-mod http_stream_reader;
 mod player;
+mod resolver;
 mod settings;
 mod two_way_channel;
+
 pub use decal::output::{AudioBackend, CpalOutput, MockOutput};
 
 pub mod platune_player {
@@ -101,7 +102,7 @@ pub mod platune_player {
                     if entry
                         .file_name()
                         .to_string_lossy()
-                        .starts_with("platunecache")
+                        .starts_with("platune_cache")
                     {
                         let _ = remove_file(entry.path())
                             .tap_err(|e| error!("Error removing temp file {:?}", e));
@@ -192,6 +193,7 @@ pub mod platune_player {
         }
 
         pub async fn stop(&self) -> Result<(), PlayerError> {
+            info!("sending stop command");
             self.cmd_sender
                 .send_async(Command::Stop)
                 .await

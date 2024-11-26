@@ -41,12 +41,12 @@ sqlx = { version = "0.8", default-features = false, features = [
   "macros",
   "runtime-tokio",
 ] }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "37ab29be1006ad6dfc2d5652cd55842c02d0b092", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "a9554d257ffe5cb73e57eb49bbd0183f707d00d1", features = [
   "native-notification",
 ] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"
-thiserror = "1"
+thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1", features = ["net", "sync"] }
 tracing = "0.1"

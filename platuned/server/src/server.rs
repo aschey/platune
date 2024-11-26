@@ -108,6 +108,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     }
 
     let _: Vec<_> = servers.collect().await;
+    info!("All servers terminated");
 
     #[cfg(feature = "player")]
     {
@@ -245,6 +246,7 @@ async fn run_server(
             builder
                 .serve_with_shutdown(addr, async {
                     shutdown_rx.next().await;
+                    info!("received shutdown signal");
                 })
                 .await
                 .wrap_err("Error running HTTP server")
@@ -256,6 +258,7 @@ async fn run_server(
             builder
                 .serve_with_incoming_shutdown(IpcStream::get_async_stream(ipc_path)?, async {
                     shutdown_rx.next().await;
+                    info!("received shutdown signal");
                 })
                 .await
                 .wrap_err("Error running IPC server")

@@ -14,18 +14,28 @@ derivative = "2"
 eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
-stream-download = { version = "0.11.1", features = [
+tokio-util = "0.7"
+stream-download = { version = "0.13.1", features = [
   "reqwest-rustls",
   "reqwest-middleware",
+  "registry",
+  "process",
 ] }
 strum = { version = "0.26", features = ["derive"] }
 tap = "1"
-thiserror = "1"
+thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
-decal = { git = "https://github.com/aschey/decal", rev = "c5aeea56f7823ca0eb38981cd8d43bd192101437" }
-reqwest-retry = "0.6.1"
-reqwest-middleware = "0.3.3"
+decal = { git = "https://github.com/aschey/decal", rev = "15d1d4fa5aae327c50b9e3cb22ab1b4fd84492ae" }
+reqwest-retry = "0.7.0"
+reqwest = { version = "0.12", features = ["rustls-tls-native-roots"] }
+reqwest-middleware = "0.4.0"
+async-trait = "0.1"
+youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "2a2533633ad2d6d718baf63e25b9b7d7c2a053d1", features = [
+  "tokio",
+] }
+regex = "1.11.1"
+lazy-regex = "3.3.0"
 
 [dev-dependencies]
 assert_matches = "1.5.0"

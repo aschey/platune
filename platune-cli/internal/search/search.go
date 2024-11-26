@@ -59,7 +59,7 @@ func (search *Search) ProcessSearchResults(
 			return
 		}
 		filesystemCallback(full)
-	} else if strings.HasPrefix(allArgs, "http://") || strings.HasPrefix(allArgs, "https://") {
+	} else if strings.HasPrefix(allArgs, "http://") || strings.HasPrefix(allArgs, "https://") || strings.HasPrefix(allArgs, "ytdl://") {
 		filesystemCallback(allArgs)
 		return
 	} else {

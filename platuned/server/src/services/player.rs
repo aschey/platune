@@ -40,7 +40,7 @@ fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse,
     Ok(EventResponse {
         event: event.into(),
         event_payload: Some(EventPayload::State(State {
-            queue: state.queue,
+            queue: state.queue(),
             queue_position: state.queue_position as u32,
             volume: state.volume,
         })),
@@ -60,7 +60,7 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
             event: Event::Seek.into(),
             event_payload: Some(EventPayload::SeekData(SeekResponse {
                 state: Some(State {
-                    queue: state.queue,
+                    queue: state.queue(),
                     queue_position: state.queue_position as u32,
                     volume: state.volume,
                 }),

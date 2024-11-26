@@ -15,7 +15,7 @@ use daemon_slayer::logging::cli::LoggingCliProvider;
 #[cfg(feature = "tokio-console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
-use daemon_slayer::logging::{self, LogLevel, LoggerBuilder};
+use daemon_slayer::logging::{EnvConfig, LoggerBuilder};
 use daemon_slayer::notify::notification::Notification;
 use daemon_slayer::server::Handler;
 use daemon_slayer::server::cli::ServerCliProvider;
@@ -35,7 +35,7 @@ async fn main() -> Result<(), ErrorSink> {
 
 async fn run() -> Result<(), BoxedError> {
     let default_level = if cfg!(feature = "tokio-console") {
-        // TODO: get rid of long spam in our normal log targets when enabling this
+        // TODO: get rid of log spam in our normal log targets when enabling this
         // we should only send the spammy logs to the tokio console
         tracing::Level::TRACE
     } else {
@@ -43,9 +43,9 @@ async fn run() -> Result<(), BoxedError> {
     };
 
     let logger_builder = LoggerBuilder::new(ServiceHandler::label())
-        .with_config(logging::UserConfig {
-            log_level: LogLevel(default_level),
-        })
+        .with_env_config(
+            EnvConfig::new("PLATUNE_LOG".to_string()).with_default(default_level.into()),
+        )
         // Lofty spams warning logs for metadata parsing issues
         // TODO: make a setting to control this
         .with_env_filter_directive("lofty=error".parse()?);
@@ -65,7 +65,9 @@ async fn run() -> Result<(), BoxedError> {
         .with_provider(build_info())
         .initialize()?;
 
-    let (logger, _) = cli.take_provider::<LoggingCliProvider>().get_logger()?;
+    // TODO: use get_logger_with_reload when we have config file support
+    let logger = cli.take_provider::<LoggingCliProvider>().get_logger()?;
+
     #[cfg(feature = "tokio-console")]
     let logger = logger.with(console_subscriber::spawn());
 

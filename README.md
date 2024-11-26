@@ -57,7 +57,7 @@ This allows for a variety of setups such as using the Platune management server 
 
 - Be simple to use with minimal configuration. Don't try to support every possible use case.
 - Follow the [Unix Philosophy](https://en.wikipedia.org/wiki/Unix_philosophy) - the core code should be simple and extendable, non-essential functionality should be implemented separately.
-- Strive for compatiblity with established tools and protocols where possible.
+- Strive for compatibility with established tools and protocols where possible.
 - Focus on file-based media playback, not third-party streaming services (integration with streaming services may be added via plugins in the future).
 - The GUI and CLI will support all essential features. Extra functionality may only be available on the GUI.
 
