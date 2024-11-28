@@ -18,6 +18,7 @@ use stream_download::{Settings, StreamDownload};
 use tap::{Tap, TapFallible};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
+use which::which;
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 
 macro_rules! url_regex {
@@ -55,16 +56,20 @@ fn ytdl_rules() -> Vec<Rule> {
     ]
 }
 
-fn ytdl_exe() -> String {
-    let path = env::var("YT_DLP_PATH").unwrap_or_else(|_| "yt-dlp".to_string());
-    info!("Using yt-dlp path: {path:?}");
-    path
+fn find_exe(env_var: &str, exe_name: &str) -> Result<String> {
+    let path =
+        env::var(env_var).or_else(|_| which(exe_name).map(|p| p.to_string_lossy().to_string()))?;
+
+    info!("Using {exe_name} path: {path:?}");
+    Ok(path)
 }
 
-fn ffmpeg_exe() -> String {
-    let path = env::var("FFMPEG_PATH").unwrap_or_else(|_| "ffmpeg".to_string());
-    info!("Using ffmpeg path: {path:?}");
-    path
+fn ytdl_exe() -> Result<String> {
+    find_exe("YT_DLP_PATH", "yt-dlp").tap_err(|e| error!("yt-dlp path not found: {e:?}"))
+}
+
+fn ffmpeg_exe() -> Result<String> {
+    find_exe("FFMPEG_PATH", "ffmpeg").tap_err(|e| error!("ffmpeg path not found: {e:?}"))
 }
 
 struct RegexSet {
@@ -127,7 +132,7 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
             .skip_flat_playlist
             .matches(source_url.domain().unwrap_or_default());
         let mut command = YoutubeDl::new(input.source.clone());
-        command.youtube_dl_path(ytdl_exe());
+        command.youtube_dl_path(ytdl_exe()?);
         if flat_playlist {
             // --flat-playlist prevents it from enumerating all videos in the playlist, which could
             // take a long time
@@ -207,7 +212,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
         info!("ytdl video url: {}", input.source);
         info!("extracting video metadata - this may take a few seconds");
         let output = YoutubeDl::new(input.source.clone())
-            .youtube_dl_path(ytdl_exe())
+            .youtube_dl_path(ytdl_exe()?)
             .extract_audio(true)
             .run_async()
             .await?;
@@ -251,16 +256,17 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
             }
         };
         let cmd = YtDlpCommand::new(input.source)
-            .yt_dlp_path(ytdl_exe())
+            .yt_dlp_path(ytdl_exe()?)
             .extract_audio(true);
-
+        let ffmpeg_args = ["--ffmpeg-location", &ffmpeg_exe()?];
         let params = if let Some(format) = &found_format {
             info!("source quality: {:?}", format.quality);
             info!("source is in an appropriate format, no post-processing required");
             // Prefer the explicit format ID since this insures the format used will match
             // the filesize.
             let format_id = format.format_id.clone().expect("format id missing");
-            let params = ProcessStreamParams::new(cmd.format(format_id))?;
+            let params =
+                ProcessStreamParams::new(cmd.format(format_id).into_command().args(ffmpeg_args))?;
             if let Some(size) = format.filesize {
                 info!("found video size: {size}");
                 params.content_length(size as u64)
@@ -271,8 +277,8 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
             info!("source requires post-processing - converting to m4a using ffmpeg");
             // yt-dlp can handle format conversion, but if we want to stream it directly from
             // stdout, we have to pipe the raw output to ffmpeg ourselves.
-            let builder = CommandBuilder::new(cmd)
-                .pipe(FfmpegConvertAudioCommand::new(ffmpeg_format).ffmpeg_path(ffmpeg_exe()));
+            let builder = CommandBuilder::new(cmd.into_command().args(ffmpeg_args))
+                .pipe(FfmpegConvertAudioCommand::new(ffmpeg_format).ffmpeg_path(ffmpeg_exe()?));
             ProcessStreamParams::new(builder)?
         };
         let size = found_format.and_then(|f| f.filesize).map(|f| f as u64);

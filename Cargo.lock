@@ -3834,6 +3834,7 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "which 7.0.0",
  "youtube_dl",
 ]
 
