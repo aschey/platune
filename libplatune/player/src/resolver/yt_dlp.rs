@@ -1,5 +1,6 @@
 use std::cmp::Ordering;
 use std::collections::HashSet;
+use std::env;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 
@@ -16,7 +17,7 @@ use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
 use tap::TapFallible;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 
 macro_rules! url_regex {
@@ -42,6 +43,12 @@ fn ytdl_rules() -> Vec<Rule> {
     ]
 }
 
+fn ytdl_exe() -> String {
+    let path = env::var("YT_DLP_PATH").unwrap_or_else(|_| "yt-dlp".to_string());
+    info!("Using yt-dlp path: {path:?}");
+    path
+}
+
 pub(crate) struct YtDlpUrlResolver {
     rules: Vec<Rule>,
     skip_flat_playlist: HashSet<&'static str>,
@@ -50,6 +57,8 @@ pub(crate) struct YtDlpUrlResolver {
 impl YtDlpUrlResolver {
     pub(crate) fn new() -> Self {
         let mut skip = HashSet::new();
+        // some sites don't populate urls when using --flat-playlist so we need to explicitly skip
+        // it
         skip.insert("audius.co");
         Self {
             rules: ytdl_rules(),
@@ -74,6 +83,7 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
             .skip_flat_playlist
             .contains(input.source.clone().into_url().domain().unwrap_or_default());
         let mut command = YoutubeDl::new(input.source.clone());
+        command.youtube_dl_path(ytdl_exe());
         if flat_playlist {
             // --flat-playlist prevents it from enumerating all videos in the playlist, which could
             // take a long time
@@ -149,9 +159,6 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
         info!("extracting video metadata - this may take a few seconds");
         let output = YoutubeDl::new(input.source.clone())
             .extract_audio(true)
-            // --flat-playlist prevents it from enumerating all videos in the playlist, which could
-            // take a long time
-            .extra_arg("--flat-playlist")
             .run_async()
             .await?;
         info!("metadata extraction complete");
@@ -179,11 +186,14 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
                 valid_formats.pop()
             }
             YoutubeDlOutput::Playlist(playlist) => {
-                info!("found playlist: {:?}", playlist.title);
+                // This shouldn't happen since we're enumerating playlists in the URL resolver
+                warn!("found playlist in source resolver: {:?}", playlist.title);
                 None
             }
         };
-        let cmd = YtDlpCommand::new(input.source).extract_audio(true);
+        let cmd = YtDlpCommand::new(input.source)
+            .yt_dlp_path(ytdl_exe())
+            .extract_audio(true);
 
         let params = if let Some(format) = &found_format {
             info!("source quality: {:?}", format.quality);

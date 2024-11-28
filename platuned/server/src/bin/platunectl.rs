@@ -19,6 +19,7 @@ use daemon_slayer::logging::cli::LoggingCliProvider;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
 use daemon_slayer::process::cli::ProcessCliProvider;
 use platuned::{build_info, clap_base_command, main_server_port, service_label};
+use which::which;
 
 #[tokio::main]
 async fn main() -> Result<(), ErrorSink> {
@@ -65,6 +66,10 @@ async fn run() -> Result<(), BoxedError> {
             .with_environment_variable_if_exists("PLATUNE_IP_HEADER")
             .with_environment_variable_if_exists("PLATUNE_MTLS_CLIENT_CERT_PATH")
             .with_environment_variable_if_exists("PLATUNE_MTLS_CLIENT_KEY_PATH");
+    }
+    if let Ok(yt_dlp) = which("yt-dlp") {
+        manager_builder =
+            manager_builder.with_environment_variable("YT_DLP_PATH", yt_dlp.to_string_lossy());
     }
     let manager = manager_builder.build().await.unwrap();
     let logger_builder = LoggerBuilder::new(label.clone());
