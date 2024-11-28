@@ -109,6 +109,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceR
                 ));
             }
         };
+
         let file_len = stream.content_length();
 
         let parts: Vec<&str> = url.path().split('.').collect();

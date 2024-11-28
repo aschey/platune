@@ -1,5 +1,4 @@
 use std::cmp::Ordering;
-use std::collections::HashSet;
 use std::env;
 use std::num::NonZeroUsize;
 use std::time::Duration;
@@ -8,6 +7,7 @@ use async_trait::async_trait;
 use decal::decoder::{ReadSeekSource, Source};
 use eyre::{Context, Result, bail};
 use lazy_regex::{Lazy, regex};
+use regex::Regex;
 use stream_download::process::{
     CommandBuilder, FfmpegConvertAudioCommand, ProcessStreamParams, YtDlpCommand,
 };
@@ -26,12 +26,24 @@ macro_rules! url_regex {
     };
 }
 
+fn audius() -> Regex {
+    url_regex!(r"^(www\.)?audius\.co$")
+}
+
+fn twitch() -> Regex {
+    url_regex!(r"^(www\.)?twitch\.tv$")
+}
+
+fn youtube() -> Regex {
+    url_regex!(r"^(www\.)?youtube\.com$")
+}
+
 fn ytdl_rules() -> Vec<Rule> {
     vec![
         Rule::prefix("ytdl://"),
-        Rule::http_domain(url_regex!(r"^(www\.)?youtube\.com$")),
-        Rule::http_domain(url_regex!(r"^(www\.)?twitch\.tv$")),
-        Rule::http_domain(url_regex!(r"^(www\.)?audius\.co$")),
+        Rule::http_domain(youtube()),
+        Rule::http_domain(twitch()),
+        Rule::http_domain(audius()),
         Rule::http_domain(url_regex!(r"^(www\.)?audiomack\.com$")),
         Rule::http_domain(url_regex!(r"^(www\.)?(.*\.)?bandcamp\.com$")),
         Rule::http_domain(url_regex!(r"^(www\.)?soundcloud.com$")),
@@ -55,20 +67,44 @@ fn ffmpeg_exe() -> String {
     path
 }
 
+struct RegexSet {
+    regexes: Vec<Regex>,
+}
+
+impl RegexSet {
+    fn single(re: Regex) -> Self {
+        Self { regexes: vec![re] }
+    }
+
+    fn new(regexes: Vec<Regex>) -> Self {
+        Self { regexes }
+    }
+
+    fn matches(&self, input: &str) -> bool {
+        for regex in &self.regexes {
+            if regex.is_match(input) {
+                return true;
+            }
+        }
+        false
+    }
+}
+
 pub(crate) struct YtDlpUrlResolver {
     rules: Vec<Rule>,
-    skip_flat_playlist: HashSet<&'static str>,
+    skip_flat_playlist: RegexSet,
+    force_original_url: RegexSet,
 }
 
 impl YtDlpUrlResolver {
     pub(crate) fn new() -> Self {
-        let mut skip = HashSet::new();
-        // some sites don't populate urls when using --flat-playlist so we need to explicitly skip
-        // it
-        skip.insert("audius.co");
         Self {
             rules: ytdl_rules(),
-            skip_flat_playlist: skip,
+            // some sites don't populate urls when using --flat-playlist so we need to explicitly
+            // skip it
+            skip_flat_playlist: RegexSet::single(audius()),
+            // some sites may return a url that's incompatible with our default logic
+            force_original_url: RegexSet::new(vec![twitch(), youtube()]),
         }
     }
 }
@@ -85,9 +121,11 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
 
     async fn handler(&mut self, mut input: Input) -> Result<Vec<Input>> {
         info!("extracting video metadata - this may take a few seconds");
+        let source_url = input.source.clone().into_url();
+        info!("source url: {source_url}");
         let flat_playlist = !self
             .skip_flat_playlist
-            .contains(input.source.clone().into_url().domain().unwrap_or_default());
+            .matches(source_url.domain().unwrap_or_default());
         let mut command = YoutubeDl::new(input.source.clone());
         command.youtube_dl_path(ytdl_exe());
         if flat_playlist {
@@ -102,9 +140,14 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
             YoutubeDlOutput::SingleVideo(video) => {
                 info!("found single video: {:?}", video.title);
                 info!("url {:?}", video.url);
-                if let Some(Ok(url)) = video.url.map(|u| u.parse()) {
-                    // prefer URL from the command output if available
-                    input.source = registry::Source::Url(url);
+                if !self
+                    .force_original_url
+                    .matches(source_url.domain().unwrap_or_default())
+                {
+                    if let Some(Ok(url)) = video.url.map(|u| u.parse()) {
+                        // prefer URL from the command output if available
+                        input.source = registry::Source::Url(url);
+                    }
                 }
                 Ok(vec![input])
             }
