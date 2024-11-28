@@ -67,9 +67,13 @@ async fn run() -> Result<(), BoxedError> {
             .with_environment_variable_if_exists("PLATUNE_MTLS_CLIENT_CERT_PATH")
             .with_environment_variable_if_exists("PLATUNE_MTLS_CLIENT_KEY_PATH");
     }
-    if let Ok(yt_dlp) = which("yt-dlp") {
+    if let Ok(yt_dlp_path) = which("yt-dlp") {
         manager_builder =
-            manager_builder.with_environment_variable("YT_DLP_PATH", yt_dlp.to_string_lossy());
+            manager_builder.with_environment_variable("YT_DLP_PATH", yt_dlp_path.to_string_lossy());
+    }
+    if let Ok(ffmpeg_path) = which("ffmpeg") {
+        manager_builder =
+            manager_builder.with_environment_variable("FFMPEG_PATH", ffmpeg_path.to_string_lossy());
     }
     let manager = manager_builder.build().await.unwrap();
     let logger_builder = LoggerBuilder::new(label.clone());

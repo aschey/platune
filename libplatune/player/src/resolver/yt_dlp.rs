@@ -49,6 +49,12 @@ fn ytdl_exe() -> String {
     path
 }
 
+fn ffmpeg_exe() -> String {
+    let path = env::var("FFMPEG_PATH").unwrap_or_else(|_| "ffmpeg".to_string());
+    info!("Using ffmpeg path: {path:?}");
+    path
+}
+
 pub(crate) struct YtDlpUrlResolver {
     rules: Vec<Rule>,
     skip_flat_playlist: HashSet<&'static str>,
@@ -158,6 +164,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
         info!("ytdl video url: {}", input.source);
         info!("extracting video metadata - this may take a few seconds");
         let output = YoutubeDl::new(input.source.clone())
+            .youtube_dl_path(ytdl_exe())
             .extract_audio(true)
             .run_async()
             .await?;
@@ -212,8 +219,8 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
             info!("source requires post-processing - converting to m4a using ffmpeg");
             // yt-dlp can handle format conversion, but if we want to stream it directly from
             // stdout, we have to pipe the raw output to ffmpeg ourselves.
-            let builder =
-                CommandBuilder::new(cmd).pipe(FfmpegConvertAudioCommand::new(ffmpeg_format));
+            let builder = CommandBuilder::new(cmd)
+                .pipe(FfmpegConvertAudioCommand::new(ffmpeg_format).ffmpeg_path(ffmpeg_exe()));
             ProcessStreamParams::new(builder)?
         };
         let size = found_format.and_then(|f| f.filesize).map(|f| f as u64);
