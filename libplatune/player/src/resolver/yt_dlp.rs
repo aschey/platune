@@ -15,7 +15,7 @@ use stream_download::registry::{self, Input, RegistryEntry, Rule};
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
 use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
-use tap::TapFallible;
+use tap::{Tap, TapFallible};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
@@ -179,8 +179,17 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
                 let mut valid_formats: Vec<_> = formats
                     .into_iter()
                     .filter(|f| {
+                        // use native audio codec or format if available
+                        if let Some(audio_codec) = &f.acodec {
+                            if yt_dlp_formats.contains(&audio_codec.as_str()) {
+                                info!("using native audio codec");
+                                return true;
+                            }
+                        }
                         if let Some(format) = &f.format {
-                            yt_dlp_formats.contains(&format.as_str())
+                            yt_dlp_formats
+                                .contains(&format.as_str())
+                                .tap(|found| info!("native format found: {found}"))
                         } else {
                             false
                         }
