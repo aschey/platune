@@ -25,7 +25,7 @@ use rpc::*;
 
 use crate::startup::ServiceHandler;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), ErrorSink> {
     let guard = daemon_slayer::logging::init();
     let result = run().await.map_err(|e| ErrorSink::new(eyre::eyre!(e)));

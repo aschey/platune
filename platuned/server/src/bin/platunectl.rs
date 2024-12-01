@@ -21,7 +21,7 @@ use daemon_slayer::process::cli::ProcessCliProvider;
 use platuned::{build_info, clap_base_command, main_server_port, service_label};
 use which::which;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), ErrorSink> {
     let guard = daemon_slayer::logging::init();
     let result = run().await.map_err(|e| ErrorSink::new(eyre::eyre!(e)));
