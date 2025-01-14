@@ -3,7 +3,7 @@ authors = ["aschey <aschey13@gmail.com>"]
 name = "libplatune-player"
 version = "0.1.0"
 
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "libplatune_player"
@@ -15,7 +15,7 @@ eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
 tokio-util = "0.7"
-stream-download = { version = "0.13.1", features = [
+stream-download = { version = "0.14.0", features = [
   "reqwest-rustls",
   "reqwest-middleware",
   "registry",
@@ -41,16 +41,16 @@ youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "2a2533633
   "tokio",
 ] }
 regex = "1.11.1"
-lazy-regex = "3.3.0"
-which = { version = "7.0.0", features = ["tracing"] }
+lazy-regex = "3.4.1"
+which = { version = "7.0.1", features = ["tracing"] }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.83"
-ctor = "0.2.8"
-futures = "0.3.30"
+async-trait = "0.1.85"
+ctor = "0.2.9"
+futures = "0.3.31"
 pretty_assertions = "1.4.1"
-rstest = "0.23.0"
-spin_sleep = "1.2.1"
+rstest = "0.24.0"
+spin_sleep = "1.3.0"
 tracing-appender = "0.2.3"
-tracing-subscriber = "0.3.18"
+tracing-subscriber = "0.3.19"

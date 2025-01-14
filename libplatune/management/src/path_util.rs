@@ -57,7 +57,7 @@ where
         file_path_str = file_path_str.replace('\\', "/");
     }
 
-    if let Some(ref mount) = mount {
+    if let Some(mount) = mount {
         if file_path_str.starts_with(&mount[..]) {
             file_path_str = file_path_str.replace(&mount[..], "");
         }
