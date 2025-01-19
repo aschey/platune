@@ -135,13 +135,10 @@ async fn run_file_service(
     match &folders[..] {
         [] => {}
         [folder] => {
-            app = app.nest_service(root_path, ServeDir::new(folder));
+            app = app.fallback_service(ServeDir::new(folder));
         }
         [folder, fallback] => {
-            app = app.nest_service(
-                root_path,
-                ServeDir::new(folder).fallback(ServeDir::new(fallback)),
-            );
+            app = app.fallback_service(ServeDir::new(folder).fallback(ServeDir::new(fallback)));
         }
         [first, second, rest @ ..] => {
             let mut serve_dir = ServeDir::new(first).fallback(ServeDir::new(second));
