@@ -118,7 +118,7 @@ async fn get_connection_type<T>(
             })
             .collect();
 
-        if remote_addr.is_global() {
+        if !is_local(remote_addr) {
             if let Ok(mut global_addr) = env::var("PLATUNE_GLOBAL_FILE_URL") {
                 if !global_addr.ends_with('/') {
                     global_addr.push('/');
@@ -144,6 +144,15 @@ async fn get_connection_type<T>(
     } else {
         Ok(ConnectionType::Local)
     }
+}
+
+fn is_local(ip_addr: IpAddr) -> bool {
+    ip_addr.is_loopback()
+        || ip_addr.is_unspecified()
+        || match ip_addr {
+            IpAddr::V4(v4) => v4.is_link_local() || v4.is_private(),
+            IpAddr::V6(v6) => v6.is_unicast_link_local() || v6.is_unique_local(),
+        }
 }
 
 #[tonic::async_trait]
