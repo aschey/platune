@@ -9,10 +9,10 @@ name = "platuned_client"
 path = "src/lib.rs"
 
 [dependencies]
-tipsy = "0.3.1"
+tipsy = "0.3.2"
 hyper-util = "0.1.10"
-prost = "0.13.4"
-prost-types = "0.13.4"
+prost = "0.13.5"
+prost-types = "0.13.5"
 tonic = "0.12.3"
 tower = { version = "0.5.2", features = ["util"] }
 

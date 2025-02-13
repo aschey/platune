@@ -9,11 +9,11 @@ path = "src/lib.rs"
 
 [dependencies]
 axum = { version = "0.8.1", optional = true }
-clap = { version = "4.5.26", features = ["unstable-styles"] }
+clap = { version = "4.5.29", features = ["unstable-styles"] }
 console-subscriber = { version = "0.4.1", features = [
   "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "1d45e3318cf3b11b8970d741b1a501243021d9ef", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "35e0f9bc24d3c258c7e81531ff252bfedc973712", features = [
   "client-standard",
   "server-standard",
   "notify",
@@ -27,9 +27,9 @@ dotenvy = "0.15.7"
 futures = "0.3.31"
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
-tipsy = "0.3.1"
-prost = "0.13.4"
-prost-types = "0.13.4"
+tipsy = "0.3.2"
+prost = "0.13.5"
+prost-types = "0.13.5"
 rcgen = { version = "0.13.2", features = ["x509-parser", "pem"] }
 time = "0.3.37"
 tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }
@@ -40,10 +40,10 @@ tonic-reflection = "0.12.3"
 tower = { version = "0.5.2", optional = true }
 tower-http = { version = "0.6.2", features = ["fs"], optional = true }
 tracing = "0.1.41"
-uuid = { version = "1.11.1", features = ["v4"] }
+uuid = { version = "1.13.1", features = ["v4"] }
 vergen-gix = { version = "1.0.6" }
 console = "0.15.10"
-which = { version = "7.0.1", features = ["tracing"] }
+which = { version = "7.0.2", features = ["tracing"] }
 
 [features]
 default = ["management", "player"]

@@ -15,13 +15,13 @@ eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
 tokio-util = "0.7"
-stream-download = { version = "0.14.0", features = [
+stream-download = { version = "0.14.1", features = [
   "reqwest-rustls",
   "reqwest-middleware",
   "registry",
   "process",
 ] }
-strum = { version = "0.26", features = ["derive"] }
+strum = { version = "0.27", features = ["derive"] }
 tap = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
@@ -42,12 +42,12 @@ youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "2a2533633
 ] }
 regex = "1.11.1"
 lazy-regex = "3.4.1"
-which = { version = "7.0.1", features = ["tracing"] }
+which = { version = "7.0.2", features = ["tracing"] }
 
 [dev-dependencies]
 assert_matches = "1.5.0"
-async-trait = "0.1.85"
-ctor = "0.2.9"
+async-trait = "0.1.86"
+ctor = "0.3.1"
 futures = "0.3.31"
 pretty_assertions = "1.4.1"
 rstest = "0.24.0"
