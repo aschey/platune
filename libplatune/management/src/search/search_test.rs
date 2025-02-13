@@ -547,7 +547,7 @@ pub async fn test_search(songs: Vec<SongTest>, results: Vec<SearchResultTest>, s
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
 
     while receiver.next().await.is_some() {}
 

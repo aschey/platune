@@ -4,7 +4,9 @@ use std::sync::Arc;
 #[cfg(feature = "management")]
 use std::time::Duration;
 
+use daemon_slayer::core::notify::AsyncNotification;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
+use daemon_slayer::notify::notification::Notification;
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
@@ -28,7 +30,7 @@ use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 #[cfg(feature = "management")]
 use tower_http::services::ServeDir;
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::cert_gen::{get_tls_config, get_tonic_tls_config};
 use crate::ipc_stream::IpcStream;
@@ -63,9 +65,17 @@ impl Services {
             #[cfg(feature = "player")]
             player: Arc::new(PlatunePlayer::new(Default::default(), Default::default())),
             #[cfg(feature = "management")]
-            manager: FileWatchManager::new(manager, Duration::from_millis(500))
-                .await
-                .wrap_err("error starting file watch manager")?,
+            manager: FileWatchManager::new(manager, Duration::from_millis(500), move || {
+                Box::pin(async move {
+                    let _ = Notification::new("com.platune.platuned".parse().unwrap())
+                        .summary("Sync completed")
+                        .show()
+                        .await
+                        .inspect_err(|e| warn!("Error sending notification: {e:?}"));
+                })
+            })
+            .await
+            .wrap_err("error starting file watch manager")?,
         })
     }
 }

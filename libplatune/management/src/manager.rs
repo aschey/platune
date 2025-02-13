@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 
 use normpath::PathExt;
@@ -115,14 +116,18 @@ impl Manager {
         Ok(self.expand_paths(folders).await)
     }
 
-    pub async fn sync(&mut self, paths: Option<Vec<String>>) -> Result<ProgressStream, DbError> {
+    pub async fn sync(
+        &mut self,
+        paths: Option<Vec<String>>,
+        finished_callback: Pin<Box<dyn Future<Output = ()> + Send>>,
+    ) -> Result<ProgressStream, DbError> {
         let folders = match paths {
             Some(paths) => paths,
             None => self.get_all_folders().await?,
         };
 
         let mount = self.get_registered_mount().await;
-        Ok(self.db.sync(folders, mount).await)
+        Ok(self.db.sync(folders, mount, finished_callback).await)
     }
 
     async fn replace_prefix(&self, paths: Vec<&str>) -> Result<Vec<String>, ManagerError> {

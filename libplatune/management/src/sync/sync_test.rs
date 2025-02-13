@@ -41,7 +41,7 @@ pub async fn test_sync_empty() {
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
     let mut msgs = vec![];
     while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
@@ -54,7 +54,7 @@ pub async fn test_sync_empty() {
 pub async fn test_sync_no_folder() {
     let (_, mut manager) = setup().await;
 
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
     let mut msgs = vec![];
     while let Some(msg) = receiver.next().await {
         msgs.push(msg.unwrap());
@@ -90,7 +90,7 @@ pub async fn test_sync_basic(use_mount: bool) {
         let mount = music_dir.parent().unwrap();
         manager.register_drive(mount).await.unwrap();
     }
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
 
     let mut msgs = vec![];
     while let Some(msg) = receiver.next().await {
@@ -136,8 +136,8 @@ pub async fn test_sync_multiple() {
         .await
         .unwrap();
 
-    let mut receiver1 = manager.sync(None).await.unwrap();
-    let mut receiver2 = manager.sync(None).await.unwrap();
+    let mut receiver1 = manager.sync(None, Box::pin(async {})).await.unwrap();
+    let mut receiver2 = manager.sync(None, Box::pin(async {})).await.unwrap();
 
     tokio::spawn(async move { while receiver1.next().await.is_some() {} })
         .await
@@ -162,7 +162,7 @@ async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager)
         .add_folder(music_dir.to_str().unwrap())
         .await
         .unwrap();
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
 
     while receiver.next().await.is_some() {}
 
@@ -171,11 +171,11 @@ async fn setup_delete(inner_dir: &Path, music_dir: &Path, manager: &mut Manager)
     // pass
     std::thread::sleep(Duration::from_secs(2));
 
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
     while receiver.next().await.is_some() {}
 
     // sync twice after deleting to ensure no unique constraint errors
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
     while receiver.next().await.is_some() {}
 }
 
@@ -229,7 +229,7 @@ pub async fn test_sync_delete_and_readd() {
 
     fs::copy("../test_assets/test3.mp3", last_song.clone()).unwrap();
 
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
     while receiver.next().await.is_some() {}
 
     let deleted2 = manager.get_deleted_songs().await.unwrap();
@@ -286,7 +286,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
         .await
         .unwrap();
 
-    let mut receiver = manager.sync(None).await.unwrap();
+    let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
     while (receiver.next().await).is_some() {}
 
     if do_update {
@@ -297,7 +297,7 @@ pub async fn test_sync_duplicate_album_name(do_update: bool) {
             tag2.save_to_path(&song2_path, WriteOptions::new()).unwrap();
         }
 
-        let mut receiver = manager.sync(None).await.unwrap();
+        let mut receiver = manager.sync(None, Box::pin(async {})).await.unwrap();
         while (receiver.next().await).is_some() {}
     }
 

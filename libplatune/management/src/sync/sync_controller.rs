@@ -1,5 +1,5 @@
-use daemon_slayer::core::notify::AsyncNotification;
-use daemon_slayer::notify::notification::Notification;
+use std::pin::Pin;
+
 use sqlx::{Pool, Sqlite};
 use tap::TapFallible;
 use tokio::sync::{broadcast, oneshot};
@@ -26,7 +26,7 @@ impl SyncController {
         &mut self,
         folders: Vec<String>,
         mount: Option<String>,
-        finished_callback: Box<dyn Fn() + Send>,
+        finished_callback: Pin<Box<dyn Future<Output = ()> + Send>>,
     ) -> ProgressStream {
         // If sync is currently running, subscribe to the current stream instead of starting another
         // one
@@ -54,7 +54,7 @@ impl SyncController {
                 let mut engine = SyncEngine::new(folders, write_pool, mount, tx.clone());
                 engine.start().await;
 
-                finished_callback();
+                finished_callback.await;
 
                 let _ = finished_tx
                     .send(())
@@ -64,12 +64,6 @@ impl SyncController {
                 let _ = tx
                     .send(None)
                     .tap_err(|e| warn!("Error sending final sync message to clients {e:?}"));
-
-                let _ = Notification::new("com.platune.platuned".parse().unwrap())
-                    .summary("Sync completed")
-                    .show()
-                    .await
-                    .tap_err(|e| warn!("Error sending notification: {e:?}"));
             });
         } else {
             info!("No folders to sync");

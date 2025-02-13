@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -218,6 +219,7 @@ impl Database {
         &mut self,
         folders: Vec<String>,
         mount: Option<String>,
+        finished_callback: Pin<Box<dyn Future<Output = ()> + Send>>,
     ) -> ProgressStream {
         let search_engine = self.search_engine.clone();
         self.sync_controller
@@ -226,7 +228,10 @@ impl Database {
             .sync(
                 folders,
                 mount,
-                Box::new(move || search_engine.clear_cache()),
+                Box::pin(async move {
+                    search_engine.clear_cache();
+                    finished_callback.await;
+                }),
             )
             .await
     }

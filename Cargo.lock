@@ -3891,7 +3891,6 @@ dependencies = [
  "concread",
  "criterion",
  "ctor 0.3.1",
- "daemon-slayer",
  "directories",
  "eyre",
  "futures",

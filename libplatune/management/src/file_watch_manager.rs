@@ -1,5 +1,6 @@
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -59,7 +60,14 @@ impl Deref for FileWatchManager {
 }
 
 impl FileWatchManager {
-    pub async fn new(manager: Manager, debounce_delay: Duration) -> Result<Self, FileWatchError> {
+    pub async fn new<F>(
+        manager: Manager,
+        debounce_delay: Duration,
+        finished_callback: F,
+    ) -> Result<Self, FileWatchError>
+    where
+        F: Fn() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
+    {
         let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(32);
         let (sync_tx, mut sync_rx) = tokio::sync::mpsc::channel(32);
         let sync_tx_ = sync_tx.clone();
@@ -159,7 +167,7 @@ impl FileWatchManager {
                         if let Ok(rx) = manager_
                             .write()
                             .await
-                            .sync(None)
+                            .sync(None, finished_callback())
                             .await
                             .tap_err(|e| error!("Error syncing: {e:?}"))
                         {
@@ -212,7 +220,7 @@ impl FileWatchManager {
                         if let Ok(rx) = manager_
                             .write()
                             .await
-                            .sync(folders)
+                            .sync(folders, finished_callback())
                             .await
                             .tap_err(|e| error!("Error syncing: {e:?}"))
                         {

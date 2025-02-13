@@ -51,7 +51,10 @@ async fn test_file_sync_sequential(
             .unwrap();
     }
 
-    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(debounce_time))
+    let file_watch_manager =
+        FileWatchManager::new(manager, Duration::from_millis(debounce_time), move || {
+            Box::pin(async {})
+        })
         .await
         .unwrap();
     let mut receiver = file_watch_manager.subscribe_progress();
@@ -149,9 +152,11 @@ async fn test_file_sync_concurrent(rename: bool) {
     let music_dir = temp_path.join("configdir");
     let inner_dir = music_dir.join("folder1");
 
-    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(10))
-        .await
-        .unwrap();
+    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(10), move || {
+        Box::pin(async {})
+    })
+    .await
+    .unwrap();
     let mut receiver = file_watch_manager.subscribe_progress();
 
     let (started_tx, mut started_rx) = mpsc::channel(1);
@@ -234,7 +239,10 @@ async fn test_sync_all(sync_twice: bool) {
         .await
         .unwrap();
 
-    let file_watch_manager = FileWatchManager::new(manager, Duration::from_millis(100))
+    let file_watch_manager =
+        FileWatchManager::new(manager, Duration::from_millis(100), move || {
+            Box::pin(async {})
+        })
         .await
         .unwrap();
     let mut receiver = file_watch_manager.subscribe_progress();
