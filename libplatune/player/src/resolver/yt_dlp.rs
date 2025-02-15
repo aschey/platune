@@ -38,16 +38,32 @@ fn youtube() -> Regex {
     url_regex!(r"^(www\.)?youtube\.com$")
 }
 
+fn audiomack() -> Regex {
+    url_regex!(r"^(www\.)?audiomack\.com$")
+}
+
+fn bandcamp() -> Regex {
+    url_regex!(r"^(www\.)?(.*\.)?bandcamp\.com$")
+}
+
+fn soundcloud() -> Regex {
+    url_regex!(r"^(www\.)?soundcloud.com$")
+}
+
+fn globalplayer() -> Regex {
+    url_regex!(r"^(www\.)?globalplayer.com$")
+}
+
 fn ytdl_rules() -> Vec<Rule> {
     vec![
         Rule::prefix("ytdl://"),
         Rule::http_domain(youtube()),
         Rule::http_domain(twitch()),
         Rule::http_domain(audius()),
-        Rule::http_domain(url_regex!(r"^(www\.)?audiomack\.com$")),
-        Rule::http_domain(url_regex!(r"^(www\.)?(.*\.)?bandcamp\.com$")),
-        Rule::http_domain(url_regex!(r"^(www\.)?soundcloud.com$")),
-        Rule::http_domain(url_regex!(r"^(www\.)?globalplayer.com$")),
+        Rule::http_domain(audiomack()),
+        Rule::http_domain(bandcamp()),
+        Rule::http_domain(soundcloud()),
+        Rule::http_domain(globalplayer()),
         // iheart has limited support currently: https://github.com/yt-dlp/yt-dlp/issues/2890
         //Rule::http_domain(url_regex!(r"^(www\.)?iheart.com$")),
         // seems to get stuck on album downloads without --playlist-end
