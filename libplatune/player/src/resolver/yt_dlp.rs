@@ -299,7 +299,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
             settings,
         )
         .await?;
-        let token = reader.get_cancellation_token();
+        let token = reader.cancellation_token();
 
         Ok((
             Box::new(ReadSeekSource::new(reader, size, Some("m4a".to_string()))),

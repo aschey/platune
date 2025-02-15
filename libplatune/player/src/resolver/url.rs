@@ -140,7 +140,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceR
         )
         .await
         .wrap_err_with(|| "Error creating stream downloader")?;
-        let token = reader.get_cancellation_token();
+        let token = reader.cancellation_token();
 
         Ok((
             Box::new(ReadSeekSource::new(reader, file_len, extension)),
