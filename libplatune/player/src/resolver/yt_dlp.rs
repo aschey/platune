@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::env;
 use std::num::NonZeroUsize;
 use std::time::Duration;
@@ -224,7 +223,9 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
                 let Some(formats) = video.formats else {
                     bail!("No formats found");
                 };
-                let mut valid_formats: Vec<_> = formats
+                let worst_quality = 10.0;
+                // find best format (0 is best, 10 is worst)
+                formats
                     .into_iter()
                     .filter(|f| {
                         // use native audio codec or format if available
@@ -242,12 +243,15 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
                             false
                         }
                     })
-                    .collect();
-                // Sort formats by quality (0 is best, 10 is worst)
-                valid_formats
-                    .sort_by(|a, b| a.quality.partial_cmp(&b.quality).unwrap_or(Ordering::Equal));
-                // Use the best quality one
-                valid_formats.pop()
+                    .reduce(|best, format| {
+                        if format.quality.unwrap_or(worst_quality)
+                            < best.quality.unwrap_or(worst_quality)
+                        {
+                            format
+                        } else {
+                            best
+                        }
+                    })
             }
             YoutubeDlOutput::Playlist(playlist) => {
                 // This shouldn't happen since we're enumerating playlists in the URL resolver
