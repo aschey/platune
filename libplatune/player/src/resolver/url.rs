@@ -10,7 +10,7 @@ use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use stream_download::http::HttpStream;
 use stream_download::http::reqwest::{Client, Identity, Url};
-use stream_download::registry::{Input, RegistryEntry, Rule};
+use stream_download::registry::{self, Input, RegistryEntry, Rule};
 use stream_download::source::{DecodeError, SourceStream};
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
 use stream_download::storage::temp::TempStorageProvider;
@@ -19,10 +19,6 @@ use tap::{TapFallible, TapOptional};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
-fn file_rule() -> Rule {
-    Rule::url_scheme("file://")
-}
-
 pub(crate) struct DefaultUrlResolver {
     rules: Vec<Rule>,
 }
@@ -30,7 +26,7 @@ pub(crate) struct DefaultUrlResolver {
 impl DefaultUrlResolver {
     pub(crate) fn new() -> Self {
         Self {
-            rules: vec![Rule::any_http(), file_rule(), Rule::any_string()],
+            rules: vec![Rule::any_url(), Rule::any_string()],
         }
     }
 }
@@ -46,6 +42,15 @@ impl RegistryEntry<Result<Vec<Input>>> for DefaultUrlResolver {
     }
 
     async fn handler(&mut self, input: Input) -> Result<Vec<Input>> {
+        if let registry::Source::Url(url) = &input.source {
+            if let Ok(path) = url.to_file_path() {
+                return Ok(vec![Input {
+                    prefix: None,
+                    source: registry::Source::String(path.to_string_lossy().to_string()),
+                }]);
+            }
+        }
+
         Ok(vec![input])
     }
 }
@@ -156,7 +161,7 @@ pub(crate) struct FileSourceResolver {
 impl FileSourceResolver {
     pub(crate) fn new() -> Self {
         Self {
-            rules: vec![file_rule(), Rule::any_string()],
+            rules: vec![Rule::any_url(), Rule::any_string()],
         }
     }
 }

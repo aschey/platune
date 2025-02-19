@@ -50,7 +50,7 @@ fn map_lookup_entry(
     connection_type: &ConnectionType,
 ) -> Result<LookupEntry, Status> {
     let path = match connection_type {
-        ConnectionType::Local => entry.path.clone(),
+        ConnectionType::Local => format!("file://{}", entry.path),
         ConnectionType::Remote {
             folders,
             local_addr,
