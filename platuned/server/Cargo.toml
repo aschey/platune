@@ -9,7 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 axum = { version = "0.8.1", optional = true }
-clap = { version = "4.5.29", features = ["unstable-styles"] }
+clap = { version = "4.5.32", features = ["unstable-styles"] }
 console-subscriber = { version = "0.4.1", features = [
   "parking_lot",
 ], optional = true }
@@ -31,8 +31,8 @@ tipsy = "0.3.2"
 prost = "0.13.5"
 prost-types = "0.13.5"
 rcgen = { version = "0.13.2", features = ["x509-parser", "pem"] }
-time = "0.3.37"
-tokio = { version = "1.43.0", features = ["rt-multi-thread", "macros"] }
+time = "0.3.40"
+tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.17", features = ["net"] }
 tonic = { version = "0.12.3", features = ["tls"] }
 tonic-health = "0.12.3"
@@ -40,9 +40,9 @@ tonic-reflection = "0.12.3"
 tower = { version = "0.5.2", optional = true }
 tower-http = { version = "0.6.2", features = ["fs"], optional = true }
 tracing = "0.1.41"
-uuid = { version = "1.13.1", features = ["v4"] }
+uuid = { version = "1.16.0", features = ["v4"] }
 vergen-gix = { version = "1.0.6" }
-console = "0.15.10"
+console = "0.15.11"
 which = { version = "7.0.2", features = ["tracing"] }
 
 [features]
