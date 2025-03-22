@@ -11,7 +11,7 @@ pub use decal::output::{AudioBackend, CpalOutput, MockOutput};
 pub mod platune_player {
     use std::fs::remove_file;
     use std::thread;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
     use decal::output::{AudioBackend, DeviceTrait, HostTrait};
     use derivative::Derivative;
@@ -43,10 +43,10 @@ pub mod platune_player {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
-        decoder_handle: Option<std::thread::JoinHandle<()>>,
+        decoder_handle: thread::JoinHandle<()>,
+        main_loop_handle: tokio::task::JoinHandle<Result<(), String>>,
         #[derivative(Debug = "ignore")]
         audio_backend: B,
-        joined: bool,
     }
 
     impl<B: AudioBackend + Send + 'static> PlatunePlayer<B> {
@@ -80,8 +80,8 @@ pub mod platune_player {
                 );
             };
 
-            tokio::spawn(main_loop_fn);
-            let decoder_handle = Some(thread::spawn(decoder_fn));
+            let main_loop_handle = tokio::spawn(main_loop_fn);
+            let decoder_handle = thread::spawn(decoder_fn);
 
             PlatunePlayer {
                 cmd_sender: cmd_tx,
@@ -89,7 +89,7 @@ pub mod platune_player {
                 decoder_tx,
                 decoder_handle,
                 audio_backend,
-                joined: false,
+                main_loop_handle,
             }
         }
 
@@ -235,7 +235,7 @@ pub mod platune_player {
                 .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
-        pub async fn join(mut self) -> Result<(), PlayerError> {
+        pub async fn join(self) -> Result<(), PlayerError> {
             info!("Joining player instance");
             self.cmd_sender
                 .send_async(Command::Stop)
@@ -247,26 +247,29 @@ pub mod platune_player {
                 .await
                 .map_err(|e| PlayerError(format!("{e:?}")))?;
             info!("Sent shutdown command");
-            self.joined = true;
-            Ok(())
-        }
-    }
 
-    impl<B: AudioBackend> Drop for PlatunePlayer<B> {
-        fn drop(&mut self) {
-            if self.joined {
-                info!("Waiting for decoder thread to terminate");
-                let _ = self
-                    .decoder_handle
-                    .take()
-                    .expect("decoder_handle should not be None")
-                    .join()
-                    .tap_err(|e| warn!("Error terminating decoder thread: {:?}", e));
+            self.main_loop_handle
+                .await
+                .map_err(|e| PlayerError(format!("{e:?}")))?
+                .map_err(|e| PlayerError(format!("{e:?}")))?;
+            info!("main loop terminated");
 
-                info!("Decoder thread terminated");
-            } else {
-                info!("join() not called, won't wait for decoder thread to terminate");
+            info!("Waiting for decoder thread to terminate");
+
+            let start = Instant::now();
+            loop {
+                if self.decoder_handle.is_finished() {
+                    info!("Decoder thread terminated");
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                if Instant::now() - start > Duration::from_secs(1) {
+                    warn!("timed out waiting for decoder to terminate");
+                    break;
+                }
             }
+
+            Ok(())
         }
     }
 }

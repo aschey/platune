@@ -122,9 +122,8 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
 
     #[cfg(feature = "player")]
     {
-        let player_inner =
-            Arc::try_unwrap(services.player).expect("All servers should've been dropped");
-        player_inner.join().await?;
+        let player = Arc::try_unwrap(services.player).expect("servers not dropped");
+        player.join().await?;
     }
 
     Ok(())

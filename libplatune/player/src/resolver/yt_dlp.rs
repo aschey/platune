@@ -14,7 +14,7 @@ use stream_download::registry::{self, Input, RegistryEntry, Rule};
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
 use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
-use tap::{Tap, TapFallible};
+use tap::TapFallible;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 use which::which;
@@ -221,7 +221,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
     }
 
     async fn handler(&mut self, input: Input) -> Result<(Box<dyn Source>, CancellationToken)> {
-        let yt_dlp_formats = ["m4a", "mp3"];
+        let yt_dlp_formats = ["m4a", "mp4a", "mp3"];
         let ffmpeg_format = "adts";
 
         info!("ytdl video url: {}", input.source);
@@ -246,18 +246,20 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
                     .filter(|f| {
                         // use native audio codec or format if available
                         if let Some(audio_codec) = &f.acodec {
-                            if yt_dlp_formats.contains(&audio_codec.as_str()) {
-                                info!("using native audio codec");
+                            info!("checking audio codec: {audio_codec}");
+                            if yt_dlp_formats.iter().any(|f| audio_codec.starts_with(f)) {
+                                info!("using native audio codec {audio_codec}");
                                 return true;
                             }
                         }
                         if let Some(format) = &f.format {
-                            yt_dlp_formats
-                                .contains(&format.as_str())
-                                .tap(|found| info!("native format found: {found}"))
-                        } else {
-                            false
+                            info!("checking format: {format}");
+                            if yt_dlp_formats.iter().any(|f| format.starts_with(f)) {
+                                info!("using native format: {format}");
+                                return true;
+                            }
                         }
+                        false
                     })
                     .reduce(|best, format| {
                         if format.quality.unwrap_or(worst_quality)
@@ -280,6 +282,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
             .extract_audio(true);
         let ffmpeg_args = ["--ffmpeg-location", &ffmpeg_exe()?];
         let params = if let Some(format) = &found_format {
+            info!("source format: {:?}", format.format);
             info!("source quality: {:?}", format.quality);
             info!("source is in an appropriate format, no post-processing required");
             // Prefer the explicit format ID since this insures the format used will match
