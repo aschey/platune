@@ -198,14 +198,37 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
     }
 }
 
+const LIBFDK_AAC: &str = "libfdk_aac";
+
 pub(crate) struct YtDlpSourceResolver {
     rules: Vec<Rule>,
+    has_fdk_aac: Option<bool>,
 }
 
 impl YtDlpSourceResolver {
     pub(crate) fn new() -> Self {
         Self {
             rules: ytdl_rules(),
+            has_fdk_aac: None,
+        }
+    }
+
+    async fn has_fdk_aac(&mut self) -> Result<bool> {
+        // libfdk_aac is better than the default encoder for ffmpeg, but it isn't included in most
+        // distributions
+        if let Some(has_fdk_aac) = self.has_fdk_aac {
+            Ok(has_fdk_aac)
+        } else {
+            let ffmpeg_path = ffmpeg_exe()?;
+            let output = tokio::process::Command::new(&ffmpeg_path)
+                .args(["-v", "quiet", "-codecs"])
+                .output()
+                .await?;
+            let re = Regex::new(&format!("encoders.*{LIBFDK_AAC}"))?;
+            let out_str = String::from_utf8(output.stdout)?;
+            let has_fdk_aac = re.is_match(&out_str);
+            self.has_fdk_aac = Some(has_fdk_aac);
+            Ok(has_fdk_aac)
         }
     }
 }
@@ -298,10 +321,19 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
             }
         } else {
             info!("source requires post-processing - converting to m4a using ffmpeg");
+            let mut ffmpeg_converter =
+                FfmpegConvertAudioCommand::new(ffmpeg_format).ffmpeg_path(ffmpeg_exe()?);
+
+            if self.has_fdk_aac().await? {
+                info!("using libfdk_aac");
+                ffmpeg_converter = ffmpeg_converter.args(["-c:a", LIBFDK_AAC]);
+            } else {
+                info!("libfdk_aac not supported, using default aac encoder");
+            }
             // yt-dlp can handle format conversion, but if we want to stream it directly from
             // stdout, we have to pipe the raw output to ffmpeg ourselves.
-            let builder = CommandBuilder::new(cmd.into_command().args(ffmpeg_args))
-                .pipe(FfmpegConvertAudioCommand::new(ffmpeg_format).ffmpeg_path(ffmpeg_exe()?));
+            let builder =
+                CommandBuilder::new(cmd.into_command().args(ffmpeg_args)).pipe(ffmpeg_converter);
             ProcessStreamParams::new(builder)?
         };
         let size = found_format.and_then(|f| f.filesize).map(|f| f as u64);
