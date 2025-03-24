@@ -26,7 +26,7 @@ tap = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
-decal = { git = "https://github.com/aschey/decal", rev = "15d1d4fa5aae327c50b9e3cb22ab1b4fd84492ae" }
+decal = { git = "https://github.com/aschey/decal", rev = "c042e87c72aab3375bb5e9e06e6614497bceb4f9" }
 reqwest-retry = "0.7.0"
 # The default-tls feature seems to break mtls client auth in some cases
 reqwest = { version = "0.12", default-features = false, features = [

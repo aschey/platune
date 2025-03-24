@@ -171,13 +171,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         break;
                     }
                     Ok((_, DecoderResult::Unfinished)) => {}
-                    Ok((_, DecoderResult::Finished))
-                    | Err(ProcessorError::WriteOutputError(
-                        WriteOutputError::WriteBlockingError {
-                            decoder_result: DecoderResult::Finished,
-                            error: _,
-                        },
-                    )) => {
+                    Ok((_, DecoderResult::Finished)) => {
                         info!("Sending ended event");
                         player_cmd_tx
                             .send(Command::Ended)
@@ -187,10 +181,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     }
                     Err(ProcessorError::WriteOutputError(
                         WriteOutputError::DecoderError(DecoderError::ResetRequired)
-                        | WriteOutputError::WriteBlockingError {
-                            decoder_result: _,
-                            error: WriteBlockingError::OutputStalled,
-                        },
+                        | WriteOutputError::WriteBlockingError(WriteBlockingError::OutputStalled),
                     )) => {
                         player_cmd_tx
                             .send(Command::Reset)

@@ -1822,7 +1822,7 @@ checksum = "575f75dfd25738df5b91b8e43e14d44bda14637a58fae779fd2b064f8bf3e010"
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=15d1d4fa5aae327c50b9e3cb22ab1b4fd84492ae#15d1d4fa5aae327c50b9e3cb22ab1b4fd84492ae"
+source = "git+https://github.com/aschey/decal?rev=c042e87c72aab3375bb5e9e06e6614497bceb4f9#c042e87c72aab3375bb5e9e06e6614497bceb4f9"
 dependencies = [
  "cpal",
  "dasp",
