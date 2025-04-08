@@ -32,7 +32,7 @@ prost = "0.13.5"
 prost-types = "0.13.5"
 rcgen = { version = "0.13.2", features = ["x509-parser", "pem"] }
 time = "0.3.40"
-tokio = { version = "1.44.1", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.17", features = ["net"] }
 tonic = { version = "0.12.3", features = ["tls"] }
 tonic-health = "0.12.3"
