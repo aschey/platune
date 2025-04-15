@@ -12,7 +12,7 @@ use tracing::{error, info};
 
 use crate::player_server::Player;
 use crate::rpc::event_response::*;
-use crate::rpc::*;
+use crate::rpc::{SeekMode, *};
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer<CpalOutput>>,
@@ -118,6 +118,13 @@ impl Player for PlayerImpl {
         }
     }
 
+    async fn toggle(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        match self.player.toggle().await {
+            Ok(()) => Ok(Response::new(())),
+            Err(e) => Err(format_error(format!("Error pausing queue: {e:?}"))),
+        }
+    }
+
     async fn stop(&self, _: Request<()>) -> Result<Response<()>, Status> {
         match self.player.stop().await {
             Ok(()) => Ok(Response::new(())),
@@ -149,9 +156,19 @@ impl Player for PlayerImpl {
     }
 
     async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<()>, Status> {
-        let time = request.into_inner().time.unwrap();
+        let request = request.into_inner();
+        let time = request.time.unwrap();
+        let mode = match request.mode() {
+            SeekMode::Absolute => libplatune_player::platune_player::SeekMode::Absolute,
+            SeekMode::Forward => libplatune_player::platune_player::SeekMode::Forward,
+            SeekMode::Backward => libplatune_player::platune_player::SeekMode::Backward,
+        };
         let nanos = time.seconds * 1_000_000_000 + time.nanos as i64;
-        match self.player.seek(Duration::from_nanos(nanos as u64)).await {
+        match self
+            .player
+            .seek(Duration::from_nanos(nanos as u64), mode)
+            .await
+        {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!("Error seeking: {e:?}"))),
         }

@@ -4,7 +4,7 @@ use hyper_util::rt::TokioIo;
 use rpc::*;
 use tipsy::ServerId;
 use tonic::codegen::StdError;
-use tonic::transport::{Channel, Endpoint, Uri};
+pub use tonic::transport::{Channel, Endpoint, Uri};
 use tower::service_fn;
 
 pub use crate::management_client::*;

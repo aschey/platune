@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use vergen_gix::{BuildBuilder, CargoBuilder, Emitter, GixBuilder, RustcBuilder, SysinfoBuilder};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    println!("cargo::rerun-if-changed=../proto/*");
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
     tonic_build::configure()

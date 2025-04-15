@@ -15,6 +15,7 @@ service Player {
   rpc Pause(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Toggle(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Seek(SeekRequest) returns (google.protobuf.Empty);
   rpc SetVolume(SetVolumeRequest) returns (google.protobuf.Empty);
   rpc Next(google.protobuf.Empty) returns (google.protobuf.Empty);
@@ -46,11 +47,20 @@ enum PlayerStatus {
   PAUSED = 2;
 }
 
+enum SeekMode {
+  FORWARD = 0;
+  BACKWARD = 1;
+  ABSOLUTE = 2;
+}
+
 message QueueRequest { repeated string queue = 1; }
 
 message AddToQueueRequest { repeated string songs = 1; }
 
-message SeekRequest { google.protobuf.Duration time = 1; }
+message SeekRequest { 
+  google.protobuf.Duration time = 1;
+  SeekMode mode = 2; 
+}
 
 message SetVolumeRequest { float volume = 1; }
 
