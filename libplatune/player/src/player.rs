@@ -17,6 +17,7 @@ use crate::dto::player_event::PlayerEvent;
 use crate::dto::player_state::PlayerState;
 use crate::dto::player_status::TrackStatus;
 use crate::dto::queue_source::{QueueSource, QueueStartMode};
+use crate::platune_player::SeekMode;
 use crate::resolver::{
     DefaultUrlResolver, FileSourceResolver, HttpSourceResolver, YtDlpSourceResolver,
     YtDlpUrlResolver,
@@ -260,6 +261,14 @@ impl Player {
         Ok(())
     }
 
+    pub(crate) async fn toggle(&mut self) -> Result<(), String> {
+        if self.audio_status == AudioStatus::Playing {
+            self.pause().await
+        } else {
+            self.play().await
+        }
+    }
+
     pub(crate) async fn set_volume(&mut self, volume: f32) -> Result<(), String> {
         if self.audio_status == AudioStatus::Stopped {
             // Decoder isn't running so we can't set the volume yet
@@ -276,7 +285,7 @@ impl Player {
         Ok(())
     }
 
-    pub(crate) async fn seek(&mut self, time: Duration) {
+    pub(crate) async fn seek(&mut self, time: Duration, mode: SeekMode) {
         if self.is_empty() {
             info!("Seek called on empty queue, ignoring");
             return;
@@ -284,7 +293,7 @@ impl Player {
 
         match self
             .cmd_sender
-            .get_response(DecoderCommand::Seek(time))
+            .get_response(DecoderCommand::Seek(time, mode))
             .await
         {
             Ok(DecoderResponse::SeekResponse(Ok(seek_result))) => {

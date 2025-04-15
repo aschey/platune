@@ -1,14 +1,9 @@
 [workspace]
 members = [
-    "platuned/server",
-    "platuned/client/rust",
-    "libplatune/player",
-    "libplatune/management",
+  "platuned/server",
+  "platuned/client/rust",
+  "libplatune/player",
+  "libplatune/management",
+  "platune-tray",
 ]
 resolver = "3"
-
-[profile.release]
-codegen-units = 1
-lto = true
-panic = "abort"
-strip = true

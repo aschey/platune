@@ -1,0 +1,17 @@
+[package]
+name = "platune-tray"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "3b3194fb04e105072a3f3c01457ba93eac382e6e", features = [
+  "tray",
+  "client",
+] }
+tokio = { version = "1.44", features = ["rt-multi-thread", "sync"] }
+souvlaki = { version = "0.8.2", default-features = false, features = [
+  "use_zbus",
+] }
+platuned-client = { path = "../platuned/client/rust" }
+tipsy = "0.4.0"
+futures-util = "0.3"

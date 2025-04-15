@@ -15,7 +15,7 @@ eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
 tokio-util = "0.7"
-stream-download = { version = "0.16.1", features = [
+stream-download = { version = "0.19.0", features = [
   "reqwest-rustls",
   "reqwest-middleware",
   "registry",
@@ -35,14 +35,14 @@ reqwest = { version = "0.12", default-features = false, features = [
   "macos-system-configuration",
   "rustls-tls-native-roots",
 ] }
-reqwest-middleware = "0.4.1"
+reqwest-middleware = "0.4.2"
 async-trait = "0.1"
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "2a2533633ad2d6d718baf63e25b9b7d7c2a053d1", features = [
   "tokio",
 ] }
 regex = "1.11.1"
 lazy-regex = "3.4.1"
-which = { version = "7.0.2", features = ["tracing"] }
+which = { version = "7.0.3", features = ["tracing"] }
 
 [dev-dependencies]
 assert_matches = "1.5.0"

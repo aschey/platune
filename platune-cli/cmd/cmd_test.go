@@ -19,7 +19,7 @@ import (
 	"github.com/aschey/platune/cli/v2/internal/statusbar"
 	"github.com/aschey/platune/cli/v2/test"
 	platune "github.com/aschey/platune/client"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -122,7 +122,7 @@ func testInteractive(
 
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	playerMock := test.NewMockPlayerClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream := test.NewMockBidiStreamingClient[platune.SearchRequest, platune.SearchResponse](ctrl)
 	stream.EXPECT().Send(&platune.SearchRequest{Query: searchQuery}).Return(nil)
 
 	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: searchResults}, nil)
@@ -260,7 +260,7 @@ func TestStop(t *testing.T) {
 func TestSync(t *testing.T) {
 	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
 		ctrl := gomock.NewController(t)
-		stream := test.NewMockManagement_SubscribeEventsClient(ctrl)
+		stream := test.NewMockServerStreamingClient[platune.Progress](ctrl)
 		stream.EXPECT().
 			Recv().
 			Return(&platune.Progress{Percentage: 0.1, Finished: false, Job: "sync"}, nil)
@@ -337,7 +337,7 @@ func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 	defer ctrl.Finish()
 
 	mock := test.NewMockManagementClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream := test.NewMockBidiStreamingClient[platune.SearchRequest, platune.SearchResponse](ctrl)
 	stream.EXPECT().Send(gomock.Any()).Return(nil)
 	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
 

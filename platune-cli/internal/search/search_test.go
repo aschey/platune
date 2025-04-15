@@ -13,7 +13,7 @@ import (
 	platune "github.com/aschey/platune/client"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 )
 
 func testRenderItem(t *testing.T, index int, expected string) {
@@ -118,7 +118,7 @@ func TestOneSearchResult(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream := test.NewMockBidiStreamingClient[platune.SearchRequest, platune.SearchResponse](ctrl)
 	song := "test song"
 	stream.EXPECT().Send(&platune.SearchRequest{Query: song}).Return(nil)
 	searchResult := &platune.SearchResult{
@@ -148,7 +148,7 @@ func TestOneSearchResult(t *testing.T) {
 func TestNoResults(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream := test.NewMockBidiStreamingClient[platune.SearchRequest, platune.SearchResponse](ctrl)
 	stream.EXPECT().Send(&platune.SearchRequest{Query: "test song"}).Return(nil)
 
 	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)

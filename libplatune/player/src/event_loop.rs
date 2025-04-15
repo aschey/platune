@@ -253,8 +253,8 @@ pub(crate) async fn main_loop(
             Command::AddToQueue(song) => {
                 player.add_to_queue(song).await?;
             }
-            Command::Seek(millis) => {
-                player.seek(millis).await;
+            Command::Seek(millis, mode) => {
+                player.seek(millis, mode).await;
             }
             Command::SetVolume(volume) => {
                 player.set_volume(volume).await?;
@@ -264,6 +264,9 @@ pub(crate) async fn main_loop(
             }
             Command::Resume => {
                 player.play().await?;
+            }
+            Command::Toggle => {
+                player.toggle().await?;
             }
             Command::Stop => {
                 player.stop().await?;

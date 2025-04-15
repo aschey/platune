@@ -65,6 +65,7 @@ echo "regenerated go client"
 cd ../../../platune-cli
 mockgen -package=test -source="./../platuned/client/go/player_rpc_grpc.pb.go" > "./test/player_mock.go"
 mockgen -package=test -source="./../platuned/client/go/management_rpc_grpc.pb.go" > "./test/management_mock.go"
+mockgen -package=test google.golang.org/grpc ServerStreamingClient,BidiStreamingClient > ./test/grpc_mock.go
 echo "regenerated mocks"
 '''
 

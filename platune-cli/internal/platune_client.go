@@ -257,6 +257,7 @@ func (p *PlatuneClient) Seek(seekTime string) {
 	p.runCommand("Seeked to "+seekTime, func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.playerClient.Seek(ctx, &platune.SeekRequest{
 			Time: durationpb.New(time.Duration(totalMillis * uint64(time.Millisecond))),
+			Mode: platune.SeekMode_ABSOLUTE,
 		})
 	})
 }
