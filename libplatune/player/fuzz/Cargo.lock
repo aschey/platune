@@ -415,7 +415,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=15d1d4fa5aae327c50b9e3cb22ab1b4fd84492ae#15d1d4fa5aae327c50b9e3cb22ab1b4fd84492ae"
+source = "git+https://github.com/aschey/decal?rev=c042e87c72aab3375bb5e9e06e6614497bceb4f9#c042e87c72aab3375bb5e9e06e6614497bceb4f9"
 dependencies = [
  "cpal",
  "dasp",
@@ -2126,9 +2126,9 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "stream-download"
-version = "0.16.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba720de920dcbc4f7adb24d41af3222e01a114700f469d4d4568b915b1ebe9a8"
+checksum = "75ffdb71547d4dd19e9b727f90b0745b0fc2ffa4f86c4c9f36264ae6dec7432d"
 dependencies = [
  "async-trait",
  "bytes",
@@ -2500,9 +2500,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.44.1"
+version = "1.44.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f382da615b842244d4b8738c82ed1275e6c5dd90c459a30941cd07080b06c91a"
+checksum = "e6b88822cbe49de4185e3a4cbf8321dd487cf5fe0c5c65695fef6346371e9c48"
 dependencies = [
  "backtrace",
  "bytes",
