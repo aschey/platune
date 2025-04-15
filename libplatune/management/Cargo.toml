@@ -49,6 +49,7 @@ tokio-stream = { version = "0.1", features = ["net", "sync"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4"] }
 walkdir = "2"
+urlencoding = "2"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio"] }

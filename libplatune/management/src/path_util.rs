@@ -1,5 +1,5 @@
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use normpath::PathExt;
 
@@ -33,11 +33,19 @@ pub(crate) fn clean_file_path<P>(file_path: &P, mount: &Option<String>) -> io::R
 where
     P: AsRef<Path>,
 {
-    let file_path = file_path.as_ref();
+    let file_path = file_path.as_ref().to_string_lossy();
+    let file_path = urlencoding::decode(&file_path).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("Error decoding url: {e:?}"),
+        )
+    })?;
+
     if file_path.starts_with("http://") || file_path.starts_with("https://") {
         // No need to normalize http urls
-        return Ok(file_path.to_string_lossy().to_string());
+        return Ok(file_path.to_string());
     }
+    let file_path = PathBuf::from(file_path.to_string());
 
     let file_path = if file_path.exists() {
         file_path
@@ -49,7 +57,7 @@ where
             .to_path_buf()
     } else {
         // Normalize call fails if the path doesn't exist so just leave it alone
-        file_path.to_path_buf()
+        file_path
     };
 
     let mut file_path_str = file_path.into_os_string().to_string_lossy().to_string();
