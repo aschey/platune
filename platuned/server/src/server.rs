@@ -196,7 +196,7 @@ async fn run_server(
         .build_v1()
         .wrap_err("Error building tonic server")?;
 
-    let (mut health_reporter, health_service) = tonic_health::server::health_reporter();
+    let (health_reporter, health_service) = tonic_health::server::health_reporter();
 
     #[cfg(feature = "player")]
     health_reporter
