@@ -268,6 +268,7 @@ async fn metadata_updater(mut controls: MediaControls) {
                     .unwrap();
             }
             EventPayload::State(state) => {
+                #[cfg(not(target_os = "macos"))]
                 controls.set_volume(state.volume as f64).unwrap();
                 let metadata = mgmt_client
                     .get()
