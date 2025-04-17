@@ -11,6 +11,8 @@ import (
 	"time"
 
 	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
+	player_v1 "github.com/aschey/platune/client/player_v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -20,11 +22,11 @@ import (
 type PlatuneClient struct {
 	playerConn            *grpc.ClientConn
 	managementConn        *grpc.ClientConn
-	playerClient          platune.PlayerClient
-	managementClient      platune.ManagementClient
-	searchClient          *platune.Management_SearchClient
-	playerEventClient     *platune.Player_SubscribeEventsClient
-	managementEventClient *platune.Management_SubscribeEventsClient
+	playerClient          player_v1.PlayerClient
+	managementClient      management_v1.ManagementClient
+	searchClient          *management_v1.Management_SearchClient
+	playerEventClient     *player_v1.Player_SubscribeEventsClient
+	managementEventClient *management_v1.Management_SubscribeEventsClient
 	statusNotifier        *StatusNotifier
 	attemptReconnect      bool
 }
@@ -54,8 +56,8 @@ func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
 		managementConn = playerConn
 	}
 
-	playerClient := platune.NewPlayerClient(playerConn)
-	managementClient := platune.NewManagementClient(managementConn)
+	playerClient := player_v1.NewPlayerClient(playerConn)
+	managementClient := management_v1.NewManagementClient(managementConn)
 	client := &PlatuneClient{
 		playerConn:       playerConn,
 		managementConn:   managementConn,
@@ -80,13 +82,13 @@ func (p *PlatuneClient) GetManagementConnection() *grpc.ClientConn {
 }
 
 func NewTestClient(
-	playerClient platune.PlayerClient,
-	managementClient platune.ManagementClient,
+	playerClient player_v1.PlayerClient,
+	managementClient management_v1.ManagementClient,
 ) PlatuneClient {
 	return PlatuneClient{playerClient: playerClient, managementClient: managementClient}
 }
 
-func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *platune.EventResponse) {
+func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *player_v1.EventResponse) {
 	if err := p.initPlayerEventClient(); err != nil {
 		fmt.Println(err)
 	}
@@ -108,7 +110,7 @@ func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *platune.EventRespons
 	}
 }
 
-func (p *PlatuneClient) SubscribeManagementEvents(progressCh chan *platune.Progress) {
+func (p *PlatuneClient) SubscribeManagementEvents(progressCh chan *management_v1.Progress) {
 	if err := p.initManagementEventClient(); err != nil {
 		fmt.Println(err)
 	}
@@ -147,7 +149,7 @@ func (p *PlatuneClient) retryManagementConnection() {
 	}
 }
 
-func (p *PlatuneClient) GetCurrentStatus() *platune.StatusResponse {
+func (p *PlatuneClient) GetCurrentStatus() *player_v1.StatusResponse {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	status, err := p.playerClient.GetCurrentStatus(ctx, &emptypb.Empty{})
@@ -167,12 +169,12 @@ func (p *PlatuneClient) ResetStreams() {
 	}
 }
 
-func (p *PlatuneClient) SetQueueFromSearchResults(entries []*platune.LookupEntry, printMsg bool) {
+func (p *PlatuneClient) SetQueueFromSearchResults(entries []*management_v1.LookupEntry, printMsg bool) {
 	paths := p.getPathsFromLookup(entries)
 	p.SetQueue(paths, printMsg)
 }
 
-func (p *PlatuneClient) AddSearchResultsToQueue(entries []*platune.LookupEntry, printMsg bool) {
+func (p *PlatuneClient) AddSearchResultsToQueue(entries []*management_v1.LookupEntry, printMsg bool) {
 	paths := p.getPathsFromLookup(entries)
 	p.AddToQueue(paths, printMsg)
 }
@@ -219,14 +221,14 @@ func (p *PlatuneClient) AddToQueue(songs []string, printMsg bool) {
 		msg = "Added"
 	}
 	p.runCommand(msg, func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.AddToQueue(ctx, &platune.AddToQueueRequest{Songs: songs})
+		return p.playerClient.AddToQueue(ctx, &player_v1.AddToQueueRequest{Songs: songs})
 	})
 }
 
 func (p *PlatuneClient) SetVolume(volume float32) {
 	p.retryPlayerConnection()
 	p.runCommand("Set", func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.SetVolume(ctx, &platune.SetVolumeRequest{Volume: volume})
+		return p.playerClient.SetVolume(ctx, &player_v1.SetVolumeRequest{Volume: volume})
 	})
 }
 
@@ -237,7 +239,7 @@ func (p *PlatuneClient) SetQueue(queue []string, printMsg bool) {
 	}
 	p.retryPlayerConnection()
 	p.runCommand(msg, func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.SetQueue(ctx, &platune.QueueRequest{Queue: queue})
+		return p.playerClient.SetQueue(ctx, &player_v1.QueueRequest{Queue: queue})
 	})
 }
 
@@ -255,9 +257,9 @@ func (p *PlatuneClient) Seek(seekTime string) {
 	}
 	p.retryPlayerConnection()
 	p.runCommand("Seeked to "+seekTime, func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.Seek(ctx, &platune.SeekRequest{
+		return p.playerClient.Seek(ctx, &player_v1.SeekRequest{
 			Time: durationpb.New(time.Duration(totalMillis * uint64(time.Millisecond))),
-			Mode: platune.SeekMode_ABSOLUTE,
+			Mode: player_v1.SeekMode_ABSOLUTE,
 		})
 	})
 }
@@ -299,7 +301,7 @@ func (p *PlatuneClient) initSearchClient() error {
 	return err
 }
 
-func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchResponse, error) {
+func (p *PlatuneClient) Search(req *management_v1.SearchRequest) (*management_v1.SearchResponse, error) {
 	p.retryManagementConnection()
 	if p.searchClient == nil {
 		if err := p.initSearchClient(); err != nil {
@@ -326,14 +328,14 @@ func (p *PlatuneClient) Search(req *platune.SearchRequest) (*platune.SearchRespo
 }
 
 func (p *PlatuneClient) Lookup(
-	entryType platune.EntryType,
+	entryType management_v1.EntryType,
 	correlationIds []int64,
-) *platune.LookupResponse {
+) *management_v1.LookupResponse {
 	p.retryManagementConnection()
 	ctx := context.Background()
 	response, err := p.managementClient.Lookup(
 		ctx,
-		&platune.LookupRequest{EntryType: entryType, CorrelationIds: correlationIds},
+		&management_v1.LookupRequest{EntryType: entryType, CorrelationIds: correlationIds},
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -359,7 +361,7 @@ func (p *PlatuneClient) AddFolder(folder string) {
 	p.runCommand("Added", func(ctx context.Context) (*emptypb.Empty, error) {
 		return p.managementClient.AddFolders(
 			ctx,
-			&platune.FoldersMessage{Folders: []string{folder}},
+			&management_v1.FoldersMessage{Folders: []string{folder}},
 		)
 	})
 }
@@ -367,15 +369,15 @@ func (p *PlatuneClient) AddFolder(folder string) {
 func (p *PlatuneClient) SetMount(mount string) {
 	p.retryManagementConnection()
 	p.runCommand("Set", func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.managementClient.RegisterMount(ctx, &platune.RegisteredMountMessage{Mount: mount})
+		return p.managementClient.RegisterMount(ctx, &management_v1.RegisteredMountMessage{Mount: mount})
 	})
 }
 
-func (p *PlatuneClient) GetSongByPath(path string) *platune.SongResponse {
+func (p *PlatuneClient) GetSongByPath(path string) *management_v1.SongResponse {
 	p.retryManagementConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	song, err := p.managementClient.GetSongByPath(ctx, &platune.PathMessage{Path: path})
+	song, err := p.managementClient.GetSongByPath(ctx, &management_v1.PathMessage{Path: path})
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -383,7 +385,7 @@ func (p *PlatuneClient) GetSongByPath(path string) *platune.SongResponse {
 	return song
 }
 
-func (p *PlatuneClient) GetDeleted() *platune.GetDeletedResponse {
+func (p *PlatuneClient) GetDeleted() *management_v1.GetDeletedResponse {
 	p.retryManagementConnection()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -398,7 +400,7 @@ func (p *PlatuneClient) GetDeleted() *platune.GetDeletedResponse {
 func (p *PlatuneClient) DeleteTracks(ids []int64) {
 	p.retryManagementConnection()
 	p.runCommand("", func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.managementClient.DeleteTracks(ctx, &platune.IdMessage{Ids: ids})
+		return p.managementClient.DeleteTracks(ctx, &management_v1.IdMessage{Ids: ids})
 	})
 }
 
@@ -418,7 +420,7 @@ func (p *PlatuneClient) runCommand(
 	}
 }
 
-func (p *PlatuneClient) getPathsFromLookup(entries []*platune.LookupEntry) []string {
+func (p *PlatuneClient) getPathsFromLookup(entries []*management_v1.LookupEntry) []string {
 	paths := []string{}
 	for _, entry := range entries {
 		paths = append(paths, entry.Path)

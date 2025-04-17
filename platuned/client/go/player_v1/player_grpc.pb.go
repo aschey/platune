@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v6.30.1
-// source: player_rpc.proto
+// source: player.proto
 
-package platune
+package player_v1
 
 import (
 	context "context"
@@ -20,20 +20,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Player_SetQueue_FullMethodName          = "/player_rpc.Player/SetQueue"
-	Player_AddToQueue_FullMethodName        = "/player_rpc.Player/AddToQueue"
-	Player_Pause_FullMethodName             = "/player_rpc.Player/Pause"
-	Player_Stop_FullMethodName              = "/player_rpc.Player/Stop"
-	Player_Resume_FullMethodName            = "/player_rpc.Player/Resume"
-	Player_Toggle_FullMethodName            = "/player_rpc.Player/Toggle"
-	Player_Seek_FullMethodName              = "/player_rpc.Player/Seek"
-	Player_SetVolume_FullMethodName         = "/player_rpc.Player/SetVolume"
-	Player_Next_FullMethodName              = "/player_rpc.Player/Next"
-	Player_Previous_FullMethodName          = "/player_rpc.Player/Previous"
-	Player_GetCurrentStatus_FullMethodName  = "/player_rpc.Player/GetCurrentStatus"
-	Player_SubscribeEvents_FullMethodName   = "/player_rpc.Player/SubscribeEvents"
-	Player_ListOutputDevices_FullMethodName = "/player_rpc.Player/ListOutputDevices"
-	Player_SetOutputDevice_FullMethodName   = "/player_rpc.Player/SetOutputDevice"
+	Player_SetQueue_FullMethodName          = "/platune.player.v1.Player/SetQueue"
+	Player_AddToQueue_FullMethodName        = "/platune.player.v1.Player/AddToQueue"
+	Player_Pause_FullMethodName             = "/platune.player.v1.Player/Pause"
+	Player_Stop_FullMethodName              = "/platune.player.v1.Player/Stop"
+	Player_Resume_FullMethodName            = "/platune.player.v1.Player/Resume"
+	Player_Toggle_FullMethodName            = "/platune.player.v1.Player/Toggle"
+	Player_Seek_FullMethodName              = "/platune.player.v1.Player/Seek"
+	Player_SetVolume_FullMethodName         = "/platune.player.v1.Player/SetVolume"
+	Player_Next_FullMethodName              = "/platune.player.v1.Player/Next"
+	Player_Previous_FullMethodName          = "/platune.player.v1.Player/Previous"
+	Player_GetCurrentStatus_FullMethodName  = "/platune.player.v1.Player/GetCurrentStatus"
+	Player_SubscribeEvents_FullMethodName   = "/platune.player.v1.Player/SubscribeEvents"
+	Player_ListOutputDevices_FullMethodName = "/platune.player.v1.Player/ListOutputDevices"
+	Player_SetOutputDevice_FullMethodName   = "/platune.player.v1.Player/SetOutputDevice"
 )
 
 // PlayerClient is the client API for Player service.
@@ -553,7 +553,7 @@ func _Player_SetOutputDevice_Handler(srv interface{}, ctx context.Context, dec f
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Player_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "player_rpc.Player",
+	ServiceName: "platune.player.v1.Player",
 	HandlerType: (*PlayerServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -616,5 +616,5 @@ var Player_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "player_rpc.proto",
+	Metadata: "player.proto",
 }

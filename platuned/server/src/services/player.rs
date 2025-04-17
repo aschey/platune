@@ -10,9 +10,9 @@ use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
 
-use crate::player_server::Player;
-use crate::rpc::event_response::*;
-use crate::rpc::{SeekMode, *};
+use crate::rpc::v1::event_response::*;
+use crate::rpc::v1::{SeekMode, *};
+use crate::v1::player_server::Player;
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer<CpalOutput>>,
@@ -211,9 +211,9 @@ impl Player for PlayerImpl {
         Ok(Response::new(StatusResponse {
             progress,
             status: match status.track_status.status {
-                AudioStatus::Playing => crate::rpc::PlayerStatus::Playing.into(),
-                AudioStatus::Paused => crate::rpc::PlayerStatus::Paused.into(),
-                AudioStatus::Stopped => crate::rpc::PlayerStatus::Stopped.into(),
+                AudioStatus::Playing => crate::rpc::v1::PlayerStatus::Playing.into(),
+                AudioStatus::Paused => crate::rpc::v1::PlayerStatus::Paused.into(),
+                AudioStatus::Stopped => crate::rpc::v1::PlayerStatus::Stopped.into(),
             },
             current_song: status.track_status.current_song,
         }))

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	platune "github.com/aschey/platune/client"
+	player_v1 "github.com/aschey/platune/client/player_v1"
 	"github.com/charmbracelet/lipgloss"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -30,7 +30,7 @@ type label struct {
 func (s *StatusBar) StartEventLoop() {
 	s.platuneClient.EnableReconnect()
 
-	eventCh := make(chan *platune.EventResponse, 1)
+	eventCh := make(chan *player_v1.EventResponse, 1)
 	go s.platuneClient.SubscribePlayerEvents(eventCh)
 
 	playerConnCh := make(chan connectivity.State, 1)
@@ -47,7 +47,7 @@ func (l label) render(iconStyle lipgloss.Style) string {
 }
 
 func (s *StatusBar) eventLoop(
-	eventCh chan *platune.EventResponse,
+	eventCh chan *player_v1.EventResponse,
 	playerStateCh chan connectivity.State,
 	managementStateCh chan connectivity.State,
 ) {

@@ -8,7 +8,7 @@ import (
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/mode"
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
@@ -144,7 +144,7 @@ func (state *cmdState) dbCompleter(in prompt.Document, rest string, filePathSkip
 	}
 
 	go func() {
-		res, err := state.client.Search(&platune.SearchRequest{
+		res, err := state.client.Search(&management_v1.SearchRequest{
 			Query: rest,
 		})
 		if err != nil {

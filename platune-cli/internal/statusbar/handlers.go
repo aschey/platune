@@ -1,7 +1,8 @@
 package statusbar
 
 import (
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
+	player_v1 "github.com/aschey/platune/client/player_v1"
 	"google.golang.org/grpc/connectivity"
 )
 
@@ -9,20 +10,20 @@ type playerEvent struct {
 	icon    string
 	color   string
 	status  string
-	newSong *platune.LookupEntry
+	newSong *management_v1.LookupEntry
 }
 
 func (s *StatusBar) handlePlayerEvent(
 	timer *timer,
-	msg *platune.EventResponse,
-	currentSong *platune.LookupEntry,
+	msg *player_v1.EventResponse,
+	currentSong *management_v1.LookupEntry,
 ) playerEvent {
 	switch msg.Event {
-	case platune.Event_START_QUEUE,
-		platune.Event_QUEUE_UPDATED,
-		platune.Event_ENDED,
-		platune.Event_NEXT,
-		platune.Event_PREVIOUS:
+	case player_v1.Event_START_QUEUE,
+		player_v1.Event_QUEUE_UPDATED,
+		player_v1.Event_ENDED,
+		player_v1.Event_NEXT,
+		player_v1.Event_PREVIOUS:
 		state := msg.GetState()
 		res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
 		timer.setTime(0)
@@ -40,14 +41,14 @@ func (s *StatusBar) handlePlayerEvent(
 			}
 		}
 
-	case platune.Event_SEEK:
+	case player_v1.Event_SEEK:
 		timer.setTime(int64(msg.GetSeekData().SeekMillis))
 		return playerEvent{
 			icon:    "",
 			color:   "14",
 			newSong: currentSong,
 		}
-	case platune.Event_QUEUE_ENDED, platune.Event_STOP:
+	case player_v1.Event_QUEUE_ENDED, player_v1.Event_STOP:
 		timer.stop()
 		return playerEvent{
 			icon:    "",
@@ -55,7 +56,7 @@ func (s *StatusBar) handlePlayerEvent(
 			status:  "Stopped",
 			newSong: nil,
 		}
-	case platune.Event_PAUSE:
+	case player_v1.Event_PAUSE:
 		timer.pause()
 		return playerEvent{
 			icon:    "",
@@ -63,14 +64,14 @@ func (s *StatusBar) handlePlayerEvent(
 			status:  "Paused",
 			newSong: currentSong,
 		}
-	case platune.Event_RESUME:
+	case player_v1.Event_RESUME:
 		timer.resume()
 		return playerEvent{
 			icon:    "",
 			color:   "14",
 			newSong: currentSong,
 		}
-	case platune.Event_POSITION:
+	case player_v1.Event_POSITION:
 		timer.setTime(msg.GetProgress().Position.AsDuration().Milliseconds())
 		return playerEvent{
 			icon:    "",
@@ -82,7 +83,7 @@ func (s *StatusBar) handlePlayerEvent(
 	}
 }
 
-func (s *StatusBar) handlePlayerStatus(timer *timer, status *platune.StatusResponse) playerEvent {
+func (s *StatusBar) handlePlayerStatus(timer *timer, status *player_v1.StatusResponse) playerEvent {
 	stoppedEvent := playerEvent{
 		icon:    "",
 		color:   "9",
@@ -93,7 +94,7 @@ func (s *StatusBar) handlePlayerStatus(timer *timer, status *platune.StatusRespo
 		return stoppedEvent
 	}
 	switch status.Status {
-	case platune.PlayerStatus_PLAYING:
+	case player_v1.PlayerStatus_PLAYING:
 		progress := status.Progress.Position.AsDuration()
 
 		timer.start()
@@ -106,10 +107,10 @@ func (s *StatusBar) handlePlayerStatus(timer *timer, status *platune.StatusRespo
 			color:   "14",
 			newSong: res.Song,
 		}
-	case platune.PlayerStatus_STOPPED:
+	case player_v1.PlayerStatus_STOPPED:
 		timer.stop()
 		return stoppedEvent
-	case platune.PlayerStatus_PAUSED:
+	case player_v1.PlayerStatus_PAUSED:
 		timer.pause()
 		progress := status.Progress.Position.AsDuration()
 		timer.setTime(progress.Milliseconds())

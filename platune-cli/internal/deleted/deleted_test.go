@@ -10,7 +10,7 @@ import (
 	"github.com/MarvinJWendt/testza"
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/test"
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"go.uber.org/mock/gomock"
@@ -18,7 +18,7 @@ import (
 )
 
 func testRenderItem(t *testing.T, index int, checked bool, expected string) {
-	results := []*platune.DeletedResult{
+	results := []*management_v1.DeletedResult{
 		{Path: "/test/path/1", Id: 1},
 		{Path: "/test/path/2", Id: 2},
 	}
@@ -39,7 +39,7 @@ func testRenderItem(t *testing.T, index int, checked bool, expected string) {
 }
 
 func sendKeys(ctrl *gomock.Controller, msgs []tea.KeyMsg, deletedIds []int64, m *model) model {
-	results := []*platune.DeletedResult{
+	results := []*management_v1.DeletedResult{
 		{Path: "/test/path/1", Id: 1},
 		{Path: "/test/path/2", Id: 2},
 	}
@@ -50,7 +50,7 @@ func sendKeys(ctrl *gomock.Controller, msgs []tea.KeyMsg, deletedIds []int64, m 
 	if m == nil {
 		mock := test.NewMockManagementClient(ctrl)
 		if len(deletedIds) > 0 {
-			mock.EXPECT().DeleteTracks(gomock.Any(), &platune.IdMessage{Ids: deletedIds})
+			mock.EXPECT().DeleteTracks(gomock.Any(), &management_v1.IdMessage{Ids: deletedIds})
 		}
 		client := internal.NewTestClient(nil, mock)
 
@@ -82,7 +82,7 @@ func TestNoRenderWhenNoResults(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mock := test.NewMockManagementClient(ctrl)
-	response := &platune.GetDeletedResponse{Results: []*platune.DeletedResult{}}
+	response := &management_v1.GetDeletedResponse{Results: []*management_v1.DeletedResult{}}
 	mock.EXPECT().GetDeleted(gomock.Any(), &emptypb.Empty{}).Return(response, nil)
 	client := internal.NewTestClient(nil, mock)
 	deleted := NewDeleted(&client)

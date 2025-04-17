@@ -1,13 +1,14 @@
 syntax = "proto3";
+package platune.player.v1;
 
-option java_multiple_files = true;
-option java_package = "player.rpc";
-option java_outer_classname = "PlayerProto";
-option go_package = "github.com/aschey/platune";
-
-import "google/protobuf/empty.proto";
 import "google/protobuf/duration.proto";
-package player_rpc;
+import "google/protobuf/empty.proto";
+
+option csharp_namespace = "Platune.Player.V1";
+option go_package = "github.com/aschey/platune/client/player_v1";
+option java_multiple_files = true;
+option java_outer_classname = "PlayerProto";
+option java_package = "platune.player.v1";
 
 service Player {
   rpc SetQueue(QueueRequest) returns (google.protobuf.Empty);
@@ -53,16 +54,22 @@ enum SeekMode {
   ABSOLUTE = 2;
 }
 
-message QueueRequest { repeated string queue = 1; }
-
-message AddToQueueRequest { repeated string songs = 1; }
-
-message SeekRequest { 
-  google.protobuf.Duration time = 1;
-  SeekMode mode = 2; 
+message QueueRequest {
+  repeated string queue = 1;
 }
 
-message SetVolumeRequest { float volume = 1; }
+message AddToQueueRequest {
+  repeated string songs = 1;
+}
+
+message SeekRequest {
+  google.protobuf.Duration time = 1;
+  SeekMode mode = 2;
+}
+
+message SetVolumeRequest {
+  float volume = 1;
+}
 
 message EventResponse {
   Event event = 1;

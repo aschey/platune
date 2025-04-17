@@ -11,13 +11,12 @@ use daemon_slayer::tray::tray_icon::menu::{Menu, MenuEvent, MenuId, MenuItem, Su
 use daemon_slayer::tray::tray_icon::{TrayIcon, TrayIconBuilder, TrayIconEvent};
 use daemon_slayer::tray::{MenuHandler, Tray, get_start_stop_text, load_icon};
 use futures_util::stream::StreamExt;
-use platuned_client::rpc::event_response::EventPayload;
-use platuned_client::rpc::{
-    Event, PathMessage, QueueRequest, SeekMode, SeekRequest, SetVolumeRequest,
-};
-use platuned_client::{
-    Channel, ManagementClient, PlayerClient, connect_management_ipc, connect_player_ipc,
-};
+use platuned_client::Channel;
+use platuned_client::management::v1::PathMessage;
+use platuned_client::management::v1::management_client::ManagementClient;
+use platuned_client::player::v1::event_response::EventPayload;
+use platuned_client::player::v1::player_client::PlayerClient;
+use platuned_client::player::v1::{Event, QueueRequest, SeekMode, SeekRequest, SetVolumeRequest};
 use souvlaki::{
     MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig,
     SeekDirection,
@@ -231,7 +230,7 @@ impl LazyPlayerClient {
         if self.0.is_some() {
             self.0.as_mut().unwrap()
         } else {
-            self.0 = connect_player_ipc().await.ok();
+            self.0 = PlayerClient::connect_ipc().await.ok();
             self.0.as_mut().unwrap()
         }
     }
@@ -244,7 +243,7 @@ impl LazyMgmtClient {
         if self.0.is_some() {
             self.0.as_mut().unwrap()
         } else {
-            self.0 = connect_management_ipc().await.ok();
+            self.0 = ManagementClient::connect_ipc().await.ok();
             self.0.as_mut().unwrap()
         }
     }

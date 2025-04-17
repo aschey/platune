@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v6.30.1
-// source: management_rpc.proto
+// source: management.proto
 
-package platune
+package management_v1
 
 import (
 	context "context"
@@ -20,18 +20,18 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Management_StartSync_FullMethodName               = "/management_rpc.Management/StartSync"
-	Management_AddFolders_FullMethodName              = "/management_rpc.Management/AddFolders"
-	Management_GetAllFolders_FullMethodName           = "/management_rpc.Management/GetAllFolders"
-	Management_RegisterMount_FullMethodName           = "/management_rpc.Management/RegisterMount"
-	Management_GetRegisteredMount_FullMethodName      = "/management_rpc.Management/GetRegisteredMount"
-	Management_Search_FullMethodName                  = "/management_rpc.Management/Search"
-	Management_Lookup_FullMethodName                  = "/management_rpc.Management/Lookup"
-	Management_GetSongByPath_FullMethodName           = "/management_rpc.Management/GetSongByPath"
-	Management_GetAlbumsByAlbumArtists_FullMethodName = "/management_rpc.Management/GetAlbumsByAlbumArtists"
-	Management_GetDeleted_FullMethodName              = "/management_rpc.Management/GetDeleted"
-	Management_DeleteTracks_FullMethodName            = "/management_rpc.Management/DeleteTracks"
-	Management_SubscribeEvents_FullMethodName         = "/management_rpc.Management/SubscribeEvents"
+	Management_StartSync_FullMethodName               = "/platune.management.v1.Management/StartSync"
+	Management_AddFolders_FullMethodName              = "/platune.management.v1.Management/AddFolders"
+	Management_GetAllFolders_FullMethodName           = "/platune.management.v1.Management/GetAllFolders"
+	Management_RegisterMount_FullMethodName           = "/platune.management.v1.Management/RegisterMount"
+	Management_GetRegisteredMount_FullMethodName      = "/platune.management.v1.Management/GetRegisteredMount"
+	Management_Search_FullMethodName                  = "/platune.management.v1.Management/Search"
+	Management_Lookup_FullMethodName                  = "/platune.management.v1.Management/Lookup"
+	Management_GetSongByPath_FullMethodName           = "/platune.management.v1.Management/GetSongByPath"
+	Management_GetAlbumsByAlbumArtists_FullMethodName = "/platune.management.v1.Management/GetAlbumsByAlbumArtists"
+	Management_GetDeleted_FullMethodName              = "/platune.management.v1.Management/GetDeleted"
+	Management_DeleteTracks_FullMethodName            = "/platune.management.v1.Management/DeleteTracks"
+	Management_SubscribeEvents_FullMethodName         = "/platune.management.v1.Management/SubscribeEvents"
 )
 
 // ManagementClient is the client API for Management service.
@@ -477,7 +477,7 @@ type Management_SubscribeEventsServer = grpc.ServerStreamingServer[Progress]
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Management_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "management_rpc.Management",
+	ServiceName: "platune.management.v1.Management",
 	HandlerType: (*ManagementServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -534,5 +534,5 @@ var Management_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "management_rpc.proto",
+	Metadata: "management.proto",
 }

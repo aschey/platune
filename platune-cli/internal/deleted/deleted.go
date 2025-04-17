@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/aschey/platune/cli/v2/internal"
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -253,7 +253,7 @@ func (m model) View() string {
 	return m.list.View()
 }
 
-func getItems(results []*platune.DeletedResult) []list.Item {
+func getItems(results []*management_v1.DeletedResult) []list.Item {
 	items := []list.Item{}
 	for i, result := range results {
 		items = append(items, item{path: result.Path, id: result.Id, index: i, selected: false})

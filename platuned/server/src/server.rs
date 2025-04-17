@@ -34,15 +34,15 @@ use tracing::{info, warn};
 
 use crate::cert_gen::{get_tls_config, get_tonic_tls_config};
 use crate::ipc_stream::IpcStream;
-#[cfg(feature = "management")]
-use crate::management_server::ManagementServer;
-#[cfg(feature = "player")]
-use crate::player_server::PlayerServer;
 use crate::rpc;
 #[cfg(feature = "management")]
 use crate::services::management::ManagementImpl;
 #[cfg(feature = "player")]
 use crate::services::player::PlayerImpl;
+#[cfg(feature = "management")]
+use crate::v1::management_server::ManagementServer;
+#[cfg(feature = "player")]
+use crate::v1::player_server::PlayerServer;
 
 enum Transport {
     Http(SocketAddr),

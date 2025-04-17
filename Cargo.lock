@@ -5031,7 +5031,6 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "tracing-subscriber",
- "urlencoding",
  "uuid",
  "walkdir",
 ]
@@ -6177,6 +6176,7 @@ dependencies = [
  "tower 0.5.2",
  "tower-http",
  "tracing",
+ "urlencoding",
  "uuid",
  "vergen-gix",
  "which 7.0.3",

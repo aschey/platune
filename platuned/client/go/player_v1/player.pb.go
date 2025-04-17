@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v6.30.1
-// source: player_rpc.proto
+// source: player.proto
 
-package platune
+package player_v1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -83,11 +83,11 @@ func (x Event) String() string {
 }
 
 func (Event) Descriptor() protoreflect.EnumDescriptor {
-	return file_player_rpc_proto_enumTypes[0].Descriptor()
+	return file_player_proto_enumTypes[0].Descriptor()
 }
 
 func (Event) Type() protoreflect.EnumType {
-	return &file_player_rpc_proto_enumTypes[0]
+	return &file_player_proto_enumTypes[0]
 }
 
 func (x Event) Number() protoreflect.EnumNumber {
@@ -96,7 +96,7 @@ func (x Event) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Event.Descriptor instead.
 func (Event) EnumDescriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{0}
+	return file_player_proto_rawDescGZIP(), []int{0}
 }
 
 type PlayerStatus int32
@@ -132,11 +132,11 @@ func (x PlayerStatus) String() string {
 }
 
 func (PlayerStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_player_rpc_proto_enumTypes[1].Descriptor()
+	return file_player_proto_enumTypes[1].Descriptor()
 }
 
 func (PlayerStatus) Type() protoreflect.EnumType {
-	return &file_player_rpc_proto_enumTypes[1]
+	return &file_player_proto_enumTypes[1]
 }
 
 func (x PlayerStatus) Number() protoreflect.EnumNumber {
@@ -145,7 +145,7 @@ func (x PlayerStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use PlayerStatus.Descriptor instead.
 func (PlayerStatus) EnumDescriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{1}
+	return file_player_proto_rawDescGZIP(), []int{1}
 }
 
 type SeekMode int32
@@ -181,11 +181,11 @@ func (x SeekMode) String() string {
 }
 
 func (SeekMode) Descriptor() protoreflect.EnumDescriptor {
-	return file_player_rpc_proto_enumTypes[2].Descriptor()
+	return file_player_proto_enumTypes[2].Descriptor()
 }
 
 func (SeekMode) Type() protoreflect.EnumType {
-	return &file_player_rpc_proto_enumTypes[2]
+	return &file_player_proto_enumTypes[2]
 }
 
 func (x SeekMode) Number() protoreflect.EnumNumber {
@@ -194,7 +194,7 @@ func (x SeekMode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SeekMode.Descriptor instead.
 func (SeekMode) EnumDescriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{2}
+	return file_player_proto_rawDescGZIP(), []int{2}
 }
 
 type QueueRequest struct {
@@ -206,7 +206,7 @@ type QueueRequest struct {
 
 func (x *QueueRequest) Reset() {
 	*x = QueueRequest{}
-	mi := &file_player_rpc_proto_msgTypes[0]
+	mi := &file_player_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -218,7 +218,7 @@ func (x *QueueRequest) String() string {
 func (*QueueRequest) ProtoMessage() {}
 
 func (x *QueueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[0]
+	mi := &file_player_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -231,7 +231,7 @@ func (x *QueueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueueRequest.ProtoReflect.Descriptor instead.
 func (*QueueRequest) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{0}
+	return file_player_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *QueueRequest) GetQueue() []string {
@@ -250,7 +250,7 @@ type AddToQueueRequest struct {
 
 func (x *AddToQueueRequest) Reset() {
 	*x = AddToQueueRequest{}
-	mi := &file_player_rpc_proto_msgTypes[1]
+	mi := &file_player_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -262,7 +262,7 @@ func (x *AddToQueueRequest) String() string {
 func (*AddToQueueRequest) ProtoMessage() {}
 
 func (x *AddToQueueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[1]
+	mi := &file_player_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -275,7 +275,7 @@ func (x *AddToQueueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AddToQueueRequest.ProtoReflect.Descriptor instead.
 func (*AddToQueueRequest) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{1}
+	return file_player_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *AddToQueueRequest) GetSongs() []string {
@@ -288,14 +288,14 @@ func (x *AddToQueueRequest) GetSongs() []string {
 type SeekRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Time          *durationpb.Duration   `protobuf:"bytes,1,opt,name=time,proto3" json:"time,omitempty"`
-	Mode          SeekMode               `protobuf:"varint,2,opt,name=mode,proto3,enum=player_rpc.SeekMode" json:"mode,omitempty"`
+	Mode          SeekMode               `protobuf:"varint,2,opt,name=mode,proto3,enum=platune.player.v1.SeekMode" json:"mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SeekRequest) Reset() {
 	*x = SeekRequest{}
-	mi := &file_player_rpc_proto_msgTypes[2]
+	mi := &file_player_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -307,7 +307,7 @@ func (x *SeekRequest) String() string {
 func (*SeekRequest) ProtoMessage() {}
 
 func (x *SeekRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[2]
+	mi := &file_player_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -320,7 +320,7 @@ func (x *SeekRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeekRequest.ProtoReflect.Descriptor instead.
 func (*SeekRequest) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{2}
+	return file_player_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SeekRequest) GetTime() *durationpb.Duration {
@@ -346,7 +346,7 @@ type SetVolumeRequest struct {
 
 func (x *SetVolumeRequest) Reset() {
 	*x = SetVolumeRequest{}
-	mi := &file_player_rpc_proto_msgTypes[3]
+	mi := &file_player_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -358,7 +358,7 @@ func (x *SetVolumeRequest) String() string {
 func (*SetVolumeRequest) ProtoMessage() {}
 
 func (x *SetVolumeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[3]
+	mi := &file_player_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -371,7 +371,7 @@ func (x *SetVolumeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetVolumeRequest.ProtoReflect.Descriptor instead.
 func (*SetVolumeRequest) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{3}
+	return file_player_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SetVolumeRequest) GetVolume() float32 {
@@ -383,7 +383,7 @@ func (x *SetVolumeRequest) GetVolume() float32 {
 
 type EventResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Event Event                  `protobuf:"varint,1,opt,name=event,proto3,enum=player_rpc.Event" json:"event,omitempty"`
+	Event Event                  `protobuf:"varint,1,opt,name=event,proto3,enum=platune.player.v1.Event" json:"event,omitempty"`
 	// Types that are valid to be assigned to EventPayload:
 	//
 	//	*EventResponse_State
@@ -396,7 +396,7 @@ type EventResponse struct {
 
 func (x *EventResponse) Reset() {
 	*x = EventResponse{}
-	mi := &file_player_rpc_proto_msgTypes[4]
+	mi := &file_player_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -408,7 +408,7 @@ func (x *EventResponse) String() string {
 func (*EventResponse) ProtoMessage() {}
 
 func (x *EventResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[4]
+	mi := &file_player_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -421,7 +421,7 @@ func (x *EventResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EventResponse.ProtoReflect.Descriptor instead.
 func (*EventResponse) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{4}
+	return file_player_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *EventResponse) GetEvent() Event {
@@ -498,7 +498,7 @@ type State struct {
 
 func (x *State) Reset() {
 	*x = State{}
-	mi := &file_player_rpc_proto_msgTypes[5]
+	mi := &file_player_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -510,7 +510,7 @@ func (x *State) String() string {
 func (*State) ProtoMessage() {}
 
 func (x *State) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[5]
+	mi := &file_player_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -523,7 +523,7 @@ func (x *State) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use State.ProtoReflect.Descriptor instead.
 func (*State) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{5}
+	return file_player_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *State) GetQueue() []string {
@@ -557,7 +557,7 @@ type PositionResponse struct {
 
 func (x *PositionResponse) Reset() {
 	*x = PositionResponse{}
-	mi := &file_player_rpc_proto_msgTypes[6]
+	mi := &file_player_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -569,7 +569,7 @@ func (x *PositionResponse) String() string {
 func (*PositionResponse) ProtoMessage() {}
 
 func (x *PositionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[6]
+	mi := &file_player_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -582,7 +582,7 @@ func (x *PositionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PositionResponse.ProtoReflect.Descriptor instead.
 func (*PositionResponse) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{6}
+	return file_player_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PositionResponse) GetPosition() *durationpb.Duration {
@@ -609,7 +609,7 @@ type SeekResponse struct {
 
 func (x *SeekResponse) Reset() {
 	*x = SeekResponse{}
-	mi := &file_player_rpc_proto_msgTypes[7]
+	mi := &file_player_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -621,7 +621,7 @@ func (x *SeekResponse) String() string {
 func (*SeekResponse) ProtoMessage() {}
 
 func (x *SeekResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[7]
+	mi := &file_player_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -634,7 +634,7 @@ func (x *SeekResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SeekResponse.ProtoReflect.Descriptor instead.
 func (*SeekResponse) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{7}
+	return file_player_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SeekResponse) GetState() *State {
@@ -653,7 +653,7 @@ func (x *SeekResponse) GetSeekMillis() uint64 {
 
 type StatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        PlayerStatus           `protobuf:"varint,1,opt,name=status,proto3,enum=player_rpc.PlayerStatus" json:"status,omitempty"`
+	Status        PlayerStatus           `protobuf:"varint,1,opt,name=status,proto3,enum=platune.player.v1.PlayerStatus" json:"status,omitempty"`
 	Progress      *PositionResponse      `protobuf:"bytes,2,opt,name=progress,proto3,oneof" json:"progress,omitempty"`
 	CurrentSong   *string                `protobuf:"bytes,3,opt,name=current_song,json=currentSong,proto3,oneof" json:"current_song,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -662,7 +662,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_player_rpc_proto_msgTypes[8]
+	mi := &file_player_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -674,7 +674,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[8]
+	mi := &file_player_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -687,7 +687,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{8}
+	return file_player_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *StatusResponse) GetStatus() PlayerStatus {
@@ -720,7 +720,7 @@ type DevicesResponse struct {
 
 func (x *DevicesResponse) Reset() {
 	*x = DevicesResponse{}
-	mi := &file_player_rpc_proto_msgTypes[9]
+	mi := &file_player_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -732,7 +732,7 @@ func (x *DevicesResponse) String() string {
 func (*DevicesResponse) ProtoMessage() {}
 
 func (x *DevicesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[9]
+	mi := &file_player_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -745,7 +745,7 @@ func (x *DevicesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DevicesResponse.ProtoReflect.Descriptor instead.
 func (*DevicesResponse) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{9}
+	return file_player_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DevicesResponse) GetDevices() []string {
@@ -764,7 +764,7 @@ type SetOutputDeviceRequest struct {
 
 func (x *SetOutputDeviceRequest) Reset() {
 	*x = SetOutputDeviceRequest{}
-	mi := &file_player_rpc_proto_msgTypes[10]
+	mi := &file_player_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -776,7 +776,7 @@ func (x *SetOutputDeviceRequest) String() string {
 func (*SetOutputDeviceRequest) ProtoMessage() {}
 
 func (x *SetOutputDeviceRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_player_rpc_proto_msgTypes[10]
+	mi := &file_player_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -789,7 +789,7 @@ func (x *SetOutputDeviceRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetOutputDeviceRequest.ProtoReflect.Descriptor instead.
 func (*SetOutputDeviceRequest) Descriptor() ([]byte, []int) {
-	return file_player_rpc_proto_rawDescGZIP(), []int{10}
+	return file_player_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *SetOutputDeviceRequest) GetDevice() string {
@@ -799,26 +799,25 @@ func (x *SetOutputDeviceRequest) GetDevice() string {
 	return ""
 }
 
-var File_player_rpc_proto protoreflect.FileDescriptor
+var File_player_proto protoreflect.FileDescriptor
 
-const file_player_rpc_proto_rawDesc = "" +
+const file_player_proto_rawDesc = "" +
 	"\n" +
-	"\x10player_rpc.proto\x12\n" +
-	"player_rpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1egoogle/protobuf/duration.proto\"$\n" +
+	"\fplayer.proto\x12\x11platune.player.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1bgoogle/protobuf/empty.proto\"$\n" +
 	"\fQueueRequest\x12\x14\n" +
 	"\x05queue\x18\x01 \x03(\tR\x05queue\")\n" +
 	"\x11AddToQueueRequest\x12\x14\n" +
-	"\x05songs\x18\x01 \x03(\tR\x05songs\"f\n" +
+	"\x05songs\x18\x01 \x03(\tR\x05songs\"m\n" +
 	"\vSeekRequest\x12-\n" +
-	"\x04time\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\x04time\x12(\n" +
-	"\x04mode\x18\x02 \x01(\x0e2\x14.player_rpc.SeekModeR\x04mode\"*\n" +
+	"\x04time\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\x04time\x12/\n" +
+	"\x04mode\x18\x02 \x01(\x0e2\x1b.platune.player.v1.SeekModeR\x04mode\"*\n" +
 	"\x10SetVolumeRequest\x12\x16\n" +
-	"\x06volume\x18\x01 \x01(\x02R\x06volume\"\xe9\x01\n" +
-	"\rEventResponse\x12'\n" +
-	"\x05event\x18\x01 \x01(\x0e2\x11.player_rpc.EventR\x05event\x12)\n" +
-	"\x05state\x18\x02 \x01(\v2\x11.player_rpc.StateH\x00R\x05state\x127\n" +
-	"\tseek_data\x18\x03 \x01(\v2\x18.player_rpc.SeekResponseH\x00R\bseekData\x12:\n" +
-	"\bprogress\x18\x04 \x01(\v2\x1c.player_rpc.PositionResponseH\x00R\bprogressB\x0f\n" +
+	"\x06volume\x18\x01 \x01(\x02R\x06volume\"\x85\x02\n" +
+	"\rEventResponse\x12.\n" +
+	"\x05event\x18\x01 \x01(\x0e2\x18.platune.player.v1.EventR\x05event\x120\n" +
+	"\x05state\x18\x02 \x01(\v2\x18.platune.player.v1.StateH\x00R\x05state\x12>\n" +
+	"\tseek_data\x18\x03 \x01(\v2\x1f.platune.player.v1.SeekResponseH\x00R\bseekData\x12A\n" +
+	"\bprogress\x18\x04 \x01(\v2#.platune.player.v1.PositionResponseH\x00R\bprogressB\x0f\n" +
 	"\revent_payload\"\\\n" +
 	"\x05State\x12\x14\n" +
 	"\x05queue\x18\x01 \x03(\tR\x05queue\x12%\n" +
@@ -826,14 +825,14 @@ const file_player_rpc_proto_rawDesc = "" +
 	"\x06volume\x18\x03 \x01(\x02R\x06volume\"\x8b\x01\n" +
 	"\x10PositionResponse\x125\n" +
 	"\bposition\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\bposition\x12@\n" +
-	"\x0eretrieval_time\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\rretrievalTime\"X\n" +
-	"\fSeekResponse\x12'\n" +
-	"\x05state\x18\x01 \x01(\v2\x11.player_rpc.StateR\x05state\x12\x1f\n" +
+	"\x0eretrieval_time\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\rretrievalTime\"_\n" +
+	"\fSeekResponse\x12.\n" +
+	"\x05state\x18\x01 \x01(\v2\x18.platune.player.v1.StateR\x05state\x12\x1f\n" +
 	"\vseek_millis\x18\x02 \x01(\x04R\n" +
-	"seekMillis\"\xc7\x01\n" +
-	"\x0eStatusResponse\x120\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x18.player_rpc.PlayerStatusR\x06status\x12=\n" +
-	"\bprogress\x18\x02 \x01(\v2\x1c.player_rpc.PositionResponseH\x00R\bprogress\x88\x01\x01\x12&\n" +
+	"seekMillis\"\xd5\x01\n" +
+	"\x0eStatusResponse\x127\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x1f.platune.player.v1.PlayerStatusR\x06status\x12D\n" +
+	"\bprogress\x18\x02 \x01(\v2#.platune.player.v1.PositionResponseH\x00R\bprogress\x88\x01\x01\x12&\n" +
 	"\fcurrent_song\x18\x03 \x01(\tH\x01R\vcurrentSong\x88\x01\x01B\v\n" +
 	"\t_progressB\x0f\n" +
 	"\r_current_song\"+\n" +
@@ -866,98 +865,97 @@ const file_player_rpc_proto_rawDesc = "" +
 	"\bSeekMode\x12\v\n" +
 	"\aFORWARD\x10\x00\x12\f\n" +
 	"\bBACKWARD\x10\x01\x12\f\n" +
-	"\bABSOLUTE\x10\x022\x89\a\n" +
-	"\x06Player\x12<\n" +
-	"\bSetQueue\x12\x18.player_rpc.QueueRequest\x1a\x16.google.protobuf.Empty\x12C\n" +
+	"\bABSOLUTE\x10\x022\xc1\a\n" +
+	"\x06Player\x12C\n" +
+	"\bSetQueue\x12\x1f.platune.player.v1.QueueRequest\x1a\x16.google.protobuf.Empty\x12J\n" +
 	"\n" +
-	"AddToQueue\x12\x1d.player_rpc.AddToQueueRequest\x1a\x16.google.protobuf.Empty\x127\n" +
+	"AddToQueue\x12$.platune.player.v1.AddToQueueRequest\x1a\x16.google.protobuf.Empty\x127\n" +
 	"\x05Pause\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x126\n" +
 	"\x04Stop\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x128\n" +
 	"\x06Resume\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x128\n" +
-	"\x06Toggle\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x127\n" +
-	"\x04Seek\x12\x17.player_rpc.SeekRequest\x1a\x16.google.protobuf.Empty\x12A\n" +
-	"\tSetVolume\x12\x1c.player_rpc.SetVolumeRequest\x1a\x16.google.protobuf.Empty\x126\n" +
+	"\x06Toggle\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12>\n" +
+	"\x04Seek\x12\x1e.platune.player.v1.SeekRequest\x1a\x16.google.protobuf.Empty\x12H\n" +
+	"\tSetVolume\x12#.platune.player.v1.SetVolumeRequest\x1a\x16.google.protobuf.Empty\x126\n" +
 	"\x04Next\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12:\n" +
-	"\bPrevious\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12F\n" +
-	"\x10GetCurrentStatus\x12\x16.google.protobuf.Empty\x1a\x1a.player_rpc.StatusResponse\x12F\n" +
-	"\x0fSubscribeEvents\x12\x16.google.protobuf.Empty\x1a\x19.player_rpc.EventResponse0\x01\x12H\n" +
-	"\x11ListOutputDevices\x12\x16.google.protobuf.Empty\x1a\x1b.player_rpc.DevicesResponse\x12M\n" +
-	"\x0fSetOutputDevice\x12\".player_rpc.SetOutputDeviceRequest\x1a\x16.google.protobuf.EmptyB6\n" +
-	"\n" +
-	"player.rpcB\vPlayerProtoP\x01Z\x19github.com/aschey/platuneb\x06proto3"
+	"\bPrevious\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12M\n" +
+	"\x10GetCurrentStatus\x12\x16.google.protobuf.Empty\x1a!.platune.player.v1.StatusResponse\x12M\n" +
+	"\x0fSubscribeEvents\x12\x16.google.protobuf.Empty\x1a .platune.player.v1.EventResponse0\x01\x12O\n" +
+	"\x11ListOutputDevices\x12\x16.google.protobuf.Empty\x1a\".platune.player.v1.DevicesResponse\x12T\n" +
+	"\x0fSetOutputDevice\x12).platune.player.v1.SetOutputDeviceRequest\x1a\x16.google.protobuf.EmptyBb\n" +
+	"\x11platune.player.v1B\vPlayerProtoP\x01Z*github.com/aschey/platune/client/player_v1\xaa\x02\x11Platune.Player.V1b\x06proto3"
 
 var (
-	file_player_rpc_proto_rawDescOnce sync.Once
-	file_player_rpc_proto_rawDescData []byte
+	file_player_proto_rawDescOnce sync.Once
+	file_player_proto_rawDescData []byte
 )
 
-func file_player_rpc_proto_rawDescGZIP() []byte {
-	file_player_rpc_proto_rawDescOnce.Do(func() {
-		file_player_rpc_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_player_rpc_proto_rawDesc), len(file_player_rpc_proto_rawDesc)))
+func file_player_proto_rawDescGZIP() []byte {
+	file_player_proto_rawDescOnce.Do(func() {
+		file_player_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_player_proto_rawDesc), len(file_player_proto_rawDesc)))
 	})
-	return file_player_rpc_proto_rawDescData
+	return file_player_proto_rawDescData
 }
 
-var file_player_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_player_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
-var file_player_rpc_proto_goTypes = []any{
-	(Event)(0),                     // 0: player_rpc.Event
-	(PlayerStatus)(0),              // 1: player_rpc.PlayerStatus
-	(SeekMode)(0),                  // 2: player_rpc.SeekMode
-	(*QueueRequest)(nil),           // 3: player_rpc.QueueRequest
-	(*AddToQueueRequest)(nil),      // 4: player_rpc.AddToQueueRequest
-	(*SeekRequest)(nil),            // 5: player_rpc.SeekRequest
-	(*SetVolumeRequest)(nil),       // 6: player_rpc.SetVolumeRequest
-	(*EventResponse)(nil),          // 7: player_rpc.EventResponse
-	(*State)(nil),                  // 8: player_rpc.State
-	(*PositionResponse)(nil),       // 9: player_rpc.PositionResponse
-	(*SeekResponse)(nil),           // 10: player_rpc.SeekResponse
-	(*StatusResponse)(nil),         // 11: player_rpc.StatusResponse
-	(*DevicesResponse)(nil),        // 12: player_rpc.DevicesResponse
-	(*SetOutputDeviceRequest)(nil), // 13: player_rpc.SetOutputDeviceRequest
+var file_player_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_player_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_player_proto_goTypes = []any{
+	(Event)(0),                     // 0: platune.player.v1.Event
+	(PlayerStatus)(0),              // 1: platune.player.v1.PlayerStatus
+	(SeekMode)(0),                  // 2: platune.player.v1.SeekMode
+	(*QueueRequest)(nil),           // 3: platune.player.v1.QueueRequest
+	(*AddToQueueRequest)(nil),      // 4: platune.player.v1.AddToQueueRequest
+	(*SeekRequest)(nil),            // 5: platune.player.v1.SeekRequest
+	(*SetVolumeRequest)(nil),       // 6: platune.player.v1.SetVolumeRequest
+	(*EventResponse)(nil),          // 7: platune.player.v1.EventResponse
+	(*State)(nil),                  // 8: platune.player.v1.State
+	(*PositionResponse)(nil),       // 9: platune.player.v1.PositionResponse
+	(*SeekResponse)(nil),           // 10: platune.player.v1.SeekResponse
+	(*StatusResponse)(nil),         // 11: platune.player.v1.StatusResponse
+	(*DevicesResponse)(nil),        // 12: platune.player.v1.DevicesResponse
+	(*SetOutputDeviceRequest)(nil), // 13: platune.player.v1.SetOutputDeviceRequest
 	(*durationpb.Duration)(nil),    // 14: google.protobuf.Duration
 	(*emptypb.Empty)(nil),          // 15: google.protobuf.Empty
 }
-var file_player_rpc_proto_depIdxs = []int32{
-	14, // 0: player_rpc.SeekRequest.time:type_name -> google.protobuf.Duration
-	2,  // 1: player_rpc.SeekRequest.mode:type_name -> player_rpc.SeekMode
-	0,  // 2: player_rpc.EventResponse.event:type_name -> player_rpc.Event
-	8,  // 3: player_rpc.EventResponse.state:type_name -> player_rpc.State
-	10, // 4: player_rpc.EventResponse.seek_data:type_name -> player_rpc.SeekResponse
-	9,  // 5: player_rpc.EventResponse.progress:type_name -> player_rpc.PositionResponse
-	14, // 6: player_rpc.PositionResponse.position:type_name -> google.protobuf.Duration
-	14, // 7: player_rpc.PositionResponse.retrieval_time:type_name -> google.protobuf.Duration
-	8,  // 8: player_rpc.SeekResponse.state:type_name -> player_rpc.State
-	1,  // 9: player_rpc.StatusResponse.status:type_name -> player_rpc.PlayerStatus
-	9,  // 10: player_rpc.StatusResponse.progress:type_name -> player_rpc.PositionResponse
-	3,  // 11: player_rpc.Player.SetQueue:input_type -> player_rpc.QueueRequest
-	4,  // 12: player_rpc.Player.AddToQueue:input_type -> player_rpc.AddToQueueRequest
-	15, // 13: player_rpc.Player.Pause:input_type -> google.protobuf.Empty
-	15, // 14: player_rpc.Player.Stop:input_type -> google.protobuf.Empty
-	15, // 15: player_rpc.Player.Resume:input_type -> google.protobuf.Empty
-	15, // 16: player_rpc.Player.Toggle:input_type -> google.protobuf.Empty
-	5,  // 17: player_rpc.Player.Seek:input_type -> player_rpc.SeekRequest
-	6,  // 18: player_rpc.Player.SetVolume:input_type -> player_rpc.SetVolumeRequest
-	15, // 19: player_rpc.Player.Next:input_type -> google.protobuf.Empty
-	15, // 20: player_rpc.Player.Previous:input_type -> google.protobuf.Empty
-	15, // 21: player_rpc.Player.GetCurrentStatus:input_type -> google.protobuf.Empty
-	15, // 22: player_rpc.Player.SubscribeEvents:input_type -> google.protobuf.Empty
-	15, // 23: player_rpc.Player.ListOutputDevices:input_type -> google.protobuf.Empty
-	13, // 24: player_rpc.Player.SetOutputDevice:input_type -> player_rpc.SetOutputDeviceRequest
-	15, // 25: player_rpc.Player.SetQueue:output_type -> google.protobuf.Empty
-	15, // 26: player_rpc.Player.AddToQueue:output_type -> google.protobuf.Empty
-	15, // 27: player_rpc.Player.Pause:output_type -> google.protobuf.Empty
-	15, // 28: player_rpc.Player.Stop:output_type -> google.protobuf.Empty
-	15, // 29: player_rpc.Player.Resume:output_type -> google.protobuf.Empty
-	15, // 30: player_rpc.Player.Toggle:output_type -> google.protobuf.Empty
-	15, // 31: player_rpc.Player.Seek:output_type -> google.protobuf.Empty
-	15, // 32: player_rpc.Player.SetVolume:output_type -> google.protobuf.Empty
-	15, // 33: player_rpc.Player.Next:output_type -> google.protobuf.Empty
-	15, // 34: player_rpc.Player.Previous:output_type -> google.protobuf.Empty
-	11, // 35: player_rpc.Player.GetCurrentStatus:output_type -> player_rpc.StatusResponse
-	7,  // 36: player_rpc.Player.SubscribeEvents:output_type -> player_rpc.EventResponse
-	12, // 37: player_rpc.Player.ListOutputDevices:output_type -> player_rpc.DevicesResponse
-	15, // 38: player_rpc.Player.SetOutputDevice:output_type -> google.protobuf.Empty
+var file_player_proto_depIdxs = []int32{
+	14, // 0: platune.player.v1.SeekRequest.time:type_name -> google.protobuf.Duration
+	2,  // 1: platune.player.v1.SeekRequest.mode:type_name -> platune.player.v1.SeekMode
+	0,  // 2: platune.player.v1.EventResponse.event:type_name -> platune.player.v1.Event
+	8,  // 3: platune.player.v1.EventResponse.state:type_name -> platune.player.v1.State
+	10, // 4: platune.player.v1.EventResponse.seek_data:type_name -> platune.player.v1.SeekResponse
+	9,  // 5: platune.player.v1.EventResponse.progress:type_name -> platune.player.v1.PositionResponse
+	14, // 6: platune.player.v1.PositionResponse.position:type_name -> google.protobuf.Duration
+	14, // 7: platune.player.v1.PositionResponse.retrieval_time:type_name -> google.protobuf.Duration
+	8,  // 8: platune.player.v1.SeekResponse.state:type_name -> platune.player.v1.State
+	1,  // 9: platune.player.v1.StatusResponse.status:type_name -> platune.player.v1.PlayerStatus
+	9,  // 10: platune.player.v1.StatusResponse.progress:type_name -> platune.player.v1.PositionResponse
+	3,  // 11: platune.player.v1.Player.SetQueue:input_type -> platune.player.v1.QueueRequest
+	4,  // 12: platune.player.v1.Player.AddToQueue:input_type -> platune.player.v1.AddToQueueRequest
+	15, // 13: platune.player.v1.Player.Pause:input_type -> google.protobuf.Empty
+	15, // 14: platune.player.v1.Player.Stop:input_type -> google.protobuf.Empty
+	15, // 15: platune.player.v1.Player.Resume:input_type -> google.protobuf.Empty
+	15, // 16: platune.player.v1.Player.Toggle:input_type -> google.protobuf.Empty
+	5,  // 17: platune.player.v1.Player.Seek:input_type -> platune.player.v1.SeekRequest
+	6,  // 18: platune.player.v1.Player.SetVolume:input_type -> platune.player.v1.SetVolumeRequest
+	15, // 19: platune.player.v1.Player.Next:input_type -> google.protobuf.Empty
+	15, // 20: platune.player.v1.Player.Previous:input_type -> google.protobuf.Empty
+	15, // 21: platune.player.v1.Player.GetCurrentStatus:input_type -> google.protobuf.Empty
+	15, // 22: platune.player.v1.Player.SubscribeEvents:input_type -> google.protobuf.Empty
+	15, // 23: platune.player.v1.Player.ListOutputDevices:input_type -> google.protobuf.Empty
+	13, // 24: platune.player.v1.Player.SetOutputDevice:input_type -> platune.player.v1.SetOutputDeviceRequest
+	15, // 25: platune.player.v1.Player.SetQueue:output_type -> google.protobuf.Empty
+	15, // 26: platune.player.v1.Player.AddToQueue:output_type -> google.protobuf.Empty
+	15, // 27: platune.player.v1.Player.Pause:output_type -> google.protobuf.Empty
+	15, // 28: platune.player.v1.Player.Stop:output_type -> google.protobuf.Empty
+	15, // 29: platune.player.v1.Player.Resume:output_type -> google.protobuf.Empty
+	15, // 30: platune.player.v1.Player.Toggle:output_type -> google.protobuf.Empty
+	15, // 31: platune.player.v1.Player.Seek:output_type -> google.protobuf.Empty
+	15, // 32: platune.player.v1.Player.SetVolume:output_type -> google.protobuf.Empty
+	15, // 33: platune.player.v1.Player.Next:output_type -> google.protobuf.Empty
+	15, // 34: platune.player.v1.Player.Previous:output_type -> google.protobuf.Empty
+	11, // 35: platune.player.v1.Player.GetCurrentStatus:output_type -> platune.player.v1.StatusResponse
+	7,  // 36: platune.player.v1.Player.SubscribeEvents:output_type -> platune.player.v1.EventResponse
+	12, // 37: platune.player.v1.Player.ListOutputDevices:output_type -> platune.player.v1.DevicesResponse
+	15, // 38: platune.player.v1.Player.SetOutputDevice:output_type -> google.protobuf.Empty
 	25, // [25:39] is the sub-list for method output_type
 	11, // [11:25] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -965,34 +963,34 @@ var file_player_rpc_proto_depIdxs = []int32{
 	0,  // [0:11] is the sub-list for field type_name
 }
 
-func init() { file_player_rpc_proto_init() }
-func file_player_rpc_proto_init() {
-	if File_player_rpc_proto != nil {
+func init() { file_player_proto_init() }
+func file_player_proto_init() {
+	if File_player_proto != nil {
 		return
 	}
-	file_player_rpc_proto_msgTypes[4].OneofWrappers = []any{
+	file_player_proto_msgTypes[4].OneofWrappers = []any{
 		(*EventResponse_State)(nil),
 		(*EventResponse_SeekData)(nil),
 		(*EventResponse_Progress)(nil),
 	}
-	file_player_rpc_proto_msgTypes[8].OneofWrappers = []any{}
-	file_player_rpc_proto_msgTypes[10].OneofWrappers = []any{}
+	file_player_proto_msgTypes[8].OneofWrappers = []any{}
+	file_player_proto_msgTypes[10].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_player_rpc_proto_rawDesc), len(file_player_rpc_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_player_proto_rawDesc), len(file_player_proto_rawDesc)),
 			NumEnums:      3,
 			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_player_rpc_proto_goTypes,
-		DependencyIndexes: file_player_rpc_proto_depIdxs,
-		EnumInfos:         file_player_rpc_proto_enumTypes,
-		MessageInfos:      file_player_rpc_proto_msgTypes,
+		GoTypes:           file_player_proto_goTypes,
+		DependencyIndexes: file_player_proto_depIdxs,
+		EnumInfos:         file_player_proto_enumTypes,
+		MessageInfos:      file_player_proto_msgTypes,
 	}.Build()
-	File_player_rpc_proto = out.File
-	file_player_rpc_proto_goTypes = nil
-	file_player_rpc_proto_depIdxs = nil
+	File_player_proto = out.File
+	file_player_proto_goTypes = nil
+	file_player_proto_depIdxs = nil
 }

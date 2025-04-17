@@ -1,21 +1,21 @@
 syntax = "proto3";
-
-option java_multiple_files = true;
-option java_package = "management.rpc";
-option java_outer_classname = "ManagementProto";
-option go_package = "github.com/aschey/platune";
+package platune.management.v1;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
-package management_rpc;
+
+option csharp_namespace = "Platune.Management.V1";
+option go_package = "github.com/aschey/platune/client/management_v1";
+option java_multiple_files = true;
+option java_outer_classname = "ManagementProto";
+option java_package = "platune.management.v1";
 
 service Management {
   rpc StartSync(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc AddFolders(FoldersMessage) returns (google.protobuf.Empty);
   rpc GetAllFolders(google.protobuf.Empty) returns (FoldersMessage);
   rpc RegisterMount(RegisteredMountMessage) returns (google.protobuf.Empty);
-  rpc GetRegisteredMount(google.protobuf.Empty)
-      returns (RegisteredMountMessage);
+  rpc GetRegisteredMount(google.protobuf.Empty) returns (RegisteredMountMessage);
   rpc Search(stream SearchRequest) returns (stream SearchResponse);
   rpc Lookup(LookupRequest) returns (LookupResponse);
   rpc GetSongByPath(PathMessage) returns (SongResponse);
@@ -31,13 +31,21 @@ message Progress {
   bool finished = 3;
 }
 
-message FoldersMessage { repeated string folders = 1; }
+message FoldersMessage {
+  repeated string folders = 1;
+}
 
-message RegisteredMountMessage { string mount = 1; }
+message RegisteredMountMessage {
+  string mount = 1;
+}
 
-message IdMessage { repeated int64 ids = 1; }
+message IdMessage {
+  repeated int64 ids = 1;
+}
 
-message PathMessage { string path = 1; }
+message PathMessage {
+  string path = 1;
+}
 
 message SearchRequest {
   string query = 1;
@@ -50,9 +58,13 @@ message LookupRequest {
   repeated int64 correlation_ids = 2;
 }
 
-message SongResponse { optional LookupEntry song = 1; }
+message SongResponse {
+  optional LookupEntry song = 1;
+}
 
-message AlbumResponse { repeated AlbumEntry entries = 1; }
+message AlbumResponse {
+  repeated AlbumEntry entries = 1;
+}
 
 message AlbumEntry {
   string album = 1;
@@ -71,7 +83,9 @@ message LookupEntry {
   google.protobuf.Timestamp duration = 7;
 }
 
-message LookupResponse { repeated LookupEntry entries = 1; }
+message LookupResponse {
+  repeated LookupEntry entries = 1;
+}
 
 enum EntryType {
   ALBUM = 0;
@@ -87,10 +101,14 @@ message SearchResult {
   string description = 5;
 }
 
-message SearchResponse { repeated SearchResult results = 1; }
+message SearchResponse {
+  repeated SearchResult results = 1;
+}
 
 message DeletedResult {
   string path = 1;
   int64 id = 2;
 }
-message GetDeletedResponse { repeated DeletedResult results = 1; }
+message GetDeletedResponse {
+  repeated DeletedResult results = 1;
+}

@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v6.30.1
-// source: management_rpc.proto
+// source: management.proto
 
-package platune
+package management_v1
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -56,11 +56,11 @@ func (x EntryType) String() string {
 }
 
 func (EntryType) Descriptor() protoreflect.EnumDescriptor {
-	return file_management_rpc_proto_enumTypes[0].Descriptor()
+	return file_management_proto_enumTypes[0].Descriptor()
 }
 
 func (EntryType) Type() protoreflect.EnumType {
-	return &file_management_rpc_proto_enumTypes[0]
+	return &file_management_proto_enumTypes[0]
 }
 
 func (x EntryType) Number() protoreflect.EnumNumber {
@@ -69,7 +69,7 @@ func (x EntryType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use EntryType.Descriptor instead.
 func (EntryType) EnumDescriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{0}
+	return file_management_proto_rawDescGZIP(), []int{0}
 }
 
 type Progress struct {
@@ -83,7 +83,7 @@ type Progress struct {
 
 func (x *Progress) Reset() {
 	*x = Progress{}
-	mi := &file_management_rpc_proto_msgTypes[0]
+	mi := &file_management_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -95,7 +95,7 @@ func (x *Progress) String() string {
 func (*Progress) ProtoMessage() {}
 
 func (x *Progress) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[0]
+	mi := &file_management_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -108,7 +108,7 @@ func (x *Progress) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Progress.ProtoReflect.Descriptor instead.
 func (*Progress) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{0}
+	return file_management_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Progress) GetJob() string {
@@ -141,7 +141,7 @@ type FoldersMessage struct {
 
 func (x *FoldersMessage) Reset() {
 	*x = FoldersMessage{}
-	mi := &file_management_rpc_proto_msgTypes[1]
+	mi := &file_management_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -153,7 +153,7 @@ func (x *FoldersMessage) String() string {
 func (*FoldersMessage) ProtoMessage() {}
 
 func (x *FoldersMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[1]
+	mi := &file_management_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -166,7 +166,7 @@ func (x *FoldersMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FoldersMessage.ProtoReflect.Descriptor instead.
 func (*FoldersMessage) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{1}
+	return file_management_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *FoldersMessage) GetFolders() []string {
@@ -185,7 +185,7 @@ type RegisteredMountMessage struct {
 
 func (x *RegisteredMountMessage) Reset() {
 	*x = RegisteredMountMessage{}
-	mi := &file_management_rpc_proto_msgTypes[2]
+	mi := &file_management_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -197,7 +197,7 @@ func (x *RegisteredMountMessage) String() string {
 func (*RegisteredMountMessage) ProtoMessage() {}
 
 func (x *RegisteredMountMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[2]
+	mi := &file_management_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -210,7 +210,7 @@ func (x *RegisteredMountMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisteredMountMessage.ProtoReflect.Descriptor instead.
 func (*RegisteredMountMessage) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{2}
+	return file_management_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RegisteredMountMessage) GetMount() string {
@@ -229,7 +229,7 @@ type IdMessage struct {
 
 func (x *IdMessage) Reset() {
 	*x = IdMessage{}
-	mi := &file_management_rpc_proto_msgTypes[3]
+	mi := &file_management_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -241,7 +241,7 @@ func (x *IdMessage) String() string {
 func (*IdMessage) ProtoMessage() {}
 
 func (x *IdMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[3]
+	mi := &file_management_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -254,7 +254,7 @@ func (x *IdMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdMessage.ProtoReflect.Descriptor instead.
 func (*IdMessage) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{3}
+	return file_management_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *IdMessage) GetIds() []int64 {
@@ -273,7 +273,7 @@ type PathMessage struct {
 
 func (x *PathMessage) Reset() {
 	*x = PathMessage{}
-	mi := &file_management_rpc_proto_msgTypes[4]
+	mi := &file_management_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -285,7 +285,7 @@ func (x *PathMessage) String() string {
 func (*PathMessage) ProtoMessage() {}
 
 func (x *PathMessage) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[4]
+	mi := &file_management_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -298,7 +298,7 @@ func (x *PathMessage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PathMessage.ProtoReflect.Descriptor instead.
 func (*PathMessage) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{4}
+	return file_management_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *PathMessage) GetPath() string {
@@ -319,7 +319,7 @@ type SearchRequest struct {
 
 func (x *SearchRequest) Reset() {
 	*x = SearchRequest{}
-	mi := &file_management_rpc_proto_msgTypes[5]
+	mi := &file_management_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -331,7 +331,7 @@ func (x *SearchRequest) String() string {
 func (*SearchRequest) ProtoMessage() {}
 
 func (x *SearchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[5]
+	mi := &file_management_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -344,7 +344,7 @@ func (x *SearchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchRequest.ProtoReflect.Descriptor instead.
 func (*SearchRequest) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{5}
+	return file_management_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SearchRequest) GetQuery() string {
@@ -370,7 +370,7 @@ func (x *SearchRequest) GetEndSeparator() string {
 
 type LookupRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	EntryType      EntryType              `protobuf:"varint,1,opt,name=entry_type,json=entryType,proto3,enum=management_rpc.EntryType" json:"entry_type,omitempty"`
+	EntryType      EntryType              `protobuf:"varint,1,opt,name=entry_type,json=entryType,proto3,enum=platune.management.v1.EntryType" json:"entry_type,omitempty"`
 	CorrelationIds []int64                `protobuf:"varint,2,rep,packed,name=correlation_ids,json=correlationIds,proto3" json:"correlation_ids,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -378,7 +378,7 @@ type LookupRequest struct {
 
 func (x *LookupRequest) Reset() {
 	*x = LookupRequest{}
-	mi := &file_management_rpc_proto_msgTypes[6]
+	mi := &file_management_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -390,7 +390,7 @@ func (x *LookupRequest) String() string {
 func (*LookupRequest) ProtoMessage() {}
 
 func (x *LookupRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[6]
+	mi := &file_management_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -403,7 +403,7 @@ func (x *LookupRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LookupRequest.ProtoReflect.Descriptor instead.
 func (*LookupRequest) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{6}
+	return file_management_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *LookupRequest) GetEntryType() EntryType {
@@ -429,7 +429,7 @@ type SongResponse struct {
 
 func (x *SongResponse) Reset() {
 	*x = SongResponse{}
-	mi := &file_management_rpc_proto_msgTypes[7]
+	mi := &file_management_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -441,7 +441,7 @@ func (x *SongResponse) String() string {
 func (*SongResponse) ProtoMessage() {}
 
 func (x *SongResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[7]
+	mi := &file_management_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -454,7 +454,7 @@ func (x *SongResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SongResponse.ProtoReflect.Descriptor instead.
 func (*SongResponse) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{7}
+	return file_management_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SongResponse) GetSong() *LookupEntry {
@@ -473,7 +473,7 @@ type AlbumResponse struct {
 
 func (x *AlbumResponse) Reset() {
 	*x = AlbumResponse{}
-	mi := &file_management_rpc_proto_msgTypes[8]
+	mi := &file_management_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -485,7 +485,7 @@ func (x *AlbumResponse) String() string {
 func (*AlbumResponse) ProtoMessage() {}
 
 func (x *AlbumResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[8]
+	mi := &file_management_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -498,7 +498,7 @@ func (x *AlbumResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AlbumResponse.ProtoReflect.Descriptor instead.
 func (*AlbumResponse) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{8}
+	return file_management_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *AlbumResponse) GetEntries() []*AlbumEntry {
@@ -520,7 +520,7 @@ type AlbumEntry struct {
 
 func (x *AlbumEntry) Reset() {
 	*x = AlbumEntry{}
-	mi := &file_management_rpc_proto_msgTypes[9]
+	mi := &file_management_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -532,7 +532,7 @@ func (x *AlbumEntry) String() string {
 func (*AlbumEntry) ProtoMessage() {}
 
 func (x *AlbumEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[9]
+	mi := &file_management_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -545,7 +545,7 @@ func (x *AlbumEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AlbumEntry.ProtoReflect.Descriptor instead.
 func (*AlbumEntry) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{9}
+	return file_management_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AlbumEntry) GetAlbum() string {
@@ -591,7 +591,7 @@ type LookupEntry struct {
 
 func (x *LookupEntry) Reset() {
 	*x = LookupEntry{}
-	mi := &file_management_rpc_proto_msgTypes[10]
+	mi := &file_management_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -603,7 +603,7 @@ func (x *LookupEntry) String() string {
 func (*LookupEntry) ProtoMessage() {}
 
 func (x *LookupEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[10]
+	mi := &file_management_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -616,7 +616,7 @@ func (x *LookupEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LookupEntry.ProtoReflect.Descriptor instead.
 func (*LookupEntry) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{10}
+	return file_management_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LookupEntry) GetArtist() string {
@@ -677,7 +677,7 @@ type LookupResponse struct {
 
 func (x *LookupResponse) Reset() {
 	*x = LookupResponse{}
-	mi := &file_management_rpc_proto_msgTypes[11]
+	mi := &file_management_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -689,7 +689,7 @@ func (x *LookupResponse) String() string {
 func (*LookupResponse) ProtoMessage() {}
 
 func (x *LookupResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[11]
+	mi := &file_management_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -702,7 +702,7 @@ func (x *LookupResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LookupResponse.ProtoReflect.Descriptor instead.
 func (*LookupResponse) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{11}
+	return file_management_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *LookupResponse) GetEntries() []*LookupEntry {
@@ -715,7 +715,7 @@ func (x *LookupResponse) GetEntries() []*LookupEntry {
 type SearchResult struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Entry          string                 `protobuf:"bytes,1,opt,name=entry,proto3" json:"entry,omitempty"`
-	EntryType      EntryType              `protobuf:"varint,2,opt,name=entry_type,json=entryType,proto3,enum=management_rpc.EntryType" json:"entry_type,omitempty"`
+	EntryType      EntryType              `protobuf:"varint,2,opt,name=entry_type,json=entryType,proto3,enum=platune.management.v1.EntryType" json:"entry_type,omitempty"`
 	Artist         *string                `protobuf:"bytes,3,opt,name=artist,proto3,oneof" json:"artist,omitempty"`
 	CorrelationIds []int64                `protobuf:"varint,4,rep,packed,name=correlation_ids,json=correlationIds,proto3" json:"correlation_ids,omitempty"`
 	Description    string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
@@ -725,7 +725,7 @@ type SearchResult struct {
 
 func (x *SearchResult) Reset() {
 	*x = SearchResult{}
-	mi := &file_management_rpc_proto_msgTypes[12]
+	mi := &file_management_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -737,7 +737,7 @@ func (x *SearchResult) String() string {
 func (*SearchResult) ProtoMessage() {}
 
 func (x *SearchResult) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[12]
+	mi := &file_management_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -750,7 +750,7 @@ func (x *SearchResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResult.ProtoReflect.Descriptor instead.
 func (*SearchResult) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{12}
+	return file_management_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SearchResult) GetEntry() string {
@@ -797,7 +797,7 @@ type SearchResponse struct {
 
 func (x *SearchResponse) Reset() {
 	*x = SearchResponse{}
-	mi := &file_management_rpc_proto_msgTypes[13]
+	mi := &file_management_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -809,7 +809,7 @@ func (x *SearchResponse) String() string {
 func (*SearchResponse) ProtoMessage() {}
 
 func (x *SearchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[13]
+	mi := &file_management_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -822,7 +822,7 @@ func (x *SearchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchResponse.ProtoReflect.Descriptor instead.
 func (*SearchResponse) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{13}
+	return file_management_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SearchResponse) GetResults() []*SearchResult {
@@ -842,7 +842,7 @@ type DeletedResult struct {
 
 func (x *DeletedResult) Reset() {
 	*x = DeletedResult{}
-	mi := &file_management_rpc_proto_msgTypes[14]
+	mi := &file_management_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -854,7 +854,7 @@ func (x *DeletedResult) String() string {
 func (*DeletedResult) ProtoMessage() {}
 
 func (x *DeletedResult) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[14]
+	mi := &file_management_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -867,7 +867,7 @@ func (x *DeletedResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeletedResult.ProtoReflect.Descriptor instead.
 func (*DeletedResult) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{14}
+	return file_management_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeletedResult) GetPath() string {
@@ -893,7 +893,7 @@ type GetDeletedResponse struct {
 
 func (x *GetDeletedResponse) Reset() {
 	*x = GetDeletedResponse{}
-	mi := &file_management_rpc_proto_msgTypes[15]
+	mi := &file_management_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -905,7 +905,7 @@ func (x *GetDeletedResponse) String() string {
 func (*GetDeletedResponse) ProtoMessage() {}
 
 func (x *GetDeletedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_management_rpc_proto_msgTypes[15]
+	mi := &file_management_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -918,7 +918,7 @@ func (x *GetDeletedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDeletedResponse.ProtoReflect.Descriptor instead.
 func (*GetDeletedResponse) Descriptor() ([]byte, []int) {
-	return file_management_rpc_proto_rawDescGZIP(), []int{15}
+	return file_management_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetDeletedResponse) GetResults() []*DeletedResult {
@@ -928,11 +928,11 @@ func (x *GetDeletedResponse) GetResults() []*DeletedResult {
 	return nil
 }
 
-var File_management_rpc_proto protoreflect.FileDescriptor
+var File_management_proto protoreflect.FileDescriptor
 
-const file_management_rpc_proto_rawDesc = "" +
+const file_management_proto_rawDesc = "" +
 	"\n" +
-	"\x14management_rpc.proto\x12\x0emanagement_rpc\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"X\n" +
+	"\x10management.proto\x12\x15platune.management.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"X\n" +
 	"\bProgress\x12\x10\n" +
 	"\x03job\x18\x01 \x01(\tR\x03job\x12\x1e\n" +
 	"\n" +
@@ -952,16 +952,16 @@ const file_management_rpc_proto_rawDesc = "" +
 	"\x0fstart_separator\x18\x02 \x01(\tH\x00R\x0estartSeparator\x88\x01\x01\x12(\n" +
 	"\rend_separator\x18\x03 \x01(\tH\x01R\fendSeparator\x88\x01\x01B\x12\n" +
 	"\x10_start_separatorB\x10\n" +
-	"\x0e_end_separator\"r\n" +
-	"\rLookupRequest\x128\n" +
+	"\x0e_end_separator\"y\n" +
+	"\rLookupRequest\x12?\n" +
 	"\n" +
-	"entry_type\x18\x01 \x01(\x0e2\x19.management_rpc.EntryTypeR\tentryType\x12'\n" +
-	"\x0fcorrelation_ids\x18\x02 \x03(\x03R\x0ecorrelationIds\"M\n" +
-	"\fSongResponse\x124\n" +
-	"\x04song\x18\x01 \x01(\v2\x1b.management_rpc.LookupEntryH\x00R\x04song\x88\x01\x01B\a\n" +
-	"\x05_song\"E\n" +
-	"\rAlbumResponse\x124\n" +
-	"\aentries\x18\x01 \x03(\v2\x1a.management_rpc.AlbumEntryR\aentries\"\x88\x01\n" +
+	"entry_type\x18\x01 \x01(\x0e2 .platune.management.v1.EntryTypeR\tentryType\x12'\n" +
+	"\x0fcorrelation_ids\x18\x02 \x03(\x03R\x0ecorrelationIds\"T\n" +
+	"\fSongResponse\x12;\n" +
+	"\x04song\x18\x01 \x01(\v2\".platune.management.v1.LookupEntryH\x00R\x04song\x88\x01\x01B\a\n" +
+	"\x05_song\"L\n" +
+	"\rAlbumResponse\x12;\n" +
+	"\aentries\x18\x01 \x03(\v2!.platune.management.v1.AlbumEntryR\aentries\"\x88\x01\n" +
 	"\n" +
 	"AlbumEntry\x12\x14\n" +
 	"\x05album\x18\x01 \x01(\tR\x05album\x12\x19\n" +
@@ -975,115 +975,115 @@ const file_management_rpc_proto_rawDesc = "" +
 	"\x04song\x18\x04 \x01(\tR\x04song\x12\x12\n" +
 	"\x04path\x18\x05 \x01(\tR\x04path\x12\x14\n" +
 	"\x05track\x18\x06 \x01(\x03R\x05track\x126\n" +
-	"\bduration\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\bduration\"G\n" +
-	"\x0eLookupResponse\x125\n" +
-	"\aentries\x18\x01 \x03(\v2\x1b.management_rpc.LookupEntryR\aentries\"\xd1\x01\n" +
+	"\bduration\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\bduration\"N\n" +
+	"\x0eLookupResponse\x12<\n" +
+	"\aentries\x18\x01 \x03(\v2\".platune.management.v1.LookupEntryR\aentries\"\xd8\x01\n" +
 	"\fSearchResult\x12\x14\n" +
-	"\x05entry\x18\x01 \x01(\tR\x05entry\x128\n" +
+	"\x05entry\x18\x01 \x01(\tR\x05entry\x12?\n" +
 	"\n" +
-	"entry_type\x18\x02 \x01(\x0e2\x19.management_rpc.EntryTypeR\tentryType\x12\x1b\n" +
+	"entry_type\x18\x02 \x01(\x0e2 .platune.management.v1.EntryTypeR\tentryType\x12\x1b\n" +
 	"\x06artist\x18\x03 \x01(\tH\x00R\x06artist\x88\x01\x01\x12'\n" +
 	"\x0fcorrelation_ids\x18\x04 \x03(\x03R\x0ecorrelationIds\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescriptionB\t\n" +
-	"\a_artist\"H\n" +
-	"\x0eSearchResponse\x126\n" +
-	"\aresults\x18\x01 \x03(\v2\x1c.management_rpc.SearchResultR\aresults\"3\n" +
+	"\a_artist\"O\n" +
+	"\x0eSearchResponse\x12=\n" +
+	"\aresults\x18\x01 \x03(\v2#.platune.management.v1.SearchResultR\aresults\"3\n" +
 	"\rDeletedResult\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x0e\n" +
-	"\x02id\x18\x02 \x01(\x03R\x02id\"M\n" +
-	"\x12GetDeletedResponse\x127\n" +
-	"\aresults\x18\x01 \x03(\v2\x1d.management_rpc.DeletedResultR\aresults*,\n" +
+	"\x02id\x18\x02 \x01(\x03R\x02id\"T\n" +
+	"\x12GetDeletedResponse\x12>\n" +
+	"\aresults\x18\x01 \x03(\v2$.platune.management.v1.DeletedResultR\aresults*,\n" +
 	"\tEntryType\x12\t\n" +
 	"\x05ALBUM\x10\x00\x12\b\n" +
 	"\x04SONG\x10\x01\x12\n" +
 	"\n" +
-	"\x06ARTIST\x10\x022\x8a\a\n" +
+	"\x06ARTIST\x10\x022\xf3\a\n" +
 	"\n" +
 	"Management\x12;\n" +
-	"\tStartSync\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12D\n" +
+	"\tStartSync\x12\x16.google.protobuf.Empty\x1a\x16.google.protobuf.Empty\x12K\n" +
 	"\n" +
-	"AddFolders\x12\x1e.management_rpc.FoldersMessage\x1a\x16.google.protobuf.Empty\x12G\n" +
-	"\rGetAllFolders\x12\x16.google.protobuf.Empty\x1a\x1e.management_rpc.FoldersMessage\x12O\n" +
-	"\rRegisterMount\x12&.management_rpc.RegisteredMountMessage\x1a\x16.google.protobuf.Empty\x12T\n" +
-	"\x12GetRegisteredMount\x12\x16.google.protobuf.Empty\x1a&.management_rpc.RegisteredMountMessage\x12K\n" +
-	"\x06Search\x12\x1d.management_rpc.SearchRequest\x1a\x1e.management_rpc.SearchResponse(\x010\x01\x12G\n" +
-	"\x06Lookup\x12\x1d.management_rpc.LookupRequest\x1a\x1e.management_rpc.LookupResponse\x12J\n" +
-	"\rGetSongByPath\x12\x1b.management_rpc.PathMessage\x1a\x1c.management_rpc.SongResponse\x12S\n" +
-	"\x17GetAlbumsByAlbumArtists\x12\x19.management_rpc.IdMessage\x1a\x1d.management_rpc.AlbumResponse\x12H\n" +
+	"AddFolders\x12%.platune.management.v1.FoldersMessage\x1a\x16.google.protobuf.Empty\x12N\n" +
+	"\rGetAllFolders\x12\x16.google.protobuf.Empty\x1a%.platune.management.v1.FoldersMessage\x12V\n" +
+	"\rRegisterMount\x12-.platune.management.v1.RegisteredMountMessage\x1a\x16.google.protobuf.Empty\x12[\n" +
+	"\x12GetRegisteredMount\x12\x16.google.protobuf.Empty\x1a-.platune.management.v1.RegisteredMountMessage\x12Y\n" +
+	"\x06Search\x12$.platune.management.v1.SearchRequest\x1a%.platune.management.v1.SearchResponse(\x010\x01\x12U\n" +
+	"\x06Lookup\x12$.platune.management.v1.LookupRequest\x1a%.platune.management.v1.LookupResponse\x12X\n" +
+	"\rGetSongByPath\x12\".platune.management.v1.PathMessage\x1a#.platune.management.v1.SongResponse\x12a\n" +
+	"\x17GetAlbumsByAlbumArtists\x12 .platune.management.v1.IdMessage\x1a$.platune.management.v1.AlbumResponse\x12O\n" +
 	"\n" +
-	"GetDeleted\x12\x16.google.protobuf.Empty\x1a\".management_rpc.GetDeletedResponse\x12A\n" +
-	"\fDeleteTracks\x12\x19.management_rpc.IdMessage\x1a\x16.google.protobuf.Empty\x12E\n" +
-	"\x0fSubscribeEvents\x12\x16.google.protobuf.Empty\x1a\x18.management_rpc.Progress0\x01B>\n" +
-	"\x0emanagement.rpcB\x0fManagementProtoP\x01Z\x19github.com/aschey/platuneb\x06proto3"
+	"GetDeleted\x12\x16.google.protobuf.Empty\x1a).platune.management.v1.GetDeletedResponse\x12H\n" +
+	"\fDeleteTracks\x12 .platune.management.v1.IdMessage\x1a\x16.google.protobuf.Empty\x12L\n" +
+	"\x0fSubscribeEvents\x12\x16.google.protobuf.Empty\x1a\x1f.platune.management.v1.Progress0\x01Br\n" +
+	"\x15platune.management.v1B\x0fManagementProtoP\x01Z.github.com/aschey/platune/client/management_v1\xaa\x02\x15Platune.Management.V1b\x06proto3"
 
 var (
-	file_management_rpc_proto_rawDescOnce sync.Once
-	file_management_rpc_proto_rawDescData []byte
+	file_management_proto_rawDescOnce sync.Once
+	file_management_proto_rawDescData []byte
 )
 
-func file_management_rpc_proto_rawDescGZIP() []byte {
-	file_management_rpc_proto_rawDescOnce.Do(func() {
-		file_management_rpc_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_management_rpc_proto_rawDesc), len(file_management_rpc_proto_rawDesc)))
+func file_management_proto_rawDescGZIP() []byte {
+	file_management_proto_rawDescOnce.Do(func() {
+		file_management_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_management_proto_rawDesc), len(file_management_proto_rawDesc)))
 	})
-	return file_management_rpc_proto_rawDescData
+	return file_management_proto_rawDescData
 }
 
-var file_management_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_management_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
-var file_management_rpc_proto_goTypes = []any{
-	(EntryType)(0),                 // 0: management_rpc.EntryType
-	(*Progress)(nil),               // 1: management_rpc.Progress
-	(*FoldersMessage)(nil),         // 2: management_rpc.FoldersMessage
-	(*RegisteredMountMessage)(nil), // 3: management_rpc.RegisteredMountMessage
-	(*IdMessage)(nil),              // 4: management_rpc.IdMessage
-	(*PathMessage)(nil),            // 5: management_rpc.PathMessage
-	(*SearchRequest)(nil),          // 6: management_rpc.SearchRequest
-	(*LookupRequest)(nil),          // 7: management_rpc.LookupRequest
-	(*SongResponse)(nil),           // 8: management_rpc.SongResponse
-	(*AlbumResponse)(nil),          // 9: management_rpc.AlbumResponse
-	(*AlbumEntry)(nil),             // 10: management_rpc.AlbumEntry
-	(*LookupEntry)(nil),            // 11: management_rpc.LookupEntry
-	(*LookupResponse)(nil),         // 12: management_rpc.LookupResponse
-	(*SearchResult)(nil),           // 13: management_rpc.SearchResult
-	(*SearchResponse)(nil),         // 14: management_rpc.SearchResponse
-	(*DeletedResult)(nil),          // 15: management_rpc.DeletedResult
-	(*GetDeletedResponse)(nil),     // 16: management_rpc.GetDeletedResponse
+var file_management_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_management_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_management_proto_goTypes = []any{
+	(EntryType)(0),                 // 0: platune.management.v1.EntryType
+	(*Progress)(nil),               // 1: platune.management.v1.Progress
+	(*FoldersMessage)(nil),         // 2: platune.management.v1.FoldersMessage
+	(*RegisteredMountMessage)(nil), // 3: platune.management.v1.RegisteredMountMessage
+	(*IdMessage)(nil),              // 4: platune.management.v1.IdMessage
+	(*PathMessage)(nil),            // 5: platune.management.v1.PathMessage
+	(*SearchRequest)(nil),          // 6: platune.management.v1.SearchRequest
+	(*LookupRequest)(nil),          // 7: platune.management.v1.LookupRequest
+	(*SongResponse)(nil),           // 8: platune.management.v1.SongResponse
+	(*AlbumResponse)(nil),          // 9: platune.management.v1.AlbumResponse
+	(*AlbumEntry)(nil),             // 10: platune.management.v1.AlbumEntry
+	(*LookupEntry)(nil),            // 11: platune.management.v1.LookupEntry
+	(*LookupResponse)(nil),         // 12: platune.management.v1.LookupResponse
+	(*SearchResult)(nil),           // 13: platune.management.v1.SearchResult
+	(*SearchResponse)(nil),         // 14: platune.management.v1.SearchResponse
+	(*DeletedResult)(nil),          // 15: platune.management.v1.DeletedResult
+	(*GetDeletedResponse)(nil),     // 16: platune.management.v1.GetDeletedResponse
 	(*timestamppb.Timestamp)(nil),  // 17: google.protobuf.Timestamp
 	(*emptypb.Empty)(nil),          // 18: google.protobuf.Empty
 }
-var file_management_rpc_proto_depIdxs = []int32{
-	0,  // 0: management_rpc.LookupRequest.entry_type:type_name -> management_rpc.EntryType
-	11, // 1: management_rpc.SongResponse.song:type_name -> management_rpc.LookupEntry
-	10, // 2: management_rpc.AlbumResponse.entries:type_name -> management_rpc.AlbumEntry
-	17, // 3: management_rpc.LookupEntry.duration:type_name -> google.protobuf.Timestamp
-	11, // 4: management_rpc.LookupResponse.entries:type_name -> management_rpc.LookupEntry
-	0,  // 5: management_rpc.SearchResult.entry_type:type_name -> management_rpc.EntryType
-	13, // 6: management_rpc.SearchResponse.results:type_name -> management_rpc.SearchResult
-	15, // 7: management_rpc.GetDeletedResponse.results:type_name -> management_rpc.DeletedResult
-	18, // 8: management_rpc.Management.StartSync:input_type -> google.protobuf.Empty
-	2,  // 9: management_rpc.Management.AddFolders:input_type -> management_rpc.FoldersMessage
-	18, // 10: management_rpc.Management.GetAllFolders:input_type -> google.protobuf.Empty
-	3,  // 11: management_rpc.Management.RegisterMount:input_type -> management_rpc.RegisteredMountMessage
-	18, // 12: management_rpc.Management.GetRegisteredMount:input_type -> google.protobuf.Empty
-	6,  // 13: management_rpc.Management.Search:input_type -> management_rpc.SearchRequest
-	7,  // 14: management_rpc.Management.Lookup:input_type -> management_rpc.LookupRequest
-	5,  // 15: management_rpc.Management.GetSongByPath:input_type -> management_rpc.PathMessage
-	4,  // 16: management_rpc.Management.GetAlbumsByAlbumArtists:input_type -> management_rpc.IdMessage
-	18, // 17: management_rpc.Management.GetDeleted:input_type -> google.protobuf.Empty
-	4,  // 18: management_rpc.Management.DeleteTracks:input_type -> management_rpc.IdMessage
-	18, // 19: management_rpc.Management.SubscribeEvents:input_type -> google.protobuf.Empty
-	18, // 20: management_rpc.Management.StartSync:output_type -> google.protobuf.Empty
-	18, // 21: management_rpc.Management.AddFolders:output_type -> google.protobuf.Empty
-	2,  // 22: management_rpc.Management.GetAllFolders:output_type -> management_rpc.FoldersMessage
-	18, // 23: management_rpc.Management.RegisterMount:output_type -> google.protobuf.Empty
-	3,  // 24: management_rpc.Management.GetRegisteredMount:output_type -> management_rpc.RegisteredMountMessage
-	14, // 25: management_rpc.Management.Search:output_type -> management_rpc.SearchResponse
-	12, // 26: management_rpc.Management.Lookup:output_type -> management_rpc.LookupResponse
-	8,  // 27: management_rpc.Management.GetSongByPath:output_type -> management_rpc.SongResponse
-	9,  // 28: management_rpc.Management.GetAlbumsByAlbumArtists:output_type -> management_rpc.AlbumResponse
-	16, // 29: management_rpc.Management.GetDeleted:output_type -> management_rpc.GetDeletedResponse
-	18, // 30: management_rpc.Management.DeleteTracks:output_type -> google.protobuf.Empty
-	1,  // 31: management_rpc.Management.SubscribeEvents:output_type -> management_rpc.Progress
+var file_management_proto_depIdxs = []int32{
+	0,  // 0: platune.management.v1.LookupRequest.entry_type:type_name -> platune.management.v1.EntryType
+	11, // 1: platune.management.v1.SongResponse.song:type_name -> platune.management.v1.LookupEntry
+	10, // 2: platune.management.v1.AlbumResponse.entries:type_name -> platune.management.v1.AlbumEntry
+	17, // 3: platune.management.v1.LookupEntry.duration:type_name -> google.protobuf.Timestamp
+	11, // 4: platune.management.v1.LookupResponse.entries:type_name -> platune.management.v1.LookupEntry
+	0,  // 5: platune.management.v1.SearchResult.entry_type:type_name -> platune.management.v1.EntryType
+	13, // 6: platune.management.v1.SearchResponse.results:type_name -> platune.management.v1.SearchResult
+	15, // 7: platune.management.v1.GetDeletedResponse.results:type_name -> platune.management.v1.DeletedResult
+	18, // 8: platune.management.v1.Management.StartSync:input_type -> google.protobuf.Empty
+	2,  // 9: platune.management.v1.Management.AddFolders:input_type -> platune.management.v1.FoldersMessage
+	18, // 10: platune.management.v1.Management.GetAllFolders:input_type -> google.protobuf.Empty
+	3,  // 11: platune.management.v1.Management.RegisterMount:input_type -> platune.management.v1.RegisteredMountMessage
+	18, // 12: platune.management.v1.Management.GetRegisteredMount:input_type -> google.protobuf.Empty
+	6,  // 13: platune.management.v1.Management.Search:input_type -> platune.management.v1.SearchRequest
+	7,  // 14: platune.management.v1.Management.Lookup:input_type -> platune.management.v1.LookupRequest
+	5,  // 15: platune.management.v1.Management.GetSongByPath:input_type -> platune.management.v1.PathMessage
+	4,  // 16: platune.management.v1.Management.GetAlbumsByAlbumArtists:input_type -> platune.management.v1.IdMessage
+	18, // 17: platune.management.v1.Management.GetDeleted:input_type -> google.protobuf.Empty
+	4,  // 18: platune.management.v1.Management.DeleteTracks:input_type -> platune.management.v1.IdMessage
+	18, // 19: platune.management.v1.Management.SubscribeEvents:input_type -> google.protobuf.Empty
+	18, // 20: platune.management.v1.Management.StartSync:output_type -> google.protobuf.Empty
+	18, // 21: platune.management.v1.Management.AddFolders:output_type -> google.protobuf.Empty
+	2,  // 22: platune.management.v1.Management.GetAllFolders:output_type -> platune.management.v1.FoldersMessage
+	18, // 23: platune.management.v1.Management.RegisterMount:output_type -> google.protobuf.Empty
+	3,  // 24: platune.management.v1.Management.GetRegisteredMount:output_type -> platune.management.v1.RegisteredMountMessage
+	14, // 25: platune.management.v1.Management.Search:output_type -> platune.management.v1.SearchResponse
+	12, // 26: platune.management.v1.Management.Lookup:output_type -> platune.management.v1.LookupResponse
+	8,  // 27: platune.management.v1.Management.GetSongByPath:output_type -> platune.management.v1.SongResponse
+	9,  // 28: platune.management.v1.Management.GetAlbumsByAlbumArtists:output_type -> platune.management.v1.AlbumResponse
+	16, // 29: platune.management.v1.Management.GetDeleted:output_type -> platune.management.v1.GetDeletedResponse
+	18, // 30: platune.management.v1.Management.DeleteTracks:output_type -> google.protobuf.Empty
+	1,  // 31: platune.management.v1.Management.SubscribeEvents:output_type -> platune.management.v1.Progress
 	20, // [20:32] is the sub-list for method output_type
 	8,  // [8:20] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
@@ -1091,30 +1091,30 @@ var file_management_rpc_proto_depIdxs = []int32{
 	0,  // [0:8] is the sub-list for field type_name
 }
 
-func init() { file_management_rpc_proto_init() }
-func file_management_rpc_proto_init() {
-	if File_management_rpc_proto != nil {
+func init() { file_management_proto_init() }
+func file_management_proto_init() {
+	if File_management_proto != nil {
 		return
 	}
-	file_management_rpc_proto_msgTypes[5].OneofWrappers = []any{}
-	file_management_rpc_proto_msgTypes[7].OneofWrappers = []any{}
-	file_management_rpc_proto_msgTypes[12].OneofWrappers = []any{}
+	file_management_proto_msgTypes[5].OneofWrappers = []any{}
+	file_management_proto_msgTypes[7].OneofWrappers = []any{}
+	file_management_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_management_rpc_proto_rawDesc), len(file_management_rpc_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_management_proto_rawDesc), len(file_management_proto_rawDesc)),
 			NumEnums:      1,
 			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_management_rpc_proto_goTypes,
-		DependencyIndexes: file_management_rpc_proto_depIdxs,
-		EnumInfos:         file_management_rpc_proto_enumTypes,
-		MessageInfos:      file_management_rpc_proto_msgTypes,
+		GoTypes:           file_management_proto_goTypes,
+		DependencyIndexes: file_management_proto_depIdxs,
+		EnumInfos:         file_management_proto_enumTypes,
+		MessageInfos:      file_management_proto_msgTypes,
 	}.Build()
-	File_management_rpc_proto = out.File
-	file_management_rpc_proto_goTypes = nil
-	file_management_rpc_proto_depIdxs = nil
+	File_management_proto = out.File
+	file_management_proto_goTypes = nil
+	file_management_proto_depIdxs = nil
 }

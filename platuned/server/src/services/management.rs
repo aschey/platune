@@ -15,8 +15,8 @@ use tokio::sync::{RwLockReadGuard, mpsc};
 use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, info, warn};
 
-use crate::management_server::Management;
-use crate::rpc::*;
+use crate::rpc::v1::*;
+use crate::v1::management_server::Management;
 
 pub struct ManagementImpl {
     manager: FileWatchManager,
@@ -409,7 +409,8 @@ impl Management for ManagementImpl {
         let request = request.into_inner();
 
         match &connection_type {
-            ConnectionType::Local => match manager.get_song_by_path(request.path).await {
+            ConnectionType::Local => match manager.get_song_by_path(url_decode(request.path)).await
+            {
                 Ok(Some(e)) => Ok(Response::new(SongResponse {
                     song: Some(map_lookup_entry(e, &connection_type)?),
                 })),
@@ -420,9 +421,10 @@ impl Management for ManagementImpl {
                 folders,
                 local_addr,
             } => {
+                let path = url_decode(request.path);
                 for folder in folders {
                     match manager
-                        .get_song_by_path(request.path.replace(local_addr, folder))
+                        .get_song_by_path(path.replace(local_addr, folder))
                         .await
                     {
                         Ok(Some(e)) => {
@@ -437,5 +439,13 @@ impl Management for ManagementImpl {
                 Ok(Response::new(SongResponse { song: None }))
             }
         }
+    }
+}
+
+fn url_decode(url: String) -> String {
+    if url.starts_with("https://") || url.starts_with("http://") {
+        urlencoding::decode(&url).unwrap().to_string()
+    } else {
+        url
     }
 }

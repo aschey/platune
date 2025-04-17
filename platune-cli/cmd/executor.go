@@ -10,7 +10,7 @@ import (
 	"github.com/aschey/go-prompt"
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/mode"
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 )
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest, suggestions []prompt.Suggest) {
@@ -44,10 +44,10 @@ func (state *cmdState) executor(in string, selected *prompt.Suggest, suggestions
 	if state.mode.First() == mode.NormalMode && len(state.currentQueue) > 0 {
 		if isSetQueueMode && strings.TrimSpace(in) == "" {
 			state.client.SetQueueFromSearchResults(state.currentQueue, true)
-			state.currentQueue = []*platune.LookupEntry{}
+			state.currentQueue = []*management_v1.LookupEntry{}
 		} else if !isSetQueueMode {
 			state.client.AddSearchResultsToQueue(state.currentQueue, true)
-			state.currentQueue = []*platune.LookupEntry{}
+			state.currentQueue = []*management_v1.LookupEntry{}
 		}
 	}
 }
@@ -64,7 +64,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 			} else if pathInput == "" {
 				state.executeEntryType(selected, mode.SetQueueMode)
 			} else {
-				state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: in})
+				state.currentQueue = append(state.currentQueue, &management_v1.LookupEntry{Path: in})
 			}
 		}
 
@@ -73,7 +73,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 			return
 		}
 		state.mode.Set(mode.SongMode)
-		newResults := []*platune.LookupEntry{}
+		newResults := []*management_v1.LookupEntry{}
 		for _, r := range state.lookupResult {
 			album := r.Album
 			if strings.TrimSpace(r.Album) == "" {
@@ -89,7 +89,7 @@ func (state *cmdState) executeMode(in string, selected *prompt.Suggest) {
 		if selected == nil || state.checkSpecialOptions(selected) {
 			return
 		}
-		lookupResponse := selected.Metadata.(*platune.LookupEntry)
+		lookupResponse := selected.Metadata.(*management_v1.LookupEntry)
 		state.mode.Reset()
 		state.currentQueue = append(state.currentQueue, lookupResponse)
 
@@ -178,24 +178,24 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 }
 
 func (state *cmdState) executeEntryType(selected *prompt.Suggest, defaultMode mode.ModeDef) {
-	searchResult, valid := selected.Metadata.(*platune.SearchResult)
+	searchResult, valid := selected.Metadata.(*management_v1.SearchResult)
 	if valid {
 		lookupResult := state.client.Lookup(searchResult.EntryType, searchResult.CorrelationIds)
 		switch searchResult.EntryType {
-		case platune.EntryType_ARTIST:
+		case management_v1.EntryType_ARTIST:
 			state.mode.Set(mode.AlbumMode)
 			state.lookupResult = lookupResult.Entries
-		case platune.EntryType_ALBUM:
+		case management_v1.EntryType_ALBUM:
 			state.mode.Set(mode.SongMode)
 			state.lookupResult = lookupResult.Entries
-		case platune.EntryType_SONG:
+		case management_v1.EntryType_SONG:
 			state.mode.Reset()
 			state.currentQueue = append(state.currentQueue, lookupResult.Entries...)
 		}
 	} else {
 		state.mode.Set(defaultMode)
 		path := selected.Metadata.(string)
-		state.currentQueue = append(state.currentQueue, &platune.LookupEntry{Path: path})
+		state.currentQueue = append(state.currentQueue, &management_v1.LookupEntry{Path: path})
 	}
 }
 
@@ -234,7 +234,7 @@ func expandFolder(song string) (string, error) {
 func (state *cmdState) checkSpecialOptions(selected *prompt.Suggest) bool {
 	switch selected.Text {
 	case selectAll:
-		results, ok := selected.Metadata.([]*platune.LookupEntry)
+		results, ok := selected.Metadata.([]*management_v1.LookupEntry)
 		if ok {
 			state.currentQueue = append(state.currentQueue, results...)
 			state.mode.Reset()
