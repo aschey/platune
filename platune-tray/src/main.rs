@@ -48,10 +48,17 @@ fn main() -> Result<(), BoxedError> {
             .build(),
         )
         .unwrap();
+
+    let tray = TrayIconBuilder::new().build().unwrap();
+    #[cfg(target_os = "windows")]
+    let hwnd = Some(tray.window_handle());
+    #[cfg(not(target_os = "windows"))]
+    let hwnd = None;
+
     let config = PlatformConfig {
         dbus_name: "platuned",
         display_name: "Platune",
-        hwnd: None,
+        hwnd,
     };
     let (tx, rx) = mpsc::channel(32);
 
@@ -128,12 +135,13 @@ fn main() -> Result<(), BoxedError> {
     tokio::spawn(service_handler(manager, rx));
     tokio::spawn(metadata_updater(controls));
 
-    let handler = PlatuneMenuHandler::new(tx);
+    let handler = PlatuneMenuHandler::new(tray, tx);
     Tray::with_handler(handler).start();
     Ok(())
 }
 
 pub struct PlatuneMenuHandler {
+    tray: TrayIcon,
     icon_path: std::path::PathBuf,
     current_state: State,
     menu: Menu,
@@ -149,7 +157,7 @@ pub struct PlatuneMenuHandler {
 }
 
 impl PlatuneMenuHandler {
-    fn new(tx: mpsc::Sender<Command>) -> Self {
+    fn new(tray: TrayIcon, tx: mpsc::Sender<Command>) -> Self {
         let main_menu = Menu::new();
         let service_menu = Submenu::new("Service", true);
         let player_menu = Submenu::new("Player", true);
@@ -175,6 +183,7 @@ impl PlatuneMenuHandler {
         let icon_path = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png"));
 
         Self {
+            tray,
             tx,
             current_state: State::NotInstalled,
             icon_path,
@@ -268,7 +277,7 @@ async fn metadata_updater(mut controls: MediaControls) {
                     .unwrap();
             }
             EventPayload::State(state) => {
-                #[cfg(not(target_os = "macos"))]
+                #[cfg(target_os = "linux")]
                 controls.set_volume(state.volume as f64).unwrap();
                 let metadata = mgmt_client
                     .get()
@@ -409,11 +418,11 @@ impl MenuHandler for PlatuneMenuHandler {
     }
 
     fn build_tray(&mut self, menu: &Menu) -> TrayIcon {
-        TrayIconBuilder::new()
-            .with_menu(Box::new(menu.clone()))
-            .with_icon(load_icon(&self.icon_path))
-            .build()
-            .unwrap()
+        self.tray.set_menu(Some(Box::new(menu.clone())));
+        self.tray
+            .set_icon(Some(load_icon(&self.icon_path)))
+            .unwrap();
+        self.tray.clone()
     }
 
     fn update_menu(&self, menu: &Menu) {
