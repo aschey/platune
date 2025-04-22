@@ -268,7 +268,8 @@ async fn metadata_updater(mut controls: MediaControls) {
     loop {
         match stream.next().await {
             Some(Ok(message)) => {
-                match message.event_payload.as_ref().unwrap() {
+                let event_payload = message.event_payload.as_ref().unwrap();
+                match event_payload {
                     EventPayload::Progress(position) => {
                         let duration: Duration = position.position.unwrap().try_into().unwrap();
                         let retrieval: Duration =
@@ -282,64 +283,39 @@ async fn metadata_updater(mut controls: MediaControls) {
                             })
                             .unwrap();
                     }
-                    EventPayload::State(state) => {
-                        #[cfg(target_os = "linux")]
-                        controls.set_volume(state.volume as f64).unwrap();
-                        let pos = state.queue_position as usize;
-                        if pos < state.queue.len() {
-                            let metadata = mgmt_client
-                                .get()
-                                .await
-                                .get_song_by_path(PathMessage {
-                                    path: state.queue[pos].clone(),
-                                })
-                                .await
-                                .unwrap()
-                                .into_inner()
-                                .song
-                                .unwrap();
-                            let duration = metadata.duration.unwrap();
-                            let duration = Duration::from_secs(duration.seconds as u64)
-                                + Duration::from_nanos(duration.nanos as u64);
+                    EventPayload::State(state) => match message.event() {
+                        Event::StartQueue
+                        | Event::QueueUpdated
+                        | Event::Ended
+                        | Event::Next
+                        | Event::Previous
+                        | Event::Resume => {
+                            set_metadata(&mut mgmt_client, state, &mut controls).await;
                             controls
-                                .set_metadata(MediaMetadata {
-                                    title: Some(&metadata.song),
-                                    album: Some(&metadata.album),
-                                    artist: Some(&metadata.artist),
-                                    cover_url: None,
-                                    duration: Some(duration),
+                                .set_playback(MediaPlayback::Playing {
+                                    progress: Some(MediaPosition(progress)),
                                 })
                                 .unwrap();
                         }
-                    }
+                        Event::Pause => {
+                            controls
+                                .set_playback(MediaPlayback::Paused {
+                                    progress: Some(MediaPosition(progress)),
+                                })
+                                .unwrap();
+                        }
+                        Event::Stop | Event::QueueEnded => {
+                            controls.set_playback(MediaPlayback::Stopped).unwrap();
+                        }
+                        Event::SetVolume => {
+                            #[cfg(target_os = "linux")]
+                            controls.set_volume(state.volume as f64).unwrap();
+                        }
+                        Event::Seek | Event::Position => {}
+                    },
                     EventPayload::SeekData(seek) => {
                         progress = Duration::from_millis(seek.seek_millis);
                     }
-                }
-                match message.event() {
-                    Event::StartQueue
-                    | Event::QueueUpdated
-                    | Event::Ended
-                    | Event::Next
-                    | Event::Previous => {}
-                    Event::Resume => {
-                        controls
-                            .set_playback(MediaPlayback::Playing {
-                                progress: Some(MediaPosition(progress)),
-                            })
-                            .unwrap();
-                    }
-                    Event::Pause => {
-                        controls
-                            .set_playback(MediaPlayback::Paused {
-                                progress: Some(MediaPosition(progress)),
-                            })
-                            .unwrap();
-                    }
-                    Event::Stop | Event::QueueEnded => {
-                        controls.set_playback(MediaPlayback::Stopped).unwrap();
-                    }
-                    Event::SetVolume | Event::Seek | Event::Position => {}
                 }
             }
             Some(Err(err)) => {
@@ -358,6 +334,39 @@ async fn metadata_updater(mut controls: MediaControls) {
                 }
             }
         }
+    }
+}
+
+async fn set_metadata(
+    mgmt_client: &mut LazyMgmtClient,
+    state: &platuned_client::player::v1::State,
+    controls: &mut MediaControls,
+) {
+    let pos = state.queue_position as usize;
+    if pos < state.queue.len() {
+        let metadata = mgmt_client
+            .get()
+            .await
+            .get_song_by_path(PathMessage {
+                path: state.queue[pos].clone(),
+            })
+            .await
+            .unwrap()
+            .into_inner()
+            .song
+            .unwrap();
+        let duration = metadata.duration.unwrap();
+        let duration = Duration::from_secs(duration.seconds as u64)
+            + Duration::from_nanos(duration.nanos as u64);
+        controls
+            .set_metadata(MediaMetadata {
+                title: Some(&metadata.song),
+                album: Some(&metadata.album),
+                artist: Some(&metadata.artist),
+                cover_url: None,
+                duration: Some(duration),
+            })
+            .unwrap();
     }
 }
 
