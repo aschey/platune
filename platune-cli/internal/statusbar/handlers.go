@@ -58,6 +58,11 @@ func (s *StatusBar) handlePlayerEvent(
 		}
 	case player_v1.Event_PAUSE:
 		timer.pause()
+		if currentSong == nil {
+			state := msg.GetState()
+			res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
+			currentSong = res.Song
+		}
 		return playerEvent{
 			icon:    "",
 			color:   "11",
@@ -66,6 +71,11 @@ func (s *StatusBar) handlePlayerEvent(
 		}
 	case player_v1.Event_RESUME:
 		timer.resume()
+		if currentSong == nil {
+			state := msg.GetState()
+			res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
+			currentSong = res.Song
+		}
 		return playerEvent{
 			icon:    "",
 			color:   "14",
@@ -77,50 +87,6 @@ func (s *StatusBar) handlePlayerEvent(
 			icon:    "",
 			color:   "14",
 			newSong: currentSong,
-		}
-	default:
-		return playerEvent{}
-	}
-}
-
-func (s *StatusBar) handlePlayerStatus(timer *timer, status *player_v1.StatusResponse) playerEvent {
-	stoppedEvent := playerEvent{
-		icon:    "",
-		color:   "9",
-		status:  "Stopped",
-		newSong: nil,
-	}
-	if status == nil {
-		return stoppedEvent
-	}
-	switch status.Status {
-	case player_v1.PlayerStatus_PLAYING:
-		progress := status.Progress.Position.AsDuration()
-
-		timer.start()
-		timer.setTime(progress.Milliseconds())
-
-		res := s.platuneClient.GetSongByPath(*status.CurrentSong)
-
-		return playerEvent{
-			icon:    "",
-			color:   "14",
-			newSong: res.Song,
-		}
-	case player_v1.PlayerStatus_STOPPED:
-		timer.stop()
-		return stoppedEvent
-	case player_v1.PlayerStatus_PAUSED:
-		timer.pause()
-		progress := status.Progress.Position.AsDuration()
-		timer.setTime(progress.Milliseconds())
-		res := s.platuneClient.GetSongByPath(*status.CurrentSong)
-
-		return playerEvent{
-			icon:    "",
-			color:   "11",
-			status:  "Paused",
-			newSong: res.Song,
 		}
 	default:
 		return playerEvent{}

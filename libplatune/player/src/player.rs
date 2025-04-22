@@ -60,7 +60,7 @@ impl Player {
             event_tx,
             state: PlayerState {
                 queue: vec![],
-                volume: 0.5,
+                volume: 1.0,
                 queue_position: 0,
             },
             queued_count: 0,
@@ -323,7 +323,7 @@ impl Player {
     pub(crate) fn get_current_status(&self) -> TrackStatus {
         TrackStatus {
             status: self.audio_status.clone(),
-            current_song: self.get_current().map(|c| c.to_string()),
+            state: self.state.clone(),
         }
     }
 

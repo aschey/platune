@@ -98,8 +98,8 @@ message SeekResponse {
 
 message StatusResponse {
   PlayerStatus status = 1;
-  optional PositionResponse progress = 2;
-  optional string current_song = 3;
+  State state = 2;
+  optional PositionResponse progress = 3;
 }
 
 message DevicesResponse {

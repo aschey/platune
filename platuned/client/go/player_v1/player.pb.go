@@ -654,8 +654,8 @@ func (x *SeekResponse) GetSeekMillis() uint64 {
 type StatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Status        PlayerStatus           `protobuf:"varint,1,opt,name=status,proto3,enum=platune.player.v1.PlayerStatus" json:"status,omitempty"`
-	Progress      *PositionResponse      `protobuf:"bytes,2,opt,name=progress,proto3,oneof" json:"progress,omitempty"`
-	CurrentSong   *string                `protobuf:"bytes,3,opt,name=current_song,json=currentSong,proto3,oneof" json:"current_song,omitempty"`
+	State         *State                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	Progress      *PositionResponse      `protobuf:"bytes,3,opt,name=progress,proto3,oneof" json:"progress,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -697,18 +697,18 @@ func (x *StatusResponse) GetStatus() PlayerStatus {
 	return PlayerStatus_PLAYING
 }
 
+func (x *StatusResponse) GetState() *State {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
 func (x *StatusResponse) GetProgress() *PositionResponse {
 	if x != nil {
 		return x.Progress
 	}
 	return nil
-}
-
-func (x *StatusResponse) GetCurrentSong() string {
-	if x != nil && x.CurrentSong != nil {
-		return *x.CurrentSong
-	}
-	return ""
 }
 
 type DevicesResponse struct {
@@ -829,13 +829,12 @@ const file_player_proto_rawDesc = "" +
 	"\fSeekResponse\x12.\n" +
 	"\x05state\x18\x01 \x01(\v2\x18.platune.player.v1.StateR\x05state\x12\x1f\n" +
 	"\vseek_millis\x18\x02 \x01(\x04R\n" +
-	"seekMillis\"\xd5\x01\n" +
+	"seekMillis\"\xcc\x01\n" +
 	"\x0eStatusResponse\x127\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x1f.platune.player.v1.PlayerStatusR\x06status\x12D\n" +
-	"\bprogress\x18\x02 \x01(\v2#.platune.player.v1.PositionResponseH\x00R\bprogress\x88\x01\x01\x12&\n" +
-	"\fcurrent_song\x18\x03 \x01(\tH\x01R\vcurrentSong\x88\x01\x01B\v\n" +
-	"\t_progressB\x0f\n" +
-	"\r_current_song\"+\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x1f.platune.player.v1.PlayerStatusR\x06status\x12.\n" +
+	"\x05state\x18\x02 \x01(\v2\x18.platune.player.v1.StateR\x05state\x12D\n" +
+	"\bprogress\x18\x03 \x01(\v2#.platune.player.v1.PositionResponseH\x00R\bprogress\x88\x01\x01B\v\n" +
+	"\t_progress\"+\n" +
 	"\x0fDevicesResponse\x12\x18\n" +
 	"\adevices\x18\x01 \x03(\tR\adevices\"@\n" +
 	"\x16SetOutputDeviceRequest\x12\x1b\n" +
@@ -927,40 +926,41 @@ var file_player_proto_depIdxs = []int32{
 	14, // 7: platune.player.v1.PositionResponse.retrieval_time:type_name -> google.protobuf.Duration
 	8,  // 8: platune.player.v1.SeekResponse.state:type_name -> platune.player.v1.State
 	1,  // 9: platune.player.v1.StatusResponse.status:type_name -> platune.player.v1.PlayerStatus
-	9,  // 10: platune.player.v1.StatusResponse.progress:type_name -> platune.player.v1.PositionResponse
-	3,  // 11: platune.player.v1.Player.SetQueue:input_type -> platune.player.v1.QueueRequest
-	4,  // 12: platune.player.v1.Player.AddToQueue:input_type -> platune.player.v1.AddToQueueRequest
-	15, // 13: platune.player.v1.Player.Pause:input_type -> google.protobuf.Empty
-	15, // 14: platune.player.v1.Player.Stop:input_type -> google.protobuf.Empty
-	15, // 15: platune.player.v1.Player.Resume:input_type -> google.protobuf.Empty
-	15, // 16: platune.player.v1.Player.Toggle:input_type -> google.protobuf.Empty
-	5,  // 17: platune.player.v1.Player.Seek:input_type -> platune.player.v1.SeekRequest
-	6,  // 18: platune.player.v1.Player.SetVolume:input_type -> platune.player.v1.SetVolumeRequest
-	15, // 19: platune.player.v1.Player.Next:input_type -> google.protobuf.Empty
-	15, // 20: platune.player.v1.Player.Previous:input_type -> google.protobuf.Empty
-	15, // 21: platune.player.v1.Player.GetCurrentStatus:input_type -> google.protobuf.Empty
-	15, // 22: platune.player.v1.Player.SubscribeEvents:input_type -> google.protobuf.Empty
-	15, // 23: platune.player.v1.Player.ListOutputDevices:input_type -> google.protobuf.Empty
-	13, // 24: platune.player.v1.Player.SetOutputDevice:input_type -> platune.player.v1.SetOutputDeviceRequest
-	15, // 25: platune.player.v1.Player.SetQueue:output_type -> google.protobuf.Empty
-	15, // 26: platune.player.v1.Player.AddToQueue:output_type -> google.protobuf.Empty
-	15, // 27: platune.player.v1.Player.Pause:output_type -> google.protobuf.Empty
-	15, // 28: platune.player.v1.Player.Stop:output_type -> google.protobuf.Empty
-	15, // 29: platune.player.v1.Player.Resume:output_type -> google.protobuf.Empty
-	15, // 30: platune.player.v1.Player.Toggle:output_type -> google.protobuf.Empty
-	15, // 31: platune.player.v1.Player.Seek:output_type -> google.protobuf.Empty
-	15, // 32: platune.player.v1.Player.SetVolume:output_type -> google.protobuf.Empty
-	15, // 33: platune.player.v1.Player.Next:output_type -> google.protobuf.Empty
-	15, // 34: platune.player.v1.Player.Previous:output_type -> google.protobuf.Empty
-	11, // 35: platune.player.v1.Player.GetCurrentStatus:output_type -> platune.player.v1.StatusResponse
-	7,  // 36: platune.player.v1.Player.SubscribeEvents:output_type -> platune.player.v1.EventResponse
-	12, // 37: platune.player.v1.Player.ListOutputDevices:output_type -> platune.player.v1.DevicesResponse
-	15, // 38: platune.player.v1.Player.SetOutputDevice:output_type -> google.protobuf.Empty
-	25, // [25:39] is the sub-list for method output_type
-	11, // [11:25] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	8,  // 10: platune.player.v1.StatusResponse.state:type_name -> platune.player.v1.State
+	9,  // 11: platune.player.v1.StatusResponse.progress:type_name -> platune.player.v1.PositionResponse
+	3,  // 12: platune.player.v1.Player.SetQueue:input_type -> platune.player.v1.QueueRequest
+	4,  // 13: platune.player.v1.Player.AddToQueue:input_type -> platune.player.v1.AddToQueueRequest
+	15, // 14: platune.player.v1.Player.Pause:input_type -> google.protobuf.Empty
+	15, // 15: platune.player.v1.Player.Stop:input_type -> google.protobuf.Empty
+	15, // 16: platune.player.v1.Player.Resume:input_type -> google.protobuf.Empty
+	15, // 17: platune.player.v1.Player.Toggle:input_type -> google.protobuf.Empty
+	5,  // 18: platune.player.v1.Player.Seek:input_type -> platune.player.v1.SeekRequest
+	6,  // 19: platune.player.v1.Player.SetVolume:input_type -> platune.player.v1.SetVolumeRequest
+	15, // 20: platune.player.v1.Player.Next:input_type -> google.protobuf.Empty
+	15, // 21: platune.player.v1.Player.Previous:input_type -> google.protobuf.Empty
+	15, // 22: platune.player.v1.Player.GetCurrentStatus:input_type -> google.protobuf.Empty
+	15, // 23: platune.player.v1.Player.SubscribeEvents:input_type -> google.protobuf.Empty
+	15, // 24: platune.player.v1.Player.ListOutputDevices:input_type -> google.protobuf.Empty
+	13, // 25: platune.player.v1.Player.SetOutputDevice:input_type -> platune.player.v1.SetOutputDeviceRequest
+	15, // 26: platune.player.v1.Player.SetQueue:output_type -> google.protobuf.Empty
+	15, // 27: platune.player.v1.Player.AddToQueue:output_type -> google.protobuf.Empty
+	15, // 28: platune.player.v1.Player.Pause:output_type -> google.protobuf.Empty
+	15, // 29: platune.player.v1.Player.Stop:output_type -> google.protobuf.Empty
+	15, // 30: platune.player.v1.Player.Resume:output_type -> google.protobuf.Empty
+	15, // 31: platune.player.v1.Player.Toggle:output_type -> google.protobuf.Empty
+	15, // 32: platune.player.v1.Player.Seek:output_type -> google.protobuf.Empty
+	15, // 33: platune.player.v1.Player.SetVolume:output_type -> google.protobuf.Empty
+	15, // 34: platune.player.v1.Player.Next:output_type -> google.protobuf.Empty
+	15, // 35: platune.player.v1.Player.Previous:output_type -> google.protobuf.Empty
+	11, // 36: platune.player.v1.Player.GetCurrentStatus:output_type -> platune.player.v1.StatusResponse
+	7,  // 37: platune.player.v1.Player.SubscribeEvents:output_type -> platune.player.v1.EventResponse
+	12, // 38: platune.player.v1.Player.ListOutputDevices:output_type -> platune.player.v1.DevicesResponse
+	15, // 39: platune.player.v1.Player.SetOutputDevice:output_type -> google.protobuf.Empty
+	26, // [26:40] is the sub-list for method output_type
+	12, // [12:26] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_player_proto_init() }

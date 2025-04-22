@@ -4,6 +4,7 @@ use std::sync::Arc;
 #[cfg(feature = "management")]
 use std::time::Duration;
 
+use daemon_slayer::core::FutureExt;
 use daemon_slayer::core::notify::AsyncNotification;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::notify::notification::Notification;
@@ -245,28 +246,54 @@ async fn run_server(
         shutdown_rx.clone(),
     )));
 
-    let mut shutdown_rx = shutdown_rx.subscribe_events();
     let server_result = match transport {
         Transport::Http(addr) => {
             info!("Running HTTP server on {addr}");
+            let mut server_shutdown_rx = shutdown_rx.subscribe_events();
+            let mut fallback_shutdown_rx = shutdown_rx.subscribe_events();
             builder
                 .serve_with_shutdown(addr, async {
-                    shutdown_rx.next().await;
+                    server_shutdown_rx.next().await;
                     info!("received shutdown signal");
                 })
+                .cancel_with_timeout(
+                    async {
+                        fallback_shutdown_rx.next().await;
+                    },
+                    Duration::from_secs(1),
+                )
                 .await
+                .inspect_err(|e| {
+                    warn!("timed out waiting for server to shut down: {e:?}");
+                })
+                .ok()
+                .unwrap_or(Ok(()))
                 .wrap_err("Error running HTTP server")
         }
 
         Transport::Ipc(path) => {
             let ipc_path = ServerId::new(path).parent_folder("/tmp").into_ipc_path()?;
             info!("Running IPC server on {}", ipc_path.display());
+            let mut server_shutdown_rx = shutdown_rx.subscribe_events();
+            let mut fallback_shutdown_rx = shutdown_rx.subscribe_events();
+
             builder
                 .serve_with_incoming_shutdown(IpcStream::get_async_stream(ipc_path)?, async {
-                    shutdown_rx.next().await;
+                    server_shutdown_rx.next().await;
                     info!("received shutdown signal");
                 })
+                .cancel_with_timeout(
+                    async {
+                        fallback_shutdown_rx.next().await;
+                    },
+                    Duration::from_secs(1),
+                )
                 .await
+                .inspect_err(|e| {
+                    warn!("timed out waiting for server to shut down: {e:?}");
+                })
+                .ok()
+                .unwrap_or(Ok(()))
                 .wrap_err("Error running IPC server")
         }
     };

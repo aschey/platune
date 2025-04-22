@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	management_v1 "github.com/aschey/platune/client/management_v1"
 	player_v1 "github.com/aschey/platune/client/player_v1"
 	"github.com/charmbracelet/lipgloss"
 	"google.golang.org/grpc"
@@ -55,18 +56,16 @@ func (s *StatusBar) eventLoop(
 	sigCh := getSignalChannel()
 	ticker := time.NewTicker(500 * time.Millisecond)
 
-	currentStatus := s.platuneClient.GetCurrentStatus()
 	timer := timer{}
-	event := s.handlePlayerStatus(&timer, currentStatus)
 
-	playingIconColor := event.color
-	playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
-	currentSong := event.newSong
+	playingIconColor := ""
+	playingIconStyle := defaultStyle.Copy()
+	var currentSong *management_v1.LookupEntry
 	renderParams := renderParams{
 		timer:        &timer,
 		connection:   "",
-		playingIcon:  playingIconStyle.Render(event.icon + " "),
-		renderStatus: textStyle.Render(event.status),
+		playingIcon:  "",
+		renderStatus: "",
 	}
 	s.renderStatusBar(renderParams)
 	var playerState connectivity.State

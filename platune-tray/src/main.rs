@@ -1,7 +1,7 @@
-use std::env::current_exe;
-use std::ops::Add;
+use std::collections::HashMap;
+use std::env::{self, current_exe};
 use std::path::PathBuf;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use daemon_slayer::client::config::Level;
 use daemon_slayer::client::{self, ServiceManager, State};
@@ -21,7 +21,7 @@ use souvlaki::{
     MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig,
     SeekDirection,
 };
-use tokio::runtime::{self, Handle};
+use tokio::runtime::{self};
 use tokio::sync::{mpsc, oneshot};
 
 fn main() -> Result<(), BoxedError> {
@@ -47,116 +47,65 @@ fn main() -> Result<(), BoxedError> {
             .build(),
         )
         .unwrap();
+    let (player_tx, player_rx) = mpsc::channel(32);
+    let (manager_tx, manager_rx) = mpsc::channel(32);
 
-    let tray = TrayIconBuilder::new().build().unwrap();
-    #[cfg(target_os = "windows")]
-    let hwnd = Some(tray.window_handle());
-    #[cfg(not(target_os = "windows"))]
-    let hwnd = None;
+    tokio::spawn(player_handler(player_rx));
+    tokio::spawn(manager_handler(manager, manager_rx));
 
-    let config = PlatformConfig {
-        dbus_name: "platuned",
-        display_name: "Platune",
-        hwnd,
-    };
-    let (tx, rx) = mpsc::channel(32);
-
-    let mut controls = MediaControls::new(config).unwrap();
-
-    controls
-        .attach({
-            let tx = tx.clone();
-            move |event: MediaControlEvent| match event {
-                MediaControlEvent::Play => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Start))
-                        .unwrap();
-                }
-                MediaControlEvent::Pause => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Pause))
-                        .unwrap();
-                }
-                MediaControlEvent::Stop | MediaControlEvent::Quit => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Stop))
-                        .unwrap();
-                }
-                MediaControlEvent::OpenUri(uri) => {
-                    tx.blocking_send(Command::Player(PlayerCommand::SetQueue(uri)))
-                        .unwrap();
-                }
-                MediaControlEvent::SetVolume(volume) => {
-                    tx.blocking_send(Command::Player(PlayerCommand::SetVolume(volume)))
-                        .unwrap();
-                }
-                MediaControlEvent::Next => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Next))
-                        .unwrap();
-                }
-                MediaControlEvent::Previous => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Previous))
-                        .unwrap();
-                }
-                MediaControlEvent::Toggle => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Toggle))
-                        .unwrap();
-                }
-                MediaControlEvent::Seek(direction) => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Seek(
-                        Duration::from_secs(5),
-                        match direction {
-                            SeekDirection::Forward => SeekMode::Forward,
-                            SeekDirection::Backward => SeekMode::Backward,
-                        },
-                    )))
-                    .unwrap();
-                }
-                MediaControlEvent::SeekBy(direction, duration) => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Seek(
-                        duration,
-                        match direction {
-                            SeekDirection::Forward => SeekMode::Forward,
-                            SeekDirection::Backward => SeekMode::Backward,
-                        },
-                    )))
-                    .unwrap();
-                }
-                MediaControlEvent::SetPosition(MediaPosition(duration)) => {
-                    tx.blocking_send(Command::Player(PlayerCommand::Seek(
-                        duration,
-                        SeekMode::Absolute,
-                    )))
-                    .unwrap();
-                }
-                MediaControlEvent::Raise => {}
-            }
-        })
-        .unwrap();
-
-    tokio::spawn(service_handler(manager, rx));
-    tokio::spawn(metadata_updater(controls));
-
-    let handler = PlatuneMenuHandler::new(tray, tx);
+    let handler = PlatuneMenuHandler::new(player_tx, manager_tx);
     Tray::with_handler(handler).start();
     Ok(())
 }
 
+#[derive(Default)]
+struct MenuItemHandler(
+    HashMap<
+        MenuId,
+        Box<
+            dyn Fn(
+                State,
+                &mpsc::Sender<PlayerCommand>,
+                &mpsc::Sender<ManagerCommand>,
+            ) -> ControlFlow,
+        >,
+    >,
+);
+
+impl MenuItemHandler {
+    fn add<F>(&mut self, menu: &MenuItem, f: F)
+    where
+        F: Fn(State, &mpsc::Sender<PlayerCommand>, &mpsc::Sender<ManagerCommand>) -> ControlFlow
+            + 'static,
+    {
+        self.0.insert(menu.id().clone(), Box::new(f));
+    }
+
+    fn handle(
+        &self,
+        event: &MenuEvent,
+        state: State,
+        player_tx: &mpsc::Sender<PlayerCommand>,
+        manager_tx: &mpsc::Sender<ManagerCommand>,
+    ) -> ControlFlow {
+        self.0.get(event.id()).unwrap()(state, player_tx, manager_tx)
+    }
+}
+
 pub struct PlatuneMenuHandler {
-    tray: TrayIcon,
     icon_path: std::path::PathBuf,
     current_state: State,
     menu: Menu,
-    start_stop_id: MenuId,
-    restart_id: MenuId,
-    quit_id: MenuId,
-    play_id: MenuId,
-    pause_id: MenuId,
-    next_id: MenuId,
-    previous_id: MenuId,
-    player_stop_id: MenuId,
-    tx: mpsc::Sender<Command>,
+    player_tx: mpsc::Sender<PlayerCommand>,
+    manager_tx: mpsc::Sender<ManagerCommand>,
+    menu_handler: MenuItemHandler,
 }
 
 impl PlatuneMenuHandler {
-    fn new(tray: TrayIcon, tx: mpsc::Sender<Command>) -> Self {
+    fn new(
+        player_tx: mpsc::Sender<PlayerCommand>,
+        manager_tx: mpsc::Sender<ManagerCommand>,
+    ) -> Self {
         let main_menu = Menu::new();
         let service_menu = Submenu::new("Service", true);
         let player_menu = Submenu::new("Player", true);
@@ -181,27 +130,51 @@ impl PlatuneMenuHandler {
             .unwrap();
         let icon_path = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png"));
 
+        let mut menu_handler = MenuItemHandler::default();
+        menu_handler.add(&start_stop, |current_state, _, manager_tx| {
+            if current_state == State::Started {
+                manager_tx.blocking_send(ManagerCommand::Stop).unwrap();
+            } else {
+                manager_tx.blocking_send(ManagerCommand::Start).unwrap()
+            }
+            ControlFlow::Poll
+        });
+        menu_handler.add(&restart, |_, _, manager_tx| {
+            manager_tx.blocking_send(ManagerCommand::Restart).unwrap();
+            ControlFlow::Poll
+        });
+        menu_handler.add(&quit, |_, _, _| ControlFlow::Exit);
+
+        menu_handler.add(&play, |_, player_tx, _| {
+            player_tx.blocking_send(PlayerCommand::Start).unwrap();
+            ControlFlow::Poll
+        });
+        menu_handler.add(&pause, |_, player_tx, _| {
+            player_tx.blocking_send(PlayerCommand::Pause).unwrap();
+            ControlFlow::Poll
+        });
+        menu_handler.add(&next, |_, player_tx, _| {
+            player_tx.blocking_send(PlayerCommand::Next).unwrap();
+            ControlFlow::Poll
+        });
+        menu_handler.add(&previous, |_, player_tx, _| {
+            player_tx.blocking_send(PlayerCommand::Previous).unwrap();
+            ControlFlow::Poll
+        });
+        menu_handler.add(&player_stop, |_, player_tx, _| {
+            player_tx.blocking_send(PlayerCommand::Stop).unwrap();
+            ControlFlow::Poll
+        });
+
         Self {
-            tray,
-            tx,
+            player_tx,
+            manager_tx,
             current_state: State::NotInstalled,
             icon_path,
             menu: main_menu,
-            start_stop_id: start_stop.into_id(),
-            restart_id: restart.into_id(),
-            quit_id: quit.into_id(),
-            play_id: play.into_id(),
-            pause_id: pause.into_id(),
-            next_id: next.into_id(),
-            previous_id: previous.into_id(),
-            player_stop_id: player_stop.into_id(),
+            menu_handler,
         }
     }
-}
-
-enum Command {
-    Player(PlayerCommand),
-    Manager(ManagerCommand),
 }
 
 enum PlayerCommand {
@@ -228,10 +201,16 @@ struct LazyPlayerClient(Option<PlayerClient<Channel>>);
 impl LazyPlayerClient {
     async fn get(&mut self) -> &mut PlayerClient<Channel> {
         if self.0.is_some() {
-            self.0.as_mut().unwrap()
-        } else {
-            self.0 = PlayerClient::connect_ipc().await.ok();
-            self.0.as_mut().unwrap()
+            return self.0.as_mut().unwrap();
+        }
+
+        loop {
+            if let Ok(client) = PlayerClient::connect_ipc().await {
+                self.0 = Some(client);
+                return self.0.as_mut().unwrap();
+            } else {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
         }
     }
 }
@@ -241,10 +220,27 @@ struct LazyMgmtClient(Option<ManagementClient<Channel>>);
 impl LazyMgmtClient {
     async fn get(&mut self) -> &mut ManagementClient<Channel> {
         if self.0.is_some() {
-            self.0.as_mut().unwrap()
-        } else {
-            self.0 = ManagementClient::connect_ipc().await.ok();
-            self.0.as_mut().unwrap()
+            return self.0.as_mut().unwrap();
+        }
+        let management_urls = env::var("PLATUNE_MANAGEMENT_URL")
+            .map(|u| u.split(",").map(|u| u.to_string()).collect::<Vec<_>>())
+            .unwrap_or_default();
+
+        loop {
+            if management_urls.is_empty() {
+                if let Ok(client) = ManagementClient::connect_ipc().await {
+                    self.0 = Some(client);
+                    return self.0.as_mut().unwrap();
+                }
+            } else {
+                for url in &management_urls {
+                    if let Ok(client) = ManagementClient::connect_http(url.clone()).await {
+                        self.0 = Some(client);
+                        return self.0.as_mut().unwrap();
+                    }
+                }
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
     }
 }
@@ -261,110 +257,120 @@ async fn metadata_updater(mut controls: MediaControls) {
     let mut mgmt_client = LazyMgmtClient(None);
 
     let mut progress = Duration::from_millis(0);
-    while let Some(Ok(message)) = stream.next().await {
-        match message.event_payload.as_ref().unwrap() {
-            EventPayload::Progress(position) => {
-                let duration: Duration = position.position.unwrap().try_into().unwrap();
-                let retrieval: Duration = position.retrieval_time.unwrap().try_into().unwrap();
-                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    loop {
+        match stream.next().await {
+            Some(Ok(message)) => {
+                match message.event_payload.as_ref().unwrap() {
+                    EventPayload::Progress(position) => {
+                        let duration: Duration = position.position.unwrap().try_into().unwrap();
+                        let retrieval: Duration =
+                            position.retrieval_time.unwrap().try_into().unwrap();
+                        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
-                progress = duration + (now - retrieval);
-                controls
-                    .set_playback(MediaPlayback::Playing {
-                        progress: Some(MediaPosition(progress)),
-                    })
-                    .unwrap();
+                        progress = duration + (now - retrieval);
+                        controls
+                            .set_playback(MediaPlayback::Playing {
+                                progress: Some(MediaPosition(progress)),
+                            })
+                            .unwrap();
+                    }
+                    EventPayload::State(state) => {
+                        #[cfg(target_os = "linux")]
+                        controls.set_volume(state.volume as f64).unwrap();
+                        let pos = state.queue_position as usize;
+                        if pos < state.queue.len() {
+                            let metadata = mgmt_client
+                                .get()
+                                .await
+                                .get_song_by_path(PathMessage {
+                                    path: state.queue[pos].clone(),
+                                })
+                                .await
+                                .unwrap()
+                                .into_inner()
+                                .song
+                                .unwrap();
+                            let duration = metadata.duration.unwrap();
+                            let duration = Duration::from_secs(duration.seconds as u64)
+                                + Duration::from_nanos(duration.nanos as u64);
+                            controls
+                                .set_metadata(MediaMetadata {
+                                    title: Some(&metadata.song),
+                                    album: Some(&metadata.album),
+                                    artist: Some(&metadata.artist),
+                                    cover_url: None,
+                                    duration: Some(duration),
+                                })
+                                .unwrap();
+                        }
+                    }
+                    EventPayload::SeekData(seek) => {
+                        progress = Duration::from_millis(seek.seek_millis);
+                    }
+                }
+                match message.event() {
+                    Event::StartQueue
+                    | Event::QueueUpdated
+                    | Event::Ended
+                    | Event::Next
+                    | Event::Previous => {}
+                    Event::Resume => {
+                        controls
+                            .set_playback(MediaPlayback::Playing {
+                                progress: Some(MediaPosition(progress)),
+                            })
+                            .unwrap();
+                    }
+                    Event::Pause => {
+                        controls
+                            .set_playback(MediaPlayback::Paused {
+                                progress: Some(MediaPosition(progress)),
+                            })
+                            .unwrap();
+                    }
+                    Event::Stop | Event::QueueEnded => {
+                        controls.set_playback(MediaPlayback::Stopped).unwrap();
+                    }
+                    Event::SetVolume | Event::Seek | Event::Position => {}
+                }
             }
-            EventPayload::State(state) => {
-                #[cfg(target_os = "linux")]
-                controls.set_volume(state.volume as f64).unwrap();
-                let metadata = mgmt_client
-                    .get()
-                    .await
-                    .get_song_by_path(PathMessage {
-                        path: state.queue[state.queue_position as usize].clone(),
-                    })
-                    .await
-                    .unwrap()
-                    .into_inner()
-                    .song
-                    .unwrap();
-                let duration = metadata.duration.unwrap();
-                let duration = Duration::from_secs(duration.seconds as u64)
-                    + Duration::from_nanos(duration.nanos as u64);
-                controls
-                    .set_metadata(MediaMetadata {
-                        title: Some(&metadata.song),
-                        album: Some(&metadata.album),
-                        artist: Some(&metadata.artist),
-                        cover_url: None,
-                        duration: Some(duration),
-                    })
-                    .unwrap();
+            Some(Err(err)) => {
+                println!("{err:?}");
+                if let Ok(new_stream) = client.get().await.subscribe_events(()).await {
+                    stream = new_stream.into_inner();
+                } else {
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
             }
-            EventPayload::SeekData(seek) => {
-                progress = Duration::from_millis(seek.seek_millis);
+            None => {
+                if let Ok(new_stream) = client.get().await.subscribe_events(()).await {
+                    stream = new_stream.into_inner();
+                } else {
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                }
             }
-        }
-        match message.event() {
-            Event::StartQueue
-            | Event::QueueUpdated
-            | Event::Ended
-            | Event::Next
-            | Event::Previous => {}
-            Event::Resume => {
-                controls
-                    .set_playback(MediaPlayback::Playing {
-                        progress: Some(MediaPosition(progress)),
-                    })
-                    .unwrap();
-            }
-            Event::Pause => {
-                controls
-                    .set_playback(MediaPlayback::Paused {
-                        progress: Some(MediaPosition(progress)),
-                    })
-                    .unwrap();
-            }
-            Event::Stop | Event::QueueEnded => {
-                controls.set_playback(MediaPlayback::Stopped).unwrap();
-            }
-            Event::SetVolume | Event::Seek | Event::Position => {}
         }
     }
-    println!("DONE");
 }
 
-async fn service_handler(manager: ServiceManager, mut rx: mpsc::Receiver<Command>) {
+async fn player_handler(mut rx: mpsc::Receiver<PlayerCommand>) {
     let mut client = LazyPlayerClient(None);
     while let Some(command) = rx.recv().await {
         match command {
-            Command::Manager(ManagerCommand::Start) => {
-                manager.start().await.unwrap();
-            }
-            Command::Manager(ManagerCommand::Stop) => {
-                manager.stop().await.unwrap();
-            }
-            Command::Manager(ManagerCommand::Restart) => {
-                manager.restart().await.unwrap();
-            }
-            Command::Manager(ManagerCommand::State(res)) => {
-                res.send(manager.status().await.unwrap().state).unwrap();
-            }
-            Command::Player(PlayerCommand::Start) => {
+            PlayerCommand::Start => {
                 client.get().await.resume(()).await.unwrap();
             }
-            Command::Player(PlayerCommand::Stop) => {
+            PlayerCommand::Stop => {
                 client.get().await.stop(()).await.unwrap();
             }
-            Command::Player(PlayerCommand::Pause) => {
+            PlayerCommand::Pause => {
                 client.get().await.pause(()).await.unwrap();
             }
-            Command::Player(PlayerCommand::Toggle) => {
+            PlayerCommand::Toggle => {
                 client.get().await.toggle(()).await.unwrap();
             }
 
-            Command::Player(PlayerCommand::Seek(pos, mode)) => {
+            PlayerCommand::Seek(pos, mode) => {
                 client
                     .get()
                     .await
@@ -375,7 +381,7 @@ async fn service_handler(manager: ServiceManager, mut rx: mpsc::Receiver<Command
                     .await
                     .unwrap();
             }
-            Command::Player(PlayerCommand::SetVolume(volume)) => {
+            PlayerCommand::SetVolume(volume) => {
                 client
                     .get()
                     .await
@@ -385,13 +391,13 @@ async fn service_handler(manager: ServiceManager, mut rx: mpsc::Receiver<Command
                     .await
                     .unwrap();
             }
-            Command::Player(PlayerCommand::Next) => {
+            PlayerCommand::Next => {
                 client.get().await.next(()).await.unwrap();
             }
-            Command::Player(PlayerCommand::Previous) => {
+            PlayerCommand::Previous => {
                 client.get().await.previous(()).await.unwrap();
             }
-            Command::Player(PlayerCommand::SetQueue(uri)) => {
+            PlayerCommand::SetQueue(uri) => {
                 client
                     .get()
                     .await
@@ -403,11 +409,30 @@ async fn service_handler(manager: ServiceManager, mut rx: mpsc::Receiver<Command
     }
 }
 
+async fn manager_handler(manager: ServiceManager, mut rx: mpsc::Receiver<ManagerCommand>) {
+    while let Some(command) = rx.recv().await {
+        match command {
+            ManagerCommand::Start => {
+                manager.start().await.unwrap();
+            }
+            ManagerCommand::Stop => {
+                manager.stop().await.unwrap();
+            }
+            ManagerCommand::Restart => {
+                manager.restart().await.unwrap();
+            }
+            ManagerCommand::State(res) => {
+                res.send(manager.status().await.unwrap().state).unwrap();
+            }
+        }
+    }
+}
+
 impl MenuHandler for PlatuneMenuHandler {
     fn refresh_state(&mut self) {
         let (state_tx, state_rx) = oneshot::channel();
-        self.tx
-            .blocking_send(Command::Manager(ManagerCommand::State(state_tx)))
+        self.manager_tx
+            .blocking_send(ManagerCommand::State(state_tx))
             .unwrap();
         self.current_state = state_rx.blocking_recv().unwrap();
     }
@@ -417,11 +442,90 @@ impl MenuHandler for PlatuneMenuHandler {
     }
 
     fn build_tray(&mut self, menu: &Menu) -> TrayIcon {
-        self.tray.set_menu(Some(Box::new(menu.clone())));
-        self.tray
-            .set_icon(Some(load_icon(&self.icon_path)))
+        let tray = TrayIconBuilder::new().build().unwrap();
+
+        #[cfg(target_os = "windows")]
+        let hwnd = Some(tray.window_handle());
+        #[cfg(not(target_os = "windows"))]
+        let hwnd = None;
+
+        let config = PlatformConfig {
+            dbus_name: "platuned",
+            display_name: "Platune",
+            hwnd,
+        };
+
+        let mut controls = MediaControls::new(config).unwrap();
+
+        controls
+            .attach({
+                let player_tx = self.player_tx.clone();
+                move |event: MediaControlEvent| match event {
+                    MediaControlEvent::Play => {
+                        player_tx.blocking_send(PlayerCommand::Start).unwrap();
+                    }
+                    MediaControlEvent::Pause => {
+                        player_tx.blocking_send(PlayerCommand::Pause).unwrap();
+                    }
+                    MediaControlEvent::Stop | MediaControlEvent::Quit => {
+                        player_tx.blocking_send(PlayerCommand::Stop).unwrap();
+                    }
+                    MediaControlEvent::OpenUri(uri) => {
+                        player_tx
+                            .blocking_send(PlayerCommand::SetQueue(uri))
+                            .unwrap();
+                    }
+                    MediaControlEvent::SetVolume(volume) => {
+                        player_tx
+                            .blocking_send(PlayerCommand::SetVolume(volume))
+                            .unwrap();
+                    }
+                    MediaControlEvent::Next => {
+                        player_tx.blocking_send(PlayerCommand::Next).unwrap();
+                    }
+                    MediaControlEvent::Previous => {
+                        player_tx.blocking_send(PlayerCommand::Previous).unwrap();
+                    }
+                    MediaControlEvent::Toggle => {
+                        player_tx.blocking_send(PlayerCommand::Toggle).unwrap();
+                    }
+                    MediaControlEvent::Seek(direction) => {
+                        player_tx
+                            .blocking_send(PlayerCommand::Seek(
+                                Duration::from_secs(5),
+                                match direction {
+                                    SeekDirection::Forward => SeekMode::Forward,
+                                    SeekDirection::Backward => SeekMode::Backward,
+                                },
+                            ))
+                            .unwrap();
+                    }
+                    MediaControlEvent::SeekBy(direction, duration) => {
+                        player_tx
+                            .blocking_send(PlayerCommand::Seek(
+                                duration,
+                                match direction {
+                                    SeekDirection::Forward => SeekMode::Forward,
+                                    SeekDirection::Backward => SeekMode::Backward,
+                                },
+                            ))
+                            .unwrap();
+                    }
+                    MediaControlEvent::SetPosition(MediaPosition(duration)) => {
+                        player_tx
+                            .blocking_send(PlayerCommand::Seek(duration, SeekMode::Absolute))
+                            .unwrap();
+                    }
+                    MediaControlEvent::Raise => {}
+                }
+            })
             .unwrap();
-        self.tray.clone()
+
+        tokio::spawn(metadata_updater(controls));
+
+        tray.set_menu(Some(Box::new(menu.clone())));
+        tray.set_icon(Some(load_icon(&self.icon_path))).unwrap();
+        tray
     }
 
     fn update_menu(&self, menu: &Menu) {
@@ -431,33 +535,12 @@ impl MenuHandler for PlatuneMenuHandler {
     }
 
     fn handle_menu_event(&mut self, event: MenuEvent) -> ControlFlow {
-        if event.id == self.start_stop_id {
-            if self.current_state == State::Started {
-                self.tx
-                    .blocking_send(Command::Manager(ManagerCommand::Stop))
-                    .unwrap();
-            } else {
-                self.tx
-                    .blocking_send(Command::Manager(ManagerCommand::Start))
-                    .unwrap()
-            }
-        } else if event.id == self.restart_id {
-            self.tx
-                .blocking_send(Command::Manager(ManagerCommand::Restart))
-                .unwrap()
-        } else if event.id == self.quit_id {
-            return ControlFlow::Exit;
-        } else if event.id == self.play_id {
-            self.tx
-                .blocking_send(Command::Player(PlayerCommand::Start))
-                .unwrap()
-        } else if event.id == self.pause_id {
-            self.tx
-                .blocking_send(Command::Player(PlayerCommand::Pause))
-                .unwrap()
-        }
-
-        ControlFlow::Poll
+        self.menu_handler.handle(
+            &event,
+            self.current_state.clone(),
+            &self.player_tx,
+            &self.manager_tx,
+        )
     }
 
     fn handle_tray_event(&mut self, _event: TrayIconEvent) -> ControlFlow {

@@ -215,7 +215,11 @@ impl Player for PlayerImpl {
                 AudioStatus::Paused => crate::rpc::v1::PlayerStatus::Paused.into(),
                 AudioStatus::Stopped => crate::rpc::v1::PlayerStatus::Stopped.into(),
             },
-            current_song: status.track_status.current_song,
+            state: Some(State {
+                queue: status.track_status.state.queue(),
+                queue_position: status.track_status.state.queue_position as u32,
+                volume: status.track_status.state.volume,
+            }),
         }))
     }
 
@@ -252,6 +256,18 @@ impl Player for PlayerImpl {
         let mut ended_rx = self.player.subscribe();
         let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
+        let status = self
+            .player
+            .get_current_status()
+            .await
+            .map_err(|e| format_error(format!("error getting status: {e:?}")))?;
+
+        let initial_message = match status.track_status.status {
+            AudioStatus::Playing => get_event_response(Event::Resume, status.track_status.state),
+            AudioStatus::Paused => get_event_response(Event::Pause, status.track_status.state),
+            AudioStatus::Stopped => get_event_response(Event::Stop, status.track_status.state),
+        };
+        tx.send(initial_message).await.unwrap_or_default();
         tokio::spawn(async move {
             while let Ok(msg) = tokio::select! {
                 val = ended_rx.recv() => val,
