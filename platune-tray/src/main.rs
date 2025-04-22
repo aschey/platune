@@ -215,6 +215,14 @@ impl LazyPlayerClient {
     }
 }
 
+fn normalize_url(url: &str) -> String {
+    if url.starts_with("http://") || url.starts_with("https://") {
+        url.to_string()
+    } else {
+        "http://".to_string() + url
+    }
+}
+
 struct LazyMgmtClient(Option<ManagementClient<Channel>>);
 
 impl LazyMgmtClient {
@@ -223,7 +231,7 @@ impl LazyMgmtClient {
             return self.0.as_mut().unwrap();
         }
         let management_urls = env::var("PLATUNE_MANAGEMENT_URL")
-            .map(|u| u.split(",").map(|u| u.to_string()).collect::<Vec<_>>())
+            .map(|u| u.split(",").map(normalize_url).collect::<Vec<_>>())
             .unwrap_or_default();
 
         loop {
