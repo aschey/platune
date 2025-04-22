@@ -253,7 +253,7 @@ impl Player for PlayerImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
-        let mut ended_rx = self.player.subscribe();
+        let mut player_rx = self.player.subscribe();
         let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         let status = self
@@ -270,7 +270,7 @@ impl Player for PlayerImpl {
         tx.send(initial_message).await.unwrap_or_default();
         tokio::spawn(async move {
             while let Ok(msg) = tokio::select! {
-                val = ended_rx.recv() => val,
+                val = player_rx.recv() => val,
                 _ = shutdown_rx.next() => Err(RecvError::Closed)
             } {
                 info!("Server received event {:?}", msg);

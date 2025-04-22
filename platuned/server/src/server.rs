@@ -1,7 +1,6 @@
 use std::env;
 use std::net::SocketAddr;
 use std::sync::Arc;
-#[cfg(feature = "management")]
 use std::time::Duration;
 
 use daemon_slayer::core::FutureExt;
