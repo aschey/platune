@@ -283,11 +283,24 @@ async fn metadata_updater(mut controls: MediaControls) {
 
                         progress = duration + (now - retrieval);
                         last_progress = Instant::now();
-                        controls
-                            .set_playback(MediaPlayback::Playing {
-                                progress: Some(MediaPosition(progress)),
-                            })
-                            .unwrap();
+
+                        match status {
+                            platuned_client::player::v1::PlayerStatus::Playing => {
+                                controls
+                                    .set_playback(MediaPlayback::Playing {
+                                        progress: Some(MediaPosition(progress)),
+                                    })
+                                    .unwrap();
+                            }
+                            platuned_client::player::v1::PlayerStatus::Paused => {
+                                controls
+                                    .set_playback(MediaPlayback::Paused {
+                                        progress: Some(MediaPosition(progress)),
+                                    })
+                                    .unwrap();
+                            }
+                            _ => {}
+                        }
                     }
                     EventPayload::State(state) => {
                         status = state.status();
@@ -323,6 +336,13 @@ async fn metadata_updater(mut controls: MediaControls) {
                                     current_duration =
                                         set_metadata(&mut mgmt_client, state, &mut controls).await;
                                     is_init = true;
+                                    // MacOS doesn't register the player if it starts as paused, so
+                                    // we have to set it to playing first
+                                    controls
+                                        .set_playback(MediaPlayback::Playing {
+                                            progress: Some(MediaPosition(progress)),
+                                        })
+                                        .unwrap();
                                 }
                                 controls
                                     .set_playback(MediaPlayback::Paused {
