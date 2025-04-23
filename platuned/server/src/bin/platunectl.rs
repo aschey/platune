@@ -1,6 +1,8 @@
 use std::env::current_exe;
 
-use daemon_slayer::cli::Cli;
+use auto_launch::AutoLaunchBuilder;
+use clap::{FromArgMatches, Subcommand};
+use daemon_slayer::cli::{Cli, InputState};
 use daemon_slayer::client::cli::ClientCliProvider;
 use daemon_slayer::client::config::Level;
 use daemon_slayer::client::config::systemd::SystemdConfig;
@@ -31,29 +33,25 @@ async fn main() -> Result<(), ErrorSink> {
 
 async fn run() -> Result<(), BoxedError> {
     let label = service_label();
-    let mut manager_builder = client::builder(
-        label.clone(),
-        current_exe()?
-            .parent()
-            .unwrap()
-            .join("platuned")
-            .try_into()?,
-    )
-    .with_description("platune service")
-    .with_service_level(Level::User)
-    .with_autostart(true)
-    .with_windows_config(WindowsConfig::default().with_additional_access(
-        Trustee::CurrentUser,
-        ServiceAccess::Start | ServiceAccess::Stop | ServiceAccess::ChangeConfig,
-    ))
-    .with_systemd_config(
-        SystemdConfig::default()
-            .with_after_target("network.target")
-            .with_after_target("network-online.target")
-            .with_after_target("NetworkManager.service")
-            .with_after_target("systemd-resolved.service"),
-    )
-    .with_arg(&"run".parse()?);
+    let exe = current_exe()?;
+    let exe_parent = exe.parent().unwrap();
+    let mut manager_builder =
+        client::builder(label.clone(), exe_parent.join("platuned").try_into()?)
+            .with_description("platune service")
+            .with_service_level(Level::User)
+            .with_autostart(true)
+            .with_windows_config(WindowsConfig::default().with_additional_access(
+                Trustee::CurrentUser,
+                ServiceAccess::Start | ServiceAccess::Stop | ServiceAccess::ChangeConfig,
+            ))
+            .with_systemd_config(
+                SystemdConfig::default()
+                    .with_after_target("network.target")
+                    .with_after_target("network-online.target")
+                    .with_after_target("NetworkManager.service")
+                    .with_after_target("systemd-resolved.service"),
+            )
+            .with_arg(&"run".parse()?);
 
     if let Ok(()) = dotenvy::from_path("./.env") {
         manager_builder = manager_builder
@@ -85,8 +83,9 @@ async fn run() -> Result<(), BoxedError> {
         .await
         .with_health_check(Box::new(health_check.clone()));
 
+    let base_command = clap_base_command();
     let mut cli = Cli::builder()
-        .with_base_command(clap_base_command())
+        .with_base_command(TrayCommand::augment_subcommands(base_command))
         .with_provider(ClientCliProvider::new(manager.clone()))
         .with_provider(ProcessCliProvider::new(manager.pid().await?))
         .with_provider(ConsoleCliProvider::new(console))
@@ -99,6 +98,41 @@ async fn run() -> Result<(), BoxedError> {
     let logger = cli.take_provider::<LoggingCliProvider>().get_logger()?;
     logger.init();
 
-    cli.handle_input().await?;
+    let (state, matches) = cli.handle_input().await?;
+    if state == InputState::Unhandled {
+        if let Ok(TrayCommand::Tray(Tray { tray })) = TrayCommand::from_arg_matches(&matches) {
+            let auto_launch = AutoLaunchBuilder::new()
+                .set_app_name("platune-tray")
+                .set_app_path(&exe_parent.join("platune-tray").to_string_lossy())
+                .set_use_launch_agent(true)
+                .build()
+                .unwrap();
+            match tray {
+                TrayValue::Enable => {
+                    auto_launch.enable()?;
+                }
+                TrayValue::Disable => {
+                    auto_launch.disable()?;
+                }
+            }
+        }
+    }
     Ok(())
+}
+
+#[derive(clap::Subcommand)]
+enum TrayCommand {
+    Tray(Tray),
+}
+
+#[derive(clap::Args, Clone)]
+struct Tray {
+    #[command(subcommand)]
+    tray: TrayValue,
+}
+
+#[derive(clap::Subcommand, Clone)]
+enum TrayValue {
+    Enable,
+    Disable,
 }
