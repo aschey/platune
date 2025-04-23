@@ -38,7 +38,6 @@ pub(crate) struct Player {
     queue_tx: Sender<QueueSource>,
     queue_rx: Receiver<QueueSource>,
     cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
-    audio_status: AudioStatus,
     settings: Settings,
     pending_volume: Option<f32>,
     device_name: Option<String>,
@@ -62,12 +61,12 @@ impl Player {
                 queue: vec![],
                 volume: 1.0,
                 queue_position: 0,
+                status: AudioStatus::Stopped,
             },
             queued_count: 0,
             queue_tx,
             queue_rx,
             cmd_sender,
-            audio_status: AudioStatus::Stopped,
             settings,
             pending_volume: None,
             device_name,
@@ -186,9 +185,9 @@ impl Player {
                 queue_start_mode,
                 QueueStartMode::ForceRestart { paused: true, .. }
             ) {
-                self.audio_status = AudioStatus::Paused;
+                self.state.status = AudioStatus::Paused;
             } else {
-                self.audio_status = AudioStatus::Playing;
+                self.state.status = AudioStatus::Playing;
             }
         }
 
@@ -234,7 +233,7 @@ impl Player {
             .await
             .tap_err(|e| error!("Error sending play command {e:?}"))?;
 
-        self.audio_status = AudioStatus::Playing;
+        self.state.status = AudioStatus::Playing;
         self.event_tx
             .send(PlayerEvent::Resume(self.state.clone()))
             .unwrap_or_default();
@@ -253,7 +252,7 @@ impl Player {
             .await
             .tap_err(|e| error!("Error sending pause command {e:?}"))?;
 
-        self.audio_status = AudioStatus::Paused;
+        self.state.status = AudioStatus::Paused;
         self.event_tx
             .send(PlayerEvent::Pause(self.state.clone()))
             .unwrap_or_default();
@@ -262,7 +261,7 @@ impl Player {
     }
 
     pub(crate) async fn toggle(&mut self) -> Result<(), String> {
-        if self.audio_status == AudioStatus::Playing {
+        if self.state.status == AudioStatus::Playing {
             self.pause().await
         } else {
             self.play().await
@@ -270,7 +269,7 @@ impl Player {
     }
 
     pub(crate) async fn set_volume(&mut self, volume: f32) -> Result<(), String> {
-        if self.audio_status == AudioStatus::Stopped {
+        if self.state.status == AudioStatus::Stopped {
             // Decoder isn't running so we can't set the volume yet
             // This will get sent with the next source
             self.pending_volume = Some(volume);
@@ -322,7 +321,7 @@ impl Player {
 
     pub(crate) fn get_current_status(&self) -> TrackStatus {
         TrackStatus {
-            status: self.audio_status.clone(),
+            status: self.state.status.clone(),
             state: self.state.clone(),
         }
     }
@@ -336,7 +335,7 @@ impl Player {
         self.queued_count = 0;
         // If decoder is already stopped then sending additional stop events will cause the next
         // song to skip
-        if self.audio_status != AudioStatus::Stopped {
+        if self.state.status != AudioStatus::Stopped {
             info!("Sending decoder stop command");
             self.cmd_sender
                 .get_response(DecoderCommand::Stop)
@@ -344,7 +343,7 @@ impl Player {
                 .tap_err(|e| error!("Error sending stop command {e:?}"))?;
             info!("Received stop response");
         }
-        self.audio_status = AudioStatus::Stopped;
+        self.state.status = AudioStatus::Stopped;
         Ok(())
     }
 
@@ -367,7 +366,7 @@ impl Player {
             );
         } else {
             info!("No more tracks in queue, changing to stopped state");
-            self.audio_status = AudioStatus::Stopped;
+            self.state.status = AudioStatus::Stopped;
             self.event_tx
                 .send(PlayerEvent::Ended(self.state.clone()))
                 .unwrap_or_default();
@@ -399,7 +398,7 @@ impl Player {
             queue_position,
             QueueStartMode::ForceRestart {
                 device_name: self.device_name.clone(),
-                paused: self.audio_status == AudioStatus::Paused,
+                paused: self.state.status == AudioStatus::Paused,
             },
         )
         .await?;

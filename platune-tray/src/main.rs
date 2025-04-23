@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::env::{self, current_exe};
 use std::path::PathBuf;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use daemon_slayer::client::config::Level;
 use daemon_slayer::client::{self, ServiceManager, State};
@@ -23,6 +23,7 @@ use souvlaki::{
 };
 use tokio::runtime::{self};
 use tokio::sync::{mpsc, oneshot};
+use tokio::time::timeout;
 
 fn main() -> Result<(), BoxedError> {
     let rt = runtime::Builder::new_multi_thread()
@@ -265,9 +266,13 @@ async fn metadata_updater(mut controls: MediaControls) {
     let mut mgmt_client = LazyMgmtClient(None);
 
     let mut progress = Duration::from_millis(0);
+    let mut last_progress = Instant::now();
+    let mut status = platuned_client::player::v1::PlayerStatus::Stopped;
+    let mut is_init = false;
+    let mut current_duration = Duration::default();
     loop {
-        match stream.next().await {
-            Some(Ok(message)) => {
+        match timeout(Duration::from_secs(1), stream.next()).await {
+            Ok(Some(Ok(message))) => {
                 let event_payload = message.event_payload.as_ref().unwrap();
                 match event_payload {
                     EventPayload::Progress(position) => {
@@ -277,48 +282,71 @@ async fn metadata_updater(mut controls: MediaControls) {
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
                         progress = duration + (now - retrieval);
+                        last_progress = Instant::now();
                         controls
                             .set_playback(MediaPlayback::Playing {
                                 progress: Some(MediaPosition(progress)),
                             })
                             .unwrap();
                     }
-                    EventPayload::State(state) => match message.event() {
-                        Event::StartQueue
-                        | Event::QueueUpdated
-                        | Event::Ended
-                        | Event::Next
-                        | Event::Previous
-                        | Event::Resume => {
-                            set_metadata(&mut mgmt_client, state, &mut controls).await;
-                            controls
-                                .set_playback(MediaPlayback::Playing {
-                                    progress: Some(MediaPosition(progress)),
-                                })
-                                .unwrap();
+                    EventPayload::State(state) => {
+                        status = state.status();
+                        match message.event() {
+                            Event::StartQueue | Event::Ended | Event::Next | Event::Previous => {
+                                progress = Duration::default();
+                                current_duration =
+                                    set_metadata(&mut mgmt_client, state, &mut controls).await;
+
+                                controls
+                                    .set_playback(MediaPlayback::Playing {
+                                        progress: Some(MediaPosition(progress)),
+                                    })
+                                    .unwrap();
+                                is_init = true;
+                                last_progress = Instant::now();
+                            }
+                            Event::Resume => {
+                                if !is_init {
+                                    current_duration =
+                                        set_metadata(&mut mgmt_client, state, &mut controls).await;
+                                    is_init = true;
+                                }
+                                controls
+                                    .set_playback(MediaPlayback::Playing {
+                                        progress: Some(MediaPosition(progress)),
+                                    })
+                                    .unwrap();
+                                last_progress = Instant::now();
+                            }
+                            Event::Pause => {
+                                if !is_init {
+                                    current_duration =
+                                        set_metadata(&mut mgmt_client, state, &mut controls).await;
+                                    is_init = true;
+                                }
+                                controls
+                                    .set_playback(MediaPlayback::Paused {
+                                        progress: Some(MediaPosition(progress)),
+                                    })
+                                    .unwrap();
+                            }
+                            Event::Stop | Event::QueueEnded => {
+                                controls.set_playback(MediaPlayback::Stopped).unwrap();
+                            }
+                            Event::SetVolume => {
+                                #[cfg(target_os = "linux")]
+                                controls.set_volume(state.volume as f64).unwrap();
+                            }
+                            Event::Seek | Event::Position | Event::QueueUpdated => {}
                         }
-                        Event::Pause => {
-                            controls
-                                .set_playback(MediaPlayback::Paused {
-                                    progress: Some(MediaPosition(progress)),
-                                })
-                                .unwrap();
-                        }
-                        Event::Stop | Event::QueueEnded => {
-                            controls.set_playback(MediaPlayback::Stopped).unwrap();
-                        }
-                        Event::SetVolume => {
-                            #[cfg(target_os = "linux")]
-                            controls.set_volume(state.volume as f64).unwrap();
-                        }
-                        Event::Seek | Event::Position => {}
-                    },
+                    }
                     EventPayload::SeekData(seek) => {
                         progress = Duration::from_millis(seek.seek_millis);
+                        last_progress = Instant::now();
                     }
                 }
             }
-            Some(Err(err)) => {
+            Ok(Some(Err(err))) => {
                 println!("{err:?}");
                 if let Ok(new_stream) = client.get().await.subscribe_events(()).await {
                     stream = new_stream.into_inner();
@@ -326,11 +354,24 @@ async fn metadata_updater(mut controls: MediaControls) {
                     tokio::time::sleep(Duration::from_secs(1)).await;
                 }
             }
-            None => {
+            Ok(None) => {
                 if let Ok(new_stream) = client.get().await.subscribe_events(()).await {
                     stream = new_stream.into_inner();
                 } else {
                     tokio::time::sleep(Duration::from_secs(1)).await;
+                }
+            }
+            Err(_) => {
+                if status == platuned_client::player::v1::PlayerStatus::Playing {
+                    let now = Instant::now();
+                    progress += now - last_progress;
+                    progress = progress.min(current_duration);
+                    last_progress = now;
+                    controls
+                        .set_playback(MediaPlayback::Playing {
+                            progress: Some(MediaPosition(progress)),
+                        })
+                        .unwrap();
                 }
             }
         }
@@ -341,7 +382,7 @@ async fn set_metadata(
     mgmt_client: &mut LazyMgmtClient,
     state: &platuned_client::player::v1::State,
     controls: &mut MediaControls,
-) {
+) -> Duration {
     let pos = state.queue_position as usize;
     if pos < state.queue.len() {
         let metadata = mgmt_client
@@ -367,6 +408,9 @@ async fn set_metadata(
                 duration: Some(duration),
             })
             .unwrap();
+        duration
+    } else {
+        Duration::default()
     }
 }
 

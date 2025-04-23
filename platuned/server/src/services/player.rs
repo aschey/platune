@@ -43,6 +43,7 @@ fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse,
             queue: state.queue(),
             queue_position: state.queue_position as u32,
             volume: state.volume,
+            status: map_audio_status(state.status).into(),
         })),
     })
 }
@@ -63,6 +64,7 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
                     queue: state.queue(),
                     queue_position: state.queue_position as u32,
                     volume: state.volume,
+                    status: map_audio_status(state.status).into(),
                 }),
                 seek_millis: time.as_millis() as u64,
             })),
@@ -89,6 +91,14 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
             })),
         }),
         _ => unreachable!("Encountered unhandled event {:?}", msg.to_string()),
+    }
+}
+
+fn map_audio_status(status: AudioStatus) -> crate::rpc::v1::PlayerStatus {
+    match status {
+        AudioStatus::Playing => crate::rpc::v1::PlayerStatus::Playing,
+        AudioStatus::Paused => crate::rpc::v1::PlayerStatus::Paused,
+        AudioStatus::Stopped => crate::rpc::v1::PlayerStatus::Stopped,
     }
 }
 
@@ -210,15 +220,11 @@ impl Player for PlayerImpl {
 
         Ok(Response::new(StatusResponse {
             progress,
-            status: match status.track_status.status {
-                AudioStatus::Playing => crate::rpc::v1::PlayerStatus::Playing.into(),
-                AudioStatus::Paused => crate::rpc::v1::PlayerStatus::Paused.into(),
-                AudioStatus::Stopped => crate::rpc::v1::PlayerStatus::Stopped.into(),
-            },
             state: Some(State {
                 queue: status.track_status.state.queue(),
                 queue_position: status.track_status.state.queue_position as u32,
                 volume: status.track_status.state.volume,
+                status: map_audio_status(status.track_status.status).into(),
             }),
         }))
     }
@@ -263,11 +269,15 @@ impl Player for PlayerImpl {
             .map_err(|e| format_error(format!("error getting status: {e:?}")))?;
 
         let initial_message = match status.track_status.status {
-            AudioStatus::Playing => get_event_response(Event::Resume, status.track_status.state),
-            AudioStatus::Paused => get_event_response(Event::Pause, status.track_status.state),
-            AudioStatus::Stopped => get_event_response(Event::Stop, status.track_status.state),
+            AudioStatus::Playing => map_response(PlayerEvent::Resume(status.track_status.state)),
+            AudioStatus::Paused => map_response(PlayerEvent::Pause(status.track_status.state)),
+            AudioStatus::Stopped => map_response(PlayerEvent::Stop(status.track_status.state)),
         };
         tx.send(initial_message).await.unwrap_or_default();
+        if let Some(position) = status.current_position {
+            let progress_message = map_response(PlayerEvent::Position(position));
+            tx.send(progress_message).await.unwrap_or_default();
+        }
         tokio::spawn(async move {
             while let Ok(msg) = tokio::select! {
                 val = player_rx.recv() => val,

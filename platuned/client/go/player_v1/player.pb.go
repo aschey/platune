@@ -491,7 +491,8 @@ type State struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Queue         []string               `protobuf:"bytes,1,rep,name=queue,proto3" json:"queue,omitempty"`
 	QueuePosition uint32                 `protobuf:"varint,2,opt,name=queue_position,json=queuePosition,proto3" json:"queue_position,omitempty"`
-	Volume        float32                `protobuf:"fixed32,3,opt,name=volume,proto3" json:"volume,omitempty"`
+	Status        PlayerStatus           `protobuf:"varint,3,opt,name=status,proto3,enum=platune.player.v1.PlayerStatus" json:"status,omitempty"`
+	Volume        float32                `protobuf:"fixed32,4,opt,name=volume,proto3" json:"volume,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -538,6 +539,13 @@ func (x *State) GetQueuePosition() uint32 {
 		return x.QueuePosition
 	}
 	return 0
+}
+
+func (x *State) GetStatus() PlayerStatus {
+	if x != nil {
+		return x.Status
+	}
+	return PlayerStatus_PLAYING
 }
 
 func (x *State) GetVolume() float32 {
@@ -653,9 +661,8 @@ func (x *SeekResponse) GetSeekMillis() uint64 {
 
 type StatusResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        PlayerStatus           `protobuf:"varint,1,opt,name=status,proto3,enum=platune.player.v1.PlayerStatus" json:"status,omitempty"`
-	State         *State                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
-	Progress      *PositionResponse      `protobuf:"bytes,3,opt,name=progress,proto3,oneof" json:"progress,omitempty"`
+	State         *State                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	Progress      *PositionResponse      `protobuf:"bytes,2,opt,name=progress,proto3,oneof" json:"progress,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -688,13 +695,6 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
 	return file_player_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *StatusResponse) GetStatus() PlayerStatus {
-	if x != nil {
-		return x.Status
-	}
-	return PlayerStatus_PLAYING
 }
 
 func (x *StatusResponse) GetState() *State {
@@ -818,22 +818,22 @@ const file_player_proto_rawDesc = "" +
 	"\x05state\x18\x02 \x01(\v2\x18.platune.player.v1.StateH\x00R\x05state\x12>\n" +
 	"\tseek_data\x18\x03 \x01(\v2\x1f.platune.player.v1.SeekResponseH\x00R\bseekData\x12A\n" +
 	"\bprogress\x18\x04 \x01(\v2#.platune.player.v1.PositionResponseH\x00R\bprogressB\x0f\n" +
-	"\revent_payload\"\\\n" +
+	"\revent_payload\"\x95\x01\n" +
 	"\x05State\x12\x14\n" +
 	"\x05queue\x18\x01 \x03(\tR\x05queue\x12%\n" +
-	"\x0equeue_position\x18\x02 \x01(\rR\rqueuePosition\x12\x16\n" +
-	"\x06volume\x18\x03 \x01(\x02R\x06volume\"\x8b\x01\n" +
+	"\x0equeue_position\x18\x02 \x01(\rR\rqueuePosition\x127\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1f.platune.player.v1.PlayerStatusR\x06status\x12\x16\n" +
+	"\x06volume\x18\x04 \x01(\x02R\x06volume\"\x8b\x01\n" +
 	"\x10PositionResponse\x125\n" +
 	"\bposition\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\bposition\x12@\n" +
 	"\x0eretrieval_time\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\rretrievalTime\"_\n" +
 	"\fSeekResponse\x12.\n" +
 	"\x05state\x18\x01 \x01(\v2\x18.platune.player.v1.StateR\x05state\x12\x1f\n" +
 	"\vseek_millis\x18\x02 \x01(\x04R\n" +
-	"seekMillis\"\xcc\x01\n" +
-	"\x0eStatusResponse\x127\n" +
-	"\x06status\x18\x01 \x01(\x0e2\x1f.platune.player.v1.PlayerStatusR\x06status\x12.\n" +
-	"\x05state\x18\x02 \x01(\v2\x18.platune.player.v1.StateR\x05state\x12D\n" +
-	"\bprogress\x18\x03 \x01(\v2#.platune.player.v1.PositionResponseH\x00R\bprogress\x88\x01\x01B\v\n" +
+	"seekMillis\"\x93\x01\n" +
+	"\x0eStatusResponse\x12.\n" +
+	"\x05state\x18\x01 \x01(\v2\x18.platune.player.v1.StateR\x05state\x12D\n" +
+	"\bprogress\x18\x02 \x01(\v2#.platune.player.v1.PositionResponseH\x00R\bprogress\x88\x01\x01B\v\n" +
 	"\t_progress\"+\n" +
 	"\x0fDevicesResponse\x12\x18\n" +
 	"\adevices\x18\x01 \x03(\tR\adevices\"@\n" +
@@ -922,10 +922,10 @@ var file_player_proto_depIdxs = []int32{
 	8,  // 3: platune.player.v1.EventResponse.state:type_name -> platune.player.v1.State
 	10, // 4: platune.player.v1.EventResponse.seek_data:type_name -> platune.player.v1.SeekResponse
 	9,  // 5: platune.player.v1.EventResponse.progress:type_name -> platune.player.v1.PositionResponse
-	14, // 6: platune.player.v1.PositionResponse.position:type_name -> google.protobuf.Duration
-	14, // 7: platune.player.v1.PositionResponse.retrieval_time:type_name -> google.protobuf.Duration
-	8,  // 8: platune.player.v1.SeekResponse.state:type_name -> platune.player.v1.State
-	1,  // 9: platune.player.v1.StatusResponse.status:type_name -> platune.player.v1.PlayerStatus
+	1,  // 6: platune.player.v1.State.status:type_name -> platune.player.v1.PlayerStatus
+	14, // 7: platune.player.v1.PositionResponse.position:type_name -> google.protobuf.Duration
+	14, // 8: platune.player.v1.PositionResponse.retrieval_time:type_name -> google.protobuf.Duration
+	8,  // 9: platune.player.v1.SeekResponse.state:type_name -> platune.player.v1.State
 	8,  // 10: platune.player.v1.StatusResponse.state:type_name -> platune.player.v1.State
 	9,  // 11: platune.player.v1.StatusResponse.progress:type_name -> platune.player.v1.PositionResponse
 	3,  // 12: platune.player.v1.Player.SetQueue:input_type -> platune.player.v1.QueueRequest

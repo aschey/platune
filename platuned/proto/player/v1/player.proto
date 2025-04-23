@@ -83,7 +83,8 @@ message EventResponse {
 message State {
   repeated string queue = 1;
   uint32 queue_position = 2;
-  float volume = 3;
+  PlayerStatus status = 3;
+  float volume = 4;
 }
 
 message PositionResponse {
@@ -97,9 +98,8 @@ message SeekResponse {
 }
 
 message StatusResponse {
-  PlayerStatus status = 1;
-  State state = 2;
-  optional PositionResponse progress = 3;
+  State state = 1;
+  optional PositionResponse progress = 2;
 }
 
 message DevicesResponse {
