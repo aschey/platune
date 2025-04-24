@@ -18,7 +18,7 @@ futures-util = "0.3"
 
 [package.metadata.packager]
 before-packaging-command = "cargo build --release"
-product-name = "Platune tray"
+product-name = "Platune Tray"
 identifier = "com.platune.tray"
 resources = ["Cargo.toml", "src", "icon.png"]
 icons = ["icon.png"]

@@ -102,14 +102,20 @@ async fn run() -> Result<(), BoxedError> {
     if state == InputState::Unhandled {
         if let Ok(TrayCommand::Tray(Tray { tray })) = TrayCommand::from_arg_matches(&matches) {
             #[cfg(target_os = "linux")]
-            let app_name = "platune-tray.AppImage";
+            let app_path = exe_parent
+                .join("platune-tray.AppImage")
+                .to_string_lossy()
+                .to_string();
             #[cfg(target_os = "macos")]
-            let app_name = "platune-tray.app";
+            let app_path = "/Applications/Platune Tray.app/Contents/MacOS/platune-tray";
             #[cfg(windows)]
-            let app_name = "platune-tray.exe";
+            let app_path = exe_parent
+                .join("platune-tray.exe")
+                .to_string_lossy()
+                .to_string();
             let auto_launch = AutoLaunchBuilder::new()
                 .set_app_name("Platune Tray")
-                .set_app_path(&exe_parent.join(app_name).to_string_lossy())
+                .set_app_path(&app_path)
                 .set_use_launch_agent(true)
                 .build()
                 .unwrap();
