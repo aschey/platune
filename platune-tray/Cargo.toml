@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "c88fe52685d66fda9cee772bdea71054c9ab11b9", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "ce12d2d8d62d96e9122e7c8a3cd893ca063120f9", features = [
   "tray",
   "client",
 ] }
@@ -15,3 +15,10 @@ souvlaki = { version = "0.8.2", default-features = false, features = [
 platuned-client = { path = "../platuned/client/rust" }
 tipsy = "0.4.0"
 futures-util = "0.3"
+
+[package.metadata.packager]
+before-packaging-command = "cargo build --release"
+product-name = "Platune tray"
+identifier = "com.platune.tray"
+resources = ["Cargo.toml", "src", "icon.png"]
+icons = ["icon.png"]

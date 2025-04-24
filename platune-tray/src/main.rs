@@ -7,7 +7,10 @@ use daemon_slayer::client::config::Level;
 use daemon_slayer::client::{self, ServiceManager, State};
 use daemon_slayer::core::BoxedError;
 use daemon_slayer::tray::event_loop::ControlFlow;
-use daemon_slayer::tray::tray_icon::menu::{Menu, MenuEvent, MenuId, MenuItem, Submenu};
+use daemon_slayer::tray::tray_icon::menu::accelerator::{Accelerator, Code, Modifiers};
+use daemon_slayer::tray::tray_icon::menu::{
+    Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu,
+};
 use daemon_slayer::tray::tray_icon::{TrayIcon, TrayIconBuilder, TrayIconEvent};
 use daemon_slayer::tray::{MenuHandler, Tray, get_start_stop_text, load_icon};
 use futures_util::stream::StreamExt;
@@ -55,7 +58,7 @@ fn main() -> Result<(), BoxedError> {
     tokio::spawn(manager_handler(manager, manager_rx));
 
     let handler = PlatuneMenuHandler::new(player_tx, manager_tx);
-    Tray::with_handler(handler).start();
+    Tray::with_handler(handler).run();
     Ok(())
 }
 
@@ -100,6 +103,7 @@ pub struct PlatuneMenuHandler {
     player_tx: mpsc::Sender<PlayerCommand>,
     manager_tx: mpsc::Sender<ManagerCommand>,
     menu_handler: MenuItemHandler,
+    start_stop: MenuItem,
 }
 
 impl PlatuneMenuHandler {
@@ -109,9 +113,6 @@ impl PlatuneMenuHandler {
     ) -> Self {
         let main_menu = Menu::new();
         let service_menu = Submenu::new("Service", true);
-        let player_menu = Submenu::new("Player", true);
-        main_menu.append(&service_menu).unwrap();
-        main_menu.append(&player_menu).unwrap();
 
         let start_stop_text = get_start_stop_text(&State::NotInstalled);
         let start_stop = MenuItem::new(start_stop_text, true, None);
@@ -126,9 +127,25 @@ impl PlatuneMenuHandler {
         let next = MenuItem::new("Next", true, None);
         let previous = MenuItem::new("Previous", true, None);
         let player_stop = MenuItem::new("Stop", true, None);
-        player_menu
-            .append_items(&[&play, &pause, &next, &previous, &player_stop])
+        let tray_quit = MenuItem::new(
+            "Quit",
+            true,
+            Some(Accelerator::new(Some(Modifiers::META), Code::KeyD)),
+        );
+        let sep = PredefinedMenuItem::separator();
+        main_menu
+            .append_items(&[
+                &play,
+                &pause,
+                &next,
+                &previous,
+                &player_stop,
+                &service_menu,
+                &sep,
+                &tray_quit,
+            ])
             .unwrap();
+
         let icon_path = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/icon.png"));
 
         let mut menu_handler = MenuItemHandler::default();
@@ -166,6 +183,7 @@ impl PlatuneMenuHandler {
             player_tx.blocking_send(PlayerCommand::Stop).unwrap();
             ControlFlow::Poll
         });
+        menu_handler.add(&tray_quit, |_, _, _| ControlFlow::ExitWithCode(0));
 
         Self {
             player_tx,
@@ -174,6 +192,7 @@ impl PlatuneMenuHandler {
             icon_path,
             menu: main_menu,
             menu_handler,
+            start_stop,
         }
     }
 }
@@ -384,8 +403,7 @@ async fn metadata_updater(mut controls: MediaControls) {
             Err(_) => {
                 if status == platuned_client::player::v1::PlayerStatus::Playing {
                     let now = Instant::now();
-                    progress += now - last_progress;
-                    progress = progress.min(current_duration);
+                    progress = (progress + (now - last_progress)).min(current_duration);
                     last_progress = now;
                     controls
                         .set_playback(MediaPlayback::Playing {
@@ -518,11 +536,7 @@ impl MenuHandler for PlatuneMenuHandler {
         self.current_state = state_rx.blocking_recv().unwrap();
     }
 
-    fn get_menu(&mut self) -> Menu {
-        self.menu.clone()
-    }
-
-    fn build_tray(&mut self, menu: &Menu) -> TrayIcon {
+    fn build_tray(&mut self) -> TrayIcon {
         let tray = TrayIconBuilder::new().build().unwrap();
 
         #[cfg(target_os = "windows")]
@@ -604,14 +618,13 @@ impl MenuHandler for PlatuneMenuHandler {
 
         tokio::spawn(metadata_updater(controls));
 
-        tray.set_menu(Some(Box::new(menu.clone())));
+        tray.set_menu(Some(Box::new(self.menu.clone())));
         tray.set_icon(Some(load_icon(&self.icon_path))).unwrap();
         tray
     }
 
-    fn update_menu(&self, menu: &Menu) {
-        menu.items()[0].as_submenu_unchecked().items()[0]
-            .as_menuitem_unchecked()
+    fn update_menu(&self) {
+        self.start_stop
             .set_text(get_start_stop_text(&self.current_state));
     }
 

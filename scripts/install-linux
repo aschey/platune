@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+
+relative_dir="$(dirname "$0")/.."
+repo_dir="$(realpath "$relative_dir")"
+
+cd "${repo_dir}/platuned/server"
+cargo build --release
+platunectl stop
+pkill 'platune-tray'
+cd "${repo_dir}/platune-tray"
+NO_STRIP=true cargo packager --release
+
+cp "${repo_dir}/target/release/platuned" "${LOCAL_BIN}/" 
+cp "${repo_dir}/target/release/platunectl" "${LOCAL_BIN}/"
+cp "${repo_dir}/target/release/platune-tray_0.1.0_x86_64.AppImage" "${LOCAL_BIN}/platune-tray.AppImage"
+cd "${repo_dir}/platune-cli"
+
+go build .
+cp ./cli "${LOCAL_BIN}/platune-cli"
+
+platunectl start
+platunectl tray enable
+cp "$HOME/.config/autostart/Platune Tray.desktop" "$HOME/.local/share/applications/"
+pkill platune-tray
+gtk-launch 'Platune Tray'
