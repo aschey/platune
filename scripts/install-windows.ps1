@@ -3,18 +3,18 @@ Set-Location $repoDir\platuned\server
 
 cargo build --release
 platunectl stop
-taskkill -f -im 'platune-tray'
+taskkill -f -im 'platune-tray.exe'
 Set-Location $repoDir/platune-tray
 cargo packager --release
 
-Copy-Item "${repo_dir}\target\release\platuned" "${LOCAL_BIN}\" 
-Copy-Item "${repo_dir}\target\release\platunectl" "${LOCAL_BIN}\"
-Copy-Item "${repo_dir}\platune-cli"
+Copy-Item "${repoDir}\target\release\platuned.exe" "$Env:LOCAL_BIN\" 
+Copy-Item "${repoDir}\target\release\platunectl.exe" "$Env:LOCAL_BIN\"
+Set-Location "${repoDir}\platune-cli"
 
 go build .
-Copy-Item .\cli "${LOCAL_BIN}\platune-cli"
+Copy-Item .\cli.exe "$Env:LOCAL_BIN\platune-cli.exe"
 
 platunectl start
-&"${repo_dir}\target\release\platune-tray_0.1.0_x64-setup.exe"
+&"${repoDir}\target\release\platune-tray_0.1.0_x64-setup.exe"
 
 platunectl tray enable
