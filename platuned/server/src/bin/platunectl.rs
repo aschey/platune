@@ -77,7 +77,7 @@ async fn run() -> Result<(), BoxedError> {
     let logger_builder = LoggerBuilder::new(label.clone());
 
     let health_check =
-        GrpcHealthCheck::new(format!("http://[::1]:{}", main_server_port()?)).unwrap();
+        GrpcHealthCheck::new(format!("http://127.0.0.1:{}", main_server_port()?)).unwrap();
 
     let console = Console::new(manager.clone(), LogSource::Ipc)
         .await
@@ -109,10 +109,14 @@ async fn run() -> Result<(), BoxedError> {
             #[cfg(target_os = "macos")]
             let app_path = "/Applications/Platune Tray.app/Contents/MacOS/platune-tray";
             #[cfg(windows)]
-            let app_path = exe_parent
-                .join("platune-tray.exe")
+            let app_path = directories::UserDirs::new()
+                .unwrap()
+                .home_dir()
+                .join("AppData\\Local\\Platune Tray\\platune-tray.exe")
                 .to_string_lossy()
                 .to_string();
+            #[cfg(windows)]
+            let app_path = format!("\"{app_path}\"");
             let auto_launch = AutoLaunchBuilder::new()
                 .set_app_name("Platune Tray")
                 .set_app_path(&app_path)

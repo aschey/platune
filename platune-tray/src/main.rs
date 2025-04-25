@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 use std::collections::HashMap;
 use std::env::{self, current_exe};
 use std::path::PathBuf;
@@ -7,7 +9,6 @@ use daemon_slayer::client::config::Level;
 use daemon_slayer::client::{self, ServiceManager, State};
 use daemon_slayer::core::BoxedError;
 use daemon_slayer::tray::event_loop::ControlFlow;
-use daemon_slayer::tray::tray_icon::menu::accelerator::{Accelerator, Code, Modifiers};
 use daemon_slayer::tray::tray_icon::menu::{
     Menu, MenuEvent, MenuId, MenuItem, PredefinedMenuItem, Submenu,
 };
@@ -62,19 +63,11 @@ fn main() -> Result<(), BoxedError> {
     Ok(())
 }
 
+type MenuFn =
+    dyn Fn(State, &mpsc::Sender<PlayerCommand>, &mpsc::Sender<ManagerCommand>) -> ControlFlow;
+
 #[derive(Default)]
-struct MenuItemHandler(
-    HashMap<
-        MenuId,
-        Box<
-            dyn Fn(
-                State,
-                &mpsc::Sender<PlayerCommand>,
-                &mpsc::Sender<ManagerCommand>,
-            ) -> ControlFlow,
-        >,
-    >,
-);
+struct MenuItemHandler(HashMap<MenuId, Box<MenuFn>>);
 
 impl MenuItemHandler {
     fn add<F>(&mut self, menu: &MenuItem, f: F)
@@ -127,11 +120,7 @@ impl PlatuneMenuHandler {
         let next = MenuItem::new("Next", true, None);
         let previous = MenuItem::new("Previous", true, None);
         let player_stop = MenuItem::new("Stop", true, None);
-        let tray_quit = MenuItem::new(
-            "Quit",
-            true,
-            Some(Accelerator::new(Some(Modifiers::META), Code::KeyD)),
-        );
+        let tray_quit = MenuItem::new("Quit", true, None);
         let sep = PredefinedMenuItem::separator();
         main_menu
             .append_items(&[
