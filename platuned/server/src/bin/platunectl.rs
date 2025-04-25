@@ -107,7 +107,7 @@ async fn run() -> Result<(), BoxedError> {
                 .to_string_lossy()
                 .to_string();
             #[cfg(target_os = "macos")]
-            let app_path = "/Applications/Platune Tray.app/Contents/MacOS/platune-tray";
+            let app_path = "/Applications/Platune Tray.app/Contents/MacOS/platune-tray".to_string();
             #[cfg(windows)]
             let app_path = directories::UserDirs::new()
                 .unwrap()
