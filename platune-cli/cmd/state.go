@@ -6,13 +6,13 @@ import (
 	"github.com/aschey/platune/cli/v2/internal/deleted"
 	"github.com/aschey/platune/cli/v2/internal/mode"
 	"github.com/aschey/platune/cli/v2/internal/statusbar"
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 )
 
 type cmdState struct {
 	mode         *mode.Mode
-	currentQueue []*platune.LookupEntry
-	lookupResult []*platune.LookupEntry
+	currentQueue []*management_v1.LookupEntry
+	lookupResult []*management_v1.LookupEntry
 	curPrompt    *prompt.Prompt
 	client       *internal.PlatuneClient
 	statusBar    *statusbar.StatusBar
@@ -31,7 +31,7 @@ func (state *cmdState) RunInteractive() int {
 func NewState(client *internal.PlatuneClient, deleted *deleted.Deleted, statusChan statusbar.StatusChan, statusBar *statusbar.StatusBar) *cmdState {
 	state := cmdState{
 		mode:         mode.NewDefaultMode(),
-		currentQueue: []*platune.LookupEntry{},
+		currentQueue: []*management_v1.LookupEntry{},
 		client:       client,
 		statusBar:    statusBar,
 		deleted:      deleted,

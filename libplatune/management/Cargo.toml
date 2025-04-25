@@ -23,7 +23,7 @@ futures = "0.3"
 ignore = "0.4"
 itertools = "0.14"
 lazy_static = "1"
-lofty = "0.22.2"
+lofty = "0.22.3"
 log = "0.4"
 normpath = "1"
 notify = { version = "8", default-features = false, features = [

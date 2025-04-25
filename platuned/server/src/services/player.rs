@@ -10,9 +10,9 @@ use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
 
-use crate::player_server::Player;
-use crate::rpc::event_response::*;
-use crate::rpc::*;
+use crate::rpc::v1::event_response::*;
+use crate::rpc::v1::{SeekMode, *};
+use crate::v1::player_server::Player;
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer<CpalOutput>>,
@@ -43,6 +43,7 @@ fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse,
             queue: state.queue(),
             queue_position: state.queue_position as u32,
             volume: state.volume,
+            status: map_audio_status(state.status).into(),
         })),
     })
 }
@@ -63,6 +64,7 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
                     queue: state.queue(),
                     queue_position: state.queue_position as u32,
                     volume: state.volume,
+                    status: map_audio_status(state.status).into(),
                 }),
                 seek_millis: time.as_millis() as u64,
             })),
@@ -92,6 +94,14 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
     }
 }
 
+fn map_audio_status(status: AudioStatus) -> crate::rpc::v1::PlayerStatus {
+    match status {
+        AudioStatus::Playing => crate::rpc::v1::PlayerStatus::Playing,
+        AudioStatus::Paused => crate::rpc::v1::PlayerStatus::Paused,
+        AudioStatus::Stopped => crate::rpc::v1::PlayerStatus::Stopped,
+    }
+}
+
 #[tonic::async_trait]
 impl Player for PlayerImpl {
     async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
@@ -113,6 +123,13 @@ impl Player for PlayerImpl {
 
     async fn pause(&self, _: Request<()>) -> Result<Response<()>, Status> {
         match self.player.pause().await {
+            Ok(()) => Ok(Response::new(())),
+            Err(e) => Err(format_error(format!("Error pausing queue: {e:?}"))),
+        }
+    }
+
+    async fn toggle(&self, _: Request<()>) -> Result<Response<()>, Status> {
+        match self.player.toggle().await {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!("Error pausing queue: {e:?}"))),
         }
@@ -149,9 +166,19 @@ impl Player for PlayerImpl {
     }
 
     async fn seek(&self, request: Request<SeekRequest>) -> Result<Response<()>, Status> {
-        let time = request.into_inner().time.unwrap();
+        let request = request.into_inner();
+        let time = request.time.unwrap();
+        let mode = match request.mode() {
+            SeekMode::Absolute => libplatune_player::platune_player::SeekMode::Absolute,
+            SeekMode::Forward => libplatune_player::platune_player::SeekMode::Forward,
+            SeekMode::Backward => libplatune_player::platune_player::SeekMode::Backward,
+        };
         let nanos = time.seconds * 1_000_000_000 + time.nanos as i64;
-        match self.player.seek(Duration::from_nanos(nanos as u64)).await {
+        match self
+            .player
+            .seek(Duration::from_nanos(nanos as u64), mode)
+            .await
+        {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!("Error seeking: {e:?}"))),
         }
@@ -193,12 +220,12 @@ impl Player for PlayerImpl {
 
         Ok(Response::new(StatusResponse {
             progress,
-            status: match status.track_status.status {
-                AudioStatus::Playing => crate::rpc::PlayerStatus::Playing.into(),
-                AudioStatus::Paused => crate::rpc::PlayerStatus::Paused.into(),
-                AudioStatus::Stopped => crate::rpc::PlayerStatus::Stopped.into(),
-            },
-            current_song: status.track_status.current_song,
+            state: Some(State {
+                queue: status.track_status.state.queue(),
+                queue_position: status.track_status.state.queue_position as u32,
+                volume: status.track_status.state.volume,
+                status: map_audio_status(status.track_status.status).into(),
+            }),
         }))
     }
 
@@ -232,12 +259,28 @@ impl Player for PlayerImpl {
         &self,
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
-        let mut ended_rx = self.player.subscribe();
+        let mut player_rx = self.player.subscribe();
         let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
+        let status = self
+            .player
+            .get_current_status()
+            .await
+            .map_err(|e| format_error(format!("error getting status: {e:?}")))?;
+
+        let initial_message = match status.track_status.status {
+            AudioStatus::Playing => map_response(PlayerEvent::Resume(status.track_status.state)),
+            AudioStatus::Paused => map_response(PlayerEvent::Pause(status.track_status.state)),
+            AudioStatus::Stopped => map_response(PlayerEvent::Stop(status.track_status.state)),
+        };
+        tx.send(initial_message).await.unwrap_or_default();
+        if let Some(position) = status.current_position {
+            let progress_message = map_response(PlayerEvent::Position(position));
+            tx.send(progress_message).await.unwrap_or_default();
+        }
         tokio::spawn(async move {
             while let Ok(msg) = tokio::select! {
-                val = ended_rx.recv() => val,
+                val = player_rx.recv() => val,
                 _ = shutdown_rx.next() => Err(RecvError::Closed)
             } {
                 info!("Server received event {:?}", msg);

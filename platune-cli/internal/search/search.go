@@ -8,14 +8,14 @@ import (
 	"strings"
 
 	"github.com/aschey/platune/cli/v2/internal"
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type item struct {
-	searchResult *platune.SearchResult
+	searchResult *management_v1.SearchResult
 }
 
 var (
@@ -30,7 +30,7 @@ type model struct {
 	list     list.Model
 	choice   item
 	client   *internal.PlatuneClient
-	callback func(entries []*platune.LookupEntry)
+	callback func(entries []*management_v1.LookupEntry)
 }
 
 type itemDelegate struct{}
@@ -48,7 +48,7 @@ func NewSearch(client *internal.PlatuneClient) *Search {
 func (search *Search) ProcessSearchResults(
 	args []string,
 	filesystemCallback func(file string),
-	dbCallback func(entries []*platune.LookupEntry),
+	dbCallback func(entries []*management_v1.LookupEntry),
 ) {
 	allArgs := strings.Join(args, " ")
 	_, err := os.Stat(allArgs)
@@ -63,7 +63,7 @@ func (search *Search) ProcessSearchResults(
 		filesystemCallback(allArgs)
 		return
 	} else {
-		results, err := search.client.Search(&platune.SearchRequest{Query: allArgs})
+		results, err := search.client.Search(&management_v1.SearchRequest{Query: allArgs})
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -150,7 +150,7 @@ func (m model) View() string {
 	return m.list.View()
 }
 
-func getItems(results []*platune.SearchResult) []list.Item {
+func getItems(results []*management_v1.SearchResult) []list.Item {
 	items := []list.Item{}
 	for _, result := range results {
 		items = append(items, item{searchResult: result})
@@ -160,8 +160,8 @@ func getItems(results []*platune.SearchResult) []list.Item {
 }
 
 func (search *Search) renderSearchResults(
-	results *platune.SearchResponse,
-	callback func(entries []*platune.LookupEntry),
+	results *management_v1.SearchResponse,
+	callback func(entries []*management_v1.LookupEntry),
 ) {
 	const defaultWidth = 20
 	const defaultHeight = 14
@@ -177,7 +177,7 @@ func (search *Search) renderSearchResults(
 		list:     l,
 		client:   search.client,
 		callback: callback,
-		choice:   item{searchResult: &platune.SearchResult{}},
+		choice:   item{searchResult: &management_v1.SearchResult{}},
 	}
 
 	if err := tea.NewProgram(m).Start(); err != nil {

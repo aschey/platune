@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
 type songInfo struct {
-	currentSong *platune.LookupEntry
+	currentSong *management_v1.LookupEntry
 	song        string
 	album       string
 	artist      string

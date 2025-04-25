@@ -1,11 +1,12 @@
 use decal::decoder::CurrentPosition;
 
 use super::audio_status::AudioStatus;
+use super::player_state::PlayerState;
 
 #[derive(Clone, Debug)]
 pub struct TrackStatus {
     pub status: AudioStatus,
-    pub current_song: Option<String>,
+    pub state: PlayerState,
 }
 
 #[derive(Clone, Debug)]

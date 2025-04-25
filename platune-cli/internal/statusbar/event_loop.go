@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
+	player_v1 "github.com/aschey/platune/client/player_v1"
 	"github.com/charmbracelet/lipgloss"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -30,7 +31,7 @@ type label struct {
 func (s *StatusBar) StartEventLoop() {
 	s.platuneClient.EnableReconnect()
 
-	eventCh := make(chan *platune.EventResponse, 1)
+	eventCh := make(chan *player_v1.EventResponse, 1)
 	go s.platuneClient.SubscribePlayerEvents(eventCh)
 
 	playerConnCh := make(chan connectivity.State, 1)
@@ -47,7 +48,7 @@ func (l label) render(iconStyle lipgloss.Style) string {
 }
 
 func (s *StatusBar) eventLoop(
-	eventCh chan *platune.EventResponse,
+	eventCh chan *player_v1.EventResponse,
 	playerStateCh chan connectivity.State,
 	managementStateCh chan connectivity.State,
 ) {
@@ -55,18 +56,16 @@ func (s *StatusBar) eventLoop(
 	sigCh := getSignalChannel()
 	ticker := time.NewTicker(500 * time.Millisecond)
 
-	currentStatus := s.platuneClient.GetCurrentStatus()
 	timer := timer{}
-	event := s.handlePlayerStatus(&timer, currentStatus)
 
-	playingIconColor := event.color
-	playingIconStyle := defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
-	currentSong := event.newSong
+	playingIconColor := ""
+	playingIconStyle := defaultStyle.Copy()
+	var currentSong *management_v1.LookupEntry
 	renderParams := renderParams{
 		timer:        &timer,
 		connection:   "",
-		playingIcon:  playingIconStyle.Render(event.icon + " "),
-		renderStatus: textStyle.Render(event.status),
+		playingIcon:  "",
+		renderStatus: "",
 	}
 	s.renderStatusBar(renderParams)
 	var playerState connectivity.State

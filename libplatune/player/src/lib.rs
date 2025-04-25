@@ -37,6 +37,13 @@ pub mod platune_player {
     #[error("{0}")]
     pub struct PlayerError(String);
 
+    #[derive(Clone, Copy, Debug)]
+    pub enum SeekMode {
+        Forward,
+        Backward,
+        Absolute,
+    }
+
     #[derive(Derivative)]
     #[derivative(Debug)]
     pub struct PlatunePlayer<B: AudioBackend> {
@@ -149,9 +156,9 @@ pub mod platune_player {
                 .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
-        pub async fn seek(&self, time: Duration) -> Result<(), PlayerError> {
+        pub async fn seek(&self, time: Duration, mode: SeekMode) -> Result<(), PlayerError> {
             self.cmd_sender
-                .send_async(Command::Seek(time))
+                .send_async(Command::Seek(time, mode))
                 .await
                 .map_err(|e| PlayerError(format!("{e:?}")))
         }
@@ -214,6 +221,12 @@ pub mod platune_player {
                 .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
+        pub async fn toggle(&self) -> Result<(), PlayerError> {
+            self.cmd_sender
+                .send_async(Command::Toggle)
+                .await
+                .map_err(|e| PlayerError(format!("{e:?}")))
+        }
         pub async fn resume(&self) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::Resume)

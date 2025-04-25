@@ -34,6 +34,7 @@ where
     P: AsRef<Path>,
 {
     let file_path = file_path.as_ref();
+
     if file_path.starts_with("http://") || file_path.starts_with("https://") {
         // No need to normalize http urls
         return Ok(file_path.to_string_lossy().to_string());

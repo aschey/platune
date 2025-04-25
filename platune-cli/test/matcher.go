@@ -1,6 +1,6 @@
 package test
 
-import gomock "github.com/golang/mock/gomock"
+import gomock "go.uber.org/mock/gomock"
 
 func NewMatcher(customMatcher func(arg interface{}) bool) gomock.Matcher {
 	return matcherCustomizer{customMatcher}

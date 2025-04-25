@@ -18,8 +18,9 @@ import (
 	"github.com/aschey/platune/cli/v2/internal/search"
 	"github.com/aschey/platune/cli/v2/internal/statusbar"
 	"github.com/aschey/platune/cli/v2/test"
-	platune "github.com/aschey/platune/client"
-	"github.com/golang/mock/gomock"
+	management_v1 "github.com/aschey/platune/client/management_v1"
+	player_v1 "github.com/aschey/platune/client/player_v1"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -109,9 +110,9 @@ func executeInteractive(t *testing.T, state *cmdState, steps []completionCase, s
 func testInteractive(
 	t *testing.T,
 	searchQuery string,
-	searchResults []*platune.SearchResult,
-	lookupRequest *platune.LookupRequest,
-	lookupEntries []*platune.LookupEntry,
+	searchResults []*management_v1.SearchResult,
+	lookupRequest *management_v1.LookupRequest,
+	lookupEntries []*management_v1.LookupEntry,
 	matcherFunc func(arg interface{}) bool,
 	steps []completionCase,
 	isAddQueue bool,
@@ -122,15 +123,15 @@ func testInteractive(
 
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	playerMock := test.NewMockPlayerClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
-	stream.EXPECT().Send(&platune.SearchRequest{Query: searchQuery}).Return(nil)
+	stream := test.NewMockBidiStreamingClient[management_v1.SearchRequest, management_v1.SearchResponse](ctrl)
+	stream.EXPECT().Send(&management_v1.SearchRequest{Query: searchQuery}).Return(nil)
 
-	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: searchResults}, nil)
+	stream.EXPECT().Recv().Return(&management_v1.SearchResponse{Results: searchResults}, nil)
 
 	mgmtMock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	mgmtMock.EXPECT().
 		Lookup(gomock.Any(), lookupRequest).
-		Return(&platune.LookupResponse{Entries: lookupEntries}, nil)
+		Return(&management_v1.LookupResponse{Entries: lookupEntries}, nil)
 	matcher := test.NewMatcher(func(arg interface{}) bool {
 		return matcherFunc(arg)
 	})
@@ -160,7 +161,7 @@ func TestAddQueueFile(t *testing.T) {
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			path, _ := filepath.Abs(testSong)
-			return arg.(*platune.AddToQueueRequest).Songs[0] == path
+			return arg.(*player_v1.AddToQueueRequest).Songs[0] == path
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
 	}, addQueueCmdText, testSong)
@@ -170,7 +171,7 @@ func TestAddQueueUrl(t *testing.T) {
 	testSong := "http://test.com/blah.mp3"
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			return arg.(*platune.AddToQueueRequest).Songs[0] == testSong
+			return arg.(*player_v1.AddToQueueRequest).Songs[0] == testSong
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
 	}, addQueueCmdText, testSong)
@@ -180,7 +181,7 @@ func TestSetQueueFile(t *testing.T) {
 	testSong := "root.go"
 	runPlayerTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			queue := arg.(*platune.QueueRequest).Queue
+			queue := arg.(*player_v1.QueueRequest).Queue
 			path, _ := filepath.Abs(testSong)
 			return queue[0] == path
 		})
@@ -192,7 +193,7 @@ func TestSetQueueUrl(t *testing.T) {
 	testSong := "http://test.com/blah.mp3"
 	runPlayerTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			queue := arg.(*platune.QueueRequest).Queue
+			queue := arg.(*player_v1.QueueRequest).Queue
 			return queue[0] == testSong
 		})
 		expect.SetQueue(gomock.Any(), matcher)
@@ -211,7 +212,7 @@ func TestSeek(t *testing.T) {
 
 	for _, tc := range testCases {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			return arg.(*platune.SeekRequest).Time.AsDuration() == time.Duration(
+			return arg.(*player_v1.SeekRequest).Time.AsDuration() == time.Duration(
 				tc.expected*uint64(time.Millisecond),
 			)
 		})
@@ -260,23 +261,23 @@ func TestStop(t *testing.T) {
 func TestSync(t *testing.T) {
 	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
 		ctrl := gomock.NewController(t)
-		stream := test.NewMockManagement_SubscribeEventsClient(ctrl)
+		stream := test.NewMockServerStreamingClient[management_v1.Progress](ctrl)
 		stream.EXPECT().
 			Recv().
-			Return(&platune.Progress{Percentage: 0.1, Finished: false, Job: "sync"}, nil)
+			Return(&management_v1.Progress{Percentage: 0.1, Finished: false, Job: "sync"}, nil)
 		stream.EXPECT().
 			Recv().
-			Return(&platune.Progress{Percentage: 0.1, Finished: false, Job: "somethingElse"}, nil)
+			Return(&management_v1.Progress{Percentage: 0.1, Finished: false, Job: "somethingElse"}, nil)
 		// subscriber channel runs in a separate goroutine so we don't know how many times it will execute before the main thread finishes
 		stream.EXPECT().
 			Recv().
-			Return(&platune.Progress{Percentage: 1.0, Finished: true, Job: "sync"}, nil).
+			Return(&management_v1.Progress{Percentage: 1.0, Finished: true, Job: "sync"}, nil).
 			MinTimes(1)
 		expect.SubscribeEvents(gomock.Any(), gomock.Any()).Return(stream, nil)
 		expect.StartSync(gomock.Any(), &emptypb.Empty{}).Return(&emptypb.Empty{}, nil)
 
-		expect.GetDeleted(gomock.Any(), gomock.Any()).Return(&platune.GetDeletedResponse{
-			Results: []*platune.DeletedResult{},
+		expect.GetDeleted(gomock.Any(), gomock.Any()).Return(&management_v1.GetDeletedResponse{
+			Results: []*management_v1.DeletedResult{},
 		}, nil)
 	}, syncCmdText)
 
@@ -287,7 +288,7 @@ func TestGetAllFolders(t *testing.T) {
 	response := "C://test"
 	res := runManagementTest(t, "", func(expect *test.MockManagementClientMockRecorder) {
 		expect.GetAllFolders(gomock.Any(), gomock.Any()).
-			Return(&platune.FoldersMessage{Folders: []string{response}}, nil)
+			Return(&management_v1.FoldersMessage{Folders: []string{response}}, nil)
 	}, getAllFoldersCmdText)
 
 	testza.AssertContains(t, res, response)
@@ -297,7 +298,7 @@ func TestAddFolder(t *testing.T) {
 	folder := "folder1"
 	runManagementTest(t, "Added\n", func(expect *test.MockManagementClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			folders := arg.(*platune.FoldersMessage).Folders
+			folders := arg.(*management_v1.FoldersMessage).Folders
 			return folders[0] == folder
 		})
 		expect.AddFolders(gomock.Any(), matcher)
@@ -308,7 +309,7 @@ func TestSetMount(t *testing.T) {
 	folder := "/home/test"
 	runManagementTest(t, "Set\n", func(expect *test.MockManagementClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			mount := arg.(*platune.RegisteredMountMessage).Mount
+			mount := arg.(*management_v1.RegisteredMountMessage).Mount
 			return mount == folder
 		})
 		expect.RegisterMount(gomock.Any(), matcher)
@@ -319,7 +320,7 @@ func TestSetVolume(t *testing.T) {
 	volume := float32(0.5)
 	runPlayerTest(t, "Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			volumeArg := arg.(*platune.SetVolumeRequest).Volume
+			volumeArg := arg.(*player_v1.SetVolumeRequest).Volume
 			return volumeArg == volume
 		})
 		expect.SetVolume(gomock.Any(), matcher)
@@ -337,9 +338,9 @@ func testFileCompleter(t *testing.T, prefix string, isAddQueue bool) {
 	defer ctrl.Finish()
 
 	mock := test.NewMockManagementClient(ctrl)
-	stream := test.NewMockManagement_SearchClient(ctrl)
+	stream := test.NewMockBidiStreamingClient[management_v1.SearchRequest, management_v1.SearchResponse](ctrl)
 	stream.EXPECT().Send(gomock.Any()).Return(nil)
-	stream.EXPECT().Recv().Return(&platune.SearchResponse{Results: []*platune.SearchResult{}}, nil)
+	stream.EXPECT().Recv().Return(&management_v1.SearchResponse{Results: []*management_v1.SearchResult{}}, nil)
 
 	mock.EXPECT().Search(gomock.Any()).Return(stream, nil)
 	client := internal.NewTestClient(nil, mock)
@@ -374,20 +375,20 @@ func testSongSelection(
 	selectPrompt bool,
 ) {
 	artist := "blah"
-	searchResults := []*platune.SearchResult{
+	searchResults := []*management_v1.SearchResult{
 		{
 			Entry:          "song name",
-			EntryType:      platune.EntryType_SONG,
+			EntryType:      management_v1.EntryType_SONG,
 			Artist:         &artist,
 			CorrelationIds: []int64{1},
 			Description:    "song desc",
 		},
 	}
-	lookupRequest := &platune.LookupRequest{
-		EntryType:      platune.EntryType_SONG,
+	lookupRequest := &management_v1.LookupRequest{
+		EntryType:      management_v1.EntryType_SONG,
 		CorrelationIds: []int64{1},
 	}
-	lookupEntries := []*platune.LookupEntry{
+	lookupEntries := []*management_v1.LookupEntry{
 		{
 			Artist: "artist name",
 			Album:  "album 1",
@@ -416,7 +417,7 @@ func testSongSelection(
 
 func TestAddQueueSongSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		return arg.(*platune.AddToQueueRequest).Songs[0] == "/test/path/1"
+		return arg.(*player_v1.AddToQueueRequest).Songs[0] == "/test/path/1"
 	}
 	testSongSelection(t, matcherFunc, addQueueCmdText+" ", true, true)
 	testSongSelection(t, matcherFunc, addQueueCmdText+" ", true, false)
@@ -424,7 +425,7 @@ func TestAddQueueSongSelection(t *testing.T) {
 
 func TestSetQueueSongSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		return arg.(*platune.QueueRequest).Queue[0] == "/test/path/1"
+		return arg.(*player_v1.QueueRequest).Queue[0] == "/test/path/1"
 	}
 	testSongSelection(t, matcherFunc, "", false, true)
 	testSongSelection(t, matcherFunc, "", false, false)
@@ -438,20 +439,20 @@ func testAlbumSelection(
 	selectPrompt bool,
 ) {
 	artist := "blah"
-	searchResults := []*platune.SearchResult{
+	searchResults := []*management_v1.SearchResult{
 		{
 			Entry:          "album name",
-			EntryType:      platune.EntryType_ALBUM,
+			EntryType:      management_v1.EntryType_ALBUM,
 			Artist:         &artist,
 			CorrelationIds: []int64{1},
 			Description:    "album desc",
 		},
 	}
-	lookupRequest := &platune.LookupRequest{
-		EntryType:      platune.EntryType_ALBUM,
+	lookupRequest := &management_v1.LookupRequest{
+		EntryType:      management_v1.EntryType_ALBUM,
 		CorrelationIds: []int64{1},
 	}
-	lookupEntries := []*platune.LookupEntry{
+	lookupEntries := []*management_v1.LookupEntry{
 		{
 			Artist: "artist name",
 			Album:  "album name",
@@ -488,7 +489,7 @@ func testAlbumSelection(
 
 func TestAddQueueAlbumSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.AddToQueueRequest)
+		req := arg.(*player_v1.AddToQueueRequest)
 		return len(req.Songs) == 1 && req.Songs[0] == "/test/path/1"
 	}
 	testAlbumSelection(t, matcherFunc, addQueueCmdText+" ", true, true)
@@ -497,7 +498,7 @@ func TestAddQueueAlbumSelection(t *testing.T) {
 
 func TestSetQueueAlbumSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.QueueRequest)
+		req := arg.(*player_v1.QueueRequest)
 		return len(req.Queue) == 1 && req.Queue[0] == "/test/path/1"
 	}
 	testAlbumSelection(t, matcherFunc, "", false, true)
@@ -512,20 +513,20 @@ func testAlbumSelectAll(
 	selectPrompt bool,
 ) {
 	artist := "blah"
-	searchResults := []*platune.SearchResult{
+	searchResults := []*management_v1.SearchResult{
 		{
 			Entry:          "album name",
-			EntryType:      platune.EntryType_ALBUM,
+			EntryType:      management_v1.EntryType_ALBUM,
 			Artist:         &artist,
 			CorrelationIds: []int64{1},
 			Description:    "album desc",
 		},
 	}
-	lookupRequest := &platune.LookupRequest{
-		EntryType:      platune.EntryType_ALBUM,
+	lookupRequest := &management_v1.LookupRequest{
+		EntryType:      management_v1.EntryType_ALBUM,
 		CorrelationIds: []int64{1},
 	}
-	lookupEntries := []*platune.LookupEntry{
+	lookupEntries := []*management_v1.LookupEntry{
 		{
 			Artist: "artist name",
 			Album:  "album name",
@@ -562,7 +563,7 @@ func testAlbumSelectAll(
 
 func TestAddQueueAlbumSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.AddToQueueRequest)
+		req := arg.(*player_v1.AddToQueueRequest)
 		return len(req.Songs) == 2 && req.Songs[0] == "/test/path/1" &&
 			req.Songs[1] == "/test/path/2"
 	}
@@ -572,7 +573,7 @@ func TestAddQueueAlbumSelectAll(t *testing.T) {
 
 func TestSetQueueAlbumSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.QueueRequest)
+		req := arg.(*player_v1.QueueRequest)
 		return len(req.Queue) == 2 && req.Queue[0] == "/test/path/1" &&
 			req.Queue[1] == "/test/path/2"
 	}
@@ -587,19 +588,19 @@ func testArtistSelection(
 	isAddQueue bool,
 	selectPrompt bool,
 ) {
-	searchResults := []*platune.SearchResult{
+	searchResults := []*management_v1.SearchResult{
 		{
 			Entry:          "artist name",
-			EntryType:      platune.EntryType_ARTIST,
+			EntryType:      management_v1.EntryType_ARTIST,
 			CorrelationIds: []int64{1},
 			Description:    "artist desc",
 		},
 	}
-	lookupRequest := &platune.LookupRequest{
-		EntryType:      platune.EntryType_ARTIST,
+	lookupRequest := &management_v1.LookupRequest{
+		EntryType:      management_v1.EntryType_ARTIST,
 		CorrelationIds: []int64{1},
 	}
-	lookupEntries := []*platune.LookupEntry{
+	lookupEntries := []*management_v1.LookupEntry{
 		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
 		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
 		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
@@ -627,7 +628,7 @@ func testArtistSelection(
 
 func TestAddQueueArtistSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.AddToQueueRequest)
+		req := arg.(*player_v1.AddToQueueRequest)
 		return len(req.Songs) == 1 && req.Songs[0] == "/test/path/1"
 	}
 	testArtistSelection(t, matcherFunc, addQueueCmdText+" ", true, true)
@@ -636,7 +637,7 @@ func TestAddQueueArtistSelection(t *testing.T) {
 
 func TestSetQueueArtistSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.QueueRequest)
+		req := arg.(*player_v1.QueueRequest)
 		return len(req.Queue) == 1 && req.Queue[0] == "/test/path/1"
 	}
 	testArtistSelection(t, matcherFunc, "", false, true)
@@ -650,19 +651,19 @@ func testArtistSelectAll(
 	isAddQueue bool,
 	selectPrompt bool,
 ) {
-	searchResults := []*platune.SearchResult{
+	searchResults := []*management_v1.SearchResult{
 		{
 			Entry:          "artist name",
-			EntryType:      platune.EntryType_ARTIST,
+			EntryType:      management_v1.EntryType_ARTIST,
 			CorrelationIds: []int64{1},
 			Description:    "artist desc",
 		},
 	}
-	lookupRequest := &platune.LookupRequest{
-		EntryType:      platune.EntryType_ARTIST,
+	lookupRequest := &management_v1.LookupRequest{
+		EntryType:      management_v1.EntryType_ARTIST,
 		CorrelationIds: []int64{1},
 	}
-	lookupEntries := []*platune.LookupEntry{
+	lookupEntries := []*management_v1.LookupEntry{
 		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
 		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
 		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
@@ -689,7 +690,7 @@ func testArtistSelectAll(
 
 func TestAddQueueArtistSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.AddToQueueRequest)
+		req := arg.(*player_v1.AddToQueueRequest)
 		return len(req.Songs) == 4 &&
 			req.Songs[0] == "/test/path/1" &&
 			req.Songs[1] == "/test/path/2" &&
@@ -702,7 +703,7 @@ func TestAddQueueArtistSelectAll(t *testing.T) {
 
 func TestSetQueueArtistSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.QueueRequest)
+		req := arg.(*player_v1.QueueRequest)
 		return len(req.Queue) == 4 &&
 			req.Queue[0] == "/test/path/1" &&
 			req.Queue[1] == "/test/path/2" &&
@@ -720,19 +721,19 @@ func testArtistSelectOneAlbum(
 	isAddQueue bool,
 	selectPrompt bool,
 ) {
-	searchResults := []*platune.SearchResult{
+	searchResults := []*management_v1.SearchResult{
 		{
 			Entry:          "artist name",
-			EntryType:      platune.EntryType_ARTIST,
+			EntryType:      management_v1.EntryType_ARTIST,
 			CorrelationIds: []int64{1},
 			Description:    "artist desc",
 		},
 	}
-	lookupRequest := &platune.LookupRequest{
-		EntryType:      platune.EntryType_ARTIST,
+	lookupRequest := &management_v1.LookupRequest{
+		EntryType:      management_v1.EntryType_ARTIST,
 		CorrelationIds: []int64{1},
 	}
-	lookupEntries := []*platune.LookupEntry{
+	lookupEntries := []*management_v1.LookupEntry{
 		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
 		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
 		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
@@ -760,7 +761,7 @@ func testArtistSelectOneAlbum(
 
 func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.AddToQueueRequest)
+		req := arg.(*player_v1.AddToQueueRequest)
 		return len(req.Songs) == 2 &&
 			req.Songs[0] == "/test/path/3" &&
 			req.Songs[1] == "/test/path/4"
@@ -771,7 +772,7 @@ func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
 
 func TestSetQueueArtistSelectOneAlbum(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*platune.QueueRequest)
+		req := arg.(*player_v1.QueueRequest)
 		return len(req.Queue) == 2 &&
 			req.Queue[0] == "/test/path/3" &&
 			req.Queue[1] == "/test/path/4"
@@ -810,16 +811,16 @@ func TestSetQueueExecutor(t *testing.T) {
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	path := "/test/path/1"
 
-	playerMock.EXPECT().SetQueue(gomock.Any(), &platune.QueueRequest{Queue: []string{path, path}})
+	playerMock.EXPECT().SetQueue(gomock.Any(), &player_v1.QueueRequest{Queue: []string{path, path}})
 
-	entries := []*platune.LookupEntry{
+	entries := []*management_v1.LookupEntry{
 		{Artist: "artist name", Album: "album 1", Song: "song name", Path: path, Track: 1},
 	}
-	mgmtMock.EXPECT().Lookup(gomock.Any(), &platune.LookupRequest{
-		EntryType:      platune.EntryType_SONG,
+	mgmtMock.EXPECT().Lookup(gomock.Any(), &management_v1.LookupRequest{
+		EntryType:      management_v1.EntryType_SONG,
 		CorrelationIds: []int64{1},
 	}).
-		Return(&platune.LookupResponse{Entries: entries}, nil).Times(2)
+		Return(&management_v1.LookupResponse{Entries: entries}, nil).Times(2)
 
 	client := internal.NewTestClient(playerMock, mgmtMock)
 	deleted := deleted.NewDeleted(&client)
@@ -828,8 +829,8 @@ func TestSetQueueExecutor(t *testing.T) {
 	state.executor(setQueueCmdText, nil, []prompt.Suggest{})
 	testza.AssertEqual(t, mode.SetQueueMode, state.mode.First())
 
-	suggests := []prompt.Suggest{{Text: "song name", Metadata: &platune.SearchResult{
-		EntryType:      platune.EntryType_SONG,
+	suggests := []prompt.Suggest{{Text: "song name", Metadata: &management_v1.SearchResult{
+		EntryType:      management_v1.EntryType_SONG,
 		CorrelationIds: []int64{1},
 	}}}
 
@@ -854,7 +855,7 @@ func TestSetQueueExecutorFile(t *testing.T) {
 
 	playerMock := test.NewMockPlayerClient(ctrl)
 	matcher := test.NewMatcher(func(arg interface{}) bool {
-		queue := arg.(*platune.QueueRequest).Queue
+		queue := arg.(*player_v1.QueueRequest).Queue
 		return strings.HasSuffix(queue[0], "root.go") && strings.HasSuffix(queue[1], "root.go")
 	})
 	playerMock.EXPECT().SetQueue(gomock.Any(), matcher)

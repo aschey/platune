@@ -10,7 +10,7 @@ use tracing::{error, info};
 use crate::dto::decoder_command::DecoderCommand;
 use crate::dto::decoder_response::DecoderResponse;
 use crate::dto::processor_error::ProcessorError;
-use crate::platune_player::PlayerEvent;
+use crate::platune_player::{PlayerEvent, SeekMode};
 use crate::two_way_channel::TwoWayReceiver;
 
 pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
@@ -85,8 +85,14 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
 
                         return Ok(InputResult::Stop);
                     }
-                    DecoderCommand::Seek(time) => {
-                        let seek_response = match self.decoder.seek(time) {
+                    DecoderCommand::Seek(time, mode) => {
+                        let current_time = self.decoder.current_position();
+                        let seek_time = match mode {
+                            SeekMode::Absolute => time,
+                            SeekMode::Forward => current_time.position + time,
+                            SeekMode::Backward => current_time.position - time,
+                        };
+                        let seek_response = match self.decoder.seek(seek_time) {
                             Ok(seeked_to) => Ok(seeked_to.actual_ts),
                             Err(e) => Err(e.to_string()),
                         };

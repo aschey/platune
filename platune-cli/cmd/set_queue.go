@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/aschey/platune/cli/v2/internal"
-	platune "github.com/aschey/platune/client"
+	management_v1 "github.com/aschey/platune/client/management_v1"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ func newSetQueueCmd() *cobra.Command {
 			search := GetSearch(cmd)
 			search.ProcessSearchResults(args,
 				func(file string) { client.SetQueue([]string{file}, true) },
-				func(entries []*platune.LookupEntry) { client.SetQueueFromSearchResults(entries, false) })
+				func(entries []*management_v1.LookupEntry) { client.SetQueueFromSearchResults(entries, false) })
 		},
 	}
 

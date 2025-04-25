@@ -35,14 +35,14 @@ jobs:
       - name: apt-get update
         if: matrix.os == 'ubuntu-latest'
         # act doesn't have sudo installed but it's required on the real actions runner
-        run: $(command -v sudo>/dev/null && echo "sudo") apt-get update
+        run: |
+          $(command -v sudo>/dev/null && echo "sudo") apt-get update
+          $(command -v sudo>/dev/null && echo "sudo") apt-get  install -y libgtk-3-dev libayatana-appindicator3-dev libxdo-dev
       - name: Install deps
         if: matrix.os == 'ubuntu-latest'
         run: |
           $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev git
       - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: cache-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         run: |
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v${{env.PROTOC_VERSION}}/protoc-${{env.PROTOC_VERSION}}-${{ matrix.protoc-target }}.zip
