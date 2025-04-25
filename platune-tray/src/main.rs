@@ -620,7 +620,7 @@ impl MenuHandler for PlatuneMenuHandler {
     fn handle_menu_event(&mut self, event: MenuEvent) -> ControlFlow {
         self.menu_handler.handle(
             &event,
-            self.current_state.clone(),
+            self.current_state,
             &self.player_tx,
             &self.manager_tx,
         )
