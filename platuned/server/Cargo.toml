@@ -9,7 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 axum = { version = "0.8.3", optional = true }
-clap = { version = "4.5.36", features = ["unstable-styles"] }
+clap = { version = "4.5.37", features = ["unstable-styles"] }
 console-subscriber = { version = "0.4.1", features = [
   "parking_lot",
 ], optional = true }

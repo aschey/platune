@@ -52,7 +52,7 @@ walkdir = "2"
 
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["async_tokio"] }
-ctor = "0.4.1"
+ctor = "0.4.2"
 pretty_assertions = "1.4.1"
 rstest = "0.25.0"
 tempfile = "3.19.1"
