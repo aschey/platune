@@ -4,7 +4,7 @@ relative_dir="$(dirname "$0")/.."
 repo_dir="$(realpath "$relative_dir")"
 
 cd "${repo_dir}/platuned/server"
-cargo build --release
+cargo build --release --no-default-features --features player
 platunectl stop
 pkill 'platune-tray'
 cd "${repo_dir}/platune-tray"

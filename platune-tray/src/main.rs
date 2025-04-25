@@ -17,7 +17,7 @@ use daemon_slayer::tray::tray_icon::{TrayIcon, TrayIconBuilder, TrayIconEvent};
 use daemon_slayer::tray::{MenuHandler, Tray, get_start_stop_text, load_icon};
 use futures_util::stream::StreamExt;
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
-use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager};
+use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 use platuned_client::Channel;
 use platuned_client::management::v1::PathMessage;
 use platuned_client::management::v1::management_client::ManagementClient;
@@ -70,7 +70,7 @@ fn main() -> Result<(), BoxedError> {
         let player_tx = player_tx.clone();
         move || {
             while let Ok(event) = global_hotkey_channel.recv() {
-                if event.id() == toggle_id {
+                if event.id() == toggle_id && event.state() == HotKeyState::Pressed {
                     player_tx.blocking_send(PlayerCommand::Toggle).unwrap();
                 }
             }
