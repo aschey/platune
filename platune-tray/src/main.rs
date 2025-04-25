@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::env::{self, current_exe};
 use std::path::PathBuf;
+use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use daemon_slayer::client::config::Level;
@@ -15,6 +16,8 @@ use daemon_slayer::tray::tray_icon::menu::{
 use daemon_slayer::tray::tray_icon::{TrayIcon, TrayIconBuilder, TrayIconEvent};
 use daemon_slayer::tray::{MenuHandler, Tray, get_start_stop_text, load_icon};
 use futures_util::stream::StreamExt;
+use global_hotkey::hotkey::{Code, HotKey, Modifiers};
+use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager};
 use platuned_client::Channel;
 use platuned_client::management::v1::PathMessage;
 use platuned_client::management::v1::management_client::ManagementClient;
@@ -55,8 +58,24 @@ fn main() -> Result<(), BoxedError> {
     let (player_tx, player_rx) = mpsc::channel(32);
     let (manager_tx, manager_rx) = mpsc::channel(32);
 
+    let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
+    let hotkey = HotKey::new(Some(Modifiers::ALT), Code::KeyP);
+    let toggle_id = hotkey.id();
+    hotkeys_manager.register(hotkey).unwrap();
+    let global_hotkey_channel = GlobalHotKeyEvent::receiver();
+
     tokio::spawn(player_handler(player_rx));
     tokio::spawn(manager_handler(manager, manager_rx));
+    thread::spawn({
+        let player_tx = player_tx.clone();
+        move || {
+            while let Ok(event) = global_hotkey_channel.recv() {
+                if event.id() == toggle_id {
+                    player_tx.blocking_send(PlayerCommand::Toggle).unwrap();
+                }
+            }
+        }
+    });
 
     let handler = PlatuneMenuHandler::new(player_tx, manager_tx);
     Tray::with_handler(handler).run();
