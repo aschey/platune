@@ -13,5 +13,6 @@ rustflags = ["--cfg", "tokio_unstable"]
 codegen-units = 1
 build-std = "std"
 lto = true
-panic = "abort"
+# setting panic=abort causes tray app to panic on startup on macos
+#panic = "abort"
 strip = true
