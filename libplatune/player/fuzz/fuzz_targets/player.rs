@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use libfuzzer_sys::arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use libplatune_player::platune_player::{PlatunePlayer, Settings};
 use libplatune_player::CpalOutput;
+use libplatune_player::platune_player::{PlatunePlayer, SeekMode, Settings};
 use tokio::runtime::Runtime;
 
 #[derive(Arbitrary, Debug)]
@@ -99,7 +99,7 @@ fuzz_target!(|input: Input| {
             }
             Input::Seek(seek_time) => {
                 PLAYER
-                    .seek(Duration::from_millis(seek_time as u64))
+                    .seek(Duration::from_millis(seek_time as u64), SeekMode::Absolute)
                     .await
                     .unwrap();
             }
