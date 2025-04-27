@@ -296,7 +296,7 @@ async fn metadata_updater(mut controls: MediaControls) {
     let mut last_progress = Instant::now();
     let mut status = platuned_client::player::v1::PlayerStatus::Stopped;
     let mut is_init = false;
-    let mut current_duration = Duration::default();
+    let mut current_duration = None;
     loop {
         match timeout(Duration::from_secs(1), stream.next()).await {
             Ok(Some(Ok(message))) => {
@@ -411,7 +411,8 @@ async fn metadata_updater(mut controls: MediaControls) {
             Err(_) => {
                 if status == platuned_client::player::v1::PlayerStatus::Playing {
                     let now = Instant::now();
-                    progress = (progress + (now - last_progress)).min(current_duration);
+                    progress = (progress + (now - last_progress))
+                        .min(current_duration.unwrap_or(Duration::MAX));
                     last_progress = now;
                     controls
                         .set_playback(MediaPlayback::Playing {
@@ -428,7 +429,7 @@ async fn set_metadata(
     mgmt_client: &mut LazyMgmtClient,
     state: &platuned_client::player::v1::State,
     controls: &mut MediaControls,
-) -> Duration {
+) -> Option<Duration> {
     let pos = state.queue_position as usize;
     if pos < state.queue.len() {
         let path = &state.queue[pos];
@@ -453,7 +454,7 @@ async fn set_metadata(
                     duration: Some(duration),
                 })
                 .unwrap();
-            duration
+            Some(duration)
         } else {
             controls
                 .set_metadata(MediaMetadata {
@@ -461,10 +462,10 @@ async fn set_metadata(
                     ..Default::default()
                 })
                 .unwrap();
-            Duration::default()
+            None
         }
     } else {
-        Duration::default()
+        None
     }
 }
 
