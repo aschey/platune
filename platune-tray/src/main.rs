@@ -431,30 +431,38 @@ async fn set_metadata(
 ) -> Duration {
     let pos = state.queue_position as usize;
     if pos < state.queue.len() {
+        let path = &state.queue[pos];
         let metadata = mgmt_client
             .get()
             .await
-            .get_song_by_path(PathMessage {
-                path: state.queue[pos].clone(),
-            })
+            .get_song_by_path(PathMessage { path: path.clone() })
             .await
             .unwrap()
             .into_inner()
-            .song
-            .unwrap();
-        let duration = metadata.duration.unwrap();
-        let duration = Duration::from_secs(duration.seconds as u64)
-            + Duration::from_nanos(duration.nanos as u64);
-        controls
-            .set_metadata(MediaMetadata {
-                title: Some(&metadata.song),
-                album: Some(&metadata.album),
-                artist: Some(&metadata.artist),
-                cover_url: None,
-                duration: Some(duration),
-            })
-            .unwrap();
-        duration
+            .song;
+        if let Some(metadata) = metadata {
+            let duration = metadata.duration.unwrap();
+            let duration = Duration::from_secs(duration.seconds as u64)
+                + Duration::from_nanos(duration.nanos as u64);
+            controls
+                .set_metadata(MediaMetadata {
+                    title: Some(&metadata.song),
+                    album: Some(&metadata.album),
+                    artist: Some(&metadata.artist),
+                    cover_url: None,
+                    duration: Some(duration),
+                })
+                .unwrap();
+            duration
+        } else {
+            controls
+                .set_metadata(MediaMetadata {
+                    title: Some(path),
+                    ..Default::default()
+                })
+                .unwrap();
+            Duration::default()
+        }
     } else {
         Duration::default()
     }
