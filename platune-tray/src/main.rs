@@ -59,7 +59,10 @@ fn main() -> Result<(), BoxedError> {
     let (manager_tx, manager_rx) = mpsc::channel(32);
 
     let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
+    #[cfg(not(target_os = "macos"))]
     let hotkey = HotKey::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyP);
+    #[cfg(target_os = "macos")]
+    let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyP);
     let toggle_id = hotkey.id();
     hotkeys_manager.register(hotkey).unwrap();
     let global_hotkey_channel = GlobalHotKeyEvent::receiver();
