@@ -8,12 +8,12 @@ version = "0.1.0"
 path = "src/lib.rs"
 
 [dependencies]
-axum = { version = "0.8.3", optional = true }
+axum = { version = "0.8.4", optional = true }
 clap = { version = "4.5.37", features = ["unstable-styles"] }
 console-subscriber = { version = "0.4.1", features = [
   "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "ce12d2d8d62d96e9122e7c8a3cd893ca063120f9", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "1a3f6f55d0006e73f8cdb984cc2fee6825fcc4fe", features = [
   "client-standard",
   "server-standard",
   "notify",
@@ -27,16 +27,16 @@ dotenvy = "0.15.7"
 futures = "0.3.31"
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
-tipsy = "0.4.0"
+tipsy = "0.4.1"
 prost = "0.13.5"
 prost-types = "0.13.5"
 rcgen = { version = "0.13.2", features = ["x509-parser", "pem"] }
 time = "0.3.41"
-tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.45.0", features = ["rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.17", features = ["net"] }
-tonic = { version = "0.13.0", features = ["tls-aws-lc"] }
-tonic-health = "0.13.0"
-tonic-reflection = "0.13.0"
+tonic = { version = "0.13.1", features = ["tls-aws-lc"] }
+tonic-health = "0.13.1"
+tonic-reflection = "0.13.1"
 tower = { version = "0.5.2", optional = true }
 tower-http = { version = "0.6.2", features = ["fs"], optional = true }
 tracing = "0.1.41"
@@ -54,5 +54,5 @@ player = ["libplatune-player"]
 tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
-tonic-build = { version = "0.13.0", features = ["prost"] }
+tonic-build = { version = "0.13.1", features = ["prost"] }
 vergen-gix = { version = "1.0.9", features = ["build", "cargo", "rustc", "si"] }

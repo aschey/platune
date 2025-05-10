@@ -15,7 +15,7 @@ eyre = "0.6"
 flume = "0.11"
 futures-util = "0.3"
 tokio-util = "0.7"
-stream-download = { version = "0.19.0", features = [
+stream-download = { version = "0.19.1", features = [
   "reqwest-rustls",
   "reqwest-middleware",
   "registry",
