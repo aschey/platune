@@ -9,7 +9,7 @@ name = "platuned_client"
 path = "src/lib.rs"
 
 [dependencies]
-tipsy = "0.4.1"
+tipsy = "0.6.0"
 hyper-util = "0.1.11"
 prost = "0.13.5"
 prost-types = "0.13.5"

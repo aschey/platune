@@ -74,14 +74,14 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
 
 pub(crate) fn get_full_spellfix_query(terms: &[&str]) -> String {
     // Union all queries together to avoid multiple trips to the database
-    let full_query = terms
+    
+
+    terms
         .iter()
         .enumerate()
         .map(|(i, _)| get_spellfix_query(i + 1))
         .collect_vec()
-        .join(" UNION ALL ");
-
-    full_query
+        .join(" UNION ALL ")
 }
 
 pub(crate) fn combine_spellfix_results(spellfix_results: Vec<SpellfixResult>) -> String {

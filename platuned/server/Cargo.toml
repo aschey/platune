@@ -9,7 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 axum = { version = "0.8.4", optional = true }
-clap = { version = "4.5.37", features = ["unstable-styles"] }
+clap = { version = "4.5.38", features = ["unstable-styles"] }
 console-subscriber = { version = "0.4.1", features = [
   "parking_lot",
 ], optional = true }
@@ -27,7 +27,7 @@ dotenvy = "0.15.7"
 futures = "0.3.31"
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
-tipsy = "0.4.1"
+tipsy = "0.6.0"
 prost = "0.13.5"
 prost-types = "0.13.5"
 rcgen = { version = "0.13.2", features = ["x509-parser", "pem"] }
@@ -38,7 +38,7 @@ tonic = { version = "0.13.1", features = ["tls-aws-lc"] }
 tonic-health = "0.13.1"
 tonic-reflection = "0.13.1"
 tower = { version = "0.5.2", optional = true }
-tower-http = { version = "0.6.2", features = ["fs"], optional = true }
+tower-http = { version = "0.6.4", features = ["fs"], optional = true }
 tracing = "0.1.41"
 uuid = { version = "1.16.0", features = ["v4"] }
 vergen-gix = { version = "1.0.9" }

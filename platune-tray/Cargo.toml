@@ -13,7 +13,7 @@ souvlaki = { version = "0.8.2", default-features = false, features = [
   "use_zbus",
 ] }
 platuned-client = { path = "../platuned/client/rust" }
-tipsy = "0.4.1"
+tipsy = "0.6.0"
 futures-util = "0.3"
 global-hotkey = "0.7.0"
 
