@@ -45,6 +45,7 @@ enum ConnectionType {
     },
 }
 
+#[allow(clippy::result_large_err)]
 fn map_lookup_entry(
     entry: database::LookupEntry,
     connection_type: &ConnectionType,

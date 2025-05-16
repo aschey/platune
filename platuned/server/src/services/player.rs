@@ -36,6 +36,7 @@ fn format_error(msg: String) -> Status {
     Status::internal(msg)
 }
 
+#[allow(clippy::result_large_err)]
 fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse, Status> {
     Ok(EventResponse {
         event: event.into(),
@@ -48,6 +49,7 @@ fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse,
     })
 }
 
+#[allow(clippy::result_large_err)]
 fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
     match msg {
         PlayerEvent::Stop(state) => get_event_response(Event::Stop, state),
