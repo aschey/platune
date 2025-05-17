@@ -13,7 +13,7 @@ clap = { version = "4.5.38", features = ["unstable-styles"] }
 console-subscriber = { version = "0.4.1", features = [
   "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "3c97841a44df32c8fbb4ccf63f290a09dcbe967c", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7742c701c0ad6a409baf1cfb15271427a4cbc09e", features = [
   "client-standard",
   "server-standard",
   "notify",

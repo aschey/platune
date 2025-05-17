@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "1a3f6f55d0006e73f8cdb984cc2fee6825fcc4fe", features = [
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7742c701c0ad6a409baf1cfb15271427a4cbc09e", features = [
   "tray",
   "client",
 ] }
