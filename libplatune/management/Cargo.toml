@@ -13,47 +13,46 @@ harness = false
 name = "bench"
 
 [dependencies]
-concread = { version = "0.5", default-features = false, features = [
+concread = { workspace = true, default-features = false, features = [
   "arcache",
   "arcache-is-hashtrie",
 ] }
-directories = "6"
-eyre = "0.6"
-futures = "0.3"
-ignore = "0.4"
-itertools = "0.14"
-lazy_static = "1"
-lofty = "0.22.4"
-log = "0.4"
-normpath = "1"
-notify = { version = "8", default-features = false, features = [
+directories = { workspace = true }
+eyre = { workspace = true }
+futures = { workspace = true }
+ignore = { workspace = true }
+itertools = { workspace = true }
+lofty = { workspace = true }
+log = { workspace = true }
+normpath = { workspace = true }
+notify = { workspace = true, default-features = false, features = [
   "macos_fsevent",
 ] }
-num_cpus = "1"
-regex = "1"
-rust-embed = "8"
-slite = { git = "https://github.com/aschey/slite", rev = "0809a9e913183f0d784aa24416e0af08a440eb3b", default-features = false, features = [
+num_cpus = { workspace = true }
+regex = { workspace = true }
+rust-embed = { workspace = true }
+slite = { workspace = true, default-features = false, features = [
   "read-files",
 ] }
-sqlx = { version = "0.8", default-features = false, features = [
+sqlx = { workspace = true, default-features = false, features = [
   "sqlite",
   "any",
   "macros",
   "runtime-tokio",
 ] }
-strum = { version = "0.27", features = ["derive"] }
-tap = "1"
-thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-tokio-stream = { version = "0.1", features = ["net", "sync"] }
-tracing = "0.1"
-uuid = { version = "1", features = ["v4"] }
-walkdir = "2"
+strum = { workspace = true, features = ["derive"] }
+tap = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio-stream = { workspace = true, features = ["net", "sync"] }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+walkdir = { workspace = true }
 
 [dev-dependencies]
-criterion = { version = "0.5.1", features = ["async_tokio"] }
-ctor = "0.4.2"
-pretty_assertions = "1.4.1"
-rstest = "0.25.0"
-tempfile = "3.20.0"
-tracing-subscriber = "0.3.19"
+criterion = { workspace = true, features = ["async_tokio"] }
+ctor = { workspace = true }
+pretty_assertions = { workspace = true }
+rstest = { workspace = true }
+tempfile = { workspace = true }
+tracing-subscriber = { workspace = true }

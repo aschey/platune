@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
-use lazy_static::lazy_static;
 use regex::Regex;
 
 use super::result_score::ResultScore;
@@ -19,13 +19,14 @@ pub(crate) struct SearchEntry {
     pub(crate) end_highlight: String,
     pub(crate) weights: HashMap<String, f32>,
 }
-lazy_static! {
-    static ref MATCH_REGEX: String = format!(
+
+static MATCH_REGEX: LazyLock<String> = LazyLock::new(|| {
+    format!(
         r"(?:{}(.*?){}[^\s]*).*",
         START_MATCH_TEXT.replace('{', r"\{").replace('}', r"\}"),
         END_MATCH_TEXT.replace('{', r"\{").replace('}', r"\}")
-    );
-}
+    )
+});
 
 impl SearchEntry {
     fn score_match(&self) -> ResultScore {

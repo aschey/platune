@@ -11,46 +11,44 @@ path = "src/lib.rs"
 
 [dependencies]
 derivative = "2"
-eyre = "0.6"
-flume = "0.11"
-futures-util = "0.3"
-tokio-util = "0.7"
-stream-download = { version = "0.20.0", features = [
+eyre = { workspace = true }
+flume = { workspace = true }
+futures-util = { workspace = true }
+tokio-util = { workspace = true }
+stream-download = { workspace = true, features = [
   "reqwest-rustls",
   "reqwest-middleware",
   "registry",
   "process",
 ] }
-strum = { version = "0.27", features = ["derive"] }
-tap = "1"
-thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-tracing = "0.1"
-decal = { git = "https://github.com/aschey/decal", rev = "5693b9770b01372b831d32351118bdd2ab42e09e" }
-reqwest-retry = "0.7.0"
+strum = { workspace = true, features = ["derive"] }
+tap = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tracing = { workspace = true }
+decal = { workspace = true }
+reqwest-retry = { workspace = true }
 # The default-tls feature seems to break mtls client auth in some cases
-reqwest = { version = "0.12", default-features = false, features = [
+reqwest = { workspace = true, default-features = false, features = [
   "charset",
   "http2",
   "macos-system-configuration",
   "rustls-tls-native-roots",
 ] }
-reqwest-middleware = "0.4.2"
-async-trait = "0.1"
-youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "2a2533633ad2d6d718baf63e25b9b7d7c2a053d1", features = [
-  "tokio",
-] }
-regex = "1.11.1"
-lazy-regex = "3.4.1"
-which = { version = "7.0.3", features = ["tracing"] }
+reqwest-middleware = { workspace = true }
+async-trait = { workspace = true }
+youtube_dl = { workspace = true, features = ["tokio"] }
+regex = { workspace = true }
+lazy-regex = { workspace = true }
+which = { workspace = true, features = ["tracing"] }
 
 [dev-dependencies]
-assert_matches = "1.5.0"
-async-trait = "0.1.88"
-ctor = "0.4.2"
-futures = "0.3.31"
-pretty_assertions = "1.4.1"
-rstest = "0.25.0"
-spin_sleep = "1.3.1"
-tracing-appender = "0.2.3"
-tracing-subscriber = "0.3.19"
+assert_matches = { workspace = true }
+async-trait = { workspace = true }
+ctor = { workspace = true }
+futures = { workspace = true }
+pretty_assertions = { workspace = true }
+rstest = { workspace = true }
+spin_sleep = { workspace = true }
+tracing-appender = { workspace = true }
+tracing-subscriber = { workspace = true }

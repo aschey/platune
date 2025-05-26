@@ -4,18 +4,15 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7742c701c0ad6a409baf1cfb15271427a4cbc09e", features = [
-  "tray",
-  "client",
-] }
-tokio = { version = "1.45", features = ["rt-multi-thread", "sync"] }
-souvlaki = { version = "0.8.2", default-features = false, features = [
+daemon-slayer = { workspace = true, features = ["tray", "client"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "sync"] }
+souvlaki = { workspace = true, default-features = false, features = [
   "use_zbus",
 ] }
 platuned-client = { path = "../platuned/client/rust" }
-tipsy = "0.6.0"
-futures-util = "0.3"
-global-hotkey = "0.7.0"
+tipsy = { workspace = true }
+futures-util = { workspace = true }
+global-hotkey = { workspace = true }
 
 [package.metadata.packager]
 before-packaging-command = "cargo build --release"

@@ -8,12 +8,12 @@ version = "0.1.0"
 path = "src/lib.rs"
 
 [dependencies]
-axum = { version = "0.8.4", optional = true }
-clap = { version = "4.5.38", features = ["unstable-styles"] }
-console-subscriber = { version = "0.4.1", features = [
+axum = { workspace = true, optional = true }
+clap = { workspace = true, features = ["unstable-styles"] }
+console-subscriber = { workspace = true, features = [
   "parking_lot",
 ], optional = true }
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7742c701c0ad6a409baf1cfb15271427a4cbc09e", features = [
+daemon-slayer = { workspace = true, features = [
   "client-standard",
   "server-standard",
   "notify",
@@ -22,30 +22,30 @@ daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7742c7
   "native-notification",
   "build-info",
 ] }
-directories = "6.0.0"
-dotenvy = "0.15.7"
-futures = "0.3.31"
+directories = { workspace = true }
+dotenvy = { workspace = true }
+futures = { workspace = true }
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
-tipsy = "0.6.0"
-prost = "0.13.5"
-prost-types = "0.13.5"
-rcgen = { version = "0.13.2", features = ["x509-parser", "pem"] }
-time = "0.3.41"
-tokio = { version = "1.45.0", features = ["rt-multi-thread", "macros"] }
-tokio-stream = { version = "0.1.17", features = ["net"] }
-tonic = { version = "0.13.1", features = ["tls-aws-lc"] }
-tonic-health = "0.13.1"
-tonic-reflection = "0.13.1"
-tower = { version = "0.5.2", optional = true }
-tower-http = { version = "0.6.4", features = ["fs"], optional = true }
-tracing = "0.1.41"
-uuid = { version = "1.16.0", features = ["v4"] }
-vergen-gix = { version = "1.0.9" }
-console = "0.15.11"
-which = { version = "7.0.3", features = ["tracing"] }
-urlencoding = "2.1.3"
-auto-launch = "0.5.0"
+tipsy = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+rcgen = { workspace = true, features = ["x509-parser", "pem"] }
+time = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tokio-stream = { workspace = true, features = ["net"] }
+tonic = { workspace = true, features = ["tls-aws-lc"] }
+tonic-health = { workspace = true }
+tonic-reflection = { workspace = true }
+tower = { workspace = true, optional = true }
+tower-http = { workspace = true, features = ["fs"], optional = true }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
+vergen-gix = { workspace = true }
+console = { workspace = true }
+which = { workspace = true, features = ["tracing"] }
+urlencoding = { workspace = true }
+auto-launch = { workspace = true }
 
 [features]
 default = ["management", "player"]
@@ -54,5 +54,5 @@ player = ["libplatune-player"]
 tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
-tonic-build = { version = "0.13.1", features = ["prost"] }
-vergen-gix = { version = "1.0.9", features = ["build", "cargo", "rustc", "si"] }
+tonic-build = { workspace = true, features = ["prost"] }
+vergen-gix = { workspace = true, features = ["build", "cargo", "rustc", "si"] }

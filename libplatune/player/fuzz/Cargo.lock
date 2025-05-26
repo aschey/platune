@@ -157,9 +157,9 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 
 [[package]]
 name = "cc"
-version = "1.2.23"
+version = "1.2.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f4ac86a9e5bc1e2b3449ab9d7d3a6a405e3d1bb28d7b9be8614f55846ae3766"
+checksum = "16595d3be041c03b09d08d0858631facccee9221e579704070e6e9e4915d3bc7"
 dependencies = [
  "jobserver",
  "libc",
@@ -421,7 +421,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=c042e87c72aab3375bb5e9e06e6614497bceb4f9#c042e87c72aab3375bb5e9e06e6614497bceb4f9"
+source = "git+https://github.com/aschey/decal?rev=5693b9770b01372b831d32351118bdd2ab42e09e#5693b9770b01372b831d32351118bdd2ab42e09e"
 dependencies = [
  "cpal",
  "dasp",
@@ -820,11 +820,10 @@ dependencies = [
 
 [[package]]
 name = "hyper-rustls"
-version = "0.27.5"
+version = "0.27.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d191583f3da1305256f22463b9bb0471acad48a4e534a5218b9963e9c1f59b2"
+checksum = "03a01595e11bdcec50946522c32dde3fc6914743000a68b93000965f2f02406d"
 dependencies = [
- "futures-util",
  "http",
  "hyper",
  "hyper-util",
@@ -834,14 +833,14 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tower-service",
- "webpki-roots 0.26.11",
+ "webpki-roots 1.0.0",
 ]
 
 [[package]]
 name = "hyper-util"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "497bbc33a26fdd4af9ed9c70d63f61cf56a938375fbb32df34db9b1cd6d643f2"
+checksum = "cf9f1e950e0d9d1d3c47184416723cf29c0d1f93bd8cccf37e4beb6b44f31710"
 dependencies = [
  "bytes",
  "futures-channel",
@@ -906,9 +905,9 @@ checksum = "00210d6893afc98edb752b664b8890f0ef174c8adbb8d0be9710fa66fbbf72d3"
 
 [[package]]
 name = "icu_properties"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2549ca8c7241c82f59c80ba2a6f415d931c5b58d24fb8412caa1a1f02c49139a"
+checksum = "016c619c1eeb94efb86809b015c58f479963de65bdb6253345c1a1276f22e32b"
 dependencies = [
  "displaydoc",
  "icu_collections",
@@ -922,9 +921,9 @@ dependencies = [
 
 [[package]]
 name = "icu_properties_data"
-version = "2.0.0"
+version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8197e866e47b68f8f7d95249e172903bec06004b18b2937f1095d40a0c57de04"
+checksum = "298459143998310acd25ffe6810ed544932242d3f07083eee1084d83a71bd632"
 
 [[package]]
 name = "icu_provider"
@@ -1226,13 +1225,13 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2886843bf800fba2e3377cff24abf6379b4c4d5c6681eaf9ea5b0d15090450bd"
+checksum = "78bed444cc8a2160f01cbcf811ef18cac863ad68ae8ca62092e8db51d51c761c"
 dependencies = [
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "windows-sys 0.52.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -1947,9 +1946,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.20"
+version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eded382c5f5f786b989652c49544c4877d9f015cc22e145a5ea8ea66c2921cd2"
+checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 
 [[package]]
 name = "ryu"
@@ -2114,9 +2113,9 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "stream-download"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae8d08381e927ac8f29a2bfc3f3b3457f47333c347b01d4d563e104f4175e055"
+checksum = "a2c05f682d8c6ecbd3edb8f3724c2d8ff2c968f3ac0345166639d03f13e1c42b"
 dependencies = [
  "async-trait",
  "bytes",
@@ -2173,7 +2172,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "symphonia"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
@@ -2193,7 +2192,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-flac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "log",
  "symphonia-common",
@@ -2204,7 +2203,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-mp3"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "lazy_static",
  "log",
@@ -2214,7 +2213,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-aac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "lazy_static",
  "log",
@@ -2224,7 +2223,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-adpcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "log",
  "symphonia-core",
@@ -2233,7 +2232,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-pcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "log",
  "symphonia-core",
@@ -2242,7 +2241,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-vorbis"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "log",
  "symphonia-common",
@@ -2252,7 +2251,7 @@ dependencies = [
 [[package]]
 name = "symphonia-common"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "symphonia-core",
  "symphonia-metadata",
@@ -2261,7 +2260,7 @@ dependencies = [
 [[package]]
 name = "symphonia-core"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "bitflags 2.9.1",
  "bytemuck",
@@ -2274,9 +2273,8 @@ dependencies = [
 [[package]]
 name = "symphonia-format-isomp4"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
- "encoding_rs",
  "log",
  "symphonia-common",
  "symphonia-core",
@@ -2286,7 +2284,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-mkv"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "lazy_static",
  "log",
@@ -2297,7 +2295,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-ogg"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "log",
  "symphonia-common",
@@ -2308,7 +2306,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-riff"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
  "extended",
  "log",
@@ -2319,9 +2317,8 @@ dependencies = [
 [[package]]
 name = "symphonia-metadata"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=5c7078eefcf2587477d10c4345af2726f3528ecb#5c7078eefcf2587477d10c4345af2726f3528ecb"
+source = "git+https://github.com/pdeljanov/Symphonia?rev=c7efbcb05dde274d13a50b4f7aac9db4c773f602#c7efbcb05dde274d13a50b4f7aac9db4c773f602"
 dependencies = [
- "encoding_rs",
  "lazy_static",
  "log",
  "regex-lite",
@@ -2488,9 +2485,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.45.0"
+version = "1.45.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2513ca694ef9ede0fb23fe71a4ee4107cb102b9dc1930f6d0fd77aae068ae165"
+checksum = "75ef51a33ef1da925cea3e4eb122833cb377c61439ca401b770f54902b806779"
 dependencies = [
  "backtrace",
  "bytes",
@@ -2951,7 +2948,7 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4286ad90ddb45071efd1a66dfa43eb02dd0dfbae1545ad6cc3c51cf34d7e8ba3"
 dependencies = [
- "windows-result 0.3.3",
+ "windows-result 0.3.4",
  "windows-strings",
  "windows-targets 0.53.0",
 ]
@@ -2967,9 +2964,9 @@ dependencies = [
 
 [[package]]
 name = "windows-result"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b895b5356fc36103d0f64dd1e94dfa7ac5633f1c9dd6e80fe9ec4adef69e09d"
+checksum = "56f42bd332cc6c8eac5af113fc0c1fd6a8fd2aa08a0119358686e5160d0586c6"
 dependencies = [
  "windows-link",
 ]

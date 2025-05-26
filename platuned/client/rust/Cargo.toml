@@ -9,12 +9,12 @@ name = "platuned_client"
 path = "src/lib.rs"
 
 [dependencies]
-tipsy = "0.6.0"
-hyper-util = "0.1.11"
-prost = "0.13.5"
-prost-types = "0.13.5"
-tonic = "0.13.1"
-tower = { version = "0.5.2", features = ["util"] }
+tipsy = { workspace = true }
+hyper-util = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+tonic = { workspace = true }
+tower = { workspace = true, features = ["util"] }
 
 [build-dependencies]
-tonic-build = { version = "0.13.1", features = ["prost"] }
+tonic-build = { workspace = true, features = ["prost"] }
