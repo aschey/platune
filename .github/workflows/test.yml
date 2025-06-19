@@ -2,8 +2,8 @@ on: [push]
 
 name: CI
 env:
-  BINSTALL_VERSION: 1.6.4
-  PROTOC_VERSION: 26.1
+  BINSTALL_VERSION: 1.13.0
+  PROTOC_VERSION: 31.1
 
 jobs:
   rust:
