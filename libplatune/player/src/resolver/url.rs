@@ -42,14 +42,13 @@ impl RegistryEntry<Result<Vec<Input>>> for DefaultUrlResolver {
     }
 
     async fn handler(&mut self, input: Input) -> Result<Vec<Input>> {
-        if let registry::Source::Url(url) = &input.source {
-            if let Ok(path) = url.to_file_path() {
+        if let registry::Source::Url(url) = &input.source
+            && let Ok(path) = url.to_file_path() {
                 return Ok(vec![Input {
                     prefix: None,
                     source: registry::Source::String(path.to_string_lossy().to_string()),
                 }]);
             }
-        }
 
         Ok(vec![input])
     }
@@ -80,8 +79,8 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceR
     async fn handler(&mut self, input: Input) -> Result<(Box<dyn Source>, CancellationToken)> {
         let mut client_builder = Client::builder();
         let url = input.source.into_url();
-        if url.scheme() == "https" {
-            if let Ok(platune_server_url) = env::var("PLATUNE_GLOBAL_FILE_URL") {
+        if url.scheme() == "https"
+            && let Ok(platune_server_url) = env::var("PLATUNE_GLOBAL_FILE_URL") {
                 let platune_server_url: Url = platune_server_url.parse()?;
                 if url.host_str() == platune_server_url.host_str() {
                     let mtls_cert_path = env::var("PLATUNE_MTLS_CLIENT_CERT_PATH");
@@ -99,7 +98,6 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceR
                     }
                 }
             }
-        }
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
         let client = reqwest_middleware::ClientBuilder::new(client_builder.build()?)
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))

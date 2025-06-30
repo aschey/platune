@@ -163,12 +163,10 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
                 if !self
                     .force_original_url
                     .matches(source_url.domain().unwrap_or_default())
-                {
-                    if let Some(Ok(url)) = video.url.map(|u| u.parse()) {
+                    && let Some(Ok(url)) = video.url.map(|u| u.parse()) {
                         // prefer URL from the command output if available
                         input.source = registry::Source::Url(url);
                     }
-                }
                 Ok(vec![input])
             }
             YoutubeDlOutput::Playlist(playlist) => {

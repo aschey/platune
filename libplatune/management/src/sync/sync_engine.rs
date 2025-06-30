@@ -165,21 +165,17 @@ impl SyncEngine {
 
                     if let Ok(result) = result {
                         let file_path = result.into_path();
-                        if file_path.is_file() {
-                            if let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path)
+                        if file_path.is_file()
+                            && let Ok(Some(metadata)) = SyncEngine::parse_metadata(&file_path)
                                 .tap_err(|e| error!("Error parsing tag metadata: {e:?}"))
-                            {
-                                if let Ok(file_path_str) = clean_file_path(&file_path, &mount) {
-                                    if tags_tx
+                                && let Ok(file_path_str) = clean_file_path(&file_path, &mount)
+                                    && tags_tx
                                         .blocking_send((metadata, file_path_str, file_path))
                                         .tap_err(|e| error!("Error sending tag: {e:?}"))
                                         .is_err()
                                     {
                                         return WalkState::Quit;
                                     }
-                                }
-                            }
-                        }
                     }
                     WalkState::Continue
                 })

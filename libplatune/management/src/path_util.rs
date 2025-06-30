@@ -44,7 +44,7 @@ where
         file_path
             .normalize()
             .map_err(|e| {
-                io::Error::new(e.kind(), format!("Error normalizing path {:?}", file_path))
+                io::Error::new(e.kind(), format!("Error normalizing path {file_path:?}"))
             })?
             .as_path()
             .to_path_buf()
@@ -58,11 +58,10 @@ where
         file_path_str = file_path_str.replace('\\', "/");
     }
 
-    if let Some(mount) = mount {
-        if file_path_str.starts_with(&mount[..]) {
+    if let Some(mount) = mount
+        && file_path_str.starts_with(&mount[..]) {
             file_path_str = file_path_str.replace(&mount[..], "");
         }
-    }
 
     Ok(file_path_str)
 }

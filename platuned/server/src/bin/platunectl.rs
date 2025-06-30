@@ -99,8 +99,8 @@ async fn run() -> Result<(), BoxedError> {
     logger.init();
 
     let (state, matches) = cli.handle_input().await?;
-    if state == InputState::Unhandled {
-        if let Ok(TrayCommand::Tray(Tray { tray })) = TrayCommand::from_arg_matches(&matches) {
+    if state == InputState::Unhandled
+        && let Ok(TrayCommand::Tray(Tray { tray })) = TrayCommand::from_arg_matches(&matches) {
             #[cfg(target_os = "linux")]
             let app_path = exe_parent
                 .join("platune-tray.AppImage")
@@ -132,7 +132,6 @@ async fn run() -> Result<(), BoxedError> {
                 }
             }
         }
-    }
     Ok(())
 }
 

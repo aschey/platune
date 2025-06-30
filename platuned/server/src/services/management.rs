@@ -119,8 +119,8 @@ async fn get_connection_type<T>(
             })
             .collect();
 
-        if !is_local(remote_addr) {
-            if let Ok(mut global_addr) = env::var("PLATUNE_GLOBAL_FILE_URL") {
+        if !is_local(remote_addr)
+            && let Ok(mut global_addr) = env::var("PLATUNE_GLOBAL_FILE_URL") {
                 if !global_addr.ends_with('/') {
                     global_addr.push('/');
                 }
@@ -130,7 +130,6 @@ async fn get_connection_type<T>(
                     local_addr: global_addr,
                 });
             }
-        }
         let local_addr = match request
             .local_addr()
             .ok_or_else(|| format_error("Local address missing".to_string()))?

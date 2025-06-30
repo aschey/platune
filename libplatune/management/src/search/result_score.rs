@@ -44,11 +44,10 @@ impl Eq for ResultScore {}
 impl Ord for ResultScore {
     fn cmp(&self, other: &Self) -> Ordering {
         let weighted_ord = self.weighted_score.partial_cmp(&other.weighted_score);
-        if let Some(weighted_ord) = weighted_ord {
-            if weighted_ord != Ordering::Equal {
+        if let Some(weighted_ord) = weighted_ord
+            && weighted_ord != Ordering::Equal {
                 return weighted_ord;
             }
-        }
 
         let len_ord = self.match_len_score.cmp(&other.match_len_score);
         if len_ord != Ordering::Equal {
