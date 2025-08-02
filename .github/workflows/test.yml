@@ -15,20 +15,23 @@ jobs:
             protoc-target: osx-x86_64
             binstall-target: x86_64-apple-darwin.zip
             binstall-extract: unzip
+            rustflags:
           - os: ubuntu-latest
             protoc-target: linux-x86_64
             binstall-target: x86_64-unknown-linux-gnu.tgz
             binstall-extract: tar -xzvf
+            rustflags:
           - os: windows-latest
             protoc-target: win64
             binstall-target: x86_64-pc-windows-msvc.zip
             binstall-extract: unzip
+            # workaround for https://github.com/rust-lang/rust/issues/141626
+            rustflags: -Clink-arg=/DEBUG:NONE
       fail-fast: false
     env:
       SQLX_OFFLINE: true
       PROTOC: ${{ github.workspace }}/protoc/bin/protoc
-      # tell aws-lc-sys to compile nasm
-      AWS_LC_SYS_PREBUILT_NASM: 1
+      RUSTFLAGS: ${{ matrix.rustflags }}
     name: Run Rust tests
     runs-on: ${{ matrix.os }}
     steps:
