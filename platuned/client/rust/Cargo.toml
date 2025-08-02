@@ -14,7 +14,9 @@ hyper-util = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 tonic = { workspace = true }
+tonic-prost = { workspace = true }
 tower = { workspace = true, features = ["util"] }
 
 [build-dependencies]
-tonic-build = { workspace = true, features = ["prost"] }
+tonic-build = { workspace = true }
+tonic-prost-build = { workspace = true }

@@ -3,7 +3,7 @@ use std::{env, fs};
 
 use rcgen::{
     BasicConstraints, Certificate, CertificateParams, DistinguishedName, DnType,
-    ExtendedKeyUsagePurpose, IsCa, KeyPair, KeyUsagePurpose,
+    ExtendedKeyUsagePurpose, IsCa, Issuer, KeyPair, KeyUsagePurpose,
 };
 use time::OffsetDateTime;
 use tonic::transport::{Identity, ServerTlsConfig};
@@ -11,7 +11,7 @@ use tracing::info;
 use uuid::Uuid;
 
 pub(crate) struct TlsConfig {
-    pub(crate) ca: Certificate,
+    pub(crate) ca_pem: String,
     pub(crate) cert: ServerCertificate,
 }
 
@@ -26,7 +26,7 @@ pub(crate) fn get_tonic_tls_config(
 
     let server_tls_config = ServerTlsConfig::new().identity(server_identity);
     if let Some(client_tls) = client_tls {
-        let client_ca_pem = tonic::transport::Certificate::from_pem(client_tls.ca.pem());
+        let client_ca_pem = tonic::transport::Certificate::from_pem(client_tls.ca_pem);
         server_tls_config.client_ca_root(client_ca_pem)
     } else {
         server_tls_config
@@ -38,14 +38,10 @@ pub(crate) async fn get_tls_config(path: &Path) -> Result<TlsConfig, rcgen::Erro
         && path.join("cert.pem").exists()
         && path.join("cert.key").exists()
     {
-        let ca_params =
-            CertificateParams::from_ca_cert_pem(&fs::read_to_string(path.join("ca.pem")).unwrap())?;
-        let key = fs::read_to_string(path.join("cert.key")).unwrap();
-        let key_pair = KeyPair::from_pem(&key)?;
         return Ok(TlsConfig {
-            ca: ca_params.self_signed(&key_pair)?,
+            ca_pem: fs::read_to_string(path.join("ca.pem")).unwrap(),
             cert: ServerCertificate {
-                private_key_pem: key,
+                private_key_pem: fs::read_to_string(path.join("cert.key")).unwrap(),
                 signed_certificate_pem: fs::read_to_string(path.join("cert.pem")).unwrap(),
             },
         });
@@ -56,18 +52,21 @@ pub(crate) async fn get_tls_config(path: &Path) -> Result<TlsConfig, rcgen::Erro
     let res = tokio::task::spawn_blocking(move || {
         let (ca, server_key_pair) = gen_cert_for_ca()?;
 
-        let cert = gen_cert_for_server(&ca, &server_key_pair)?;
+        let cert = gen_cert_for_server(&server_key_pair)?;
 
         fs::create_dir_all(&path).unwrap();
         fs::write(path.join("ca.pem"), ca.pem()).unwrap();
         fs::write(path.join("cert.pem"), &cert.signed_certificate_pem).unwrap();
         fs::write(path.join("cert.key"), &cert.private_key_pem).unwrap();
-        Ok(TlsConfig { ca, cert })
+        Ok(TlsConfig {
+            ca_pem: ca.pem(),
+            cert,
+        })
     });
     res.await.unwrap()
 }
 
-fn gen_cert_for_ca() -> Result<(Certificate, KeyPair), rcgen::Error> {
+fn gen_cert_for_ca() -> Result<(Certificate, Issuer<'static, KeyPair>), rcgen::Error> {
     let mut params = CertificateParams::new(Vec::default()).unwrap();
 
     params.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
@@ -89,7 +88,7 @@ fn gen_cert_for_ca() -> Result<(Certificate, KeyPair), rcgen::Error> {
     let key_pair = KeyPair::generate()?;
     let cert = params.self_signed(&key_pair)?;
 
-    Ok((cert, key_pair))
+    Ok((cert, Issuer::new(params, key_pair)))
 }
 
 pub(crate) struct ServerCertificate {
@@ -100,8 +99,7 @@ pub(crate) struct ServerCertificate {
 }
 
 fn gen_cert_for_server(
-    ca: &Certificate,
-    ca_key: &KeyPair,
+    issuer: &Issuer<'static, KeyPair>,
 ) -> Result<ServerCertificate, rcgen::Error> {
     let mut dn = DistinguishedName::new();
     dn.push(DnType::OrganizationName, "Platune");
@@ -131,7 +129,7 @@ fn gen_cert_for_server(
     params.key_usages.push(KeyUsagePurpose::DigitalSignature);
 
     let key_pair = KeyPair::generate()?;
-    let signed_pem = params.signed_by(&key_pair, ca, ca_key)?;
+    let signed_pem = params.signed_by(&key_pair, issuer)?;
 
     Ok(ServerCertificate {
         private_key_pem: key_pair.serialize_pem(),

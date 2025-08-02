@@ -35,6 +35,7 @@ time = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tokio-stream = { workspace = true, features = ["net"] }
 tonic = { workspace = true, features = ["tls-aws-lc"] }
+tonic-prost = { workspace = true }
 tonic-health = { workspace = true }
 tonic-reflection = { workspace = true }
 tower = { workspace = true, optional = true }
@@ -54,5 +55,6 @@ player = ["libplatune-player"]
 tokio-console = ["console-subscriber", "tokio/tracing"]
 
 [build-dependencies]
-tonic-build = { workspace = true, features = ["prost"] }
+tonic-build = { workspace = true }
+tonic-prost-build = { workspace = true }
 vergen-gix = { workspace = true, features = ["build", "cargo", "rustc", "si"] }
