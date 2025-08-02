@@ -48,6 +48,8 @@ jobs:
         run: |
           $(command -v sudo>/dev/null && echo "sudo") apt-get install -y libssl-dev libasound2-dev git
       - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v2"
       - name: Build
         run: |
           curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v${{env.PROTOC_VERSION}}/protoc-${{env.PROTOC_VERSION}}-${{ matrix.protoc-target }}.zip
