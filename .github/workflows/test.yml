@@ -10,9 +10,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        env:
-          # tell aws-lc-sys to compile nasm
-          AWS_LC_SYS_PREBUILT_NASM: 1
         include:
           - os: macos-13
             protoc-target: osx-x86_64
@@ -30,6 +27,8 @@ jobs:
     env:
       SQLX_OFFLINE: true
       PROTOC: ${{ github.workspace }}/protoc/bin/protoc
+      # tell aws-lc-sys to compile nasm
+      AWS_LC_SYS_PREBUILT_NASM: 1
     name: Run Rust tests
     runs-on: ${{ matrix.os }}
     steps:
