@@ -34,6 +34,7 @@ rcgen = { workspace = true, features = ["x509-parser", "pem"] }
 time = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tokio-stream = { workspace = true, features = ["net"] }
+tokio-util = { workspace = true }
 tonic = { workspace = true, features = ["tls-aws-lc"] }
 tonic-prost = { workspace = true }
 tonic-health = { workspace = true }
@@ -47,6 +48,7 @@ console = { workspace = true }
 which = { workspace = true, features = ["tracing"] }
 urlencoding = { workspace = true }
 auto-launch = { workspace = true }
+tap = { workspace = true }
 
 [features]
 default = ["management", "player"]

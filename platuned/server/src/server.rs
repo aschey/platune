@@ -3,7 +3,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use daemon_slayer::core::FutureExt;
 use daemon_slayer::core::notify::AsyncNotification;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::notify::notification::Notification;
@@ -25,7 +24,10 @@ use libplatune_player::CpalOutput;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
 use platuned::{file_server_port, main_server_port};
+use tap::TapOptional;
 use tipsy::{IntoIpcPath, ServerId};
+use tokio_util::future::FutureExt;
+use tokio_util::sync::CancellationToken;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
 #[cfg(feature = "management")]
@@ -248,24 +250,18 @@ async fn run_server(
     let server_result = match transport {
         Transport::Http(addr) => {
             info!("Running HTTP server on {addr}");
-            let mut server_shutdown_rx = shutdown_rx.subscribe_events();
-            let mut fallback_shutdown_rx = shutdown_rx.subscribe_events();
+            let fallback_shutdown = CancellationToken::new();
+
             builder
-                .serve_with_shutdown(addr, async {
-                    server_shutdown_rx.next().await;
-                    info!("received shutdown signal");
-                })
-                .cancel_with_timeout(
-                    async {
-                        fallback_shutdown_rx.next().await;
-                    },
-                    Duration::from_secs(1),
+                .serve_with_shutdown(
+                    addr,
+                    shutdown_handler(fallback_shutdown.clone(), &shutdown_rx),
                 )
+                .with_cancellation_token(&fallback_shutdown)
                 .await
-                .inspect_err(|e| {
-                    warn!("timed out waiting for server to shut down: {e:?}");
+                .tap_none(|| {
+                    warn!("timed out waiting for server to shut down");
                 })
-                .ok()
                 .unwrap_or(Ok(()))
                 .wrap_err("Error running HTTP server")
         }
@@ -273,29 +269,38 @@ async fn run_server(
         Transport::Ipc(path) => {
             let ipc_path = ServerId::new(path).parent_folder("/tmp").into_ipc_path()?;
             info!("Running IPC server on {}", ipc_path.display());
-            let mut server_shutdown_rx = shutdown_rx.subscribe_events();
-            let mut fallback_shutdown_rx = shutdown_rx.subscribe_events();
+            let fallback_shutdown = CancellationToken::new();
 
             builder
-                .serve_with_incoming_shutdown(IpcStream::get_async_stream(ipc_path)?, async {
-                    server_shutdown_rx.next().await;
-                    info!("received shutdown signal");
-                })
-                .cancel_with_timeout(
-                    async {
-                        fallback_shutdown_rx.next().await;
-                    },
-                    Duration::from_secs(1),
+                .serve_with_incoming_shutdown(
+                    IpcStream::get_async_stream(ipc_path)?,
+                    shutdown_handler(fallback_shutdown.clone(), &shutdown_rx),
                 )
+                .with_cancellation_token(&fallback_shutdown)
                 .await
-                .inspect_err(|e| {
-                    warn!("timed out waiting for server to shut down: {e:?}");
+                .tap_none(|| {
+                    warn!("timed out waiting for server to shut down");
                 })
-                .ok()
                 .unwrap_or(Ok(()))
                 .wrap_err("Error running IPC server")
         }
     };
 
     server_result.wrap_err("Error running server")
+}
+
+fn shutdown_handler(
+    fallback_shutdown: CancellationToken,
+    shutdown_rx: &BroadcastEventStore<Signal>,
+) -> impl Future<Output = ()> {
+    let mut server_shutdown_rx = shutdown_rx.subscribe_events();
+    async move {
+        server_shutdown_rx.next().await;
+        info!("received shutdown signal");
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            warn!("force shutting down");
+            fallback_shutdown.cancel();
+        });
+    }
 }

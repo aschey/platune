@@ -1,11 +1,13 @@
 use std::io::BufReader;
 use std::num::NonZeroUsize;
 use std::path::Path;
+use std::sync::Arc;
 use std::{env, fs};
 
 use async_trait::async_trait;
-use decal::decoder::{ReadSeekSource, Source};
+use decal::decoder::ReadSeekSource;
 use eyre::{Context, Result, eyre};
+use icy_metadata::{IcyHeaders, IcyMetadataReader, RequestIcyMetadata};
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use stream_download::http::HttpStream;
@@ -18,6 +20,9 @@ use stream_download::{Settings, StreamDownload};
 use tap::{TapFallible, TapOptional};
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
+
+use super::MetadataSource;
+use crate::dto::track::Metadata;
 
 pub(crate) struct DefaultUrlResolver {
     rules: Vec<Rule>,
@@ -43,12 +48,13 @@ impl RegistryEntry<Result<Vec<Input>>> for DefaultUrlResolver {
 
     async fn handler(&mut self, input: Input) -> Result<Vec<Input>> {
         if let registry::Source::Url(url) = &input.source
-            && let Ok(path) = url.to_file_path() {
-                return Ok(vec![Input {
-                    prefix: None,
-                    source: registry::Source::String(path.to_string_lossy().to_string()),
-                }]);
-            }
+            && let Ok(path) = url.to_file_path()
+        {
+            return Ok(vec![Input {
+                prefix: None,
+                source: registry::Source::String(path.to_string_lossy().to_string()),
+            }]);
+        }
 
         Ok(vec![input])
     }
@@ -56,18 +62,20 @@ impl RegistryEntry<Result<Vec<Input>>> for DefaultUrlResolver {
 
 pub(crate) struct HttpSourceResolver {
     rules: Vec<Rule>,
+    on_track_changed: Arc<dyn Fn(Metadata) + Send + Sync>,
 }
 
 impl HttpSourceResolver {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(on_track_changed: Arc<dyn Fn(Metadata) + Send + Sync>) -> Self {
         Self {
             rules: vec![Rule::any_http()],
+            on_track_changed,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceResolver {
+impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceResolver {
     fn priority(&self) -> u32 {
         2
     }
@@ -76,30 +84,34 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceR
         &self.rules
     }
 
-    async fn handler(&mut self, input: Input) -> Result<(Box<dyn Source>, CancellationToken)> {
+    async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
         let mut client_builder = Client::builder();
         let url = input.source.into_url();
         if url.scheme() == "https"
-            && let Ok(platune_server_url) = env::var("PLATUNE_GLOBAL_FILE_URL") {
-                let platune_server_url: Url = platune_server_url.parse()?;
-                if url.host_str() == platune_server_url.host_str() {
-                    let mtls_cert_path = env::var("PLATUNE_MTLS_CLIENT_CERT_PATH");
-                    let mtls_key_path = env::var("PLATUNE_MTLS_CLIENT_KEY_PATH");
-                    if let (Ok(mtls_cert_path), Ok(mtls_key_path)) = (mtls_cert_path, mtls_key_path)
-                    {
-                        info!("Using cert paths: {mtls_cert_path} {mtls_key_path}");
-                        let mut cert =
-                            fs::read(mtls_cert_path).wrap_err_with(|| "mtls cert path invalid")?;
-                        let mut key =
-                            fs::read(mtls_key_path).wrap_err_with(|| "mtls key path invalid")?;
-                        cert.append(&mut key);
+            && let Ok(platune_server_url) = env::var("PLATUNE_GLOBAL_FILE_URL")
+        {
+            let platune_server_url: Url = platune_server_url.parse()?;
+            if url.host_str() == platune_server_url.host_str() {
+                let mtls_cert_path = env::var("PLATUNE_MTLS_CLIENT_CERT_PATH");
+                let mtls_key_path = env::var("PLATUNE_MTLS_CLIENT_KEY_PATH");
+                if let (Ok(mtls_cert_path), Ok(mtls_key_path)) = (mtls_cert_path, mtls_key_path) {
+                    info!("Using cert paths: {mtls_cert_path} {mtls_key_path}");
+                    let mut cert =
+                        fs::read(mtls_cert_path).wrap_err_with(|| "mtls cert path invalid")?;
+                    let mut key =
+                        fs::read(mtls_key_path).wrap_err_with(|| "mtls key path invalid")?;
+                    cert.append(&mut key);
 
-                        client_builder = client_builder.identity(Identity::from_pem(&cert)?);
-                    }
+                    client_builder = client_builder.identity(Identity::from_pem(&cert)?);
                 }
             }
+        }
+        // We need to add a header to tell the Icecast server that we can parse the metadata
+        // embedded within the stream itself.
+        let client = client_builder.request_icy_metadata().build()?;
+
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
-        let client = reqwest_middleware::ClientBuilder::new(client_builder.build()?)
+        let client = reqwest_middleware::ClientBuilder::new(client)
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
         let stream = match HttpStream::new(client, url.clone()).await {
@@ -122,15 +134,15 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceR
         };
         info!("Using extension {extension:?}");
         let settings = Settings::default();
+        let icy_headers = IcyHeaders::parse_from_headers(stream.headers());
         // radio streams commonly include an Icy-Br header to denote the bitrate
-        let prefetch_bytes =
-            if let Some(Ok(bitrate)) = stream.header("Icy-Br").map(|br| br.parse::<u64>()) {
-                // buffer 5 seconds of audio
-                // bitrate (in kilobits) / bits per byte * bytes per kilobyte * 5 seconds
-                bitrate / 8 * 1024 * 5
-            } else {
-                settings.get_prefetch_bytes()
-            };
+        let prefetch_bytes = if let Some(bitrate) = icy_headers.bitrate() {
+            // buffer 5 seconds of audio
+            // bitrate (in kilobits) / bits per byte * bytes per kilobyte * 5 seconds
+            (bitrate / 8 * 1024 * 5) as u64
+        } else {
+            settings.get_prefetch_bytes()
+        };
 
         let reader = StreamDownload::from_stream(
             stream,
@@ -144,11 +156,33 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for HttpSourceR
         .await
         .wrap_err_with(|| "Error creating stream downloader")?;
         let token = reader.cancellation_token();
+        if let Some(icy_metadata_interval) = icy_headers.metadata_interval() {
+            let on_track_changed = self.on_track_changed.clone();
+            let icy_reader =
+                IcyMetadataReader::new(reader, Some(icy_metadata_interval), move |metadata| {
+                    if let Ok(metadata) =
+                        metadata.inspect_err(|e| warn!("error parsing icy metadata: {e:?}"))
+                    {
+                        let title = metadata.stream_title();
+                        on_track_changed(Metadata {
+                            song: title.map(|t| t.to_string()),
+                            ..Default::default()
+                        });
+                    }
+                });
+            let track = MetadataSource {
+                source: Box::new(ReadSeekSource::new(icy_reader, file_len, extension)),
+                metadata: None,
+            };
+            Ok((track, token))
+        } else {
+            let track = MetadataSource {
+                source: Box::new(ReadSeekSource::new(reader, file_len, extension)),
+                metadata: None,
+            };
 
-        Ok((
-            Box::new(ReadSeekSource::new(reader, file_len, extension)),
-            token,
-        ))
+            Ok((track, token))
+        }
     }
 }
 
@@ -165,7 +199,7 @@ impl FileSourceResolver {
 }
 
 #[async_trait::async_trait]
-impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for FileSourceResolver {
+impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for FileSourceResolver {
     fn priority(&self) -> u32 {
         3
     }
@@ -174,7 +208,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for FileSourceR
         &self.rules
     }
 
-    async fn handler(&mut self, input: Input) -> Result<(Box<dyn Source>, CancellationToken)> {
+    async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
         let path = input.source.to_string();
         let file = fs::File::open(&path).tap_err(|e| error!("Error opening file {path} {e:?}"))?;
 
@@ -195,10 +229,10 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for FileSourceR
             .map(|ext| ext.to_owned());
 
         let reader = BufReader::new(file);
-
-        Ok((
-            Box::new(ReadSeekSource::new(reader, file_len, extension)),
-            CancellationToken::new(),
-        ))
+        let track = MetadataSource {
+            source: Box::new(ReadSeekSource::new(reader, file_len, extension)),
+            metadata: None,
+        };
+        Ok((track, CancellationToken::new()))
     }
 }

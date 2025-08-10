@@ -9,7 +9,6 @@ use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::{Manager, SearchOptions};
 use libplatune_management::{database, manager};
 use platuned::file_server_port;
-use prost_types::Timestamp;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{RwLockReadGuard, mpsc};
 use tonic::{Request, Response, Status, Streaming};
@@ -75,11 +74,10 @@ fn map_lookup_entry(
         album: entry.album,
         song: entry.song,
         path,
-        track: entry.track,
-        duration: Some(Timestamp {
-            seconds: Duration::from_millis(entry.duration_millis as u64).as_secs() as i64,
-            nanos: Duration::from_millis(entry.duration_millis as u64).subsec_nanos() as i32,
-        }),
+        track_number: entry.track_number,
+        duration: Duration::from_millis(entry.duration_millis as u64)
+            .try_into()
+            .ok(),
     })
 }
 
@@ -120,16 +118,17 @@ async fn get_connection_type<T>(
             .collect();
 
         if !is_local(remote_addr)
-            && let Ok(mut global_addr) = env::var("PLATUNE_GLOBAL_FILE_URL") {
-                if !global_addr.ends_with('/') {
-                    global_addr.push('/');
-                }
-                info!("Using global file URL {global_addr}");
-                return Ok(ConnectionType::Remote {
-                    folders,
-                    local_addr: global_addr,
-                });
+            && let Ok(mut global_addr) = env::var("PLATUNE_GLOBAL_FILE_URL")
+        {
+            if !global_addr.ends_with('/') {
+                global_addr.push('/');
             }
+            info!("Using global file URL {global_addr}");
+            return Ok(ConnectionType::Remote {
+                folders,
+                local_addr: global_addr,
+            });
+        }
         let local_addr = match request
             .local_addr()
             .ok_or_else(|| format_error("Local address missing".to_string()))?

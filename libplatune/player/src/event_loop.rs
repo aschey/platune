@@ -4,6 +4,7 @@ use decal::decoder::{
     Decoder, DecoderError, DecoderResult, DecoderSettings, ResamplerSettings, Source,
 };
 use decal::output::{AudioBackend, OutputBuilder, OutputSettings, WriteBlockingError};
+use decal::symphonia::core::meta::StandardTag;
 use decal::{AudioManager, WriteOutputError};
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
@@ -16,6 +17,7 @@ use crate::dto::decoder_response::DecoderResponse;
 use crate::dto::player_response::PlayerResponse;
 use crate::dto::processor_error::ProcessorError;
 use crate::dto::queue_source::{QueueSource, QueueStartMode};
+use crate::dto::track::Metadata;
 use crate::platune_player::PlayerEvent;
 use crate::player::Player;
 use crate::two_way_channel::{TwoWayReceiver, TwoWaySender};
@@ -54,7 +56,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
     let mut last_stop_position = Duration::default();
 
     loop {
-        let decoder = match queue_rx.try_recv() {
+        let (mut decoder, metadata) = match queue_rx.try_recv() {
             Ok(queue_source) => {
                 info!("Got source on initial attempt");
                 init_source(&mut manager, &queue_source);
@@ -73,7 +75,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         )
                         .tap_err(|e| error!("Error during force restart {e:?}"))
                         {
-                            decoder
+                            (decoder, queue_source.metadata)
                         } else {
                             continue;
                         }
@@ -91,7 +93,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                             let _ = manager
                                 .initialize(&mut decoder)
                                 .tap_err(|e| error!("error initializing decoder {e:?}"));
-                            decoder
+                            (decoder, queue_source.metadata)
                         } else {
                             continue;
                         }
@@ -122,7 +124,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                                 )
                                 .tap_err(|e| error!("Error handling force restart: {e:?}"))
                                 {
-                                    decoder
+                                    (decoder, queue_source.metadata)
                                 } else {
                                     continue;
                                 }
@@ -140,7 +142,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                                     let _ = manager
                                         .reset(&mut decoder)
                                         .tap_err(|e| error!("Error resetting decoder: {e:?}"));
-                                    decoder
+                                    (decoder, queue_source.metadata)
                                 } else {
                                     continue;
                                 }
@@ -159,6 +161,11 @@ pub(crate) fn decode_loop<B: AudioBackend>(
             }
         };
         info!("Creating processor");
+        let metadata = metadata.unwrap_or_else(|| decoder_metadata(&mut decoder));
+        info!("Got metadata: {metadata:?}");
+        let _ = player_cmd_tx
+            .send(Command::Metadata(metadata))
+            .inspect_err(|e| error!("Unable to send command: {e:?}"));
         if let Ok(mut processor) =
             AudioProcessor::new(&mut manager, decoder, &mut cmd_rx, &event_tx)
                 .tap_err(|e| error!("Error creating processor: {e}"))
@@ -209,6 +216,21 @@ fn init_source<B: AudioBackend>(manager: &mut AudioManager<f32, B>, queue_source
     });
 }
 
+macro_rules! find_tag {
+    ($tags:expr, $tag_type:path) => {
+        $tags
+            .iter()
+            .filter_map(|t| {
+                if let $tag_type(val) = t {
+                    Some(val.to_string())
+                } else {
+                    None
+                }
+            })
+            .next()
+    };
+}
+
 fn handle_force_restart<B: AudioBackend>(
     manager: &mut AudioManager<f32, B>,
     device_name: Option<String>,
@@ -235,6 +257,26 @@ fn handle_force_restart<B: AudioBackend>(
     }
     manager.reset(&mut decoder).ok();
     Ok(decoder)
+}
+
+fn decoder_metadata(decoder: &mut Decoder<f32>) -> Metadata {
+    let mut metadata = decoder.metadata();
+    if let Some(latest) = metadata.skip_to_latest() {
+        let tags = latest.tags();
+        let std_tags: Vec<_> = tags.iter().filter_map(|t| t.std.as_ref()).collect();
+        Metadata {
+            artist: find_tag!(std_tags, StandardTag::Artist),
+            album_artist: find_tag!(std_tags, StandardTag::AlbumArtist),
+            album: find_tag!(std_tags, StandardTag::Album),
+            song: find_tag!(std_tags, StandardTag::TrackTitle),
+            track_number: find_tag!(std_tags, StandardTag::TrackNumber)
+                .map(|t| t.parse().ok())
+                .flatten(),
+            duration: decoder.duration(),
+        }
+    } else {
+        Metadata::default()
+    }
 }
 
 pub(crate) async fn main_loop(
@@ -279,6 +321,9 @@ pub(crate) async fn main_loop(
             }
             Command::Previous => {
                 player.go_previous().await?;
+            }
+            Command::Metadata(metadata) => {
+                player.update_metadata(metadata);
             }
             Command::GetCurrentStatus => {
                 let current_status = player.get_current_status();

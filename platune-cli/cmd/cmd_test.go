@@ -161,7 +161,7 @@ func TestAddQueueFile(t *testing.T) {
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			path, _ := filepath.Abs(testSong)
-			return arg.(*player_v1.AddToQueueRequest).Songs[0] == path
+			return arg.(*player_v1.QueueRequest).Queue[0].Url == path
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
 	}, addQueueCmdText, testSong)
@@ -171,7 +171,7 @@ func TestAddQueueUrl(t *testing.T) {
 	testSong := "http://test.com/blah.mp3"
 	runPlayerTest(t, "Added\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
-			return arg.(*player_v1.AddToQueueRequest).Songs[0] == testSong
+			return arg.(*player_v1.QueueRequest).Queue[0].Url == testSong
 		})
 		expect.AddToQueue(gomock.Any(), matcher)
 	}, addQueueCmdText, testSong)
@@ -183,7 +183,7 @@ func TestSetQueueFile(t *testing.T) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			queue := arg.(*player_v1.QueueRequest).Queue
 			path, _ := filepath.Abs(testSong)
-			return queue[0] == path
+			return queue[0].Url == path
 		})
 		expect.SetQueue(gomock.Any(), matcher)
 	}, setQueueCmdText, testSong)
@@ -194,7 +194,7 @@ func TestSetQueueUrl(t *testing.T) {
 	runPlayerTest(t, "Queue Set\n", func(expect *test.MockPlayerClientMockRecorder) {
 		matcher := test.NewMatcher(func(arg interface{}) bool {
 			queue := arg.(*player_v1.QueueRequest).Queue
-			return queue[0] == testSong
+			return queue[0].Url == testSong
 		})
 		expect.SetQueue(gomock.Any(), matcher)
 	}, setQueueCmdText, testSong)
@@ -390,11 +390,11 @@ func testSongSelection(
 	}
 	lookupEntries := []*management_v1.LookupEntry{
 		{
-			Artist: "artist name",
-			Album:  "album 1",
-			Song:   "song name",
-			Path:   "/test/path/1",
-			Track:  1,
+			Artist:      "artist name",
+			Album:       "album 1",
+			Song:        "song name",
+			Path:        "/test/path/1",
+			TrackNumber: 1,
 		},
 	}
 
@@ -417,7 +417,7 @@ func testSongSelection(
 
 func TestAddQueueSongSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		return arg.(*player_v1.AddToQueueRequest).Songs[0] == "/test/path/1"
+		return arg.(*player_v1.QueueRequest).Queue[0].Url == "/test/path/1"
 	}
 	testSongSelection(t, matcherFunc, addQueueCmdText+" ", true, true)
 	testSongSelection(t, matcherFunc, addQueueCmdText+" ", true, false)
@@ -425,7 +425,7 @@ func TestAddQueueSongSelection(t *testing.T) {
 
 func TestSetQueueSongSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		return arg.(*player_v1.QueueRequest).Queue[0] == "/test/path/1"
+		return arg.(*player_v1.QueueRequest).Queue[0].Url == "/test/path/1"
 	}
 	testSongSelection(t, matcherFunc, "", false, true)
 	testSongSelection(t, matcherFunc, "", false, false)
@@ -454,18 +454,18 @@ func testAlbumSelection(
 	}
 	lookupEntries := []*management_v1.LookupEntry{
 		{
-			Artist: "artist name",
-			Album:  "album name",
-			Song:   "track 1",
-			Path:   "/test/path/1",
-			Track:  1,
+			Artist:      "artist name",
+			Album:       "album name",
+			Song:        "track 1",
+			Path:        "/test/path/1",
+			TrackNumber: 1,
 		},
 		{
-			Artist: "artist name",
-			Album:  "album name",
-			Song:   "track 2",
-			Path:   "/test/path/2",
-			Track:  2,
+			Artist:      "artist name",
+			Album:       "album name",
+			Song:        "track 2",
+			Path:        "/test/path/2",
+			TrackNumber: 2,
 		},
 	}
 
@@ -489,8 +489,8 @@ func testAlbumSelection(
 
 func TestAddQueueAlbumSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*player_v1.AddToQueueRequest)
-		return len(req.Songs) == 1 && req.Songs[0] == "/test/path/1"
+		req := arg.(*player_v1.QueueRequest)
+		return len(req.Queue) == 1 && req.Queue[0].Url == "/test/path/1"
 	}
 	testAlbumSelection(t, matcherFunc, addQueueCmdText+" ", true, true)
 	testAlbumSelection(t, matcherFunc, addQueueCmdText+" ", true, false)
@@ -499,7 +499,7 @@ func TestAddQueueAlbumSelection(t *testing.T) {
 func TestSetQueueAlbumSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		req := arg.(*player_v1.QueueRequest)
-		return len(req.Queue) == 1 && req.Queue[0] == "/test/path/1"
+		return len(req.Queue) == 1 && req.Queue[0].Url == "/test/path/1"
 	}
 	testAlbumSelection(t, matcherFunc, "", false, true)
 	testAlbumSelection(t, matcherFunc, "", false, false)
@@ -528,18 +528,18 @@ func testAlbumSelectAll(
 	}
 	lookupEntries := []*management_v1.LookupEntry{
 		{
-			Artist: "artist name",
-			Album:  "album name",
-			Song:   "track 1",
-			Path:   "/test/path/1",
-			Track:  1,
+			Artist:      "artist name",
+			Album:       "album name",
+			Song:        "track 1",
+			Path:        "/test/path/1",
+			TrackNumber: 1,
 		},
 		{
-			Artist: "artist name",
-			Album:  "album name",
-			Song:   "track 2",
-			Path:   "/test/path/2",
-			Track:  2,
+			Artist:      "artist name",
+			Album:       "album name",
+			Song:        "track 2",
+			Path:        "/test/path/2",
+			TrackNumber: 2,
 		},
 	}
 
@@ -563,9 +563,9 @@ func testAlbumSelectAll(
 
 func TestAddQueueAlbumSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*player_v1.AddToQueueRequest)
-		return len(req.Songs) == 2 && req.Songs[0] == "/test/path/1" &&
-			req.Songs[1] == "/test/path/2"
+		req := arg.(*player_v1.QueueRequest)
+		return len(req.Queue) == 2 && req.Queue[0].Url == "/test/path/1" &&
+			req.Queue[1].Url == "/test/path/2"
 	}
 	testAlbumSelectAll(t, matcherFunc, addQueueCmdText+" ", true, true)
 	testAlbumSelectAll(t, matcherFunc, addQueueCmdText+" ", true, false)
@@ -574,8 +574,8 @@ func TestAddQueueAlbumSelectAll(t *testing.T) {
 func TestSetQueueAlbumSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		req := arg.(*player_v1.QueueRequest)
-		return len(req.Queue) == 2 && req.Queue[0] == "/test/path/1" &&
-			req.Queue[1] == "/test/path/2"
+		return len(req.Queue) == 2 && req.Queue[0].Url == "/test/path/1" &&
+			req.Queue[1].Url == "/test/path/2"
 	}
 	testAlbumSelectAll(t, matcherFunc, "", false, true)
 	testAlbumSelectAll(t, matcherFunc, "", false, false)
@@ -601,10 +601,10 @@ func testArtistSelection(
 		CorrelationIds: []int64{1},
 	}
 	lookupEntries := []*management_v1.LookupEntry{
-		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
-		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
-		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
-		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", TrackNumber: 1},
 	}
 
 	steps := []completionCase{
@@ -628,8 +628,8 @@ func testArtistSelection(
 
 func TestAddQueueArtistSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*player_v1.AddToQueueRequest)
-		return len(req.Songs) == 1 && req.Songs[0] == "/test/path/1"
+		req := arg.(*player_v1.QueueRequest)
+		return len(req.Queue) == 1 && req.Queue[0].Url == "/test/path/1"
 	}
 	testArtistSelection(t, matcherFunc, addQueueCmdText+" ", true, true)
 	testArtistSelection(t, matcherFunc, addQueueCmdText+" ", true, false)
@@ -638,7 +638,7 @@ func TestAddQueueArtistSelection(t *testing.T) {
 func TestSetQueueArtistSelection(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		req := arg.(*player_v1.QueueRequest)
-		return len(req.Queue) == 1 && req.Queue[0] == "/test/path/1"
+		return len(req.Queue) == 1 && req.Queue[0].Url == "/test/path/1"
 	}
 	testArtistSelection(t, matcherFunc, "", false, true)
 	testArtistSelection(t, matcherFunc, "", false, false)
@@ -664,10 +664,10 @@ func testArtistSelectAll(
 		CorrelationIds: []int64{1},
 	}
 	lookupEntries := []*management_v1.LookupEntry{
-		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
-		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
-		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
-		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", TrackNumber: 1},
 	}
 
 	steps := []completionCase{
@@ -690,12 +690,12 @@ func testArtistSelectAll(
 
 func TestAddQueueArtistSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*player_v1.AddToQueueRequest)
-		return len(req.Songs) == 4 &&
-			req.Songs[0] == "/test/path/1" &&
-			req.Songs[1] == "/test/path/2" &&
-			req.Songs[2] == "/test/path/3" &&
-			req.Songs[3] == "/test/path/4"
+		req := arg.(*player_v1.QueueRequest)
+		return len(req.Queue) == 4 &&
+			req.Queue[0].Url == "/test/path/1" &&
+			req.Queue[1].Url == "/test/path/2" &&
+			req.Queue[2].Url == "/test/path/3" &&
+			req.Queue[3].Url == "/test/path/4"
 	}
 	testArtistSelectAll(t, matcherFunc, addQueueCmdText+" ", true, true)
 	testArtistSelectAll(t, matcherFunc, addQueueCmdText+" ", true, false)
@@ -705,10 +705,10 @@ func TestSetQueueArtistSelectAll(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		req := arg.(*player_v1.QueueRequest)
 		return len(req.Queue) == 4 &&
-			req.Queue[0] == "/test/path/1" &&
-			req.Queue[1] == "/test/path/2" &&
-			req.Queue[2] == "/test/path/3" &&
-			req.Queue[3] == "/test/path/4"
+			req.Queue[0].Url == "/test/path/1" &&
+			req.Queue[1].Url == "/test/path/2" &&
+			req.Queue[2].Url == "/test/path/3" &&
+			req.Queue[3].Url == "/test/path/4"
 	}
 	testArtistSelectAll(t, matcherFunc, "", false, true)
 	testArtistSelectAll(t, matcherFunc, "", false, false)
@@ -734,10 +734,10 @@ func testArtistSelectOneAlbum(
 		CorrelationIds: []int64{1},
 	}
 	lookupEntries := []*management_v1.LookupEntry{
-		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", Track: 1},
-		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", Track: 1},
-		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", Track: 1},
-		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", Track: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 1", Path: "/test/path/1", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 1", Song: "track 2", Path: "/test/path/2", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 1", Path: "/test/path/3", TrackNumber: 1},
+		{Artist: "artist name", Album: "album 2", Song: "track 2", Path: "/test/path/4", TrackNumber: 1},
 	}
 
 	steps := []completionCase{
@@ -761,10 +761,10 @@ func testArtistSelectOneAlbum(
 
 func TestAddQueueArtistSelectOneAlbum(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
-		req := arg.(*player_v1.AddToQueueRequest)
-		return len(req.Songs) == 2 &&
-			req.Songs[0] == "/test/path/3" &&
-			req.Songs[1] == "/test/path/4"
+		req := arg.(*player_v1.QueueRequest)
+		return len(req.Queue) == 2 &&
+			req.Queue[0].Url == "/test/path/3" &&
+			req.Queue[1].Url == "/test/path/4"
 	}
 	testArtistSelectOneAlbum(t, matcherFunc, addQueueCmdText+" ", true, true)
 	testArtistSelectOneAlbum(t, matcherFunc, addQueueCmdText+" ", true, false)
@@ -774,8 +774,8 @@ func TestSetQueueArtistSelectOneAlbum(t *testing.T) {
 	matcherFunc := func(arg interface{}) bool {
 		req := arg.(*player_v1.QueueRequest)
 		return len(req.Queue) == 2 &&
-			req.Queue[0] == "/test/path/3" &&
-			req.Queue[1] == "/test/path/4"
+			req.Queue[0].Url == "/test/path/3" &&
+			req.Queue[1].Url == "/test/path/4"
 	}
 	testArtistSelectOneAlbum(t, matcherFunc, "", false, true)
 	testArtistSelectOneAlbum(t, matcherFunc, "", false, false)
@@ -810,11 +810,31 @@ func TestSetQueueExecutor(t *testing.T) {
 	playerMock := test.NewMockPlayerClient(ctrl)
 	mgmtMock := test.NewMockManagementClient(ctrl)
 	path := "/test/path/1"
-
-	playerMock.EXPECT().SetQueue(gomock.Any(), &player_v1.QueueRequest{Queue: []string{path, path}})
+	artist := "artist name"
+	album := "album name"
+	song := "song name"
+	var track int64 = 1
+	playerMock.EXPECT().SetQueue(gomock.Any(),
+		&player_v1.QueueRequest{
+			Queue: []*player_v1.Track{
+				{Url: path, Metadata: &player_v1.Metadata{
+					Song:        &song,
+					Artist:      &artist,
+					AlbumArtist: &artist,
+					Album:       &album,
+					TrackNumber: &track,
+				}},
+				{Url: path, Metadata: &player_v1.Metadata{
+					Song:        &song,
+					Artist:      &artist,
+					AlbumArtist: &artist,
+					Album:       &album,
+					TrackNumber: &track,
+				}}},
+		})
 
 	entries := []*management_v1.LookupEntry{
-		{Artist: "artist name", Album: "album 1", Song: "song name", Path: path, Track: 1},
+		{Artist: artist, Album: album, AlbumArtist: artist, Song: song, Path: path, TrackNumber: track},
 	}
 	mgmtMock.EXPECT().Lookup(gomock.Any(), &management_v1.LookupRequest{
 		EntryType:      management_v1.EntryType_SONG,
@@ -856,7 +876,7 @@ func TestSetQueueExecutorFile(t *testing.T) {
 	playerMock := test.NewMockPlayerClient(ctrl)
 	matcher := test.NewMatcher(func(arg interface{}) bool {
 		queue := arg.(*player_v1.QueueRequest).Queue
-		return strings.HasSuffix(queue[0], "root.go") && strings.HasSuffix(queue[1], "root.go")
+		return strings.HasSuffix(queue[0].Url, "root.go") && strings.HasSuffix(queue[1].Url, "root.go")
 	})
 	playerMock.EXPECT().SetQueue(gomock.Any(), matcher)
 

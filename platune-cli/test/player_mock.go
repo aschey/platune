@@ -44,7 +44,7 @@ func (m *MockPlayerClient) EXPECT() *MockPlayerClientMockRecorder {
 }
 
 // AddToQueue mocks base method.
-func (m *MockPlayerClient) AddToQueue(ctx context.Context, in *player_v1.AddToQueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockPlayerClient) AddToQueue(ctx context.Context, in *player_v1.QueueRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{ctx, in}
 	for _, a := range opts {
@@ -348,7 +348,7 @@ func (m *MockPlayerServer) EXPECT() *MockPlayerServerMockRecorder {
 }
 
 // AddToQueue mocks base method.
-func (m *MockPlayerServer) AddToQueue(arg0 context.Context, arg1 *player_v1.AddToQueueRequest) (*emptypb.Empty, error) {
+func (m *MockPlayerServer) AddToQueue(arg0 context.Context, arg1 *player_v1.QueueRequest) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddToQueue", arg0, arg1)
 	ret0, _ := ret[0].(*emptypb.Empty)

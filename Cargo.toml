@@ -12,11 +12,10 @@ resolver = "3"
 axum = "0.8.4"
 clap = "4.5.41"
 console-subscriber = "0.4.1"
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "6b349b6a3b9a04ef6701548308471a86a6115c56" }
-decal = { git = "https://github.com/aschey/decal", rev = "b6ce2d413ac49b74573eaf2b3a43893a4a682166" }
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "8136845235b1a367f979fc444680da54651a19d9" }
+decal = { git = "https://github.com/aschey/decal", rev = "ca90c5444593747f754d03c1a1117543fe01c2dc" }
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "2a2533633ad2d6d718baf63e25b9b7d7c2a053d1" }
 slite = { git = "https://github.com/aschey/slite", rev = "1c4ecd93b51604da80e4c125e52b5e9a96155bab", default-features = false }
-rusqlite = "0.37.0"
 directories = "6.0.0"
 dotenvy = "0.15.7"
 futures = "0.3.31"
@@ -72,12 +71,13 @@ reqwest-middleware = "0.4.2"
 reqwest-retry = "0.7.0"
 stream-download = "0.22.1"
 lofty = "0.22.4"
+icy-metadata = "0.4.1"
 
 # testing dependencies
 criterion = "0.7.0"
 assert_matches = "1.5.0"
 rstest = "0.26.1"
-ctor = "0.4.2"
+ctor = "0.5.0"
 pretty_assertions = "1.4.1"
 tempfile = "3.20.0"
 spin_sleep = "1.3.2"

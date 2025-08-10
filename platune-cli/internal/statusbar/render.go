@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"time"
 
-	management_v1 "github.com/aschey/platune/client/management_v1"
+	"github.com/aschey/platune/client/player_v1"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nathan-fiscaletti/consolesize-go"
 )
 
 type songInfo struct {
-	currentSong *management_v1.LookupEntry
+	currentMeta *player_v1.Metadata
 	song        string
 	album       string
 	artist      string
@@ -26,8 +26,9 @@ type renderParams struct {
 	renderStatus string
 }
 
-func formatTime(time time.Time) string {
-	return fmt.Sprintf("%02d:%02d:%02d", int(time.Hour()), int(time.Minute()), int(time.Second()))
+func formatDuration(dur time.Duration) string {
+	durTime := time.Unix(0, 0).UTC().Add(dur)
+	return fmt.Sprintf("%02d:%02d:%02d", int(durTime.Hour()), int(durTime.Minute()), int(durTime.Second()))
 }
 
 func (s *StatusBar) renderStatusBar(params renderParams) {
@@ -38,18 +39,17 @@ func (s *StatusBar) renderStatusBar(params renderParams) {
 	if params.songInfo != nil {
 		renderStatus := params.renderStatus
 		if lipgloss.Width(params.renderStatus) == 0 {
-			z := time.Unix(0, 0).UTC()
-			newTime := z.Add(params.timer.elapsed())
-			songTime := params.songInfo.currentSong.Duration.AsTime()
+			newTime := params.timer.elapsed()
+			songTime := params.songInfo.currentMeta.Duration.AsDuration()
 			// If the current time > the song time, we're probably just waiting for the server to tell us
 			// that the song completed. Cap the display time here so we don't show that it's past the end of the song.
-			if newTime.Compare(songTime) == 1 {
+			if newTime > songTime {
 				newTime = songTime
 			}
 			newText := fmt.Sprintf(
 				"%s/%s",
-				formatTime(newTime),
-				formatTime(params.songInfo.currentSong.Duration.AsTime()),
+				formatDuration(newTime),
+				formatDuration(params.songInfo.currentMeta.Duration.AsDuration()),
 			)
 			renderStatus = textStyle.Render(newText)
 		}

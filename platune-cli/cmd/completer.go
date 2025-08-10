@@ -69,8 +69,8 @@ func (state *cmdState) completerMode(in prompt.Document, returnChan chan []promp
 		}
 		for _, r := range state.lookupResult {
 			completionText := r.Song
-			if r.Track > 0 {
-				completionText = fmt.Sprintf("%d. %s", r.Track, r.Song)
+			if r.TrackNumber > 0 {
+				completionText = fmt.Sprintf("%d. %s", r.TrackNumber, r.Song)
 			}
 			suggestions = append(suggestions, prompt.Suggest{
 				Text:           r.Song,

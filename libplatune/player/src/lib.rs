@@ -28,6 +28,7 @@ pub mod platune_player {
     use crate::dto::player_response::PlayerResponse;
     pub use crate::dto::player_state::PlayerState;
     pub use crate::dto::player_status::PlayerStatus;
+    pub use crate::dto::track::{Metadata, Track};
     use crate::event_loop::{decode_loop, main_loop};
     use crate::player::Player;
     pub use crate::settings::Settings;
@@ -70,10 +71,20 @@ pub mod platune_player {
             let (decoder_tx, decoder_rx) = two_way_channel();
             let decoder_tx_ = decoder_tx.clone();
 
-            let main_loop_fn = async move {
-                let player =
-                    Player::new(event_tx_, queue_tx, queue_rx, decoder_tx_, settings, None);
-                main_loop(cmd_rx, player).await
+            let main_loop_fn = {
+                let cmd_tx_ = cmd_tx_.clone();
+                async move {
+                    let player = Player::new(
+                        event_tx_,
+                        queue_tx,
+                        queue_rx,
+                        cmd_tx_,
+                        decoder_tx_,
+                        settings,
+                        None,
+                    );
+                    main_loop(cmd_rx, player).await
+                }
             };
             let audio_backend_ = audio_backend.clone();
             let decoder_fn = || {
@@ -142,14 +153,14 @@ pub mod platune_player {
             self.event_tx.subscribe()
         }
 
-        pub async fn set_queue(&self, queue: Vec<String>) -> Result<(), PlayerError> {
+        pub async fn set_queue(&self, queue: Vec<Track>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::SetQueue(queue))
                 .await
                 .map_err(|e| PlayerError(format!("{e:?}")))
         }
 
-        pub async fn add_to_queue(&self, songs: Vec<String>) -> Result<(), PlayerError> {
+        pub async fn add_to_queue(&self, songs: Vec<Track>) -> Result<(), PlayerError> {
             self.cmd_sender
                 .send_async(Command::AddToQueue(songs))
                 .await

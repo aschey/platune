@@ -74,7 +74,6 @@ pub(crate) fn get_search_query(artist_filter: &[String], allowed_entry_types: &[
 
 pub(crate) fn get_full_spellfix_query(terms: &[&str]) -> String {
     // Union all queries together to avoid multiple trips to the database
-    
 
     terms
         .iter()

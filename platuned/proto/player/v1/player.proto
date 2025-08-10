@@ -12,7 +12,7 @@ option java_package = "platune.player.v1";
 
 service Player {
   rpc SetQueue(QueueRequest) returns (google.protobuf.Empty);
-  rpc AddToQueue(AddToQueueRequest) returns (google.protobuf.Empty);
+  rpc AddToQueue(QueueRequest) returns (google.protobuf.Empty);
   rpc Pause(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc Resume(google.protobuf.Empty) returns (google.protobuf.Empty);
@@ -33,13 +33,11 @@ enum Event {
   STOP = 2;
   PAUSE = 3;
   RESUME = 4;
-  ENDED = 5;
-  NEXT = 6;
-  PREVIOUS = 7;
-  SET_VOLUME = 8;
-  SEEK = 9;
-  QUEUE_ENDED = 10;
-  POSITION = 11;
+  TRACK_CHANGED = 5;
+  SET_VOLUME = 6;
+  SEEK = 7;
+  QUEUE_ENDED = 8;
+  POSITION = 9;
 }
 
 enum PlayerStatus {
@@ -54,12 +52,13 @@ enum SeekMode {
   ABSOLUTE = 2;
 }
 
-message QueueRequest {
-  repeated string queue = 1;
+message Track {
+  string url = 1;
+  Metadata metadata = 2;
 }
 
-message AddToQueueRequest {
-  repeated string songs = 1;
+message QueueRequest {
+  repeated Track queue = 1;
 }
 
 message SeekRequest {
@@ -80,11 +79,21 @@ message EventResponse {
   }
 }
 
+message Metadata {
+  optional string artist = 1;
+  optional string album_artist = 2;
+  optional string album = 3;
+  optional string song = 4;
+  optional int64 track_number = 5;
+  optional google.protobuf.Duration duration = 6;
+}
+
 message State {
   repeated string queue = 1;
   uint32 queue_position = 2;
   PlayerStatus status = 3;
   float volume = 4;
+  optional Metadata metadata = 5;
 }
 
 message PositionResponse {

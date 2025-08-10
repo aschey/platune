@@ -43,9 +43,7 @@ where
     let file_path = if file_path.exists() {
         file_path
             .normalize()
-            .map_err(|e| {
-                io::Error::new(e.kind(), format!("Error normalizing path {file_path:?}"))
-            })?
+            .map_err(|e| io::Error::new(e.kind(), format!("Error normalizing path {file_path:?}")))?
             .as_path()
             .to_path_buf()
     } else {
@@ -59,9 +57,10 @@ where
     }
 
     if let Some(mount) = mount
-        && file_path_str.starts_with(&mount[..]) {
-            file_path_str = file_path_str.replace(&mount[..], "");
-        }
+        && file_path_str.starts_with(&mount[..])
+    {
+        file_path_str = file_path_str.replace(&mount[..], "");
+    }
 
     Ok(file_path_str)
 }

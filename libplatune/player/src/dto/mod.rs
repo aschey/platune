@@ -8,3 +8,4 @@ pub(crate) mod player_state;
 pub(crate) mod player_status;
 pub(crate) mod processor_error;
 pub(crate) mod queue_source;
+pub(crate) mod track;

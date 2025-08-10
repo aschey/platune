@@ -3,7 +3,7 @@ use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use decal::decoder::{ReadSeekSource, Source};
+use decal::decoder::ReadSeekSource;
 use eyre::{Context, Result, bail};
 use lazy_regex::{Lazy, regex};
 use regex::Regex;
@@ -16,9 +16,12 @@ use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
 use tap::TapFallible;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 use which::which;
 use youtube_dl::{YoutubeDl, YoutubeDlOutput};
+
+use super::MetadataSource;
+use crate::dto::track::Metadata;
 
 macro_rules! url_regex {
     ($s:expr) => {
@@ -163,10 +166,11 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
                 if !self
                     .force_original_url
                     .matches(source_url.domain().unwrap_or_default())
-                    && let Some(Ok(url)) = video.url.map(|u| u.parse()) {
-                        // prefer URL from the command output if available
-                        input.source = registry::Source::Url(url);
-                    }
+                    && let Some(Ok(url)) = video.url.map(|u| u.parse())
+                {
+                    // prefer URL from the command output if available
+                    input.source = registry::Source::Url(url);
+                }
                 Ok(vec![input])
             }
             YoutubeDlOutput::Playlist(playlist) => {
@@ -232,7 +236,7 @@ impl YtDlpSourceResolver {
 }
 
 #[async_trait]
-impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSourceResolver {
+impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceResolver {
     fn priority(&self) -> u32 {
         1
     }
@@ -241,7 +245,7 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
         &self.rules
     }
 
-    async fn handler(&mut self, input: Input) -> Result<(Box<dyn Source>, CancellationToken)> {
+    async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
         let yt_dlp_formats = ["m4a", "mp4a", "mp3"];
         let ffmpeg_format = "adts";
 
@@ -254,29 +258,37 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
             .await?;
         info!("metadata extraction complete");
 
-        let found_format = match output {
+        let (found_format, video) = match output {
             YoutubeDlOutput::SingleVideo(video) => {
                 info!("found single video: {:?}", video.title);
-                let Some(formats) = video.formats else {
+                let Some(formats) = &video.formats else {
                     bail!("No formats found");
                 };
                 let worst_quality = 10.0;
                 // find best format (0 is best, 10 is worst)
-                formats
-                    .into_iter()
+                let format = formats
+                    .iter()
                     .filter(|f| {
+                        // If no high-quality format is available, it's better to parse it from the
+                        // raw input.
+                        if f.quality.map(|q| q > 3.0).unwrap_or(true) {
+                            return false;
+                        }
                         // use native audio codec or format if available
                         if let Some(audio_codec) = &f.acodec {
                             info!("checking audio codec: {audio_codec}");
                             if yt_dlp_formats.iter().any(|f| audio_codec.starts_with(f)) {
-                                info!("using native audio codec {audio_codec}");
+                                info!(
+                                    "using native audio codec {audio_codec} quality: {:?}",
+                                    f.quality
+                                );
                                 return true;
                             }
                         }
                         if let Some(format) = &f.format {
-                            info!("checking format: {format}");
+                            info!("checking format: {format} quality: {:?}", f.quality);
                             if yt_dlp_formats.iter().any(|f| format.starts_with(f)) {
-                                info!("using native format: {format}");
+                                info!("using native format: {format} quality: {:?}", f.quality);
                                 return true;
                             }
                         }
@@ -290,13 +302,24 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
                         } else {
                             best
                         }
-                    })
+                    });
+                (format.cloned(), video)
             }
             YoutubeDlOutput::Playlist(playlist) => {
                 // This shouldn't happen since we're enumerating playlists in the URL resolver
-                warn!("found playlist in source resolver: {:?}", playlist.title);
-                None
+                bail!("found playlist in source resolver: {:?}", playlist.title);
             }
+        };
+        let metadata = Metadata {
+            artist: video.artist,
+            album_artist: video.album_artist,
+            album: video.album,
+            song: video.track.or(video.title),
+            track_number: video.track_number.map(|t| t as u32),
+            duration: video
+                .duration
+                .and_then(|d| d.as_u64())
+                .map(Duration::from_secs),
         };
         let cmd = YtDlpCommand::new(input.source)
             .yt_dlp_path(ytdl_exe()?)
@@ -353,10 +376,10 @@ impl RegistryEntry<Result<(Box<dyn Source>, CancellationToken)>> for YtDlpSource
         )
         .await?;
         let token = reader.cancellation_token();
-
-        Ok((
-            Box::new(ReadSeekSource::new(reader, size, Some("m4a".to_string()))),
-            token,
-        ))
+        let track = MetadataSource {
+            source: Box::new(ReadSeekSource::new(reader, size, Some("m4a".to_string()))),
+            metadata: Some(metadata),
+        };
+        Ok((track, token))
     }
 }

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	management_v1 "github.com/aschey/platune/client/management_v1"
 	player_v1 "github.com/aschey/platune/client/player_v1"
 	"github.com/charmbracelet/lipgloss"
 	"google.golang.org/grpc"
@@ -14,9 +13,9 @@ import (
 
 var (
 	defaultStyle  = lipgloss.NewStyle().Background(lipgloss.Color("8"))
-	infoIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color("14"))
-	textStyle     = defaultStyle.Copy().Foreground(lipgloss.Color("15"))
-	separator     = defaultStyle.Copy().Foreground(lipgloss.Color("7")).Render(" | ")
+	infoIconStyle = defaultStyle.Foreground(lipgloss.Color("14"))
+	textStyle     = defaultStyle.Foreground(lipgloss.Color("15"))
+	separator     = defaultStyle.Foreground(lipgloss.Color("7")).Render(" | ")
 	songIcon      = ""
 	albumIcon     = "󰀥"
 	artistIcon    = ""
@@ -25,7 +24,7 @@ var (
 
 type label struct {
 	icon string
-	text string
+	text *string
 }
 
 func (s *StatusBar) StartEventLoop() {
@@ -44,7 +43,11 @@ func (s *StatusBar) StartEventLoop() {
 }
 
 func (l label) render(iconStyle lipgloss.Style) string {
-	return fmt.Sprintf("%s%s", iconStyle.Render(l.icon), textStyle.Render(" "+l.text))
+	text := ""
+	if l.text != nil {
+		text = *l.text
+	}
+	return fmt.Sprintf("%s%s", iconStyle.Render(l.icon), textStyle.Render(" "+text))
 }
 
 func (s *StatusBar) eventLoop(
@@ -59,8 +62,8 @@ func (s *StatusBar) eventLoop(
 	timer := timer{}
 
 	playingIconColor := ""
-	playingIconStyle := defaultStyle.Copy()
-	var currentSong *management_v1.LookupEntry
+	playingIconStyle := defaultStyle
+	var currentMeta *player_v1.Metadata
 	renderParams := renderParams{
 		timer:        &timer,
 		connection:   "",
@@ -74,32 +77,32 @@ func (s *StatusBar) eventLoop(
 		select {
 		case msg := <-eventCh:
 			if msg != nil {
-				event := s.handlePlayerEvent(&timer, msg, currentSong)
-				currentSong = event.newSong
+				event := s.handlePlayerEvent(&timer, msg, currentMeta)
+				currentMeta = event.newMeta
 				playingIconColor = event.color
-				playingIconStyle = defaultStyle.Copy().Foreground(lipgloss.Color(playingIconColor))
+				playingIconStyle = defaultStyle.Foreground(lipgloss.Color(playingIconColor))
 				renderParams.renderStatus = textStyle.Render(event.status)
 				renderParams.playingIcon = playingIconStyle.Render(event.icon + " ")
 			}
 		case newState := <-playerStateCh:
 			playerState = newState
 			connectionIcon, connectionIconColor, connectionStatus := s.handleStateChange(playerState, managementState)
-			connectionIconStyle := defaultStyle.Copy().
+			connectionIconStyle := defaultStyle.
 				Foreground(lipgloss.Color(connectionIconColor))
 			renderParams.connection = label{
 				icon: connectionIcon,
-				text: connectionStatus,
+				text: &connectionStatus,
 			}.render(
 				connectionIconStyle,
 			)
 		case newState := <-managementStateCh:
 			managementState = newState
 			connectionIcon, connectionIconColor, connectionStatus := s.handleStateChange(playerState, managementState)
-			connectionIconStyle := defaultStyle.Copy().
+			connectionIconStyle := defaultStyle.
 				Foreground(lipgloss.Color(connectionIconColor))
 			renderParams.connection = label{
 				icon: connectionIcon,
-				text: connectionStatus,
+				text: &connectionStatus,
 			}.render(
 				connectionIconStyle,
 			)
@@ -109,17 +112,17 @@ func (s *StatusBar) eventLoop(
 			// Resize event, don't need to do anything except re-render
 		}
 
-		if currentSong != nil {
+		if currentMeta != nil {
 			renderParams.songInfo = &songInfo{
-				currentSong: currentSong,
+				currentMeta: currentMeta,
 				artist: label{
 					icon: artistIcon,
-					text: currentSong.Artist,
+					text: currentMeta.Artist,
 				}.render(
 					infoIconStyle,
 				),
-				album: label{icon: albumIcon, text: currentSong.Album}.render(infoIconStyle),
-				song:  label{icon: songIcon, text: currentSong.Song}.render(infoIconStyle),
+				album: label{icon: albumIcon, text: currentMeta.Album}.render(infoIconStyle),
+				song:  label{icon: songIcon, text: currentMeta.Song}.render(infoIconStyle),
 			}
 		} else {
 			renderParams.songInfo = nil

@@ -1,9 +1,12 @@
+# remove -s none when this is resolved https://github.com/rust-fuzz/cargo-fuzz/issues/404
 [tasks.fuzz]
 args = [
     "+nightly",
     "fuzz",
     "run",
     "player",
+    "-s",
+    "none",
     "--target",
     "x86_64-unknown-linux-gnu",
     "--",

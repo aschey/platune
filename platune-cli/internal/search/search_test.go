@@ -79,11 +79,11 @@ func TestSelectOneItem(t *testing.T) {
 	}
 	lookupEntries := []*management_v1.LookupEntry{
 		{
-			Artist: "artist name",
-			Album:  "album 1",
-			Song:   "song name",
-			Path:   "/test/path/1",
-			Track:  1,
+			Artist:      "artist name",
+			Album:       "album 1",
+			Song:        "song name",
+			Path:        "/test/path/1",
+			TrackNumber: 1,
 		},
 	}
 	mock.EXPECT().
@@ -92,7 +92,7 @@ func TestSelectOneItem(t *testing.T) {
 	client := internal.NewTestClient(nil, mock)
 
 	d := itemDelegate{}
-	l := list.NewModel(items, d, 0, 0)
+	l := list.New(items, d, 0, 0)
 	m := model{list: l, client: &client, callback: func(entries []*management_v1.LookupEntry) {}}
 
 	m.list.CursorDown()

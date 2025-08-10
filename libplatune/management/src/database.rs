@@ -42,7 +42,7 @@ pub struct LookupEntry {
     pub album: String,
     pub song: String,
     pub path: String,
-    pub track: i64,
+    pub track_number: i64,
     pub duration_millis: i64,
 }
 
@@ -274,7 +274,7 @@ impl Database {
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
              duration_millis,
-            al.album_name album, aa.artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track_number
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
@@ -295,7 +295,7 @@ impl Database {
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
              duration_millis,
-            al.album_name album, aa.artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track_number
             FROM artist ar
             INNER JOIN song s ON s.artist_id = ar.artist_id
             INNER JOIN album al ON al.album_id = s.album_id
@@ -316,7 +316,7 @@ impl Database {
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
              duration_millis,
-            al.album_name album, aa.artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track_number
             FROM album al
             INNER JOIN artist aa ON aa.artist_id = al.artist_id
             INNER JOIN song s ON s.album_id = al.album_id
@@ -337,7 +337,7 @@ impl Database {
             "
             SELECT ar.artist_name artist, s.song_title song, s.song_path path, s.duration \
              duration_millis,
-            al.album_name album, aa.artist_name album_artist, s.track_number track
+            al.album_name album, aa.artist_name album_artist, s.track_number track_number
             FROM song s
             INNER JOIN artist ar ON ar.artist_id = s.artist_id
             INNER JOIN album al ON al.album_id = s.album_id

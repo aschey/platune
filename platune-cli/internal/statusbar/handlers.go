@@ -1,7 +1,6 @@
 package statusbar
 
 import (
-	management_v1 "github.com/aschey/platune/client/management_v1"
 	player_v1 "github.com/aschey/platune/client/player_v1"
 	"google.golang.org/grpc/connectivity"
 )
@@ -10,35 +9,24 @@ type playerEvent struct {
 	icon    string
 	color   string
 	status  string
-	newSong *management_v1.LookupEntry
+	newMeta *player_v1.Metadata
 }
 
 func (s *StatusBar) handlePlayerEvent(
 	timer *timer,
 	msg *player_v1.EventResponse,
-	currentSong *management_v1.LookupEntry,
+	currentMeta *player_v1.Metadata,
 ) playerEvent {
 	switch msg.Event {
 	case player_v1.Event_START_QUEUE,
 		player_v1.Event_QUEUE_UPDATED,
-		player_v1.Event_ENDED,
-		player_v1.Event_NEXT,
-		player_v1.Event_PREVIOUS:
+		player_v1.Event_TRACK_CHANGED:
 		state := msg.GetState()
-		res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
 		timer.setTime(0)
-		if res != nil {
-			return playerEvent{
-				icon:    "",
-				color:   "14",
-				newSong: res.Song,
-			}
-		} else {
-			return playerEvent{
-				icon:    "",
-				color:   "14",
-				newSong: nil,
-			}
+		return playerEvent{
+			icon:    "",
+			color:   "14",
+			newMeta: state.Metadata,
 		}
 
 	case player_v1.Event_SEEK:
@@ -46,7 +34,7 @@ func (s *StatusBar) handlePlayerEvent(
 		return playerEvent{
 			icon:    "",
 			color:   "14",
-			newSong: currentSong,
+			newMeta: currentMeta,
 		}
 	case player_v1.Event_QUEUE_ENDED, player_v1.Event_STOP:
 		timer.stop()
@@ -54,39 +42,37 @@ func (s *StatusBar) handlePlayerEvent(
 			icon:    "",
 			color:   "9",
 			status:  "Stopped",
-			newSong: nil,
+			newMeta: nil,
 		}
 	case player_v1.Event_PAUSE:
 		timer.pause()
-		if currentSong == nil {
+		if currentMeta == nil {
 			state := msg.GetState()
-			res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
-			currentSong = res.Song
+			currentMeta = state.Metadata
 		}
 		return playerEvent{
 			icon:    "",
 			color:   "11",
 			status:  "Paused",
-			newSong: currentSong,
+			newMeta: currentMeta,
 		}
 	case player_v1.Event_RESUME:
 		timer.resume()
-		if currentSong == nil {
+		if currentMeta == nil {
 			state := msg.GetState()
-			res := s.platuneClient.GetSongByPath(state.Queue[state.QueuePosition])
-			currentSong = res.Song
+			currentMeta = state.Metadata
 		}
 		return playerEvent{
 			icon:    "",
 			color:   "14",
-			newSong: currentSong,
+			newMeta: currentMeta,
 		}
 	case player_v1.Event_POSITION:
 		timer.setTime(msg.GetProgress().Position.AsDuration().Milliseconds())
 		return playerEvent{
 			icon:    "",
 			color:   "14",
-			newSong: currentSong,
+			newMeta: currentMeta,
 		}
 	default:
 		return playerEvent{}

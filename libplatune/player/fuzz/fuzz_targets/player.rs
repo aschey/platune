@@ -6,7 +6,7 @@ use std::time::Duration;
 use libfuzzer_sys::arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
 use libplatune_player::CpalOutput;
-use libplatune_player::platune_player::{PlatunePlayer, SeekMode, Settings};
+use libplatune_player::platune_player::{PlatunePlayer, SeekMode, Settings, Track};
 use tokio::runtime::Runtime;
 
 #[derive(Arbitrary, Debug)]
@@ -36,12 +36,16 @@ static PLAYER: LazyLock<PlatunePlayer<CpalOutput>> =
 
 static RUNTIME: LazyLock<Runtime> = LazyLock::new(|| Runtime::new().unwrap());
 
-fn get_path(song: &str) -> String {
+fn get_path(song: &str) -> Track {
     let dir = current_dir().unwrap().to_str().unwrap().to_owned();
-    format!("{dir}/../../test_assets/{song}")
+    let path = format!("{dir}/../../test_assets/{song}");
+    Track {
+        url: path,
+        metadata: None,
+    }
 }
 
-fn get_test_files(num_songs: NumSongs) -> Vec<String> {
+fn get_test_files(num_songs: NumSongs) -> Vec<Track> {
     let song1 = get_path("test.mp3");
     let song2 = get_path("test2.mp3");
     let song3 = get_path("test3.mp3");

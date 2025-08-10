@@ -1,12 +1,14 @@
 use std::fmt::Debug;
 use std::time::Duration;
 
+use super::track::{Metadata, Track};
 use crate::platune_player::SeekMode;
 
 #[derive(Clone, Debug)]
 pub(crate) enum Command {
-    SetQueue(Vec<String>),
-    AddToQueue(Vec<String>),
+    SetQueue(Vec<Track>),
+    AddToQueue(Vec<Track>),
+    Metadata(Metadata),
     Seek(Duration, SeekMode),
     SetVolume(f32),
     SetDeviceName(Option<String>),

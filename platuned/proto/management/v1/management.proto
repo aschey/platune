@@ -1,8 +1,8 @@
 syntax = "proto3";
 package platune.management.v1;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/empty.proto";
-import "google/protobuf/timestamp.proto";
 
 option csharp_namespace = "Platune.Management.V1";
 option go_package = "github.com/aschey/platune/client/management_v1";
@@ -79,8 +79,8 @@ message LookupEntry {
   string album = 3;
   string song = 4;
   string path = 5;
-  int64 track = 6;
-  google.protobuf.Timestamp duration = 7;
+  int64 track_number = 6;
+  google.protobuf.Duration duration = 7;
 }
 
 message LookupResponse {

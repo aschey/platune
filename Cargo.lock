@@ -111,9 +111,9 @@ dependencies = [
 
 [[package]]
 name = "anstream"
-version = "0.6.19"
+version = "0.6.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "301af1932e46185686725e0fad2f8f2aa7da69dd70bf6ecc44d6b703844a3933"
+checksum = "3ae563653d1938f79b1ab1b5e668c87c76a9930414574a6583a7b7e11a8e6192"
 dependencies = [
  "anstyle",
  "anstyle-parse",
@@ -141,22 +141,22 @@ dependencies = [
 
 [[package]]
 name = "anstyle-query"
-version = "1.1.3"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c8bdeb6047d8983be085bab0ba1472e6dc604e7041dbf6fcd5e71523014fae9"
+checksum = "9e231f6134f61b71076a3eab506c379d4f36122f2af15a9ff04415ea4c3339e2"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
 name = "anstyle-wincon"
-version = "3.0.9"
+version = "3.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "403f75924867bb1033c59fbf0797484329750cfbe3c4325cd33127941fabc882"
+checksum = "3e0633414522a32ffaac8ac6cc8f748e090c5717661fddeea04219e2344f5f2a"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -255,7 +255,7 @@ version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "435a87a52755b8f27fcf321ac4f04b2802e337c8c4872923137471ec39c37532"
 dependencies = [
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "event-listener-strategy",
  "futures-core",
  "pin-project-lite",
@@ -282,7 +282,7 @@ dependencies = [
  "async-task",
  "concurrent-queue",
  "fastrand 2.3.0",
- "futures-lite 2.6.0",
+ "futures-lite 2.6.1",
  "pin-project-lite",
  "slab",
 ]
@@ -325,13 +325,13 @@ version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19634d6336019ef220f09fd31168ce5c184b295cbf80345437cc36094ef223ca"
 dependencies = [
- "async-lock 3.4.0",
+ "async-lock 3.4.1",
  "cfg-if",
  "concurrent-queue",
  "futures-io",
- "futures-lite 2.6.0",
+ "futures-lite 2.6.1",
  "parking",
- "polling 3.9.0",
+ "polling 3.10.0",
  "rustix 1.0.8",
  "slab",
  "windows-sys 0.60.2",
@@ -348,11 +348,11 @@ dependencies = [
 
 [[package]]
 name = "async-lock"
-version = "3.4.0"
+version = "3.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff6e472cdea888a4bd64f342f09b3f50e1886d32afe8df3d663c01140b811b18"
+checksum = "5fd03604047cee9b6ce9de9f70c6cd540a0520c813cbd49bae61f33ab80ed1dc"
 dependencies = [
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "event-listener-strategy",
  "pin-project-lite",
 ]
@@ -382,13 +382,13 @@ checksum = "65daa13722ad51e6ab1a1b9c01299142bc75135b337923cfa10e79bbbd669f00"
 dependencies = [
  "async-channel",
  "async-io 2.5.0",
- "async-lock 3.4.0",
+ "async-lock 3.4.1",
  "async-signal",
  "async-task",
  "blocking",
  "cfg-if",
- "event-listener 5.4.0",
- "futures-lite 2.6.0",
+ "event-listener 5.4.1",
+ "futures-lite 2.6.1",
  "rustix 1.0.8",
 ]
 
@@ -410,7 +410,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f567af260ef69e1d52c2b560ce0ea230763e6fbb9214a85d768760a920e3e3c1"
 dependencies = [
  "async-io 2.5.0",
- "async-lock 3.4.0",
+ "async-lock 3.4.1",
  "atomic-waker",
  "cfg-if",
  "futures-core",
@@ -679,11 +679,11 @@ dependencies = [
 [[package]]
 name = "background-service"
 version = "0.1.0"
-source = "git+https://github.com/aschey/background-service-rs?rev=2d4f0dd65c86b50585827cd12adaa57de3f8b214#2d4f0dd65c86b50585827cd12adaa57de3f8b214"
+source = "git+https://github.com/aschey/background-service-rs?rev=6d9a1ddb2b57ac4fe305eff84545168d70171a5d#6d9a1ddb2b57ac4fe305eff84545168d70171a5d"
 dependencies = [
  "dashmap",
  "futures",
- "thiserror 1.0.69",
+ "thiserror 2.0.12",
  "tokio",
  "tokio-util",
  "tracing",
@@ -830,7 +830,7 @@ dependencies = [
  "async-channel",
  "async-task",
  "futures-io",
- "futures-lite 2.6.0",
+ "futures-lite 2.6.1",
  "piper",
 ]
 
@@ -904,9 +904,9 @@ checksum = "46c5e41b57b8bba42a04676d81cb89e9ee8e859a1a66f80a5a72e1cb76b34d43"
 
 [[package]]
 name = "bytemuck"
-version = "1.23.1"
+version = "1.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c76a5792e44e4abe34d3abf15636779261d45a7450612059293d1d2cfc63422"
+checksum = "3995eaeebcdf32f91f980d360f78732ddc061097ab4e39991ae7a6ace9194677"
 
 [[package]]
 name = "byteorder"
@@ -962,9 +962,9 @@ dependencies = [
 
 [[package]]
 name = "camino"
-version = "1.1.10"
+version = "1.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0da45bc31171d8d6960122e222a67740df867c1dd53b4d51caa297084c185cab"
+checksum = "5d07aa9a93b00c76f71bc35d598bed923f6d4f3a9ca5c24b7737ae1a292841c0"
 dependencies = [
  "serde",
 ]
@@ -1015,9 +1015,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.31"
+version = "1.2.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3a42d84bb6b69d3a8b3eaacf0d88f179e1929695e1ad012b6cf64d9caaa5fd2"
+checksum = "2352e5597e9c544d5e6d9c95190d5d27738ade584fa8db0a16e130e5c2b5296e"
 dependencies = [
  "jobserver",
  "libc",
@@ -1116,9 +1116,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.42"
+version = "4.5.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed87a9d530bb41a67537289bafcac159cb3ee28460e0a4571123d2a778a6a882"
+checksum = "50fd97c9dc2399518aa331917ac6f274280ec5eb34e555dd291899745c48ec6f"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -1126,9 +1126,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.42"
+version = "4.5.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64f4f3f3c77c94aff3c7e9aac9a2ca1974a5adf392a8bb751e827d6d127ab966"
+checksum = "c35b5830294e1fa0462034af85cc95225a4cb07092c088c55bda3147cfcd8f65"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1314,7 +1314,7 @@ dependencies = [
  "json5",
  "serde",
  "serde_yaml",
- "toml 0.9.4",
+ "toml 0.9.5",
 ]
 
 [[package]]
@@ -1680,7 +1680,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec09e802f5081de6157da9a75701d6c713d8dc3ba52571fd4bd25f412644e8a6"
 dependencies = [
  "ctor-proc-macro",
- "dtor",
+ "dtor 0.0.6",
+]
+
+[[package]]
+name = "ctor"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67773048316103656a637612c4a62477603b777d91d9c62ff2290f9cde178fdb"
+dependencies = [
+ "ctor-proc-macro",
+ "dtor 0.1.0",
 ]
 
 [[package]]
@@ -1692,7 +1702,7 @@ checksum = "e2931af7e13dc045d8e9d26afccc6fa115d64e115c9c84b1166288b46f6782c2"
 [[package]]
 name = "daemon-slayer"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "daemon-slayer-build-info",
  "daemon-slayer-cli",
@@ -1713,7 +1723,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-build-info"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "console",
@@ -1724,7 +1734,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-cli"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "clap",
  "daemon-slayer-core",
@@ -1734,7 +1744,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-client"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1764,7 +1774,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-config"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "arc-swap",
  "async-trait",
@@ -1778,13 +1788,14 @@ dependencies = [
  "tap",
  "thiserror 2.0.12",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
 [[package]]
 name = "daemon-slayer-console"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "confique",
@@ -1797,12 +1808,13 @@ dependencies = [
  "tilia",
  "tilia-widget",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
 name = "daemon-slayer-core"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "arc-swap",
  "async-stream",
@@ -1814,7 +1826,6 @@ dependencies = [
  "downcast-rs",
  "dyn-clonable",
  "futures",
- "futures-cancel",
  "owo-colors",
  "pin-project-lite",
  "regex",
@@ -1837,7 +1848,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-error-handler"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "color-eyre",
@@ -1851,42 +1862,44 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-file-watcher"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "daemon-slayer-core",
  "notify",
  "notify-debouncer-mini",
  "tap",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
 [[package]]
 name = "daemon-slayer-health-check"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
  "tokio",
- "tonic 0.14.0",
+ "tonic 0.14.1",
  "tonic-health",
 ]
 
 [[package]]
 name = "daemon-slayer-logging"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "confique",
- "ctor",
+ "ctor 0.4.3",
  "daemon-slayer-core",
  "serde",
  "tap",
  "thiserror 2.0.12",
  "tilia",
  "time",
+ "tokio-util",
  "tracing",
  "tracing-appender",
  "tracing-error",
@@ -1899,7 +1912,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-macros"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "proc-macro-crate 3.3.0",
  "proc-macro2",
@@ -1910,20 +1923,21 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-notify"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
  "notify-rust",
  "tap",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
 [[package]]
 name = "daemon-slayer-process"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "bytesize",
@@ -1939,7 +1953,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-server"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "async-trait",
  "daemon-slayer-core",
@@ -1957,7 +1971,7 @@ dependencies = [
 [[package]]
 name = "daemon-slayer-signals"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "daemon-slayer-core",
  "futures",
@@ -1965,13 +1979,14 @@ dependencies = [
  "signal-hook-tokio",
  "tap",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
 [[package]]
 name = "daemon-slayer-tray"
 version = "0.1.0"
-source = "git+https://github.com/aschey/daemon-slayer?rev=6b349b6a3b9a04ef6701548308471a86a6115c56#6b349b6a3b9a04ef6701548308471a86a6115c56"
+source = "git+https://github.com/aschey/daemon-slayer?rev=8136845235b1a367f979fc444680da54651a19d9#8136845235b1a367f979fc444680da54651a19d9"
 dependencies = [
  "daemon-slayer-client",
  "image",
@@ -2167,7 +2182,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=b6ce2d413ac49b74573eaf2b3a43893a4a682166#b6ce2d413ac49b74573eaf2b3a43893a4a682166"
+source = "git+https://github.com/aschey/decal?rev=ca90c5444593747f754d03c1a1117543fe01c2dc#ca90c5444593747f754d03c1a1117543fe01c2dc"
 dependencies = [
  "cpal",
  "dasp",
@@ -2419,7 +2434,16 @@ version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97cbdf2ad6846025e8e25df05171abfb30e3ababa12ee0a0e44b9bbe570633a8"
 dependencies = [
- "dtor-proc-macro",
+ "dtor-proc-macro 0.0.5",
+]
+
+[[package]]
+name = "dtor"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e58a0764cddb55ab28955347b45be00ade43d4d6f3ba4bf3dc354e4ec9432934"
+dependencies = [
+ "dtor-proc-macro 0.0.6",
 ]
 
 [[package]]
@@ -2427,6 +2451,12 @@ name = "dtor-proc-macro"
 version = "0.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7454e41ff9012c00d53cf7f475c5e3afa3b91b7c90568495495e8d9bf47a1055"
+
+[[package]]
+name = "dtor-proc-macro"
+version = "0.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f678cf4a922c215c63e0de95eb1ff08a958a81d47e485cf9da1e27bf6305cfa5"
 
 [[package]]
 name = "dunce"
@@ -2501,7 +2531,7 @@ dependencies = [
  "cc",
  "memchr",
  "rustc_version",
- "toml 0.9.4",
+ "toml 0.9.5",
  "vswhom",
  "winreg 0.55.0",
 ]
@@ -2654,9 +2684,9 @@ dependencies = [
 
 [[package]]
 name = "event-listener"
-version = "5.4.0"
+version = "5.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3492acde4c3fc54c845eaab3eed8bd00c7a7d881f78bfc801e43a93dec1331ae"
+checksum = "e13b66accf52311f30a0db42147dadea9850cb48cd070028831ae5f5d4b856ab"
 dependencies = [
  "concurrent-queue",
  "parking",
@@ -2669,7 +2699,7 @@ version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
 dependencies = [
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "pin-project-lite",
 ]
 
@@ -2913,17 +2943,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "futures-cancel"
-version = "0.1.0"
-source = "git+https://github.com/aschey/futures-cancel?rev=d2c20b78ff5c9e85aa892b51971cc1c1b6b22351#d2c20b78ff5c9e85aa892b51971cc1c1b6b22351"
-dependencies = [
- "futures",
- "pin-project-lite",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
 name = "futures-channel"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2984,9 +3003,9 @@ dependencies = [
 
 [[package]]
 name = "futures-lite"
-version = "2.6.0"
+version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5edaec856126859abb19ed65f39e90fea3a9574b9707f13539acf4abf7eb532"
+checksum = "f78e10609fe0e0b3f4157ffab1876319b5b0db102a2c60dc4626306dc46b44ad"
 dependencies = [
  "fastrand 2.3.0",
  "futures-core",
@@ -3719,9 +3738,9 @@ dependencies = [
 
 [[package]]
 name = "gix-path"
-version = "0.10.19"
+version = "0.10.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6279d323d925ad4790602105ae27df4b915e7a7d81e4cdba2603121c03ad111"
+checksum = "06d37034a4c67bbdda76f7bcd037b2f7bc0fba0c09a6662b19697a5716e7b2fd"
 dependencies = [
  "bstr",
  "gix-trace",
@@ -4183,9 +4202,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.4.11"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17da50a276f1e01e0ba6c029e47b7100754904ee8a278f886546e98575380785"
+checksum = "f3c0b69cfcb4e1b9f1bf2f53f95f766e4661169728ec61cd3fe5a0166f2d1386"
 dependencies = [
  "atomic-waker",
  "bytes",
@@ -4237,9 +4256,9 @@ dependencies = [
 
 [[package]]
 name = "hashbrown"
-version = "0.15.4"
+version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
+checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
  "allocator-api2",
  "equivalent",
@@ -4261,7 +4280,7 @@ version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7382cf6263419f2d8df38c55d7da83da5c18aef87fc7a7fc1fb1e344edfe14c1"
 dependencies = [
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
 ]
 
 [[package]]
@@ -4621,6 +4640,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "icy-metadata"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eda57d35fae891e71c56fd2eb5bc6777f8444db3b1dddbfcee06a812745e895a"
+dependencies = [
+ "http",
+ "reqwest",
+ "tracing",
+ "urlencoding",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4702,7 +4733,7 @@ version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "17d34b7d42178945f775e84bc4c36dde7c1c6cdfea656d3354d009056f2bb3d2"
 dependencies = [
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
 ]
 
 [[package]]
@@ -4713,9 +4744,9 @@ checksum = "d0263a3d970d5c054ed9312c0057b4f3bde9c0b33836d3637361d4a9e6e7a408"
 
 [[package]]
 name = "indenter"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce23b50ad8242c51a442f3ff322d56b02f08852c77e4c0b4d3fd684abc89c683"
+checksum = "964de6e86d545b246d84badc0fef527924ace5134f30641c203ef52ba83f58d5"
 
 [[package]]
 name = "indexmap"
@@ -4735,7 +4766,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe4cd85333e22411419a0bcae1297d25e58c9443848b11dc6a86fefe8c78a661"
 dependencies = [
  "equivalent",
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
  "serde",
 ]
 
@@ -5170,7 +5201,7 @@ version = "0.1.0"
 dependencies = [
  "concread",
  "criterion",
- "ctor",
+ "ctor 0.5.0",
  "directories",
  "eyre",
  "futures",
@@ -5205,13 +5236,14 @@ version = "0.1.0"
 dependencies = [
  "assert_matches",
  "async-trait",
- "ctor",
+ "ctor 0.5.0",
  "decal",
  "derivative",
  "eyre",
  "flume",
  "futures",
  "futures-util",
+ "icy-metadata",
  "lazy-regex",
  "pretty_assertions",
  "regex",
@@ -5355,7 +5387,7 @@ version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
 dependencies = [
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
 ]
 
 [[package]]
@@ -5364,7 +5396,7 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "227748d55f2f0ab4735d87fd623798cb6b664512fe979705f829c9f81c934465"
 dependencies = [
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
 ]
 
 [[package]]
@@ -5671,9 +5703,9 @@ dependencies = [
 
 [[package]]
 name = "notify"
-version = "8.1.0"
+version = "8.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3163f59cd3fa0e9ef8c32f242966a7b9994fd7378366099593e0e73077cd8c97"
+checksum = "4d3d07927151ff8575b7087f245456e549fea62edf0ec4e565a5ee50c8402bc3"
 dependencies = [
  "bitflags 2.9.1",
  "fsevent-sys",
@@ -5689,9 +5721,9 @@ dependencies = [
 
 [[package]]
 name = "notify-debouncer-mini"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a689eb4262184d9a1727f9087cd03883ea716682ab03ed24efec57d7716dccb8"
+checksum = "17849edfaabd9a5fef1c606d99cfc615a8e99f7ac4366406d86c7942a3184cf2"
 dependencies = [
  "log",
  "notify",
@@ -5705,7 +5737,7 @@ version = "4.11.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6442248665a5aa2514e794af3b39661a8e73033b1cc5e59899e1276117ee4400"
 dependencies = [
- "futures-lite 2.6.0",
+ "futures-lite 2.6.1",
  "log",
  "mac-notification-sys",
  "serde",
@@ -6316,7 +6348,7 @@ dependencies = [
  "global-hotkey",
  "platuned-client",
  "souvlaki",
- "tipsy 0.6.1",
+ "tipsy",
  "tokio",
 ]
 
@@ -6338,11 +6370,13 @@ dependencies = [
  "prost 0.14.1",
  "prost-types 0.14.1",
  "rcgen",
+ "tap",
  "time",
- "tipsy 0.6.1",
+ "tipsy",
  "tokio",
  "tokio-stream",
- "tonic 0.14.0",
+ "tokio-util",
+ "tonic 0.14.1",
  "tonic-build",
  "tonic-health",
  "tonic-prost",
@@ -6364,8 +6398,8 @@ dependencies = [
  "hyper-util",
  "prost 0.14.1",
  "prost-types 0.14.1",
- "tipsy 0.6.1",
- "tonic 0.14.0",
+ "tipsy",
+ "tonic 0.14.1",
  "tonic-build",
  "tonic-prost",
  "tonic-prost-build",
@@ -6380,7 +6414,7 @@ checksum = "3af6b589e163c5a788fab00ce0c0366f6efbb9959c2f9874b224936af7fce7e1"
 dependencies = [
  "base64 0.22.1",
  "indexmap 2.10.0",
- "quick-xml 0.38.0",
+ "quick-xml 0.38.1",
  "serde",
  "time",
 ]
@@ -6444,9 +6478,9 @@ dependencies = [
 
 [[package]]
 name = "polling"
-version = "3.9.0"
+version = "3.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ee9b2fa7a4517d2c91ff5bc6c297a427a96749d15f98fcdbb22c05571a4d4b7"
+checksum = "b5bd19146350fe804f7cb2669c851c03d69da628803dab0d98018142aaa5d829"
 dependencies = [
  "cfg-if",
  "concurrent-queue",
@@ -6752,9 +6786,9 @@ dependencies = [
 
 [[package]]
 name = "quick-xml"
-version = "0.38.0"
+version = "0.38.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8927b0664f5c5a98265138b7e3f90aa19a6b21353182469ace36d4ac527b7b1b"
+checksum = "9845d9dccf565065824e69f9f235fafba1587031eda353c1f1561cd6a6be78f4"
 dependencies = [
  "memchr",
 ]
@@ -7522,9 +7556,9 @@ dependencies = [
 
 [[package]]
 name = "rustversion"
-version = "1.0.21"
+version = "1.0.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
+checksum = "b39cdef0fa800fc44525c84ccb54a029961a8215f9619753635a9c0d2538d46d"
 
 [[package]]
 name = "ryu"
@@ -7591,9 +7625,9 @@ dependencies = [
 
 [[package]]
 name = "security-framework"
-version = "3.2.0"
+version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "271720403f46ca04f7ba6f55d438f8bd878d6b8ca0a1046e8228c4145bcbb316"
+checksum = "80fb1d92c5028aa318b4b8bd7302a5bfcf48be96a37fc6fc790f806b0004ee0c"
 dependencies = [
  "bitflags 2.9.1",
  "core-foundation 0.10.1",
@@ -7812,9 +7846,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.5"
+version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9203b8055f63a2a00e2f593bb0510367fe707d7ff1e5c872de2f537b339e5410"
+checksum = "b2a4719bff48cee6b39d12c020eeb490953ad2443b7055bd0b21fca26bd8c28b"
 dependencies = [
  "libc",
 ]
@@ -7864,9 +7898,9 @@ checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
 name = "slab"
-version = "0.4.10"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04dc19736151f35336d325007ac991178d504a119863a2fcb3758cdb5e52c50d"
+checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 
 [[package]]
 name = "slite"
@@ -8010,12 +8044,12 @@ dependencies = [
  "crc",
  "crossbeam-queue",
  "either",
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "futures-core",
  "futures-intrusive",
  "futures-io",
  "futures-util",
- "hashbrown 0.15.4",
+ "hashbrown 0.15.5",
  "hashlink 0.10.0",
  "indexmap 2.10.0",
  "log",
@@ -8760,13 +8794,12 @@ dependencies = [
 [[package]]
 name = "tilia"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tilia?rev=b47c67a00a5c3afd946a5e82c0ab68711b5fd536#b47c67a00a5c3afd946a5e82c0ab68711b5fd536"
+source = "git+https://github.com/aschey/tilia?rev=c6c42f73121bcbbb73d3289e1dc9a663d18c9aaa#c6c42f73121bcbbb73d3289e1dc9a663d18c9aaa"
 dependencies = [
  "background-service",
  "bollard",
  "bytes",
  "futures",
- "futures-cancel",
  "pin-project-lite",
  "tokio",
  "tokio-util",
@@ -8778,7 +8811,7 @@ dependencies = [
 [[package]]
 name = "tilia-widget"
 version = "0.1.0"
-source = "git+https://github.com/aschey/tilia?rev=b47c67a00a5c3afd946a5e82c0ab68711b5fd536#b47c67a00a5c3afd946a5e82c0ab68711b5fd536"
+source = "git+https://github.com/aschey/tilia?rev=c6c42f73121bcbbb73d3289e1dc9a663d18c9aaa#c6c42f73121bcbbb73d3289e1dc9a663d18c9aaa"
 dependencies = [
  "ansi-to-tui",
  "crossterm",
@@ -8855,20 +8888,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "tipsy"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec9813b544f2f7b5304961b1f3adb1ae1329914e7d09d6da1a4223d3cfdbb3cb"
-dependencies = [
- "dirs 6.0.0",
- "futures",
- "libc",
- "tokio",
- "tracing",
- "windows-sys 0.59.0",
-]
 
 [[package]]
 name = "tipsy"
@@ -8951,15 +8970,14 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.15"
+version = "0.7.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66a539a9ad6d5d281510d5bd368c973d636c02dbf8a67300bfb6b950696ad7df"
+checksum = "14307c986784f72ef81c89db7d9e28d6ac26d16213b109ea501696195e6e3ce5"
 dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
  "futures-util",
- "hashbrown 0.15.4",
  "pin-project-lite",
  "tokio",
 ]
@@ -8978,9 +8996,9 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.9.4"
+version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41ae868b5a0f67631c14589f7e250c1ea2c574ee5ba21c6c8dd4b1485705a5a1"
+checksum = "75129e1dc5000bfbaa9fee9d1b21f974f9fbad9daec557a521ee6e080825f6e8"
 dependencies = [
  "indexmap 2.10.0",
  "serde",
@@ -9046,9 +9064,9 @@ dependencies = [
 
 [[package]]
 name = "toml_parser"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97200572db069e74c512a14117b296ba0a80a30123fbbb5aa1f4a348f639ca30"
+checksum = "b551886f449aa90d4fe2bdaa9f4a2577ad2dde302c61ecf262d80b116db95c10"
 dependencies = [
  "winnow 0.7.12",
 ]
@@ -9091,9 +9109,9 @@ dependencies = [
 
 [[package]]
 name = "tonic"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "308e1db96abdccdf0a9150fb69112bf6ea72640e0bd834ef0c4a618ccc8c8ddc"
+checksum = "67ac5a8627ada0968acec063a4746bf79588aa03ccb66db2f75d7dce26722a40"
 dependencies = [
  "async-trait",
  "axum 0.8.4",
@@ -9121,9 +9139,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-build"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18262cdd13dec66e8e3f2e3fe535e4b2cc706fab444a7d3678d75d8ac2557329"
+checksum = "49e323d8bba3be30833707e36d046deabf10a35ae8ad3cae576943ea8933e25d"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -9133,33 +9151,33 @@ dependencies = [
 
 [[package]]
 name = "tonic-health"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47b73e8ee6621bc988f378d709615a77048649d34271bcdbf43395f325ada69b"
+checksum = "d8aa31379f0851de4f223496a469ffcaae24ad4ce736493179c3e42135e2af5c"
 dependencies = [
  "prost 0.14.1",
  "tokio",
  "tokio-stream",
- "tonic 0.14.0",
+ "tonic 0.14.1",
  "tonic-prost",
 ]
 
 [[package]]
 name = "tonic-prost"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d8b5b7a44512c59f5ad45e0c40e53263cbbf4426d74fe6b569e04f1d4206e9c"
+checksum = "b9c511b9a96d40cb12b7d5d00464446acf3b9105fd3ce25437cfe41c92b1c87d"
 dependencies = [
  "bytes",
  "prost 0.14.1",
- "tonic 0.14.0",
+ "tonic 0.14.1",
 ]
 
 [[package]]
 name = "tonic-prost-build"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "114cca66d757d72422ef8cccf8be3065321860ac9fa4be73aab37a8a20a9a805"
+checksum = "8ef298fcd01b15e135440c4b8c974460ceca4e6a5af7f1c933b08e4d2875efa1"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -9173,15 +9191,15 @@ dependencies = [
 
 [[package]]
 name = "tonic-reflection"
-version = "0.14.0"
+version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b6a72aca1cabacc0a7b61a61b6045ce0e833d773de6fb455e7737194e548977"
+checksum = "0267a0073385cd94996197d12acb1856a3a0a2367482c726a48a769f6fed8a3a"
 dependencies = [
  "prost 0.14.1",
  "prost-types 0.14.1",
  "tokio",
  "tokio-stream",
- "tonic 0.14.0",
+ "tonic 0.14.1",
  "tonic-prost",
 ]
 
@@ -9393,13 +9411,13 @@ dependencies = [
 [[package]]
 name = "transport-async"
 version = "0.1.0"
-source = "git+https://github.com/aschey/transport-async-rs?rev=918af6562e6c80c74d0aeb71850dccfd388c6463#918af6562e6c80c74d0aeb71850dccfd388c6463"
+source = "git+https://github.com/aschey/transport-async-rs?rev=bf3922e692de1bf7d7a613fa703609e5f13e2bc7#bf3922e692de1bf7d7a613fa703609e5f13e2bc7"
 dependencies = [
  "bytes",
- "futures",
+ "futures-util",
  "pin-project-lite",
  "serde",
- "tipsy 0.3.3",
+ "tipsy",
  "tokio",
  "tokio-serde",
  "tokio-util",
@@ -9855,7 +9873,7 @@ dependencies = [
 [[package]]
 name = "wasm-compat"
 version = "0.1.0"
-source = "git+https://github.com/aschey/wasm-compat?rev=98287ef1046e4c8694e0b90fbb0d0986573a1969#98287ef1046e4c8694e0b90fbb0d0986573a1969"
+source = "git+https://github.com/aschey/wasm-compat?rev=ef5760036e0c49d3bc8b5e0d85722f6b88bc9f87#ef5760036e0c49d3bc8b5e0d85722f6b88bc9f87"
 dependencies = [
  "js-sys",
  "paste",
@@ -10863,16 +10881,16 @@ dependencies = [
  "async-broadcast 0.7.2",
  "async-executor",
  "async-io 2.5.0",
- "async-lock 3.4.0",
+ "async-lock 3.4.1",
  "async-process 2.4.0",
  "async-recursion",
  "async-task",
  "async-trait",
  "blocking",
  "enumflags2",
- "event-listener 5.4.0",
+ "event-listener 5.4.1",
  "futures-core",
- "futures-lite 2.6.0",
+ "futures-lite 2.6.1",
  "hex",
  "nix 0.30.1",
  "ordered-stream",
@@ -11000,9 +11018,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec"
-version = "0.11.2"
+version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a05eb080e015ba39cc9e23bbe5e7fb04d5fb040350f99f34e338d5fdd294428"
+checksum = "e7aa2bd55086f1ab526693ecbe444205da57e25f4489879da80635a46d90e73b"
 dependencies = [
  "yoke",
  "zerofrom",

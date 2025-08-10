@@ -100,38 +100,39 @@ async fn run() -> Result<(), BoxedError> {
 
     let (state, matches) = cli.handle_input().await?;
     if state == InputState::Unhandled
-        && let Ok(TrayCommand::Tray(Tray { tray })) = TrayCommand::from_arg_matches(&matches) {
-            #[cfg(target_os = "linux")]
-            let app_path = exe_parent
-                .join("platune-tray.AppImage")
-                .to_string_lossy()
-                .to_string();
-            #[cfg(target_os = "macos")]
-            let app_path = "/Applications/Platune Tray.app/Contents/MacOS/platune-tray".to_string();
-            #[cfg(windows)]
-            let app_path = directories::UserDirs::new()
-                .unwrap()
-                .home_dir()
-                .join("AppData\\Local\\Platune Tray\\platune-tray.exe")
-                .to_string_lossy()
-                .to_string();
-            #[cfg(windows)]
-            let app_path = format!("\"{app_path}\"");
-            let auto_launch = AutoLaunchBuilder::new()
-                .set_app_name("Platune Tray")
-                .set_app_path(&app_path)
-                .set_use_launch_agent(true)
-                .build()
-                .unwrap();
-            match tray {
-                TrayValue::Enable => {
-                    auto_launch.enable()?;
-                }
-                TrayValue::Disable => {
-                    auto_launch.disable()?;
-                }
+        && let Ok(TrayCommand::Tray(Tray { tray })) = TrayCommand::from_arg_matches(&matches)
+    {
+        #[cfg(target_os = "linux")]
+        let app_path = exe_parent
+            .join("platune-tray.AppImage")
+            .to_string_lossy()
+            .to_string();
+        #[cfg(target_os = "macos")]
+        let app_path = "/Applications/Platune Tray.app/Contents/MacOS/platune-tray".to_string();
+        #[cfg(windows)]
+        let app_path = directories::UserDirs::new()
+            .unwrap()
+            .home_dir()
+            .join("AppData\\Local\\Platune Tray\\platune-tray.exe")
+            .to_string_lossy()
+            .to_string();
+        #[cfg(windows)]
+        let app_path = format!("\"{app_path}\"");
+        let auto_launch = AutoLaunchBuilder::new()
+            .set_app_name("Platune Tray")
+            .set_app_path(&app_path)
+            .set_use_launch_agent(true)
+            .build()
+            .unwrap();
+        match tray {
+            TrayValue::Enable => {
+                auto_launch.enable()?;
+            }
+            TrayValue::Disable => {
+                auto_launch.disable()?;
             }
         }
+    }
     Ok(())
 }
 

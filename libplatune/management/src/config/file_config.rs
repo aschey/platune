@@ -41,9 +41,10 @@ impl FileConfig {
 
         if !config_path_ref.exists() {
             if let Some(parent) = config_path_ref.parent()
-                && let Err(e) = create_dir_all(parent) {
-                    return Err(ConfigError::FileCreationFailed(config_string, e));
-                }
+                && let Err(e) = create_dir_all(parent)
+            {
+                return Err(ConfigError::FileCreationFailed(config_string, e));
+            }
 
             if let Err(e) = File::create(config_path_ref) {
                 return Err(ConfigError::FileCreationFailed(config_string, e));

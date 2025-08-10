@@ -11,6 +11,7 @@ import (
 	"github.com/aschey/platune/cli/v2/internal"
 	"github.com/aschey/platune/cli/v2/internal/mode"
 	management_v1 "github.com/aschey/platune/client/management_v1"
+	"github.com/aschey/platune/client/player_v1"
 )
 
 func (state *cmdState) executor(in string, selected *prompt.Suggest, suggestions []prompt.Suggest) {
@@ -122,7 +123,7 @@ func (state *cmdState) executeCmd(cmds []string, selected *prompt.Suggest) {
 			return
 		}
 
-		state.client.AddToQueue([]string{pathInput}, true)
+		state.client.AddToQueue([]*player_v1.Track{{Url: pathInput}}, true)
 	case seekCmdText:
 		if len(cmds) < 2 {
 			fmt.Println("Usage: seek [hh]:[mm]:ss")

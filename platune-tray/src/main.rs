@@ -1,7 +1,7 @@
 #![windows_subsystem = "windows"]
 
 use std::collections::HashMap;
-use std::env::{self, current_exe};
+use std::env::current_exe;
 use std::path::PathBuf;
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -19,11 +19,11 @@ use futures_util::stream::StreamExt;
 use global_hotkey::hotkey::{Code, HotKey, Modifiers};
 use global_hotkey::{GlobalHotKeyEvent, GlobalHotKeyManager, HotKeyState};
 use platuned_client::Channel;
-use platuned_client::management::v1::PathMessage;
-use platuned_client::management::v1::management_client::ManagementClient;
 use platuned_client::player::v1::event_response::EventPayload;
 use platuned_client::player::v1::player_client::PlayerClient;
-use platuned_client::player::v1::{Event, QueueRequest, SeekMode, SeekRequest, SetVolumeRequest};
+use platuned_client::player::v1::{
+    Event, QueueRequest, SeekMode, SeekRequest, SetVolumeRequest, Track,
+};
 use souvlaki::{
     MediaControlEvent, MediaControls, MediaMetadata, MediaPlayback, MediaPosition, PlatformConfig,
     SeekDirection,
@@ -246,44 +246,6 @@ impl LazyPlayerClient {
     }
 }
 
-fn normalize_url(url: &str) -> String {
-    if url.starts_with("http://") || url.starts_with("https://") {
-        url.to_string()
-    } else {
-        "http://".to_string() + url
-    }
-}
-
-struct LazyMgmtClient(Option<ManagementClient<Channel>>);
-
-impl LazyMgmtClient {
-    async fn get(&mut self) -> &mut ManagementClient<Channel> {
-        if self.0.is_some() {
-            return self.0.as_mut().unwrap();
-        }
-        let management_urls = env::var("PLATUNE_MANAGEMENT_URL")
-            .map(|u| u.split(",").map(normalize_url).collect::<Vec<_>>())
-            .unwrap_or_default();
-
-        loop {
-            if management_urls.is_empty() {
-                if let Ok(client) = ManagementClient::connect_ipc().await {
-                    self.0 = Some(client);
-                    return self.0.as_mut().unwrap();
-                }
-            } else {
-                for url in &management_urls {
-                    if let Ok(client) = ManagementClient::connect_http(url.clone()).await {
-                        self.0 = Some(client);
-                        return self.0.as_mut().unwrap();
-                    }
-                }
-            }
-            tokio::time::sleep(Duration::from_secs(1)).await;
-        }
-    }
-}
-
 async fn metadata_updater(mut controls: MediaControls) {
     let mut client = LazyPlayerClient(None);
     let mut stream = client
@@ -293,7 +255,6 @@ async fn metadata_updater(mut controls: MediaControls) {
         .await
         .unwrap()
         .into_inner();
-    let mut mgmt_client = LazyMgmtClient(None);
 
     let mut progress = Duration::from_millis(0);
     let mut last_progress = Instant::now();
@@ -335,10 +296,9 @@ async fn metadata_updater(mut controls: MediaControls) {
                     EventPayload::State(state) => {
                         status = state.status();
                         match message.event() {
-                            Event::StartQueue | Event::Ended | Event::Next | Event::Previous => {
+                            Event::StartQueue | Event::TrackChanged => {
                                 progress = Duration::default();
-                                current_duration =
-                                    set_metadata(&mut mgmt_client, state, &mut controls).await;
+                                current_duration = set_metadata(state, &mut controls).await;
 
                                 controls
                                     .set_playback(MediaPlayback::Playing {
@@ -350,8 +310,7 @@ async fn metadata_updater(mut controls: MediaControls) {
                             }
                             Event::Resume => {
                                 if !is_init {
-                                    current_duration =
-                                        set_metadata(&mut mgmt_client, state, &mut controls).await;
+                                    current_duration = set_metadata(state, &mut controls).await;
                                     is_init = true;
                                 }
                                 controls
@@ -363,8 +322,7 @@ async fn metadata_updater(mut controls: MediaControls) {
                             }
                             Event::Pause => {
                                 if !is_init {
-                                    current_duration =
-                                        set_metadata(&mut mgmt_client, state, &mut controls).await;
+                                    current_duration = set_metadata(state, &mut controls).await;
                                     is_init = true;
                                     // MacOS doesn't register the player if it starts as paused, so
                                     // we have to set it to playing first
@@ -429,35 +387,24 @@ async fn metadata_updater(mut controls: MediaControls) {
 }
 
 async fn set_metadata(
-    mgmt_client: &mut LazyMgmtClient,
     state: &platuned_client::player::v1::State,
     controls: &mut MediaControls,
 ) -> Option<Duration> {
     let pos = state.queue_position as usize;
     if pos < state.queue.len() {
         let path = &state.queue[pos];
-        let metadata = mgmt_client
-            .get()
-            .await
-            .get_song_by_path(PathMessage { path: path.clone() })
-            .await
-            .unwrap()
-            .into_inner()
-            .song;
-        if let Some(metadata) = metadata {
-            let duration = metadata.duration.unwrap();
-            let duration = Duration::from_secs(duration.seconds as u64)
-                + Duration::from_nanos(duration.nanos as u64);
+        if let Some(metadata) = &state.metadata {
+            let duration = metadata.duration.map(|d| d.try_into().unwrap());
             controls
                 .set_metadata(MediaMetadata {
-                    title: Some(&metadata.song),
-                    album: Some(&metadata.album),
-                    artist: Some(&metadata.artist),
+                    title: metadata.song.as_deref(),
+                    album: metadata.album.as_deref(),
+                    artist: metadata.artist.as_deref(),
                     cover_url: None,
-                    duration: Some(duration),
+                    duration: metadata.duration.map(|d| d.try_into().unwrap()),
                 })
                 .unwrap();
-            Some(duration)
+            duration
         } else {
             controls
                 .set_metadata(MediaMetadata {
@@ -516,11 +463,16 @@ async fn player_handler(mut rx: mpsc::Receiver<PlayerCommand>) {
             PlayerCommand::Previous => {
                 client.get().await.previous(()).await.unwrap();
             }
-            PlayerCommand::SetQueue(uri) => {
+            PlayerCommand::SetQueue(url) => {
                 client
                     .get()
                     .await
-                    .set_queue(QueueRequest { queue: vec![uri] })
+                    .set_queue(QueueRequest {
+                        queue: vec![Track {
+                            url,
+                            metadata: None,
+                        }],
+                    })
                     .await
                     .unwrap();
             }

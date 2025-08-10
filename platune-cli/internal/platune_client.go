@@ -170,12 +170,12 @@ func (p *PlatuneClient) ResetStreams() {
 }
 
 func (p *PlatuneClient) SetQueueFromSearchResults(entries []*management_v1.LookupEntry, printMsg bool) {
-	paths := p.getPathsFromLookup(entries)
+	paths := p.getTracksFromLookup(entries)
 	p.SetQueue(paths, printMsg)
 }
 
 func (p *PlatuneClient) AddSearchResultsToQueue(entries []*management_v1.LookupEntry, printMsg bool) {
-	paths := p.getPathsFromLookup(entries)
+	paths := p.getTracksFromLookup(entries)
 	p.AddToQueue(paths, printMsg)
 }
 
@@ -214,14 +214,14 @@ func (p *PlatuneClient) Resume() {
 	})
 }
 
-func (p *PlatuneClient) AddToQueue(songs []string, printMsg bool) {
+func (p *PlatuneClient) AddToQueue(songs []*player_v1.Track, printMsg bool) {
 	p.retryPlayerConnection()
 	msg := ""
 	if printMsg {
 		msg = "Added"
 	}
 	p.runCommand(msg, func(ctx context.Context) (*emptypb.Empty, error) {
-		return p.playerClient.AddToQueue(ctx, &player_v1.AddToQueueRequest{Songs: songs})
+		return p.playerClient.AddToQueue(ctx, &player_v1.QueueRequest{Queue: songs})
 	})
 }
 
@@ -232,7 +232,7 @@ func (p *PlatuneClient) SetVolume(volume float32) {
 	})
 }
 
-func (p *PlatuneClient) SetQueue(queue []string, printMsg bool) {
+func (p *PlatuneClient) SetQueue(queue []*player_v1.Track, printMsg bool) {
 	msg := ""
 	if printMsg {
 		msg = "Queue Set"
@@ -420,10 +420,20 @@ func (p *PlatuneClient) runCommand(
 	}
 }
 
-func (p *PlatuneClient) getPathsFromLookup(entries []*management_v1.LookupEntry) []string {
-	paths := []string{}
+func (p *PlatuneClient) getTracksFromLookup(entries []*management_v1.LookupEntry) []*player_v1.Track {
+	paths := []*player_v1.Track{}
 	for _, entry := range entries {
-		paths = append(paths, entry.Path)
+		paths = append(paths, &player_v1.Track{
+			Url: entry.Path,
+			Metadata: &player_v1.Metadata{
+				Song:        &entry.Song,
+				Artist:      &entry.Artist,
+				AlbumArtist: &entry.AlbumArtist,
+				Album:       &entry.Album,
+				Duration:    entry.Duration,
+				TrackNumber: &entry.TrackNumber,
+			},
+		})
 	}
 
 	return paths

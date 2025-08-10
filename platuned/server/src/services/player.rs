@@ -4,8 +4,8 @@ use std::time::Duration;
 
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
-use libplatune_player::CpalOutput;
-use libplatune_player::platune_player::*;
+use libplatune_player::platune_player::{AudioStatus, PlatunePlayer, PlayerEvent, PlayerState};
+use libplatune_player::{CpalOutput, platune_player};
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
 use tracing::{error, info};
@@ -45,6 +45,7 @@ fn get_event_response(event: Event, state: PlayerState) -> Result<EventResponse,
             queue_position: state.queue_position as u32,
             volume: state.volume,
             status: map_audio_status(state.status).into(),
+            metadata: state.metadata.map(map_player_metadata),
         })),
     })
 }
@@ -55,8 +56,7 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
         PlayerEvent::Stop(state) => get_event_response(Event::Stop, state),
         PlayerEvent::Pause(state) => get_event_response(Event::Pause, state),
         PlayerEvent::Resume(state) => get_event_response(Event::Resume, state),
-        PlayerEvent::Ended(state) => get_event_response(Event::Ended, state),
-        PlayerEvent::Next(state) => get_event_response(Event::Next, state),
+        PlayerEvent::TrackChanged(state) => get_event_response(Event::TrackChanged, state),
         PlayerEvent::StartQueue(state) => get_event_response(Event::StartQueue, state),
         PlayerEvent::QueueUpdated(state) => get_event_response(Event::QueueUpdated, state),
         PlayerEvent::Seek(state, time) => Ok(EventResponse {
@@ -67,11 +67,11 @@ fn map_response(msg: PlayerEvent) -> Result<EventResponse, Status> {
                     queue_position: state.queue_position as u32,
                     volume: state.volume,
                     status: map_audio_status(state.status).into(),
+                    metadata: None,
                 }),
                 seek_millis: time.as_millis() as u64,
             })),
         }),
-        PlayerEvent::Previous(state) => get_event_response(Event::Previous, state),
         PlayerEvent::QueueEnded(state) => get_event_response(Event::QueueEnded, state),
         PlayerEvent::Position(position) => Ok(EventResponse {
             event: Event::Position.into(),
@@ -104,20 +104,58 @@ fn map_audio_status(status: AudioStatus) -> crate::rpc::v1::PlayerStatus {
     }
 }
 
+fn map_queue_request(request: QueueRequest) -> Vec<platune_player::Track> {
+    request
+        .queue
+        .into_iter()
+        .map(|t| platune_player::Track {
+            url: t.url,
+            metadata: t.metadata.map(map_queue_metadata),
+        })
+        .collect()
+}
+
+fn map_queue_metadata(metadata: Metadata) -> platune_player::Metadata {
+    platune_player::Metadata {
+        artist: metadata.artist,
+        album_artist: metadata.album_artist,
+        album: metadata.album,
+        song: metadata.song,
+        track_number: metadata.track_number.map(|t| t as u32),
+        duration: metadata.duration.map(|d| d.try_into().unwrap()),
+    }
+}
+
+fn map_player_metadata(metadata: platune_player::Metadata) -> Metadata {
+    Metadata {
+        artist: metadata.artist,
+        album_artist: metadata.album_artist,
+        album: metadata.album,
+        song: metadata.song,
+        track_number: metadata.track_number.map(|t| t as i64),
+        duration: metadata.duration.map(|d| d.try_into().unwrap()),
+    }
+}
+
 #[tonic::async_trait]
 impl Player for PlayerImpl {
     async fn set_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
-        match self.player.set_queue(request.into_inner().queue).await {
+        match self
+            .player
+            .set_queue(map_queue_request(request.into_inner()))
+            .await
+        {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!("Error setting queue: {e:?}"))),
         }
     }
 
-    async fn add_to_queue(
-        &self,
-        request: Request<AddToQueueRequest>,
-    ) -> Result<Response<()>, Status> {
-        match self.player.add_to_queue(request.into_inner().songs).await {
+    async fn add_to_queue(&self, request: Request<QueueRequest>) -> Result<Response<()>, Status> {
+        match self
+            .player
+            .add_to_queue(map_queue_request(request.into_inner()))
+            .await
+        {
             Ok(()) => Ok(Response::new(())),
             Err(e) => Err(format_error(format!("Error adding songs to queue: {e:?}"))),
         }
@@ -227,6 +265,7 @@ impl Player for PlayerImpl {
                 queue_position: status.track_status.state.queue_position as u32,
                 volume: status.track_status.state.volume,
                 status: map_audio_status(status.track_status.status).into(),
+                metadata: status.track_status.state.metadata.map(map_player_metadata),
             }),
         }))
     }

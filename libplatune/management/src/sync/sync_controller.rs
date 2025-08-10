@@ -34,10 +34,11 @@ impl SyncController {
             // If the finished channel has a value, the last sync finished so we should restart
             // Otherwise, the sync is curently in progress
             if finished_rx.try_recv().is_err()
-                && let Some(tx) = &self.progress_tx {
-                    info!("Subscribing to sync in progress");
-                    return ProgressStream::new(tx.subscribe());
-                }
+                && let Some(tx) = &self.progress_tx
+            {
+                info!("Subscribing to sync in progress");
+                return ProgressStream::new(tx.subscribe());
+            }
         }
         let (finished_tx, finished_rx) = oneshot::channel();
 

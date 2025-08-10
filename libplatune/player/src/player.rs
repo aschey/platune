@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::time::Duration;
 
-use decal::decoder::Source;
 use eyre::bail;
 use flume::{Receiver, Sender};
 use stream_download::registry::{Input, Registry};
@@ -11,16 +11,19 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::dto::audio_status::AudioStatus;
+use crate::dto::command::Command;
 use crate::dto::decoder_command::DecoderCommand;
 use crate::dto::decoder_response::DecoderResponse;
 use crate::dto::player_event::PlayerEvent;
+use crate::dto::player_response::PlayerResponse;
 use crate::dto::player_state::PlayerState;
 use crate::dto::player_status::TrackStatus;
 use crate::dto::queue_source::{QueueSource, QueueStartMode};
+use crate::dto::track::{Metadata, Track};
 use crate::platune_player::SeekMode;
 use crate::resolver::{
-    DefaultUrlResolver, FileSourceResolver, HttpSourceResolver, YtDlpSourceResolver,
-    YtDlpUrlResolver,
+    DefaultUrlResolver, FileSourceResolver, HttpSourceResolver, MetadataSource, TrackInput,
+    YtDlpSourceResolver, YtDlpUrlResolver,
 };
 use crate::settings::Settings;
 use crate::two_way_channel::TwoWaySender;
@@ -42,7 +45,7 @@ pub(crate) struct Player {
     pending_volume: Option<f32>,
     device_name: Option<String>,
     url_resolver: Registry<eyre::Result<Vec<Input>>>,
-    source_resolver: Registry<eyre::Result<(Box<dyn Source>, CancellationToken)>>,
+    source_resolver: Registry<eyre::Result<(MetadataSource, CancellationToken)>>,
     stream_cancellation_tokens: VecDeque<CancellationToken>,
 }
 
@@ -51,17 +54,19 @@ impl Player {
         event_tx: broadcast::Sender<PlayerEvent>,
         queue_tx: Sender<QueueSource>,
         queue_rx: Receiver<QueueSource>,
+        player_tx: TwoWaySender<Command, PlayerResponse>,
         cmd_sender: TwoWaySender<DecoderCommand, DecoderResponse>,
         settings: Settings,
         device_name: Option<String>,
     ) -> Self {
         Self {
-            event_tx,
+            event_tx: event_tx.clone(),
             state: PlayerState {
                 queue: vec![],
                 volume: 1.0,
                 queue_position: 0,
                 status: AudioStatus::Stopped,
+                metadata: None,
             },
             queued_count: 0,
             queue_tx,
@@ -75,13 +80,17 @@ impl Player {
                 .entry(YtDlpUrlResolver::new())
                 .entry(DefaultUrlResolver::new()),
             source_resolver: Registry::new()
-                .entry(HttpSourceResolver::new())
+                .entry(HttpSourceResolver::new(Arc::new(move |metadata| {
+                    let _ = player_tx
+                        .send(Command::Metadata(metadata))
+                        .inspect_err(|e| warn!("error sending metadata: {e:?}"));
+                })))
                 .entry(FileSourceResolver::new())
                 .entry(YtDlpSourceResolver::new()),
         }
     }
 
-    async fn get_source(&mut self, input: Input) -> Option<Box<dyn Source>> {
+    async fn get_source(&mut self, input: Input) -> Option<MetadataSource> {
         let (reader, cancellation_token) = self
             .source_resolver
             .find_match(input)
@@ -95,19 +104,20 @@ impl Player {
 
     async fn append_file(
         &mut self,
-        input: Input,
+        input: TrackInput,
         queue_start_mode: QueueStartMode,
     ) -> Result<(), AppendError> {
-        match self.get_source(input.clone()).await {
+        match self.get_source(input.input.clone()).await {
             Some(source) => {
                 info!("Sending source {input:?}");
                 match self
                     .queue_tx
                     .send_async(QueueSource {
-                        source,
+                        source: source.source,
                         settings: self.settings.clone(),
                         queue_start_mode,
                         volume: self.pending_volume.take(),
+                        metadata: source.metadata,
                     })
                     .await
                 {
@@ -136,9 +146,9 @@ impl Player {
         // Keep trying until a valid source is found or we reach the end of the queue
         while success.is_err() {
             match self.get_current() {
-                Some(path) => {
+                Some(input) => {
                     match self
-                        .append_file(path.clone(), queue_start_mode.clone())
+                        .append_file(input.clone(), queue_start_mode.clone())
                         .await
                     {
                         Ok(_) => {
@@ -284,6 +294,14 @@ impl Player {
         Ok(())
     }
 
+    pub(crate) fn update_metadata(&mut self, metadata: Metadata) {
+        self.state.metadata = Some(metadata);
+        let _ = self
+            .event_tx
+            .send(PlayerEvent::TrackChanged(self.state.clone()))
+            .inspect_err(|e| warn!("error sending track changed {e:?}"));
+    }
+
     pub(crate) async fn seek(&mut self, time: Duration, mode: SeekMode) {
         if self.is_empty() {
             info!("Seek called on empty queue, ignoring");
@@ -311,6 +329,7 @@ impl Player {
         self.reset_queue().await?;
         self.state.queue_position = 0;
         self.state.queue = vec![];
+        self.state.metadata = None;
         self.queued_count = 0;
         self.event_tx
             .send(PlayerEvent::Stop(self.state.clone()))
@@ -357,9 +376,6 @@ impl Player {
             info!("Waiting for decoder after ended event");
             self.wait_for_decoder().await;
             self.state.queue_position += 1;
-            self.event_tx
-                .send(PlayerEvent::Ended(self.state.clone()))
-                .unwrap_or_default();
             info!(
                 "Incrementing position. New position: {}",
                 self.state.queue_position
@@ -367,9 +383,7 @@ impl Player {
         } else {
             info!("No more tracks in queue, changing to stopped state");
             self.state.status = AudioStatus::Stopped;
-            self.event_tx
-                .send(PlayerEvent::Ended(self.state.clone()))
-                .unwrap_or_default();
+            self.state.metadata = None;
             self.event_tx
                 .send(PlayerEvent::QueueEnded(self.state.clone()))
                 .unwrap_or_default();
@@ -406,18 +420,25 @@ impl Player {
         Ok(())
     }
 
-    async fn find_urls(&mut self, item: &str) -> eyre::Result<Vec<Input>> {
-        let Some(items) = self.url_resolver.find_match(item).await else {
-            bail!("no resolver found for {item}");
+    async fn find_urls(&mut self, item: Track) -> eyre::Result<Vec<TrackInput>> {
+        let Some(items) = self.url_resolver.find_match(&item.url).await else {
+            bail!("no resolver found for {}", item.url);
         };
-        items
+        let items = items?;
+        Ok(items
+            .into_iter()
+            .map(|i| TrackInput {
+                input: i,
+                metadata: item.metadata.clone(),
+            })
+            .collect())
     }
 
-    pub(crate) async fn set_queue(&mut self, queue: Vec<String>) -> Result<(), String> {
+    pub(crate) async fn set_queue(&mut self, queue: Vec<Track>) -> Result<(), String> {
         let mut new_queue = Vec::new();
         for item in queue {
             if let Ok(mut items) = self
-                .find_urls(&item)
+                .find_urls(item)
                 .await
                 .tap_err(|e| error!("error finding urls: {e:?}"))
             {
@@ -437,7 +458,7 @@ impl Player {
 
     async fn set_queue_internal(
         &mut self,
-        queue: Vec<Input>,
+        queue: Vec<TrackInput>,
         start_position: usize,
         queue_start_mode: QueueStartMode,
     ) -> Result<(), String> {
@@ -454,10 +475,10 @@ impl Player {
         }
     }
 
-    pub(crate) async fn add_to_queue(&mut self, songs: Vec<String>) -> Result<(), String> {
+    pub(crate) async fn add_to_queue(&mut self, songs: Vec<Track>) -> Result<(), String> {
         for song in songs {
             if let Ok(urls) = self
-                .find_urls(&song)
+                .find_urls(song)
                 .await
                 .tap_err(|e| error!("error finding urls {e:?}"))
             {
@@ -471,7 +492,7 @@ impl Player {
         Ok(())
     }
 
-    async fn add_one_to_queue(&mut self, song: Input) -> Result<(), String> {
+    async fn add_one_to_queue(&mut self, song: TrackInput) -> Result<(), String> {
         // Queue is not currently running, need to start it
         if self.queued_count == 0 {
             self.set_queue_internal(vec![song], 0, QueueStartMode::Normal)
@@ -497,15 +518,15 @@ impl Player {
         Ok(())
     }
 
-    fn get_current(&self) -> Option<Input> {
+    fn get_current(&self) -> Option<TrackInput> {
         self.get_position(self.state.queue_position)
     }
 
-    fn get_next(&self) -> Option<Input> {
+    fn get_next(&self) -> Option<TrackInput> {
         self.get_position(self.state.queue_position + 1)
     }
 
-    fn get_position(&self, position: usize) -> Option<Input> {
+    fn get_position(&self, position: usize) -> Option<TrackInput> {
         self.state.queue.get(position).cloned()
     }
 
@@ -521,7 +542,7 @@ impl Player {
             self.reset_queue().await?;
             if self.start(QueueStartMode::Normal).await.is_ok() {
                 self.event_tx
-                    .send(PlayerEvent::Next(self.state.clone()))
+                    .send(PlayerEvent::TrackChanged(self.state.clone()))
                     .unwrap_or_default();
             }
         } else {
@@ -544,7 +565,7 @@ impl Player {
             self.reset_queue().await?;
             if self.start(QueueStartMode::Normal).await.is_ok() {
                 self.event_tx
-                    .send(PlayerEvent::Previous(self.state.clone()))
+                    .send(PlayerEvent::TrackChanged(self.state.clone()))
                     .unwrap_or_default();
             }
         } else {
