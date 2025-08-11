@@ -92,7 +92,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
                             SeekMode::Forward => current_time.position + time,
                             SeekMode::Backward => current_time.position - time,
                         };
-                        let seek_response = match self.decoder.seek(seek_time) {
+                        let seek_response = match self.manager.seek(&mut self.decoder, seek_time) {
                             Ok(seeked_to) => Ok(seeked_to.actual_ts),
                             Err(e) => Err(e.to_string()),
                         };

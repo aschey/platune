@@ -247,15 +247,14 @@ fn handle_force_restart<B: AudioBackend>(
         },
     )?;
 
-    decoder
-        .seek(last_stop_position)
+    manager
+        .seek(&mut decoder, last_stop_position)
         .map_err(|e| warn!("Error seeking: {e}"))
         .ok();
 
     if paused {
         decoder.pause();
     }
-    manager.reset(&mut decoder).ok();
     Ok(decoder)
 }
 
