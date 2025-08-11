@@ -23,7 +23,7 @@ use libplatune_management::manager::Manager;
 use libplatune_player::CpalOutput;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
-use platuned::{file_server_port, main_server_port};
+use platuned::{file_server_port, main_server_port, service_label};
 use tap::TapOptional;
 use tipsy::{IntoIpcPath, ServerId};
 use tokio_util::future::FutureExt;
@@ -69,7 +69,7 @@ impl Services {
             #[cfg(feature = "management")]
             manager: FileWatchManager::new(manager, Duration::from_millis(500), move || {
                 Box::pin(async move {
-                    let _ = Notification::new("com.platune.platuned".parse().unwrap())
+                    let _ = Notification::new(service_label())
                         .summary("Sync completed")
                         .show()
                         .await

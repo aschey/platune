@@ -2,13 +2,16 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+use daemon_slayer::core::notify::AsyncNotification;
+use daemon_slayer::notify::notification::Notification;
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
 use libplatune_player::platune_player::{AudioStatus, PlatunePlayer, PlayerEvent, PlayerState};
 use libplatune_player::{CpalOutput, platune_player};
+use platuned::service_label;
 use tokio::sync::broadcast::error::RecvError;
 use tonic::{Request, Response, Status};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::rpc::v1::event_response::*;
 use crate::rpc::v1::{SeekMode, *};
@@ -24,6 +27,24 @@ impl PlayerImpl {
         player: Arc<PlatunePlayer<CpalOutput>>,
         shutdown_rx: BroadcastEventStore<Signal>,
     ) -> Self {
+        let mut player_rx = player.subscribe();
+        tokio::spawn(async move {
+            while let Ok(event) = player_rx.recv().await {
+                if let PlayerEvent::TrackChanged(state) = event
+                    && let Some(meta) = state.metadata {
+                        let msg = [meta.song, meta.artist]
+                            .into_iter()
+                            .flatten()
+                            .collect::<Vec<_>>()
+                            .join(" - ");
+                        let _ = Notification::new(service_label())
+                            .summary(format!("Now playing: {msg}"))
+                            .show()
+                            .await
+                            .inspect_err(|e| warn!("Error sending notification: {e:?}"));
+                    }
+            }
+        });
         PlayerImpl {
             player,
             shutdown_rx,
