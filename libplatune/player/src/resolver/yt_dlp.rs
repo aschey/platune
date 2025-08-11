@@ -310,6 +310,7 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                 bail!("found playlist in source resolver: {:?}", playlist.title);
             }
         };
+
         let metadata = Metadata {
             artist: video.artist,
             album_artist: video.album_artist,
@@ -318,8 +319,8 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
             track_number: video.track_number.map(|t| t as u32),
             duration: video
                 .duration
-                .and_then(|d| d.as_u64())
-                .map(Duration::from_secs),
+                .and_then(|d| d.as_f64())
+                .map(|d| Duration::from_secs(d as u64)),
         };
         let cmd = YtDlpCommand::new(input.source)
             .yt_dlp_path(ytdl_exe()?)
