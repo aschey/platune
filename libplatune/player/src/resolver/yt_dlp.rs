@@ -1,6 +1,6 @@
 use std::env;
 use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -92,16 +92,18 @@ fn ffmpeg_exe() -> Result<String> {
     find_exe("FFMPEG_PATH", "ffmpeg").tap_err(|e| error!("ffmpeg path not found: {e:?}"))
 }
 
-struct RegexSet {
-    regexes: Vec<Regex>,
+struct RegexSet<const N: usize> {
+    regexes: [Regex; N],
 }
 
-impl RegexSet {
+impl RegexSet<1> {
     fn single(re: Regex) -> Self {
-        Self { regexes: vec![re] }
+        Self { regexes: [re] }
     }
+}
 
-    fn new(regexes: Vec<Regex>) -> Self {
+impl<const N: usize> RegexSet<N> {
+    fn new(regexes: [Regex; N]) -> Self {
         Self { regexes }
     }
 
@@ -115,10 +117,13 @@ impl RegexSet {
     }
 }
 
+// some sites may return a url that's incompatible with our default logic
+static FORCE_ORIGINAL_URL: LazyLock<RegexSet<2>> =
+    LazyLock::new(|| RegexSet::new([twitch(), youtube()]));
+
 pub(crate) struct YtDlpUrlResolver {
     rules: Vec<Rule>,
-    skip_flat_playlist: RegexSet,
-    force_original_url: RegexSet,
+    skip_flat_playlist: RegexSet<1>,
 }
 
 impl YtDlpUrlResolver {
@@ -128,8 +133,6 @@ impl YtDlpUrlResolver {
             // some sites don't populate urls when using --flat-playlist so we need to explicitly
             // skip it
             skip_flat_playlist: RegexSet::single(audius()),
-            // some sites may return a url that's incompatible with our default logic
-            force_original_url: RegexSet::new(vec![twitch(), youtube()]),
         }
     }
 }
@@ -165,9 +168,7 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
             YoutubeDlOutput::SingleVideo(video) => {
                 info!("found single video: {:?}", video.title);
                 info!("url {:?}", video.url);
-                if !self
-                    .force_original_url
-                    .matches(source_url.domain().unwrap_or_default())
+                if !FORCE_ORIGINAL_URL.matches(source_url.domain().unwrap_or_default())
                     && let Some(Ok(url)) = video.url.map(|u| u.parse())
                 {
                     // prefer URL from the command output if available
@@ -207,7 +208,6 @@ const LIBFDK_AAC: &str = "libfdk_aac";
 pub(crate) struct YtDlpSourceResolver {
     rules: Vec<Rule>,
     has_fdk_aac: Option<bool>,
-    use_direct_url: RegexSet,
     http_resolver: HttpSourceResolver,
 }
 
@@ -216,7 +216,6 @@ impl YtDlpSourceResolver {
         Self {
             rules: ytdl_rules(),
             has_fdk_aac: None,
-            use_direct_url: RegexSet::new(vec![bandcamp(), soundcloud(), audius(), audiomack()]),
             http_resolver: HttpSourceResolver::new(Arc::new(|_| {})),
         }
     }
@@ -268,10 +267,7 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                 info!("video url: {:?}", video.url);
                 if let Some(url) = &video.url {
                     let input_source = input.source.clone().into_url();
-                    if self
-                        .use_direct_url
-                        .matches(input_source.domain().unwrap_or_default())
-                    {
+                    if !FORCE_ORIGINAL_URL.matches(input_source.domain().unwrap_or_default()) {
                         // For some sites, the direct audio URL can be downloaded with the default
                         // HTTP resolver This is preferable, since it allows
                         // us to have proper seek support
