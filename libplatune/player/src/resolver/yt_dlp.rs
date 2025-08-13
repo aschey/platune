@@ -1,5 +1,6 @@
 use std::env;
 use std::num::NonZeroUsize;
+use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
@@ -10,7 +11,7 @@ use regex::Regex;
 use stream_download::process::{
     CommandBuilder, FfmpegConvertAudioCommand, ProcessStreamParams, YtDlpCommand,
 };
-use stream_download::registry::{self, Input, RegistryEntry, Rule};
+use stream_download::registry::{self, Input, RegistryEntry, Rule, Source};
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
 use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
@@ -22,6 +23,7 @@ use youtube_dl::{YoutubeDl, YoutubeDlOutput};
 
 use super::MetadataSource;
 use crate::dto::track::Metadata;
+use crate::resolver::HttpSourceResolver;
 
 macro_rules! url_regex {
     ($s:expr) => {
@@ -205,6 +207,8 @@ const LIBFDK_AAC: &str = "libfdk_aac";
 pub(crate) struct YtDlpSourceResolver {
     rules: Vec<Rule>,
     has_fdk_aac: Option<bool>,
+    use_direct_url: RegexSet,
+    http_resolver: HttpSourceResolver,
 }
 
 impl YtDlpSourceResolver {
@@ -212,6 +216,8 @@ impl YtDlpSourceResolver {
         Self {
             rules: ytdl_rules(),
             has_fdk_aac: None,
+            use_direct_url: RegexSet::new(vec![bandcamp(), soundcloud(), audius(), audiomack()]),
+            http_resolver: HttpSourceResolver::new(Arc::new(|_| {})),
         }
     }
 
@@ -248,7 +254,6 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
     async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
         let yt_dlp_formats = ["m4a", "mp4a", "mp3"];
         let ffmpeg_format = "adts";
-
         info!("ytdl video url: {}", input.source);
         info!("extracting video metadata - this may take a few seconds");
         let output = YoutubeDl::new(input.source.clone())
@@ -260,6 +265,26 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
 
         let (found_format, video) = match output {
             YoutubeDlOutput::SingleVideo(video) => {
+                info!("video url: {:?}", video.url);
+                if let Some(url) = &video.url {
+                    let input_source = input.source.clone().into_url();
+                    if self
+                        .use_direct_url
+                        .matches(input_source.domain().unwrap_or_default())
+                    {
+                        // For some sites, the direct audio URL can be downloaded with the default
+                        // HTTP resolver This is preferable, since it allows
+                        // us to have proper seek support
+                        info!("using http source resolver");
+                        return self
+                            .http_resolver
+                            .handler(Input {
+                                prefix: None,
+                                source: Source::Url(url.parse().unwrap()),
+                            })
+                            .await;
+                    }
+                }
                 info!("found single video: {:?}", video.title);
                 let Some(formats) = &video.formats else {
                     bail!("No formats found");
@@ -271,7 +296,8 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                     .filter(|f| {
                         // If no high-quality format is available, it's better to parse it from the
                         // raw input.
-                        if f.quality.map(|q| q > 3.0).unwrap_or(true) {
+                        if f.quality.map(|q| q > 3.0).unwrap_or(false) {
+                            info!("quality too low, ignoring: {:?}", f.quality);
                             return false;
                         }
                         // use native audio codec or format if available
