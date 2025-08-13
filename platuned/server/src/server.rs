@@ -23,6 +23,7 @@ use libplatune_management::manager::Manager;
 use libplatune_player::CpalOutput;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
+#[cfg(feature = "player")]
 use libplatune_player::platune_player::PlayerEvent;
 use platuned::{file_server_port, main_server_port, service_label};
 use tap::TapOptional;
@@ -136,6 +137,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "player")]
 fn show_notifications(player: &Arc<PlatunePlayer<CpalOutput>>) {
     let mut player_rx = player.subscribe();
     tokio::spawn(async move {
