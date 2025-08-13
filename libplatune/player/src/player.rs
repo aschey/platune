@@ -134,11 +134,15 @@ impl Player {
             }
             None => {
                 error!("source unavailable");
-                let queue = self.state.queue.clone();
-                self.state.queue = queue.into_iter().filter(|q| *q != input).collect();
+                self.remove_from_queue(&input);
                 Err(AppendError::SourceUnavailable)
             }
         }
+    }
+
+    fn remove_from_queue(&mut self, input: &TrackInput) {
+        let queue = self.state.queue.clone();
+        self.state.queue = queue.into_iter().filter(|q| q != input).collect();
     }
 
     async fn start(&mut self, queue_start_mode: QueueStartMode) -> Result<(), Option<AppendError>> {
@@ -185,19 +189,28 @@ impl Player {
                 }
                 None => return Err(None),
             }
-        }
 
-        info!("Waiting for decoder after starting");
-        if success.is_ok()
-            && self.wait_for_decoder().await == DecoderResponse::InitializationSucceeded
-        {
-            if matches!(
-                queue_start_mode,
-                QueueStartMode::ForceRestart { paused: true, .. }
-            ) {
-                self.state.status = AudioStatus::Paused;
-            } else {
-                self.state.status = AudioStatus::Playing;
+            info!("Waiting for decoder after starting");
+            if success.is_ok() {
+                let decoder_result = self.wait_for_decoder().await;
+                if decoder_result == DecoderResponse::InitializationFailed {
+                    success = Err(Some(AppendError::SourceUnavailable));
+                    let input = self.get_current().expect("current track missing");
+                    self.stream_cancellation_tokens.pop_front();
+                    self.queued_count -= 1;
+
+                    self.remove_from_queue(&input);
+                    continue;
+                }
+
+                if matches!(
+                    queue_start_mode,
+                    QueueStartMode::ForceRestart { paused: true, .. }
+                ) {
+                    self.state.status = AudioStatus::Paused;
+                } else {
+                    self.state.status = AudioStatus::Playing;
+                }
             }
         }
 

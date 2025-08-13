@@ -23,6 +23,7 @@ use libplatune_management::manager::Manager;
 use libplatune_player::CpalOutput;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
+use libplatune_player::platune_player::PlayerEvent;
 use platuned::{file_server_port, main_server_port, service_label};
 use tap::TapOptional;
 use tipsy::{IntoIpcPath, ServerId};
@@ -94,6 +95,10 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     let services = Services::new().await?;
     let servers = FuturesUnordered::new();
     let port = main_server_port()?;
+
+    #[cfg(feature = "player")]
+    show_notifications(&services.player);
+
     let http_server = run_server(
         shutdown_rx.clone(),
         services.clone(),
@@ -129,6 +134,28 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn show_notifications(player: &Arc<PlatunePlayer<CpalOutput>>) {
+    let mut player_rx = player.subscribe();
+    tokio::spawn(async move {
+        while let Ok(event) = player_rx.recv().await {
+            if let PlayerEvent::TrackChanged(state) = event
+                && let Some(meta) = state.metadata
+            {
+                let msg = [meta.song, meta.artist]
+                    .into_iter()
+                    .flatten()
+                    .collect::<Vec<_>>()
+                    .join(" - ");
+                let _ = Notification::new(service_label())
+                    .summary(format!("Now playing: {msg}"))
+                    .show()
+                    .await
+                    .inspect_err(|e| warn!("Error sending notification: {e:?}"));
+            }
+        }
+    });
 }
 
 #[cfg(feature = "management")]

@@ -18,6 +18,7 @@ pub mod platune_player {
     use tap::TapFallible;
     use thiserror::Error;
     use tokio::sync::broadcast;
+    use tokio::time::timeout;
     use tracing::{error, info, warn};
 
     pub use crate::dto::audio_status::AudioStatus;
@@ -271,9 +272,11 @@ pub mod platune_player {
                 .await
                 .map_err(|e| PlayerError(format!("{e:?}")))?;
             info!("Sent shutdown command");
-
-            self.main_loop_handle
+            timeout(Duration::from_secs(1), self.main_loop_handle)
                 .await
+                .map_err(|_| {
+                    PlayerError("timed out waiting for main loop to terminate".to_string())
+                })?
                 .map_err(|e| PlayerError(format!("{e:?}")))?
                 .map_err(|e| PlayerError(format!("{e:?}")))?;
             info!("main loop terminated");
