@@ -27,6 +27,7 @@ dotenvy = { workspace = true }
 futures = { workspace = true }
 libplatune-management = { path = "../../libplatune/management", optional = true }
 libplatune-player = { path = "../../libplatune/player", optional = true }
+background-service = { workspace = true }
 tipsy = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }

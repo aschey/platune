@@ -10,17 +10,18 @@ resolver = "3"
 
 [workspace.dependencies]
 axum = "0.8.4"
-clap = "4.5.41"
+clap = "4.5.45"
 console-subscriber = "0.4.1"
 daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "8136845235b1a367f979fc444680da54651a19d9" }
-decal = { git = "https://github.com/aschey/decal", rev = "94f568e7f72e638505c4ad4444922b97b08c570e" }
+decal = { git = "https://github.com/aschey/decal", rev = "df7c105a3990ce3a56ac623960a8a6c0960f41b6" }
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "2a2533633ad2d6d718baf63e25b9b7d7c2a053d1" }
 slite = { git = "https://github.com/aschey/slite", rev = "1c4ecd93b51604da80e4c125e52b5e9a96155bab", default-features = false }
+background-service = { git = "https://github.com/aschey/background-service-rs", rev = "6d9a1ddb2b57ac4fe305eff84545168d70171a5d" }
 directories = "6.0.0"
 dotenvy = "0.15.7"
 futures = "0.3.31"
 futures-util = "0.3.31"
-tipsy = "0.6.1"
+tipsy = "0.6.2"
 prost = "0.14.1"
 prost-types = "0.14.1"
 rcgen = "0.14.2"
@@ -40,9 +41,9 @@ tower-http = "0.6.6"
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 tracing-appender = "0.2.3"
-uuid = "1.17.0"
+uuid = "1.18.0"
 vergen-gix = "1.0.9"
-console = "0.15.11"
+console = "0.16.0"
 which = "8.0.0"
 urlencoding = "2.1.3"
 auto-launch = "0.5.0"
@@ -59,19 +60,19 @@ num_cpus = "1.17.0"
 regex = "1.11.1"
 rust-embed = "8.7.2"
 sqlx = { version = "0.8", default-features = false }
-strum = "0.27.1"
+strum = "0.27.2"
 tap = "1.0.1"
-thiserror = "2.0.12"
+thiserror = "2.0.16"
 walkdir = "2.5.0"
-async-trait = "0.1.88"
+async-trait = "0.1.89"
 flume = "0.11.1"
 lazy-regex = "3.4.1"
-reqwest = { version = "0.12.22", default-features = false }
+reqwest = { version = "0.12.23", default-features = false }
 reqwest-middleware = "0.4.2"
 reqwest-retry = "0.7.0"
-stream-download = "0.22.1"
+stream-download = "0.22.4"
 lofty = "0.22.4"
-icy-metadata = "0.4.1"
+icy-metadata = "0.4.2"
 
 # testing dependencies
 criterion = "0.7.0"
@@ -79,5 +80,5 @@ assert_matches = "1.5.0"
 rstest = "0.26.1"
 ctor = "0.5.0"
 pretty_assertions = "1.4.1"
-tempfile = "3.20.0"
+tempfile = "3.21.0"
 spin_sleep = "1.3.2"

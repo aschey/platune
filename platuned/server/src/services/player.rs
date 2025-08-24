@@ -2,13 +2,13 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
-use futures::StreamExt;
 use libplatune_player::platune_player::{AudioStatus, PlatunePlayer, PlayerEvent, PlayerState};
 use libplatune_player::{CpalOutput, platune_player};
 use tokio::sync::broadcast::error::RecvError;
+use tokio_util::future::FutureExt;
+use tokio_util::sync::CancellationToken;
 use tonic::{Request, Response, Status};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::rpc::v1::event_response::*;
 use crate::rpc::v1::{SeekMode, *};
@@ -16,17 +16,17 @@ use crate::v1::player_server::Player;
 
 pub struct PlayerImpl {
     player: Arc<PlatunePlayer<CpalOutput>>,
-    shutdown_rx: BroadcastEventStore<Signal>,
+    cancellation_token: CancellationToken,
 }
 
 impl PlayerImpl {
     pub fn new(
         player: Arc<PlatunePlayer<CpalOutput>>,
-        shutdown_rx: BroadcastEventStore<Signal>,
+        cancellation_token: CancellationToken,
     ) -> Self {
         PlayerImpl {
             player,
-            shutdown_rx,
+            cancellation_token,
         }
     }
 }
@@ -301,7 +301,6 @@ impl Player for PlayerImpl {
         _: Request<()>,
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut player_rx = self.player.subscribe();
-        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
         let (tx, rx) = tokio::sync::mpsc::channel(32);
         let status = self
             .player
@@ -319,15 +318,30 @@ impl Player for PlayerImpl {
             let progress_message = map_response(PlayerEvent::Position(position));
             tx.send(progress_message).await.unwrap_or_default();
         }
+        let cancellation_token = self.cancellation_token.clone();
         tokio::spawn(async move {
-            while let Ok(msg) = tokio::select! {
-                val = player_rx.recv() => val,
-                _ = shutdown_rx.next() => Err(RecvError::Closed)
-            } {
-                info!("Server received event {:?}", msg);
-                let msg = map_response(msg);
+            loop {
+                match player_rx
+                    .recv()
+                    .with_cancellation_token(&cancellation_token)
+                    .await
+                {
+                    Some(Ok(msg)) => {
+                        info!("Sending event to client {:?}", msg);
+                        let msg = map_response(msg);
 
-                tx.send(msg).await.unwrap_or_default()
+                        if tx.send(msg).await.is_err() {
+                            info!("client disconnected");
+                            break;
+                        }
+                    }
+                    Some(Err(RecvError::Lagged(_))) => {
+                        warn!("receiver lagged");
+                    }
+                    _ => {
+                        break;
+                    }
+                }
             }
         });
         Ok(Response::new(Box::pin(

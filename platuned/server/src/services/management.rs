@@ -3,7 +3,6 @@ use std::net::{IpAddr, SocketAddr};
 use std::pin::Pin;
 use std::time::Duration;
 
-use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::{Stream, StreamExt};
 use libplatune_management::file_watch_manager::FileWatchManager;
 use libplatune_management::manager::{Manager, SearchOptions};
@@ -11,22 +10,24 @@ use libplatune_management::{database, manager};
 use platuned::file_server_port;
 use tokio::sync::broadcast::error::RecvError;
 use tokio::sync::{RwLockReadGuard, mpsc};
+use tokio_util::future::FutureExt;
+use tokio_util::sync::CancellationToken;
 use tonic::{Request, Response, Status, Streaming};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use crate::rpc::v1::*;
 use crate::v1::management_server::Management;
 
 pub struct ManagementImpl {
     manager: FileWatchManager,
-    shutdown_rx: BroadcastEventStore<Signal>,
+    cancellation_token: CancellationToken,
 }
 
 impl ManagementImpl {
-    pub(crate) fn new(manager: FileWatchManager, shutdown_rx: BroadcastEventStore<Signal>) -> Self {
+    pub(crate) fn new(manager: FileWatchManager, cancellation_token: CancellationToken) -> Self {
         Self {
             manager,
-            shutdown_rx,
+            cancellation_token,
         }
     }
 }
@@ -172,19 +173,28 @@ impl Management for ManagementImpl {
     ) -> Result<Response<Self::SubscribeEventsStream>, Status> {
         let mut progress_rx = self.manager.subscribe_progress();
         let (tx, rx) = mpsc::channel(32);
+        let cancellation_token = self.cancellation_token.clone();
         tokio::spawn(async move {
             loop {
-                match progress_rx.recv().await {
-                    Ok(val) => {
-                        tx.send(Ok(Progress {
-                            job: val.job,
-                            percentage: val.percentage,
-                            finished: val.finished,
-                        }))
-                        .await
-                        .unwrap_or_default();
+                match progress_rx
+                    .recv()
+                    .with_cancellation_token(&cancellation_token)
+                    .await
+                {
+                    Some(Ok(val)) => {
+                        if tx
+                            .send(Ok(Progress {
+                                job: val.job,
+                                percentage: val.percentage,
+                                finished: val.finished,
+                            }))
+                            .await
+                            .is_err()
+                        {
+                            info!("client disconnected");
+                        }
                     }
-                    Err(RecvError::Lagged(_)) => {}
+                    Some(Err(RecvError::Lagged(_))) => {}
                     _ => {
                         break;
                     }
@@ -323,23 +333,30 @@ impl Management for ManagementImpl {
 
         let (tx, rx) = mpsc::channel(32);
         // Close stream when shutdown is requested
-        let mut shutdown_rx = self.shutdown_rx.subscribe_events();
-
+        let cancellation_token = self.cancellation_token.clone();
         tokio::spawn(async move {
-            while let Some(msg) =
-                tokio::select! { val = messages.next() => val, _ = shutdown_rx.next() => None }
+            while let Some(msg) = messages
+                .next()
+                .with_cancellation_token(&cancellation_token)
+                .await
+                .flatten()
             {
-                let manager = manager.read().await;
                 match msg {
                     Ok(msg) => {
-                        let options = SearchOptions {
-                            ..Default::default()
-                        };
-                        if let Err(e) = tx.send(manager.search(&msg.query, options).await).await {
-                            warn!("Error sending message to response stream {:?}", e);
+                        let search_result = manager
+                            .read()
+                            .await
+                            .search(&msg.query, SearchOptions::default())
+                            .await;
+                        if tx.send(search_result).await.is_err() {
+                            info!("client disconnected");
+                            break;
                         }
                     }
-                    Err(_) => break,
+                    Err(e) => {
+                        info!("search client returned error: {e:?}");
+                        break;
+                    }
                 }
             }
         });

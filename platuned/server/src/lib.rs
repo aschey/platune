@@ -3,7 +3,7 @@ use std::num::ParseIntError;
 
 use clap::builder::styling;
 use daemon_slayer::build_info::cli::BuildInfoCliProvider;
-use daemon_slayer::build_info::vergen_pretty::{self, PrettyBuilder, vergen_pretty_env};
+use daemon_slayer::build_info::vergen_pretty::{self, Pretty, vergen_pretty_env};
 use daemon_slayer::core::Label;
 
 const DEFAULT_MAIN_SERVER_PORT: usize = 50051;
@@ -36,7 +36,7 @@ pub fn clap_base_command() -> clap::Command {
 }
 
 pub fn build_info() -> BuildInfoCliProvider {
-    let config = PrettyBuilder::default()
+    let config = Pretty::builder()
         .env(vergen_pretty_env!())
         .key_style(
             vergen_pretty::Style::default()
@@ -45,8 +45,7 @@ pub fn build_info() -> BuildInfoCliProvider {
         )
         .value_style(vergen_pretty::Style::default())
         .category(false)
-        .build()
-        .unwrap();
+        .build();
 
     BuildInfoCliProvider::new(config)
 }

@@ -3,12 +3,12 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use background_service::ServiceContext;
 use daemon_slayer::core::notify::AsyncNotification;
 use daemon_slayer::error_handler::color_eyre::eyre::{Context, Result};
 use daemon_slayer::notify::notification::Notification;
 use daemon_slayer::server::{BroadcastEventStore, EventStore, Signal};
 use futures::StreamExt;
-use futures::stream::FuturesUnordered;
 #[cfg(feature = "management")]
 use libplatune_management::config::FileConfig;
 #[cfg(feature = "management")]
@@ -26,9 +26,7 @@ use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlayerEvent;
 use platuned::{file_server_port, main_server_port, service_label};
-use tap::TapOptional;
 use tipsy::{IntoIpcPath, ServerId};
-use tokio_util::future::FutureExt;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Server;
 use tonic_reflection::server::Builder;
@@ -94,38 +92,69 @@ pub fn config_dir() -> Result<std::path::PathBuf> {
 
 pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
     let services = Services::new().await?;
-    let servers = FuturesUnordered::new();
     let port = main_server_port()?;
 
     #[cfg(feature = "player")]
     show_notifications(&services.player);
 
-    let http_server = run_server(
-        shutdown_rx.clone(),
-        services.clone(),
-        Transport::Http(
-            format!("0.0.0.0:{port}")
-                .parse()
-                .expect("failed to parse address"),
-        ),
+    let manager = background_service::Manager::new(
+        CancellationToken::new(),
+        background_service::Settings::default(),
     );
-    servers.push(tokio::spawn(http_server));
+    let context = manager.get_context();
+    tokio::spawn({
+        let mut shutdown_rx = shutdown_rx.subscribe_events();
+        let context = context.clone();
+        async move {
+            shutdown_rx.next().await;
+            context.cancellation_token().cancel();
+        }
+    });
 
-    let ipc_server = run_server(
-        shutdown_rx.clone(),
-        services.clone(),
-        Transport::Ipc("platune/platuned"),
-    );
-    servers.push(tokio::spawn(ipc_server));
+    context.spawn(("http_server", {
+        let services = services.clone();
+        move |context: ServiceContext| async move {
+            run_server(
+                services,
+                Transport::Http(
+                    format!("0.0.0.0:{port}")
+                        .parse()
+                        .expect("failed to parse address"),
+                ),
+                context.cancellation_token().clone(),
+            )
+            .await?;
+            Ok(())
+        }
+    }));
+
+    context.spawn(("ipc_server", {
+        let services = services.clone();
+        |context: ServiceContext| async move {
+            run_server(
+                services,
+                Transport::Ipc("platune/platuned"),
+                context.cancellation_token().clone(),
+            )
+            .await?;
+            Ok(())
+        }
+    }));
     #[cfg(feature = "management")]
     {
         let folders = services.manager.read().await.get_all_folders().await?;
         if !folders.is_empty() {
-            servers.push(tokio::spawn(run_file_service(folders, shutdown_rx)));
+            context.spawn(("file_service", |context: ServiceContext| async move {
+                run_file_service(folders, context.cancellation_token().clone()).await?;
+                Ok(())
+            }));
         }
     }
 
-    let _: Vec<_> = servers.collect().await;
+    let _ = manager
+        .join_on_cancel()
+        .await
+        .inspect_err(|e| warn!("{e:?}"));
     info!("All servers terminated");
 
     #[cfg(feature = "player")]
@@ -163,12 +192,11 @@ fn show_notifications(player: &Arc<PlatunePlayer<CpalOutput>>) {
 #[cfg(feature = "management")]
 async fn run_file_service(
     folders: Vec<String>,
-    shutdown_rx: BroadcastEventStore<Signal>,
+    cancellation_token: CancellationToken,
 ) -> Result<()> {
     let addr: SocketAddr = format!("0.0.0.0:{}", file_server_port()?)
         .parse()
         .expect("failed to parse address");
-    let mut shutdown_rx = shutdown_rx.subscribe_events();
     info!("Running file server on {addr}");
     let mut app = axum::Router::new();
     let root_path = "/";
@@ -193,7 +221,7 @@ async fn run_file_service(
         .await
         .wrap_err(format!("Failed to bind to {addr}"))?;
     let server = axum::serve(listener, app).with_graceful_shutdown(async move {
-        shutdown_rx.next().await;
+        cancellation_token.cancelled().await;
     });
     server.await.wrap_err("Error running file server")?;
 
@@ -218,9 +246,9 @@ async fn init_manager() -> Result<Manager> {
 }
 
 async fn run_server(
-    shutdown_rx: BroadcastEventStore<Signal>,
     services: Services,
     transport: Transport,
+    cancellation_token: CancellationToken,
 ) -> Result<()> {
     let reflection_service = Builder::configure()
         .register_encoded_file_descriptor_set(rpc::FILE_DESCRIPTOR_SET)
@@ -268,68 +296,37 @@ async fn run_server(
     #[cfg(feature = "player")]
     let builder = builder.add_service(PlayerServer::new(PlayerImpl::new(
         services.player,
-        shutdown_rx.clone(),
+        cancellation_token.clone(),
     )));
     #[cfg(feature = "management")]
     let builder = builder.add_service(ManagementServer::new(ManagementImpl::new(
         services.manager,
-        shutdown_rx.clone(),
+        cancellation_token.clone(),
     )));
 
     let server_result = match transport {
         Transport::Http(addr) => {
             info!("Running HTTP server on {addr}");
-            let fallback_shutdown = CancellationToken::new();
 
             builder
-                .serve_with_shutdown(
-                    addr,
-                    shutdown_handler(fallback_shutdown.clone(), &shutdown_rx),
-                )
-                .with_cancellation_token(&fallback_shutdown)
+                .serve_with_shutdown(addr, cancellation_token.cancelled())
                 .await
-                .tap_none(|| {
-                    warn!("timed out waiting for server to shut down");
-                })
-                .unwrap_or(Ok(()))
                 .wrap_err("Error running HTTP server")
         }
 
         Transport::Ipc(path) => {
             let ipc_path = ServerId::new(path).parent_folder("/tmp").into_ipc_path()?;
             info!("Running IPC server on {}", ipc_path.display());
-            let fallback_shutdown = CancellationToken::new();
 
             builder
                 .serve_with_incoming_shutdown(
                     IpcStream::get_async_stream(ipc_path)?,
-                    shutdown_handler(fallback_shutdown.clone(), &shutdown_rx),
+                    cancellation_token.cancelled(),
                 )
-                .with_cancellation_token(&fallback_shutdown)
                 .await
-                .tap_none(|| {
-                    warn!("timed out waiting for server to shut down");
-                })
-                .unwrap_or(Ok(()))
                 .wrap_err("Error running IPC server")
         }
     };
 
     server_result.wrap_err("Error running server")
-}
-
-fn shutdown_handler(
-    fallback_shutdown: CancellationToken,
-    shutdown_rx: &BroadcastEventStore<Signal>,
-) -> impl Future<Output = ()> {
-    let mut server_shutdown_rx = shutdown_rx.subscribe_events();
-    async move {
-        server_shutdown_rx.next().await;
-        info!("received shutdown signal");
-        tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            warn!("force shutting down");
-            fallback_shutdown.cancel();
-        });
-    }
 }

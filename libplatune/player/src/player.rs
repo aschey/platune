@@ -194,6 +194,7 @@ impl Player {
             if success.is_ok() {
                 let decoder_result = self.wait_for_decoder().await;
                 if decoder_result == DecoderResponse::InitializationFailed {
+                    warn!("received initialization failed message");
                     success = Err(Some(AppendError::SourceUnavailable));
                     let input = self.get_current().expect("current track missing");
                     self.stream_cancellation_tokens.pop_front();
