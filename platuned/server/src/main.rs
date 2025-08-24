@@ -11,6 +11,7 @@ use daemon_slayer::error_handler::ErrorSink;
 use daemon_slayer::error_handler::cli::ErrorHandlerCliProvider;
 use daemon_slayer::error_handler::color_eyre::eyre;
 use daemon_slayer::logging::cli::LoggingCliProvider;
+use daemon_slayer::logging::tracing_subscriber::fmt::time::OffsetTime;
 #[cfg(feature = "tokio-console")]
 use daemon_slayer::logging::tracing_subscriber::prelude::*;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
@@ -21,18 +22,25 @@ use daemon_slayer::server::cli::ServerCliProvider;
 use dotenvy::dotenv;
 use platuned::{build_info, clap_base_command};
 use rpc::*;
+use time::format_description::well_known::Rfc3339;
 
 use crate::startup::ServiceHandler;
 
+fn main() -> Result<(), ErrorSink> {
+    async_main(OffsetTime::local_rfc_3339()?)
+}
+
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), ErrorSink> {
+async fn async_main(offset_time: OffsetTime<Rfc3339>) -> Result<(), ErrorSink> {
     let guard = daemon_slayer::logging::init();
-    let result = run().await.map_err(|e| ErrorSink::new(eyre::eyre!(e)));
+    let result = run(offset_time)
+        .await
+        .map_err(|e| ErrorSink::new(eyre::eyre!(e)));
     drop(guard);
     result
 }
 
-async fn run() -> Result<(), BoxedError> {
+async fn run(offset_time: OffsetTime<Rfc3339>) -> Result<(), BoxedError> {
     let default_level = if cfg!(feature = "tokio-console") {
         // TODO: get rid of log spam in our normal log targets when enabling this
         // we should only send the spammy logs to the tokio console
@@ -41,7 +49,7 @@ async fn run() -> Result<(), BoxedError> {
         tracing::Level::INFO
     };
 
-    let logger_builder = LoggerBuilder::new(ServiceHandler::label())
+    let logger_builder = LoggerBuilder::new(ServiceHandler::label(), offset_time)
         .with_env_config(
             EnvConfig::new("PLATUNE_LOG".to_string()).with_default(default_level.into()),
         )
@@ -65,7 +73,9 @@ async fn run() -> Result<(), BoxedError> {
         .initialize()?;
 
     // TODO: use get_logger_with_reload when we have config file support
-    let logger = cli.take_provider::<LoggingCliProvider>().get_logger()?;
+    let logger = cli
+        .take_provider::<LoggingCliProvider<Rfc3339>>()
+        .get_logger()?;
 
     #[cfg(feature = "tokio-console")]
     let logger = logger.with(console_subscriber::spawn());

@@ -18,20 +18,28 @@ use daemon_slayer::health_check::GrpcHealthCheck;
 use daemon_slayer::health_check::cli::HealthCheckCliProvider;
 use daemon_slayer::logging::LoggerBuilder;
 use daemon_slayer::logging::cli::LoggingCliProvider;
+use daemon_slayer::logging::tracing_subscriber::fmt::time::OffsetTime;
 use daemon_slayer::logging::tracing_subscriber::util::SubscriberInitExt;
 use daemon_slayer::process::cli::ProcessCliProvider;
 use platuned::{build_info, clap_base_command, main_server_port, service_label};
+use time::format_description::well_known::Rfc3339;
 use which::which;
 
+fn main() -> Result<(), ErrorSink> {
+    async_main(OffsetTime::local_rfc_3339()?)
+}
+
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), ErrorSink> {
+async fn async_main(offset_time: OffsetTime<Rfc3339>) -> Result<(), ErrorSink> {
     let guard = daemon_slayer::logging::init();
-    let result = run().await.map_err(|e| ErrorSink::new(eyre::eyre!(e)));
+    let result = run(offset_time)
+        .await
+        .map_err(|e| ErrorSink::new(eyre::eyre!(e)));
     drop(guard);
     result
 }
 
-async fn run() -> Result<(), BoxedError> {
+async fn run(offset_time: OffsetTime<Rfc3339>) -> Result<(), BoxedError> {
     let label = service_label();
     let exe = current_exe()?;
     let exe_parent = exe.parent().unwrap();
@@ -74,7 +82,7 @@ async fn run() -> Result<(), BoxedError> {
             manager_builder.with_environment_variable("FFMPEG_PATH", ffmpeg_path.to_string_lossy());
     }
     let manager = manager_builder.build().await.unwrap();
-    let logger_builder = LoggerBuilder::new(label.clone());
+    let logger_builder = LoggerBuilder::new(label.clone(), offset_time);
 
     let health_check =
         GrpcHealthCheck::new(format!("http://127.0.0.1:{}", main_server_port()?)).unwrap();
@@ -95,7 +103,9 @@ async fn run() -> Result<(), BoxedError> {
         .with_provider(build_info())
         .initialize()?;
 
-    let logger = cli.take_provider::<LoggingCliProvider>().get_logger()?;
+    let logger = cli
+        .take_provider::<LoggingCliProvider<Rfc3339>>()
+        .get_logger()?;
     logger.init();
 
     let (state, matches) = cli.handle_input().await?;
