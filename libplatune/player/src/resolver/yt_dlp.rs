@@ -19,7 +19,7 @@ use tap::TapFallible;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 use which::which;
-use youtube_dl::{YoutubeDl, YoutubeDlOutput};
+use youtube_dl::{Format, YoutubeDl, YoutubeDlOutput};
 
 use super::MetadataSource;
 use crate::dto::track::Metadata;
@@ -251,7 +251,6 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
     }
 
     async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
-        let yt_dlp_formats = ["m4a", "mp4a", "mp3"];
         let ffmpeg_format = "adts";
         info!("ytdl video url: {}", input.source);
         info!("extracting video metadata - this may take a few seconds");
@@ -285,60 +284,75 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                 let Some(formats) = &video.formats else {
                     bail!("No formats found");
                 };
-                if video.is_live == Some(true) {
-                    // Youtube live stream audio is encoded in a way that Symphonia can't always
+                let yt_dlp_formats = if video.is_live == Some(true) {
+                    // Youtube live stream m4a audio is encoded in a way that Symphonia can't always
                     // decode
-                    info!("Defaulting to ffmpeg for live stream");
-                    (None, video)
+                    vec!["mp3", "opus"]
                 } else {
-                    let worst_quality = 10.0;
-                    // find best format (0 is best, 10 is worst)
-                    let format = formats
-                        .iter()
-                        .filter(|f| {
-                            // If no high-quality format is available, it's better to parse it from
-                            // the raw input.
-                            if f.quality.map(|q| q > 3.0).unwrap_or(false) {
+                    vec!["m4a", "mp4a", "mp3", "opus"]
+                };
+                let worst_quality = 10.0;
+                // find best format (0 is best, 10 is worst)
+                let format = formats
+                    .iter()
+                    .filter(|f| {
+                        // If no high-quality format is available, it's better to parse it from
+                        // the raw input.
+                        if !is_decent_quality(f) {
+                            info!(
+                                "quality too low, ignoring: {:?} {:?}",
+                                f.format_id, f.quality
+                            );
+                            return false;
+                        }
+                        // use native audio codec or format if available
+                        if let Some(audio_codec) = &f.acodec {
+                            info!("checking audio codec: {audio_codec}");
+                            if is_usable_format(&yt_dlp_formats, audio_codec) {
+                                info!(
+                                    "found native audio codec {audio_codec}, quality: {:?}",
+                                    f.quality
+                                );
+                                return true;
+                            }
+                        }
+                        if let Some(format) = &f.format {
+                            info!("checking format: {format}, quality: {:?}", f.quality);
+                            if is_decent_quality(f) {
                                 info!("quality too low, ignoring: {:?}", f.quality);
                                 return false;
                             }
-                            // use native audio codec or format if available
-                            if let Some(audio_codec) = &f.acodec {
-                                info!("checking audio codec: {audio_codec}");
-                                if yt_dlp_formats.iter().any(|f| audio_codec.starts_with(f)) {
-                                    info!(
-                                        "using native audio codec {audio_codec} quality: {:?}",
-                                        f.quality
-                                    );
-                                    return true;
-                                }
+
+                            if is_usable_format(&yt_dlp_formats, format) {
+                                info!("found native format: {format} quality: {:?}", f.quality);
+                                return true;
                             }
-                            if let Some(format) = &f.format {
-                                info!("checking format: {format} quality: {:?}", f.quality);
-                                if yt_dlp_formats.iter().any(|f| format.starts_with(f)) {
-                                    info!("using native format: {format} quality: {:?}", f.quality);
-                                    return true;
-                                }
-                            }
-                            false
-                        })
-                        .reduce(|best, format| {
-                            if format.quality.unwrap_or(worst_quality)
-                                < best.quality.unwrap_or(worst_quality)
-                            {
-                                format
-                            } else {
-                                best
-                            }
-                        });
-                    (format.cloned(), video)
-                }
+                        }
+                        false
+                    })
+                    .reduce(|best, format| {
+                        if format.quality.unwrap_or(worst_quality)
+                            < best.quality.unwrap_or(worst_quality)
+                        {
+                            format
+                        } else {
+                            best
+                        }
+                    });
+                (format.cloned(), video)
             }
             YoutubeDlOutput::Playlist(playlist) => {
                 // This shouldn't happen since we're enumerating playlists in the URL resolver
                 bail!("found playlist in source resolver: {:?}", playlist.title);
             }
         };
+
+        if let Some(format) = &found_format {
+            info!(
+                "using format {:?} {:?}, quality: {:?}",
+                format.format_id, format.acodec, format.quality
+            );
+        }
 
         let metadata = Metadata {
             artist: video.artist,
@@ -428,4 +442,12 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
         };
         Ok((track, token))
     }
+}
+
+fn is_decent_quality(format: &Format) -> bool {
+    format.quality.map(|q| q <= 3.0).unwrap_or(false)
+}
+
+fn is_usable_format(yt_dlp_formats: &[&str], format: &str) -> bool {
+    yt_dlp_formats.iter().any(|f| format.starts_with(f))
 }

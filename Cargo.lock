@@ -2231,7 +2231,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=63086a31f9e8ad56c0487f63bec405ea14840036#63086a31f9e8ad56c0487f63bec405ea14840036"
+source = "git+https://github.com/aschey/decal?rev=11208a5553c5f50014fb2da0d1ae6ccb533e3c86#11208a5553c5f50014fb2da0d1ae6ccb533e3c86"
 dependencies = [
  "cpal",
  "dasp",
@@ -2239,6 +2239,7 @@ dependencies = [
  "rubato",
  "symphonia",
  "symphonia-adapter-fdk-aac",
+ "symphonia-adapter-libopus",
  "tap",
  "thiserror 2.0.16",
  "tracing",
@@ -6135,6 +6136,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
+name = "opusic-sys"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cedad37fbb9d84c9f70a9cfa150798e7ae09466e353f911ea74ff108abeb50b1"
+dependencies = [
+ "cmake",
+ "libc",
+]
+
+[[package]]
 name = "ordered-stream"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8400,7 +8411,7 @@ dependencies = [
 [[package]]
 name = "symphonia"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
@@ -8422,7 +8433,7 @@ dependencies = [
 [[package]]
 name = "symphonia-adapter-fdk-aac"
 version = "0.1.0"
-source = "git+https://github.com/aschey/symphonia-adapters?rev=c5ea9624db8d203c960095f71300f1dffec6b28e#c5ea9624db8d203c960095f71300f1dffec6b28e"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=10079ca96b0228d09676ec82db45e49fa52f1a03#10079ca96b0228d09676ec82db45e49fa52f1a03"
 dependencies = [
  "fdk-aac",
  "symphonia-core",
@@ -8430,9 +8441,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "symphonia-adapter-libopus"
+version = "0.1.0"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=10079ca96b0228d09676ec82db45e49fa52f1a03#10079ca96b0228d09676ec82db45e49fa52f1a03"
+dependencies = [
+ "opusic-sys",
+ "symphonia-core",
+]
+
+[[package]]
 name = "symphonia-bundle-flac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8443,7 +8463,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-mp3"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "lazy_static",
  "log",
@@ -8453,7 +8473,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-aac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "lazy_static",
  "log",
@@ -8463,7 +8483,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-adpcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8472,7 +8492,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-alac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8481,7 +8501,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-pcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8490,7 +8510,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-vorbis"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8500,7 +8520,7 @@ dependencies = [
 [[package]]
 name = "symphonia-common"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "symphonia-core",
  "symphonia-metadata",
@@ -8509,7 +8529,7 @@ dependencies = [
 [[package]]
 name = "symphonia-core"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "bitflags 2.9.3",
  "bytemuck",
@@ -8523,7 +8543,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-caf"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8532,7 +8552,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-isomp4"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8543,7 +8563,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-mkv"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "lazy_static",
  "log",
@@ -8554,7 +8574,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-ogg"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8565,7 +8585,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-riff"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "extended",
  "log",
@@ -8576,7 +8596,7 @@ dependencies = [
 [[package]]
 name = "symphonia-metadata"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=39798f11d882b9fc959bf2d3c99eb7d6ac8b221a#39798f11d882b9fc959bf2d3c99eb7d6ac8b221a"
+source = "git+https://github.com/aschey/Symphonia?rev=327b803cb46141e4e2f31c2b8f8169a122c97ba5#327b803cb46141e4e2f31c2b8f8169a122c97ba5"
 dependencies = [
  "lazy_static",
  "log",

@@ -26,7 +26,11 @@ tap = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tracing = { workspace = true }
-decal = { workspace = true, features = ["decoder-fdk-aac", "decoder-simd"] }
+decal = { workspace = true, features = [
+  "decoder-fdk-aac",
+  "decoder-libopus",
+  "decoder-simd",
+] }
 reqwest-retry = { workspace = true }
 # The default-tls feature seems to break mtls client auth in some cases
 reqwest = { workspace = true, default-features = false, features = [
