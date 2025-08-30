@@ -19,7 +19,7 @@ use walkdir::WalkDir;
 use super::dir_read::DirRead;
 use super::sync_dal::SyncDAL;
 use super::tag::Tag;
-use crate::consts::MIN_WORDS;
+use crate::consts::{ALLOWED_FILE_EXTS, MIN_WORDS};
 use crate::db_error::DbError;
 use crate::path_util::clean_file_path;
 
@@ -300,21 +300,18 @@ impl SyncEngine {
             .len();
 
         let name = &name.to_str().unwrap_or_default().to_lowercase()[..];
-        match name {
-            "mp3" | "m4a" | "ogg" | "wav" | "flac" | "aac" => {
-                let tagged_file = Probe::open(file_path)
-                    .map_err(|e| {
-                        SyncError::TagReadError(format!("Error opening file {file_path:?}: {e:?}"))
-                    })?
-                    .read()
-                    .map_err(|e| {
-                        SyncError::TagReadError(format!(
-                            "Error reading tag from file {file_path:?}: {e:?}"
-                        ))
-                    })?;
-                return Ok(Some(tagged_file.into()));
-            }
-            _ => {}
+        if ALLOWED_FILE_EXTS.contains(&name) {
+            let tagged_file = Probe::open(file_path)
+                .map_err(|e| {
+                    SyncError::TagReadError(format!("Error opening file {file_path:?}: {e:?}"))
+                })?
+                .read()
+                .map_err(|e| {
+                    SyncError::TagReadError(format!(
+                        "Error reading tag from file {file_path:?}: {e:?}"
+                    ))
+                })?;
+            return Ok(Some(tagged_file.into()));
         }
 
         Ok(None)

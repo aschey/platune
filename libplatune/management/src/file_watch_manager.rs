@@ -13,6 +13,7 @@ use thiserror::Error;
 use tokio::sync::{Mutex, RwLock, broadcast, mpsc};
 use tracing::{error, info, warn};
 
+use crate::consts::ALLOWED_FILE_EXTS;
 use crate::db_error::DbError;
 use crate::manager::{Manager, ManagerError};
 use crate::sync::progress_stream::ProgressStream;
@@ -139,6 +140,9 @@ impl FileWatchManager {
                             }
                         }
                         EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                            // TODO: we can probably auto-delete tracks based on some heuristic
+                            // like if they were only added very recently.
+                            // This may happen if some external programs are messing with the metadata.
                             for path in event.paths {
                                 let _ = sync_tx_
                                     .send(SyncMessage::Path(path))
@@ -178,12 +182,19 @@ impl FileWatchManager {
                         paths = Self::normalize_paths(paths, new_path);
                     }
                     Ok(Some(SyncMessage::Rename(from, to))) => {
-                        let _ = manager_
-                            .write()
-                            .await
-                            .rename_path(from, to.clone())
-                            .await
-                            .tap_err(|e| error!("Error renaming path: {e:?}"));
+                        // Some metadata tagging programs may rename the existing file and create a new one.
+                        // If this happens, we don't want to include the intermediate temporary file.
+                        if let Some(ext) = to.extension()
+                            && let Some(ext) = ext.to_str()
+                            && ALLOWED_FILE_EXTS.contains(&ext)
+                        {
+                            let _ = manager_
+                                .write()
+                                .await
+                                .rename_path(from, to.clone())
+                                .await
+                                .tap_err(|e| error!("Error renaming path: {e:?}"));
+                        }
 
                         // Add new path to sync list in case the new path maps to paths that are
                         // currently marked as deleted So we need to now
