@@ -117,7 +117,7 @@ impl Player {
                         settings: self.settings.clone(),
                         queue_start_mode,
                         volume: self.pending_volume.take(),
-                        metadata: source.metadata,
+                        metadata: input.metadata.or(source.metadata),
                     })
                     .await
                 {

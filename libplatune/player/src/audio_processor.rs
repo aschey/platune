@@ -3,6 +3,7 @@ use std::time::Duration;
 use decal::AudioManager;
 use decal::decoder::{Decoder, DecoderResult};
 use decal::output::AudioBackend;
+use decal::symphonia::core::meta::StandardTag;
 use flume::TryRecvError;
 use tap::TapFallible;
 use tracing::{error, info};
@@ -10,7 +11,7 @@ use tracing::{error, info};
 use crate::dto::decoder_command::DecoderCommand;
 use crate::dto::decoder_response::DecoderResponse;
 use crate::dto::processor_error::ProcessorError;
-use crate::platune_player::{PlayerEvent, SeekMode};
+use crate::platune_player::{Metadata, PlayerEvent, SeekMode};
 use crate::two_way_channel::TwoWayReceiver;
 
 pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
@@ -19,11 +20,28 @@ pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
     decoder: Decoder<f32>,
     last_send_time: Duration,
     event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
+    input_metadata: Option<Metadata>,
+    metadata_init: bool,
 }
 
 pub(crate) enum InputResult {
     Continue,
     Stop,
+}
+
+macro_rules! find_tag {
+    ($tags:expr, $tag_type:path) => {
+        $tags
+            .iter()
+            .filter_map(|t| {
+                if let $tag_type(val) = t {
+                    Some(val.to_string())
+                } else {
+                    None
+                }
+            })
+            .next()
+    };
 }
 
 impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
@@ -32,6 +50,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
         decoder: Decoder<f32>,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
+        input_metadata: Option<Metadata>,
     ) -> Result<Self, ProcessorError> {
         match cmd_rx.recv() {
             Ok(DecoderCommand::WaitForInitialization) => {
@@ -55,6 +74,8 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             manager,
             cmd_rx,
             event_tx,
+            input_metadata,
+            metadata_init: false,
             last_send_time: Duration::default(),
         })
     }
@@ -167,5 +188,34 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             .write(&mut self.decoder)
             .map_err(ProcessorError::WriteOutputError)?;
         Ok((InputResult::Continue, res))
+    }
+
+    pub(crate) fn next_metadata(&mut self) -> Option<Metadata> {
+        if let Some(input_metadata) = self.input_metadata.take() {
+            self.decoder.metadata().skip_to_latest();
+            self.metadata_init = true;
+            return Some(input_metadata);
+        }
+
+        let mut metadata = self.decoder.metadata();
+        if (!self.metadata_init || !metadata.is_latest())
+            && let Some(latest) = metadata.skip_to_latest()
+        {
+            self.metadata_init = true;
+            let tags = latest.tags();
+            let std_tags: Vec<_> = tags.iter().filter_map(|t| t.std.as_ref()).collect();
+            Some(Metadata {
+                artist: find_tag!(std_tags, StandardTag::Artist),
+                album_artist: find_tag!(std_tags, StandardTag::AlbumArtist),
+                album: find_tag!(std_tags, StandardTag::Album),
+                song: find_tag!(std_tags, StandardTag::TrackTitle),
+                track_number: find_tag!(std_tags, StandardTag::TrackNumber)
+                    .map(|t| t.parse().ok())
+                    .flatten(),
+                duration: self.decoder.duration(),
+            })
+        } else {
+            None
+        }
     }
 }

@@ -157,6 +157,8 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
         .wrap_err_with(|| "Error creating stream downloader")?;
         let token = reader.cancellation_token();
         if let Some(icy_metadata_interval) = icy_headers.metadata_interval() {
+            info!("detected icecast metadata. interval: {icy_metadata_interval}");
+            let station_name = icy_headers.name().map(|s| s.to_owned());
             let on_track_changed = self.on_track_changed.clone();
             let icy_reader =
                 IcyMetadataReader::new(reader, Some(icy_metadata_interval), move |metadata| {
@@ -166,6 +168,8 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
                         let title = metadata.stream_title();
                         on_track_changed(Metadata {
                             song: title.map(|t| t.to_string()),
+                            // TODO: maybe add some custom metadata for radio stations
+                            artist: station_name.clone(),
                             ..Default::default()
                         });
                     }
