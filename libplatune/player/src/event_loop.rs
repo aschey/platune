@@ -189,8 +189,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         break;
                     }
                     Err(ProcessorError::WriteOutputError(
-                        WriteOutputError::DecoderError(DecoderError::ResetRequired)
-                        | WriteOutputError::WriteBlockingError(WriteBlockingError::OutputStalled),
+                        WriteOutputError::WriteBlockingError(WriteBlockingError::OutputStalled),
                     )) => {
                         player_cmd_tx
                             .send(Command::Reset)

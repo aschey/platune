@@ -421,6 +421,7 @@ impl Player {
     pub(crate) async fn reset(&mut self) -> Result<(), String> {
         let queue = self.state.queue.clone();
         let queue_position = self.state.queue_position;
+        info!("resetting");
         self.set_queue_internal(
             queue,
             queue_position,
@@ -430,7 +431,11 @@ impl Player {
             },
         )
         .await?;
-
+        info!(
+            "reset queue. length: {} position: {}",
+            self.state.queue.len(),
+            self.state.queue_position
+        );
         Ok(())
     }
 

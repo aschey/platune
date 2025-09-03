@@ -18,7 +18,7 @@ pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
     cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
     manager: &'a mut AudioManager<f32, B>,
     decoder: Decoder<f32>,
-    last_send_time: Duration,
+    last_sent_position: Duration,
     event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
     input_metadata: Option<Metadata>,
     metadata_init: bool,
@@ -76,7 +76,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             event_tx,
             input_metadata,
             metadata_init: false,
-            last_send_time: Duration::default(),
+            last_sent_position: Duration::ZERO,
         })
     }
 
@@ -159,13 +159,13 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             Err(TryRecvError::Empty) => {
                 let position = self.decoder.current_position();
                 // if position.position < last_send_time, we just seeked backwards
-                if position.position < self.last_send_time
-                    || position.position - self.last_send_time >= Duration::from_secs(10)
+                if position.position < self.last_sent_position
+                    || position.position - self.last_sent_position >= Duration::from_secs(10)
                 {
                     self.event_tx
                         .send(PlayerEvent::Position(position.clone()))
                         .unwrap_or_default();
-                    self.last_send_time = position.position;
+                    self.last_sent_position = position.position;
                 }
             }
             Err(TryRecvError::Disconnected) => {

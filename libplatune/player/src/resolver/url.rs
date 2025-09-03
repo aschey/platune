@@ -24,6 +24,9 @@ use tracing::{error, info, warn};
 use super::MetadataSource;
 use crate::dto::track::Metadata;
 
+// streams for testing https://stream.lesonparisien.com/mid.ogg
+// http://radio.glafir.ru:7000/humor
+
 pub(crate) struct DefaultUrlResolver {
     rules: Vec<Rule>,
 }
@@ -137,9 +140,14 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
         let icy_headers = IcyHeaders::parse_from_headers(stream.headers());
         // radio streams commonly include an Icy-Br header to denote the bitrate
         let prefetch_bytes = if let Some(bitrate) = icy_headers.bitrate() {
-            // buffer 5 seconds of audio
-            // bitrate (in kilobits) / bits per byte * bytes per kilobyte * 5 seconds
-            (bitrate / 8 * 1024 * 5) as u64
+            bitrate_to_prefetch(bitrate)
+        } else if file_len.is_none() {
+            let subtype = &stream
+                .content_type()
+                .as_ref()
+                .map(|t| t.subtype.as_str())
+                .unwrap_or("");
+            bitrate_to_prefetch(content_subtype_to_bitrate(subtype))
         } else {
             settings.get_prefetch_bytes()
         };
@@ -187,6 +195,21 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
 
             Ok((track, token))
         }
+    }
+}
+
+fn bitrate_to_prefetch(bitrate: u32) -> u64 {
+    // buffer 5 seconds of audio
+    // bitrate (in kilobits) / bits per byte * bytes per kilobyte * 5 seconds
+    (bitrate / 8 * 1000 * 5) as u64
+}
+
+fn content_subtype_to_bitrate(subtype: &str) -> u32 {
+    match subtype {
+        "vorbis" | "opus" | "ogg" => 96,
+        "aac" => 128,
+        "mpeg" => 256,
+        _ => 128,
     }
 }
 

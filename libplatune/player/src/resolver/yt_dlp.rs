@@ -318,8 +318,11 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                         }
                         if let Some(format) = &f.format {
                             info!("checking format: {format}, quality: {:?}", f.quality);
-                            if is_decent_quality(f) {
-                                info!("quality too low, ignoring: {:?}", f.quality);
+                            if !is_decent_quality(f) {
+                                info!(
+                                    "quality too low, ignoring: {:?} {:?}",
+                                    f.format_id, f.quality
+                                );
                                 return false;
                             }
 
