@@ -2232,7 +2232,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=b16c34805b9a9c33f9fa4550244c19e6880c46f5#b16c34805b9a9c33f9fa4550244c19e6880c46f5"
+source = "git+https://github.com/aschey/decal?rev=a3442a9423871dfdcad62b444ca77cf42e6d7018#a3442a9423871dfdcad62b444ca77cf42e6d7018"
 dependencies = [
  "cpal",
  "dasp",
@@ -8418,7 +8418,7 @@ dependencies = [
 [[package]]
 name = "symphonia-adapter-fdk-aac"
 version = "0.1.0"
-source = "git+https://github.com/aschey/symphonia-adapters?rev=10079ca96b0228d09676ec82db45e49fa52f1a03#10079ca96b0228d09676ec82db45e49fa52f1a03"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=bf4b70710124d5e7be216d654a0d32992b081fb5#bf4b70710124d5e7be216d654a0d32992b081fb5"
 dependencies = [
  "fdk-aac",
  "symphonia-core",
@@ -8428,7 +8428,7 @@ dependencies = [
 [[package]]
 name = "symphonia-adapter-libopus"
 version = "0.1.0"
-source = "git+https://github.com/aschey/symphonia-adapters?rev=10079ca96b0228d09676ec82db45e49fa52f1a03#10079ca96b0228d09676ec82db45e49fa52f1a03"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=bf4b70710124d5e7be216d654a0d32992b081fb5#bf4b70710124d5e7be216d654a0d32992b081fb5"
 dependencies = [
  "opusic-sys",
  "symphonia-core",

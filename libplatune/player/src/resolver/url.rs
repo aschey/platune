@@ -2,6 +2,7 @@ use std::io::BufReader;
 use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 use std::{env, fs};
 
 use async_trait::async_trait;
@@ -23,9 +24,6 @@ use tracing::{error, info, warn};
 
 use super::MetadataSource;
 use crate::dto::track::Metadata;
-
-// streams for testing https://stream.lesonparisien.com/mid.ogg
-// http://radio.glafir.ru:7000/humor
 
 pub(crate) struct DefaultUrlResolver {
     rules: Vec<Rule>,
@@ -136,22 +134,31 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
             None
         };
         info!("Using extension {extension:?}");
+
+        // live streams have fixed transfer rates so we'll limit prefetch to 2 seconds
+        const PREFETCH_SECONDS: u64 = 5;
+        const LIVE_PREFETCH_SECONDS: u64 = 2;
         let settings = Settings::default();
         let icy_headers = IcyHeaders::parse_from_headers(stream.headers());
         // radio streams commonly include an Icy-Br header to denote the bitrate
         let prefetch_bytes = if let Some(bitrate) = icy_headers.bitrate() {
-            bitrate_to_prefetch(bitrate)
-        } else if file_len.is_none() {
+            bitrate_to_prefetch(bitrate, Duration::from_secs(LIVE_PREFETCH_SECONDS))
+        } else {
             let subtype = &stream
                 .content_type()
                 .as_ref()
                 .map(|t| t.subtype.as_str())
                 .unwrap_or("");
-            bitrate_to_prefetch(content_subtype_to_bitrate(subtype))
-        } else {
-            settings.get_prefetch_bytes()
+            let prefetch_seconds = if file_len.is_some() {
+                PREFETCH_SECONDS
+            } else {
+                LIVE_PREFETCH_SECONDS
+            };
+            bitrate_to_prefetch(
+                content_subtype_to_bitrate(subtype),
+                Duration::from_secs(prefetch_seconds),
+            )
         };
-
         let reader = StreamDownload::from_stream(
             stream,
             // store 512 kb of audio when the content length is not known
@@ -198,10 +205,14 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
     }
 }
 
-fn bitrate_to_prefetch(bitrate: u32) -> u64 {
+fn bitrate_to_prefetch(mut bitrate: u32, buffer_time: Duration) -> u64 {
+    // If bitrate is > 1000, it was probably incorrectly sent as bits/sec instead of kilobits/sec.
+    if bitrate > 1000 {
+        bitrate /= 1000;
+    }
     // buffer 5 seconds of audio
     // bitrate (in kilobits) / bits per byte * bytes per kilobyte * 5 seconds
-    (bitrate / 8 * 1000 * 5) as u64
+    (bitrate / 8 * 1000) as u64 * buffer_time.as_secs()
 }
 
 fn content_subtype_to_bitrate(subtype: &str) -> u32 {
