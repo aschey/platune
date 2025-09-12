@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use decal::AudioManager;
-use decal::decoder::{Decoder, DecoderResult};
+use decal::decoder::{CurrentPosition, Decoder, DecoderResult};
 use decal::output::AudioBackend;
 use decal::symphonia::core::meta::StandardTag;
 use flume::TryRecvError;
@@ -50,7 +50,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
         decoder: Decoder<f32>,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
-        input_metadata: Option<Metadata>,
+        input_metadata: Metadata,
     ) -> Result<Self, ProcessorError> {
         match cmd_rx.recv() {
             Ok(DecoderCommand::WaitForInitialization) => {
@@ -74,7 +74,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             manager,
             cmd_rx,
             event_tx,
-            input_metadata,
+            input_metadata: Some(input_metadata),
             metadata_init: false,
             last_sent_position: Duration::ZERO,
         })
@@ -175,6 +175,10 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
         }
 
         Ok(InputResult::Continue)
+    }
+
+    pub(crate) fn position(&self) -> CurrentPosition {
+        self.decoder.current_position()
     }
 
     pub(crate) fn next(&mut self) -> Result<(InputResult, DecoderResult), ProcessorError> {

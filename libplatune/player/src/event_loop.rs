@@ -165,6 +165,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
             AudioProcessor::new(&mut manager, decoder, &mut cmd_rx, &event_tx, metadata)
                 .inspect_err(|e| error!("Error creating processor: {e}"))
         {
+            let mut send_time = true;
             loop {
                 match processor.next() {
                     Ok((InputResult::Stop, _)) => {
@@ -173,8 +174,20 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         break;
                     }
                     Ok((_, DecoderResult::Unfinished)) => {
+                        if send_time {
+                            // Send initial position
+                            // this is usually 0:00, but may be something else for live streams or
+                            // radio
+                            let _ = event_tx
+                                .send(PlayerEvent::Position(processor.position()))
+                                .inspect_err(|e| error!("unable to send event: {e:?}"));
+                            send_time = false;
+                        }
                         if let Some(metadata) = processor.next_metadata() {
                             info!("Got metadata: {metadata:?}");
+                            // Resend the current time 1 packet after we receive updated metadata.
+                            // This ensures we wait until the position info gets updated first.
+                            send_time = true;
                             let _ = player_cmd_tx
                                 .send(Command::Metadata(metadata))
                                 .inspect_err(|e| error!("Unable to send command: {e:?}"));

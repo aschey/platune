@@ -117,7 +117,17 @@ impl Player {
                         settings: self.settings.clone(),
                         queue_start_mode,
                         volume: self.pending_volume.take(),
-                        metadata: input.metadata.or(source.metadata),
+                        // Metadata precedence:
+                        // 1. Info supplied by the user
+                        // 2. Extracted from the source
+                        // 3. Default to the input URI as the song name
+                        metadata: input
+                            .metadata
+                            .or(source.metadata)
+                            .unwrap_or_else(|| Metadata {
+                                song: input.input.to_string().into(),
+                                ..Default::default()
+                            }),
                     })
                     .await
                 {

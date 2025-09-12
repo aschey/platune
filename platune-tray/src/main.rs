@@ -297,6 +297,7 @@ async fn metadata_updater(mut controls: MediaControls) {
                         status = state.status();
                         match message.event() {
                             Event::StartQueue | Event::TrackChanged => {
+                                progress = Duration::default();
                                 current_duration = set_metadata(state, &mut controls).await;
 
                                 controls

@@ -211,10 +211,11 @@ fn bitrate_to_prefetch(mut bitrate: u32, buffer_time: Duration) -> u64 {
         bitrate /= 1000;
     }
     // buffer 5 seconds of audio
-    // bitrate (in kilobits) / bits per byte * bytes per kilobyte * 5 seconds
+    // bitrate (in kilobits) / bits per byte * bytes per kilobyte * seconds
     (bitrate / 8 * 1000) as u64 * buffer_time.as_secs()
 }
 
+// estimated bitrates for prefetch in absence of a bitrate header
 fn content_subtype_to_bitrate(subtype: &str) -> u32 {
     match subtype {
         "vorbis" | "opus" | "ogg" => 96,
