@@ -13,7 +13,7 @@ axum = "0.8.4"
 clap = "4.5.47"
 console-subscriber = "0.4.1"
 daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7caa9397428713c8f9689723f36c1e3406c7a434" }
-decal = { git = "https://github.com/aschey/decal", rev = "a3442a9423871dfdcad62b444ca77cf42e6d7018" }
+decal = { git = "https://github.com/aschey/decal", rev = "87b4ea6aa87c07825f4f1a2959d33f2ed275b186" }
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "9dbce3919b1f386fa8abe6c195f4ab4cb261523f" }
 slite = { git = "https://github.com/aschey/slite", rev = "1c4ecd93b51604da80e4c125e52b5e9a96155bab", default-features = false }
 background-service = { git = "https://github.com/aschey/background-service-rs", rev = "6d9a1ddb2b57ac4fe305eff84545168d70171a5d" }

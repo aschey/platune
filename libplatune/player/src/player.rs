@@ -18,7 +18,7 @@ use crate::dto::player_event::PlayerEvent;
 use crate::dto::player_response::PlayerResponse;
 use crate::dto::player_state::PlayerState;
 use crate::dto::player_status::TrackStatus;
-use crate::dto::queue_source::{QueueSource, QueueStartMode};
+use crate::dto::queue_source::QueueSource;
 use crate::dto::track::{Metadata, Track};
 use crate::platune_player::SeekMode;
 use crate::resolver::{
@@ -102,11 +102,7 @@ impl Player {
         Some(reader)
     }
 
-    async fn append_file(
-        &mut self,
-        input: TrackInput,
-        queue_start_mode: QueueStartMode,
-    ) -> Result<(), AppendError> {
+    async fn append_file(&mut self, input: TrackInput) -> Result<(), AppendError> {
         match self.get_source(input.input.clone()).await {
             Some(source) => {
                 info!("Sending source {input:?}");
@@ -115,7 +111,6 @@ impl Player {
                     .send_async(QueueSource {
                         source: source.source,
                         settings: self.settings.clone(),
-                        queue_start_mode,
                         volume: self.pending_volume.take(),
                         // Metadata precedence:
                         // 1. Info supplied by the user
@@ -155,16 +150,13 @@ impl Player {
         self.state.queue = queue.into_iter().filter(|q| q != input).collect();
     }
 
-    async fn start(&mut self, queue_start_mode: QueueStartMode) -> Result<(), Option<AppendError>> {
+    async fn start(&mut self) -> Result<(), Option<AppendError>> {
         let mut success: Result<(), Option<AppendError>> = Err(None);
         // Keep trying until a valid source is found or we reach the end of the queue
         while success.is_err() {
             match self.get_current() {
                 Some(input) => {
-                    match self
-                        .append_file(input.clone(), queue_start_mode.clone())
-                        .await
-                    {
+                    match self.append_file(input.clone()).await {
                         Ok(_) => {
                             success = Ok(());
                         }
@@ -173,20 +165,7 @@ impl Player {
                     }
 
                     if let Some(path) = self.get_next() {
-                        let start_mode = match (&queue_start_mode, &success) {
-                            (
-                                QueueStartMode::ForceRestart {
-                                    device_name,
-                                    paused,
-                                },
-                                Err(_),
-                            ) => QueueStartMode::ForceRestart {
-                                device_name: device_name.to_owned(),
-                                paused: *paused,
-                            },
-                            _ => QueueStartMode::Normal,
-                        };
-                        match self.append_file(path, start_mode).await {
+                        match self.append_file(path).await {
                             Ok(_) => {
                                 success = Ok(());
                             }
@@ -214,14 +193,7 @@ impl Player {
                     continue;
                 }
 
-                if matches!(
-                    queue_start_mode,
-                    QueueStartMode::ForceRestart { paused: true, .. }
-                ) {
-                    self.state.status = AudioStatus::Paused;
-                } else {
-                    self.state.status = AudioStatus::Playing;
-                }
+                self.state.status = AudioStatus::Playing;
             }
         }
 
@@ -414,9 +386,7 @@ impl Player {
         }
 
         if let Some(file) = self.get_next() {
-            self.append_file(file, QueueStartMode::Normal)
-                .await
-                .unwrap_or_default();
+            self.append_file(file).await.unwrap_or_default();
         }
     }
 
@@ -429,23 +399,8 @@ impl Player {
     }
 
     pub(crate) async fn reset(&mut self) -> Result<(), String> {
-        let queue = self.state.queue.clone();
-        let queue_position = self.state.queue_position;
         info!("resetting");
-        self.set_queue_internal(
-            queue,
-            queue_position,
-            QueueStartMode::ForceRestart {
-                device_name: self.device_name.clone(),
-                paused: self.state.status == AudioStatus::Paused,
-            },
-        )
-        .await?;
-        info!(
-            "reset queue. length: {} position: {}",
-            self.state.queue.len(),
-            self.state.queue_position
-        );
+        self.cmd_sender.get_response(DecoderCommand::Reset).await?;
         Ok(())
     }
 
@@ -476,8 +431,7 @@ impl Player {
             }
         }
 
-        self.set_queue_internal(new_queue, 0, QueueStartMode::Normal)
-            .await?;
+        self.set_queue_internal(new_queue, 0).await?;
         self.event_tx
             .send(PlayerEvent::StartQueue(self.state.clone()))
             .unwrap_or_default();
@@ -489,7 +443,6 @@ impl Player {
         &mut self,
         queue: Vec<TrackInput>,
         start_position: usize,
-        queue_start_mode: QueueStartMode,
     ) -> Result<(), String> {
         // Don't need to send stop signal if no sources are playing
         if self.queued_count > 0 {
@@ -498,7 +451,7 @@ impl Player {
         self.state.queue_position = start_position;
         self.state.queue = queue;
 
-        match self.start(queue_start_mode).await {
+        match self.start().await {
             Err(Some(append_err)) => Err(format!("Failed to start queue: {append_err:?}")),
             _ => Ok(()),
         }
@@ -524,8 +477,7 @@ impl Player {
     async fn add_one_to_queue(&mut self, song: TrackInput) -> Result<(), String> {
         // Queue is not currently running, need to start it
         if self.queued_count == 0 {
-            self.set_queue_internal(vec![song], 0, QueueStartMode::Normal)
-                .await?;
+            self.set_queue_internal(vec![song], 0).await?;
             self.event_tx
                 .send(PlayerEvent::StartQueue(self.state.clone()))
                 .unwrap_or_default();
@@ -534,9 +486,7 @@ impl Player {
             // Special case: if we started with only one song, then the new song will never get
             // triggered by the ended event so we need to add it here explicitly
             if self.queued_count == 1 {
-                self.append_file(song, QueueStartMode::Normal)
-                    .await
-                    .unwrap_or_default();
+                self.append_file(song).await.unwrap_or_default();
             }
 
             self.event_tx
@@ -569,7 +519,7 @@ impl Player {
             );
             self.state.queue_position += 1;
             self.reset_queue().await?;
-            if self.start(QueueStartMode::Normal).await.is_ok() {
+            if self.start().await.is_ok() {
                 self.event_tx
                     .send(PlayerEvent::TrackChanged(self.state.clone()))
                     .unwrap_or_default();
@@ -592,7 +542,7 @@ impl Player {
             );
             self.state.queue_position -= 1;
             self.reset_queue().await?;
-            if self.start(QueueStartMode::Normal).await.is_ok() {
+            if self.start().await.is_ok() {
                 self.event_tx
                     .send(PlayerEvent::TrackChanged(self.state.clone()))
                     .unwrap_or_default();

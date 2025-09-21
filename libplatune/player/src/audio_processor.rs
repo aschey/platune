@@ -80,10 +80,6 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
         })
     }
 
-    pub(crate) fn current_position(&self) -> Duration {
-        self.decoder.current_position().position
-    }
-
     fn process_input(&mut self) -> Result<InputResult, ProcessorError> {
         match self.cmd_rx.try_recv() {
             Ok(command) => {
@@ -150,6 +146,13 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
                                 error!("Unable to send current position response: {e:?}")
                             })?;
                     }
+                    DecoderCommand::Reset => {
+                        self.reset();
+                        self.cmd_rx
+                            .respond(DecoderResponse::Received)
+                            .map_err(|e| ProcessorError::CommunicationError(format!("{e:?}")))
+                            .tap_err(|e| error!("Error sending set volume response: {e:?}"))?;
+                    }
                     DecoderCommand::WaitForInitialization => {
                         unreachable!("Should only send this during initialization");
                     }
@@ -192,6 +195,13 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             .write(&mut self.decoder)
             .map_err(ProcessorError::WriteOutputError)?;
         Ok((InputResult::Continue, res))
+    }
+
+    pub(crate) fn reset(&mut self) {
+        let _ = self
+            .manager
+            .reset(&mut self.decoder)
+            .inspect_err(|e| error!("error resetting {e:?}"));
     }
 
     pub(crate) fn next_metadata(&mut self) -> Option<Metadata> {

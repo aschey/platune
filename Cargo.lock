@@ -2222,7 +2222,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=a3442a9423871dfdcad62b444ca77cf42e6d7018#a3442a9423871dfdcad62b444ca77cf42e6d7018"
+source = "git+https://github.com/aschey/decal?rev=87b4ea6aa87c07825f4f1a2959d33f2ed275b186#87b4ea6aa87c07825f4f1a2959d33f2ed275b186"
 dependencies = [
  "cpal",
  "dasp",

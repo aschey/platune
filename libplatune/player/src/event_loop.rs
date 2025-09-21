@@ -1,13 +1,11 @@
 use std::time::Duration;
 
-use decal::decoder::{
-    Decoder, DecoderError, DecoderResult, DecoderSettings, ResamplerSettings, Source,
-};
+use decal::decoder::{DecoderError, DecoderResult, DecoderSettings, ResamplerSettings};
 use decal::output::{AudioBackend, OutputBuilder, OutputSettings, WriteBlockingError};
 use decal::{AudioManager, WriteOutputError};
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use crate::audio_processor::{AudioProcessor, InputResult};
 use crate::dto::command::Command;
@@ -15,7 +13,7 @@ use crate::dto::decoder_command::DecoderCommand;
 use crate::dto::decoder_response::DecoderResponse;
 use crate::dto::player_response::PlayerResponse;
 use crate::dto::processor_error::ProcessorError;
-use crate::dto::queue_source::{QueueSource, QueueStartMode};
+use crate::dto::queue_source::QueueSource;
 use crate::platune_player::PlayerEvent;
 use crate::player::Player;
 use crate::two_way_channel::{TwoWayReceiver, TwoWaySender};
@@ -33,6 +31,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
         audio_backend,
         OutputSettings::default(),
         move || {
+            info!("output device changed");
             player_cmd_tx_
                 .send(Command::Reset)
                 .tap_err(|e| error!("Error sending reset command: {e}"))
@@ -51,7 +50,6 @@ pub(crate) fn decode_loop<B: AudioBackend>(
         }
     };
     manager.set_volume(volume);
-    let mut last_stop_position = Duration::default();
 
     loop {
         let (decoder, metadata) = match queue_rx.try_recv() {
@@ -59,44 +57,21 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                 info!("Got source on initial attempt");
                 init_source(&mut manager, &queue_source);
 
-                match queue_source.queue_start_mode {
-                    QueueStartMode::ForceRestart {
-                        device_name,
-                        paused,
-                    } => {
-                        if let Ok(decoder) = handle_force_restart(
-                            &mut manager,
-                            device_name,
-                            queue_source.source,
-                            last_stop_position,
-                            paused,
-                            &mut cmd_rx,
-                        )
-                        .tap_err(|e| error!("Error during force restart {e:?}"))
-                        {
-                            (decoder, queue_source.metadata)
-                        } else {
-                            continue;
-                        }
-                    }
-                    QueueStartMode::Normal => {
-                        if let Ok(mut decoder) = manager
-                            .init_decoder(
-                                queue_source.source,
-                                DecoderSettings {
-                                    enable_gapless: true,
-                                },
-                            )
-                            .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
-                        {
-                            let _ = manager
-                                .initialize(&mut decoder)
-                                .tap_err(|e| error!("error initializing decoder {e:?}"));
-                            (decoder, queue_source.metadata)
-                        } else {
-                            continue;
-                        }
-                    }
+                if let Ok(mut decoder) = manager
+                    .init_decoder(
+                        queue_source.source,
+                        DecoderSettings {
+                            enable_gapless: true,
+                        },
+                    )
+                    .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
+                {
+                    let _ = manager
+                        .initialize(&mut decoder)
+                        .tap_err(|e| error!("error initializing decoder {e:?}"));
+                    (decoder, queue_source.metadata)
+                } else {
+                    continue;
                 }
             }
             Err(TryRecvError::Empty) => {
@@ -108,45 +83,21 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     Ok(queue_source) => {
                         info!("Got source after waiting");
                         init_source(&mut manager, &queue_source);
-
-                        match queue_source.queue_start_mode {
-                            QueueStartMode::ForceRestart {
-                                device_name,
-                                paused,
-                            } => {
-                                if let Ok(decoder) = handle_force_restart(
-                                    &mut manager,
-                                    device_name,
-                                    queue_source.source,
-                                    last_stop_position,
-                                    paused,
-                                    &mut cmd_rx,
-                                )
-                                .tap_err(|e| error!("Error handling force restart: {e:?}"))
-                                {
-                                    (decoder, queue_source.metadata)
-                                } else {
-                                    continue;
-                                }
-                            }
-                            QueueStartMode::Normal => {
-                                if let Ok(mut decoder) = manager
-                                    .init_decoder(
-                                        queue_source.source,
-                                        DecoderSettings {
-                                            enable_gapless: true,
-                                        },
-                                    )
-                                    .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
-                                {
-                                    let _ = manager
-                                        .reset(&mut decoder)
-                                        .tap_err(|e| error!("Error resetting decoder: {e:?}"));
-                                    (decoder, queue_source.metadata)
-                                } else {
-                                    continue;
-                                }
-                            }
+                        if let Ok(mut decoder) = manager
+                            .init_decoder(
+                                queue_source.source,
+                                DecoderSettings {
+                                    enable_gapless: true,
+                                },
+                            )
+                            .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
+                        {
+                            let _ = manager
+                                .reset(&mut decoder)
+                                .tap_err(|e| error!("Error resetting decoder: {e:?}"));
+                            (decoder, queue_source.metadata)
+                        } else {
+                            continue;
                         }
                     }
                     Err(_) => {
@@ -204,10 +155,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     Err(ProcessorError::WriteOutputError(
                         WriteOutputError::WriteBlockingError(WriteBlockingError::OutputStalled),
                     )) => {
-                        player_cmd_tx
-                            .send(Command::Reset)
-                            .tap_err(|e| error!("Error sending reset command: {e}"))
-                            .ok();
+                        processor.reset();
                     }
                     Err(e) => {
                         error!("Error while decoding: {e:?}");
@@ -215,7 +163,6 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     }
                 }
             }
-            last_stop_position = processor.current_position();
         }
     }
 }
@@ -250,36 +197,6 @@ fn handle_decoder_failure(
     let _ = cmd_rx
         .respond(DecoderResponse::InitializationFailed)
         .tap_err(|e| error!("Error sending decoder initialization succeeded: {e:?}"));
-}
-
-fn handle_force_restart<B: AudioBackend>(
-    manager: &mut AudioManager<f32, B>,
-    device_name: Option<String>,
-    source: Box<dyn Source>,
-    last_stop_position: Duration,
-    paused: bool,
-    cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-) -> Result<Decoder<f32>, DecoderError> {
-    info!("Force restarting. Paused={paused}, last_stop_position={last_stop_position:?}");
-    manager.set_device(device_name);
-    let mut decoder = manager
-        .init_decoder(
-            source,
-            DecoderSettings {
-                enable_gapless: true,
-            },
-        )
-        .inspect_err(|e| handle_decoder_failure(e, cmd_rx))?;
-
-    manager
-        .seek(&mut decoder, last_stop_position)
-        .map_err(|e| warn!("Error seeking: {e}"))
-        .ok();
-
-    if paused {
-        decoder.pause();
-    }
-    Ok(decoder)
 }
 
 pub(crate) async fn main_loop(

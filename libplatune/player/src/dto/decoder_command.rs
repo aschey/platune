@@ -11,4 +11,5 @@ pub(crate) enum DecoderCommand {
     Stop,
     SetVolume(f32),
     GetCurrentPosition,
+    Reset,
 }
