@@ -395,11 +395,12 @@ async fn set_metadata(
         let path = &state.queue[pos];
         if let Some(metadata) = &state.metadata {
             let duration = metadata.duration.map(|d| d.try_into().unwrap());
+            // Some players don't clear out the old data if we set these to None, so we send an empty string instead.
             controls
                 .set_metadata(MediaMetadata {
-                    title: metadata.song.as_deref(),
-                    album: metadata.album.as_deref(),
-                    artist: metadata.artist.as_deref(),
+                    title: metadata.song.as_deref().unwrap_or_default().into(),
+                    album: metadata.album.as_deref().unwrap_or_default().into(),
+                    artist: metadata.artist.as_deref().unwrap_or_default().into(),
                     cover_url: None,
                     duration: metadata.duration.map(|d| d.try_into().unwrap()),
                 })
