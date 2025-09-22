@@ -15,12 +15,12 @@ jobs:
             protoc-target: osx-x86_64
             binstall-target: x86_64-apple-darwin.zip
             binstall-extract: unzip
-            rustflags:
+            rustflags: ""
           - os: ubuntu-latest
             protoc-target: linux-x86_64
             binstall-target: x86_64-unknown-linux-gnu.tgz
             binstall-extract: tar -xzvf
-            rustflags:
+            rustflags: ""
           - os: windows-latest
             protoc-target: win64
             binstall-target: x86_64-pc-windows-msvc.zip

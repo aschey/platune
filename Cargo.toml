@@ -10,10 +10,10 @@ resolver = "3"
 
 [workspace.dependencies]
 axum = "0.8.4"
-clap = "4.5.47"
+clap = "4.5.48"
 console-subscriber = "0.4.1"
 daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7caa9397428713c8f9689723f36c1e3406c7a434" }
-decal = { git = "https://github.com/aschey/decal", rev = "87b4ea6aa87c07825f4f1a2959d33f2ed275b186" }
+decal = { git = "https://github.com/aschey/decal", rev = "7e237dedbad1ee2b9837353d603c3e63641c89e7" }
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "9dbce3919b1f386fa8abe6c195f4ab4cb261523f" }
 slite = { git = "https://github.com/aschey/slite", rev = "1c4ecd93b51604da80e4c125e52b5e9a96155bab", default-features = false }
 background-service = { git = "https://github.com/aschey/background-service-rs", rev = "6d9a1ddb2b57ac4fe305eff84545168d70171a5d" }
@@ -24,9 +24,9 @@ futures-util = "0.3.31"
 tipsy = "0.6.2"
 prost = "0.14.1"
 prost-types = "0.14.1"
-rcgen = "0.14.3"
-hyper-util = "0.1.16"
-time = "0.3.43"
+rcgen = "0.14.4"
+hyper-util = "0.1.17"
+time = "0.3.44"
 tokio = "1.47.1"
 tokio-util = "0.7.16"
 tokio-stream = "0.1.17"
@@ -54,7 +54,7 @@ eyre = "0.6.12"
 ignore = "0.4.23"
 itertools = "0.14.0"
 log = "0.4.27"
-normpath = "1.3.0"
+normpath = "1.5.0"
 notify = { version = "8.2.0", default-features = false }
 num_cpus = "1.17.0"
 regex = "1.11.2"

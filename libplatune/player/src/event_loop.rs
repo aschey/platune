@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use decal::decoder::{DecoderError, DecoderResult, DecoderSettings, ResamplerSettings};
+use decal::decoder::{DecoderResult, DecoderSettings, ResamplerSettings};
 use decal::output::{AudioBackend, OutputBuilder, OutputSettings, WriteBlockingError};
-use decal::{AudioManager, WriteOutputError};
+use decal::{AudioManager, ResetError, WriteOutputError};
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
 use tracing::{error, info};
@@ -31,7 +31,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
         audio_backend,
         OutputSettings::default(),
         move || {
-            info!("output device changed");
+            info!("Output device changed");
             player_cmd_tx_
                 .send(Command::Reset)
                 .tap_err(|e| error!("Error sending reset command: {e}"))
@@ -57,7 +57,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                 info!("Got source on initial attempt");
                 init_source(&mut manager, &queue_source);
 
-                if let Ok(mut decoder) = manager
+                if let Ok(decoder) = manager
                     .init_decoder(
                         queue_source.source,
                         DecoderSettings {
@@ -66,9 +66,6 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     )
                     .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
                 {
-                    let _ = manager
-                        .initialize(&mut decoder)
-                        .tap_err(|e| error!("error initializing decoder {e:?}"));
                     (decoder, queue_source.metadata)
                 } else {
                     continue;
@@ -83,7 +80,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     Ok(queue_source) => {
                         info!("Got source after waiting");
                         init_source(&mut manager, &queue_source);
-                        if let Ok(mut decoder) = manager
+                        if let Ok(decoder) = manager
                             .init_decoder(
                                 queue_source.source,
                                 DecoderSettings {
@@ -92,9 +89,6 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                             )
                             .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
                         {
-                            let _ = manager
-                                .reset(&mut decoder)
-                                .tap_err(|e| error!("Error resetting decoder: {e:?}"));
                             (decoder, queue_source.metadata)
                         } else {
                             continue;
@@ -178,7 +172,7 @@ fn init_source<B: AudioBackend>(manager: &mut AudioManager<f32, B>, queue_source
 }
 
 fn handle_decoder_failure(
-    err: &DecoderError,
+    err: &ResetError,
     cmd_rx: &mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
 ) {
     error!("error initializing decoder: {err:?}");

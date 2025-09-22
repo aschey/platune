@@ -1,12 +1,12 @@
 use std::time::Duration;
 
-use decal::AudioManager;
 use decal::decoder::{CurrentPosition, Decoder, DecoderResult};
 use decal::output::AudioBackend;
 use decal::symphonia::core::meta::StandardTag;
+use decal::{AudioManager, ResetMode};
 use flume::TryRecvError;
 use tap::TapFallible;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::dto::decoder_command::DecoderCommand;
 use crate::dto::decoder_response::DecoderResponse;
@@ -109,7 +109,7 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
                             SeekMode::Forward => current_time.position + time,
                             SeekMode::Backward => current_time.position - time,
                         };
-                        let seek_response = match self.manager.seek(&mut self.decoder, seek_time) {
+                        let seek_response = match self.decoder.seek(seek_time) {
                             Ok(seeked_to) => Ok(seeked_to.actual_ts),
                             Err(e) => Err(e.to_string()),
                         };
@@ -198,10 +198,11 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
     }
 
     pub(crate) fn reset(&mut self) {
+        // Reset may fail on Windows on the first try if the device was unplugged
         let _ = self
             .manager
-            .reset(&mut self.decoder)
-            .inspect_err(|e| error!("error resetting {e:?}"));
+            .reset(&mut self.decoder, ResetMode::Force)
+            .inspect_err(|e| warn!("error resetting {e:?}"));
     }
 
     pub(crate) fn next_metadata(&mut self) -> Option<Metadata> {
