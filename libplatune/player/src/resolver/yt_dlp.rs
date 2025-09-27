@@ -8,6 +8,7 @@ use decal::decoder::ReadSeekSource;
 use eyre::{Context, Result, bail};
 use lazy_regex::{Lazy, regex};
 use regex::Regex;
+use reqwest::Url;
 use stream_download::process::{
     CommandBuilder, FfmpegConvertAudioCommand, ProcessStreamParams, YtDlpCommand,
 };
@@ -23,7 +24,7 @@ use youtube_dl::{Format, YoutubeDl, YoutubeDlOutput};
 
 use super::MetadataSource;
 use crate::dto::track::Metadata;
-use crate::resolver::HttpSourceResolver;
+use crate::resolver::{HttpSourceResolver, TEMP_BUFFER_SIZE, bitrate_to_prefetch};
 
 macro_rules! url_regex {
     ($s:expr) => {
@@ -204,6 +205,7 @@ impl RegistryEntry<Result<Vec<Input>>> for YtDlpUrlResolver {
 }
 
 const LIBFDK_AAC: &str = "libfdk_aac";
+const FFMPEG_FORMAT_ADTS: &str = "adts";
 
 pub(crate) struct YtDlpSourceResolver {
     rules: Vec<Rule>,
@@ -238,6 +240,28 @@ impl YtDlpSourceResolver {
             Ok(has_fdk_aac)
         }
     }
+
+    async fn resolve_http(
+        &mut self,
+        input_source: &Url,
+        video_url: &str,
+    ) -> Option<Result<(MetadataSource, CancellationToken)>> {
+        if !FORCE_ORIGINAL_URL.matches(input_source.domain().unwrap_or_default()) {
+            // For some sites, the direct audio URL can be downloaded with the default
+            // HTTP resolver. This is preferable, since it allows
+            // us to have proper seek support
+            info!("using http source resolver");
+            return Some(
+                self.http_resolver
+                    .handler(Input {
+                        prefix: None,
+                        source: Source::Url(video_url.parse().unwrap()),
+                    })
+                    .await,
+            );
+        }
+        None
+    }
 }
 
 #[async_trait]
@@ -251,7 +275,6 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
     }
 
     async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
-        let ffmpeg_format = "adts";
         info!("ytdl video url: {}", input.source);
         info!("extracting video metadata - this may take a few seconds");
         let output = YoutubeDl::new(input.source.clone())
@@ -260,25 +283,14 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
             .run_async()
             .await?;
         info!("metadata extraction complete");
-
+        let input_source = input.source.clone().into_url();
         let (found_format, video) = match output {
             YoutubeDlOutput::SingleVideo(video) => {
                 info!("video url: {:?}", video.url);
-                if let Some(url) = &video.url {
-                    let input_source = input.source.clone().into_url();
-                    if !FORCE_ORIGINAL_URL.matches(input_source.domain().unwrap_or_default()) {
-                        // For some sites, the direct audio URL can be downloaded with the default
-                        // HTTP resolver This is preferable, since it allows
-                        // us to have proper seek support
-                        info!("using http source resolver");
-                        return self
-                            .http_resolver
-                            .handler(Input {
-                                prefix: None,
-                                source: Source::Url(url.parse().unwrap()),
-                            })
-                            .await;
-                    }
+                if let Some(url) = &video.url
+                    && let Some(result) = self.resolve_http(&input_source, url).await
+                {
+                    return result;
                 }
                 info!("found single video: {:?}", video.title);
                 let Some(formats) = &video.formats else {
@@ -287,15 +299,15 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                 let yt_dlp_formats = if video.is_live == Some(true) {
                     // Youtube live stream m4a audio is encoded in a way that Symphonia can't always
                     // decode
-                    vec!["mp3", "opus"]
+                    vec!["ogg", "opus", "mp3"]
                 } else {
-                    vec!["m4a", "mp4a", "mp3", "opus"]
+                    vec!["ogg", "opus", "m4a", "mp4a", "mp3"]
                 };
                 let worst_quality = 10.0;
                 // find best format (0 is best, 10 is worst)
                 let format = formats
                     .iter()
-                    .filter(|f| {
+                    .filter_map(|f| {
                         // If no high-quality format is available, it's better to parse it from
                         // the raw input.
                         if !is_decent_quality(f) {
@@ -303,17 +315,17 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                                 "quality too low, ignoring: {:?} {:?}",
                                 f.format_id, f.quality
                             );
-                            return false;
+                            return None;
                         }
                         // use native audio codec or format if available
                         if let Some(audio_codec) = &f.acodec {
                             info!("checking audio codec: {audio_codec}");
-                            if is_usable_format(&yt_dlp_formats, audio_codec) {
+                            if let Some(format) = find_usable_format(&yt_dlp_formats, audio_codec) {
                                 info!(
                                     "found native audio codec {audio_codec}, quality: {:?}",
                                     f.quality
                                 );
-                                return true;
+                                return Some((f, format));
                             }
                         }
                         if let Some(format) = &f.format {
@@ -323,26 +335,26 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                                     "quality too low, ignoring: {:?} {:?}",
                                     f.format_id, f.quality
                                 );
-                                return false;
+                                return None;
                             }
 
-                            if is_usable_format(&yt_dlp_formats, format) {
+                            if let Some(format) = find_usable_format(&yt_dlp_formats, format) {
                                 info!("found native format: {format} quality: {:?}", f.quality);
-                                return true;
+                                return Some((f, format));
                             }
                         }
-                        false
+                        None
                     })
-                    .reduce(|best, format| {
+                    .reduce(|(best, best_name), (format, name)| {
                         if format.quality.unwrap_or(worst_quality)
                             < best.quality.unwrap_or(worst_quality)
                         {
-                            format
+                            (format, name)
                         } else {
-                            best
+                            (best, best_name)
                         }
                     });
-                (format.cloned(), video)
+                (format.map(|(f, n)| (f.clone(), n)), video)
             }
             YoutubeDlOutput::Playlist(playlist) => {
                 // This shouldn't happen since we're enumerating playlists in the URL resolver
@@ -350,9 +362,9 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
             }
         };
 
-        if let Some(format) = &found_format {
+        if let Some((format, name)) = &found_format {
             info!(
-                "using format {:?} {:?}, quality: {:?}",
+                "using format {name} {:?} {:?}, quality: {:?}",
                 format.format_id, format.acodec, format.quality
             );
         }
@@ -368,9 +380,10 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                 .and_then(|d| d.as_f64())
                 .map(|d| Duration::from_secs(d as u64)),
         };
-        let yt_dlp_cmd = YtDlpCommand::new(input.source)
-            .yt_dlp_path(ytdl_exe()?)
-            .extract_audio(true);
+        // We always pipe the output into FFMPEG instead of reading directly from yt-dlp's output
+        // stream because yt-dlp still outputs the video stream which can cause format
+        // detection issues with Symphonia.
+        let mut yt_dlp_cmd = YtDlpCommand::new(input.source).yt_dlp_path(ytdl_exe()?);
         let ffmpeg_args = [
             "--ffmpeg-location",
             &ffmpeg_exe()?,
@@ -382,56 +395,52 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
             "--downloader-arg",
             "ffmpeg_i2:-extension_picky 0",
         ];
-        let params = if let Some(format) = &found_format {
+        let mut content_length = None;
+        let mut ffmpeg_format = FFMPEG_FORMAT_ADTS;
+        let mut format_name = "m4a";
+        if let Some((format, name)) = &found_format {
             info!("source format: {:?}", format.format);
             info!("source quality: {:?}", format.quality);
             info!("source is in an appropriate format, no post-processing required");
             // Prefer the explicit format ID since this insures the format used will match
             // the filesize.
             let format_id = format.format_id.clone().expect("format id missing");
-            let params = ProcessStreamParams::new(
-                yt_dlp_cmd
-                    .format(format_id)
-                    .into_command()
-                    .args(ffmpeg_args),
-            )?;
-            if let Some(size) = format.filesize {
-                info!("found video size: {size}");
-                params.content_length(size as u64)
-            } else {
-                params
+            if let Some(url) = &format.url
+                && let Some(result) = self.resolve_http(&input_source, url).await
+            {
+                return result;
             }
-        } else {
-            info!("source requires post-processing - converting to m4a using ffmpeg");
-            let mut ffmpeg_converter =
-                FfmpegConvertAudioCommand::new(ffmpeg_format).ffmpeg_path(ffmpeg_exe()?);
-
-            if self.has_fdk_aac().await? {
-                info!("using libfdk_aac");
-                ffmpeg_converter = ffmpeg_converter.args(["-c:a", LIBFDK_AAC]);
-            } else {
-                info!("libfdk_aac not supported, using default aac encoder");
-            }
-            // yt-dlp can handle format conversion, but if we want to stream it directly from
-            // stdout, we have to pipe the raw output to ffmpeg ourselves.
-            let builder = CommandBuilder::new(yt_dlp_cmd.into_command().args(ffmpeg_args))
-                .pipe(ffmpeg_converter);
-            ProcessStreamParams::new(builder)?
+            yt_dlp_cmd = yt_dlp_cmd.format(format_id);
+            content_length = format.filesize.map(|f| f as u64);
+            format_name = name;
+            ffmpeg_format = ytdl_to_ffmpeg_format(format_name);
         };
-        let size = found_format.and_then(|f| f.filesize).map(|f| f as u64);
+        let mut ffmpeg_converter =
+            FfmpegConvertAudioCommand::new(ffmpeg_format).ffmpeg_path(ffmpeg_exe()?);
 
+        if ffmpeg_format == FFMPEG_FORMAT_ADTS && self.has_fdk_aac().await? {
+            info!("using libfdk_aac");
+            ffmpeg_converter = ffmpeg_converter.args(["-c:a", LIBFDK_AAC]);
+        }
+        // yt-dlp can handle format conversion, but if we want to stream it directly from
+        // stdout, we have to pipe the raw output to ffmpeg ourselves.
+        let builder =
+            CommandBuilder::new(yt_dlp_cmd.into_command().args(ffmpeg_args)).pipe(ffmpeg_converter);
+        let params = ProcessStreamParams::new(builder)?.content_length(content_length);
+
+        let prefetch = bitrate_to_prefetch(format_type_to_bitrate(format_name), content_length);
         // Sometimes it may take a while for ffmpeg to output a new chunk, so we can bump up the
         // retry timeout to be safe.
         let settings = Settings::default()
             .retry_timeout(Duration::from_secs(30))
+            .prefetch_bytes(prefetch)
             .cancel_on_drop(false);
+
         let reader = StreamDownload::new_process(
             params,
             AdaptiveStorageProvider::new(
                 TempStorageProvider::with_prefix("platune_cache"),
-                // ensure we have enough buffer space to store the prefetch data
-                NonZeroUsize::new((settings.get_prefetch_bytes() * 2) as usize)
-                    .expect("invalid prefetch bytes"),
+                NonZeroUsize::new(TEMP_BUFFER_SIZE).expect("invalid buffer bytes"),
             ),
             settings,
         )
@@ -439,7 +448,8 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
         let token = reader.cancellation_token();
         let track = MetadataSource {
             source: Box::new(
-                ReadSeekSource::new(reader, size, Some("m4a".to_string())).seekable(false),
+                ReadSeekSource::new(reader, content_length, Some(format_name.to_string()))
+                    .seekable(false),
             ),
             metadata: Some(metadata),
         };
@@ -447,10 +457,33 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
     }
 }
 
+// Estimate bitrate from file type
+fn format_type_to_bitrate(format_type: &str) -> u32 {
+    match format_type {
+        "vorbis" | "opus" | "ogg" => 96,
+        "m4a" | "mp4a" => 128,
+        "mp3" => 256,
+        _ => 128,
+    }
+}
+
 fn is_decent_quality(format: &Format) -> bool {
     format.quality.map(|q| q <= 3.0).unwrap_or(false)
 }
 
-fn is_usable_format(yt_dlp_formats: &[&str], format: &str) -> bool {
-    yt_dlp_formats.iter().any(|f| format.starts_with(f))
+fn find_usable_format(yt_dlp_formats: &[&str], format: &str) -> Option<String> {
+    yt_dlp_formats.iter().find_map(|f| {
+        if format.starts_with(f) {
+            Some(f.to_string())
+        } else {
+            None
+        }
+    })
+}
+
+fn ytdl_to_ffmpeg_format(ydtl: &str) -> &str {
+    match ydtl {
+        "m4a" | "mp4a" => FFMPEG_FORMAT_ADTS,
+        _ => ydtl,
+    }
 }
