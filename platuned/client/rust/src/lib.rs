@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::io;
 
 use hyper_util::rt::TokioIo;
 use tipsy::ServerId;
@@ -9,11 +9,11 @@ use tower::service_fn;
 pub mod management;
 pub mod player;
 
-async fn get_ipc_channel() -> Result<Channel, Box<dyn Error>> {
+async fn get_ipc_channel() -> Result<Channel, tonic::transport::Error> {
     let endpoint = tonic::transport::Endpoint::try_from("http://dummy")?;
     let channel = endpoint
-        .connect_with_connector(service_fn(|_: Uri| async move {
-            Ok::<_, Box<dyn Error + Send + Sync>>(TokioIo::new(
+        .connect_with_connector(service_fn(async |_: Uri| {
+            Ok::<_, io::Error>(TokioIo::new(
                 tipsy::Endpoint::connect(ServerId::new("platune/platuned").parent_folder("/tmp"))
                     .await?,
             ))

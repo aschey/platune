@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use player_client::PlayerClient;
 use tonic::transport::{Channel, Endpoint};
 
@@ -8,7 +6,7 @@ use crate::{StdError, get_ipc_channel};
 tonic::include_proto!("platune.player.v1");
 
 impl PlayerClient<Channel> {
-    pub async fn connect_http<D>(uri: D) -> Result<PlayerClient<Channel>, Box<dyn Error>>
+    pub async fn connect_http<D>(uri: D) -> Result<PlayerClient<Channel>, tonic::transport::Error>
     where
         D: TryInto<Endpoint>,
         D::Error: Into<StdError>,
@@ -17,7 +15,7 @@ impl PlayerClient<Channel> {
         Ok(client)
     }
 
-    pub async fn connect_ipc() -> Result<PlayerClient<Channel>, Box<dyn Error>> {
+    pub async fn connect_ipc() -> Result<PlayerClient<Channel>, tonic::transport::Error> {
         let channel = get_ipc_channel().await?;
         let client = PlayerClient::new(channel);
         Ok(client)
