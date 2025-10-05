@@ -211,16 +211,27 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             self.metadata_init = true;
             return Some(input_metadata);
         }
+        let track_id = self.decoder.track_id() as u64;
 
         let mut metadata = self.decoder.metadata();
         if (!self.metadata_init || !metadata.is_latest())
             && let Some(latest) = metadata.skip_to_latest()
         {
             self.metadata_init = true;
-            let std_tags: Vec<_> = latest
-                .media
-                .tags
+            let per_track = latest
+                .per_track
                 .iter()
+                .find_map(|t| {
+                    if t.track_id == track_id {
+                        Some(t.metadata.tags.iter())
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or_default();
+            let std_tags: Vec<_> = per_track
+                .into_iter()
+                .chain(latest.media.tags.iter())
                 .filter_map(|t| t.std.as_ref())
                 .collect();
             Some(Metadata {
