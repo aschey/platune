@@ -217,8 +217,12 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
             && let Some(latest) = metadata.skip_to_latest()
         {
             self.metadata_init = true;
-            let tags = latest.tags();
-            let std_tags: Vec<_> = tags.iter().filter_map(|t| t.std.as_ref()).collect();
+            let std_tags: Vec<_> = latest
+                .media
+                .tags
+                .iter()
+                .filter_map(|t| t.std.as_ref())
+                .collect();
             Some(Metadata {
                 artist: find_tag!(std_tags, StandardTag::Artist),
                 album_artist: find_tag!(std_tags, StandardTag::AlbumArtist),
