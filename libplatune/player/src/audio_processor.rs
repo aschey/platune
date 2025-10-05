@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use decal::decoder::{CurrentPosition, Decoder, DecoderResult};
 use decal::output::AudioBackend;
-use decal::symphonia::core::meta::StandardTag;
+use decal::symphonia::core::meta::{MetadataRevision, StandardTag};
 use decal::{AudioManager, ResetMode};
 use flume::TryRecvError;
 use tap::TapFallible;
@@ -207,45 +207,57 @@ impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
 
     pub(crate) fn next_metadata(&mut self) -> Option<Metadata> {
         if let Some(input_metadata) = self.input_metadata.take() {
-            self.decoder.metadata().skip_to_latest();
+            let latest = self.decoder.metadata().skip_to_latest().cloned();
             self.metadata_init = true;
+            // Prefer the metadata from the decoder if the input metadata only has the default
+            // title attached
+            if input_metadata.artist.is_none()
+                && input_metadata.album_artist.is_none()
+                && let Some(latest) = latest
+            {
+                return Some(self.extract_metadata(&latest));
+            }
             return Some(input_metadata);
         }
-        let track_id = self.decoder.track_id() as u64;
 
         let mut metadata = self.decoder.metadata();
         if (!self.metadata_init || !metadata.is_latest())
-            && let Some(latest) = metadata.skip_to_latest()
+            && let Some(latest) = metadata.skip_to_latest().cloned()
         {
             self.metadata_init = true;
-            let per_track = latest
-                .per_track
-                .iter()
-                .find_map(|t| {
-                    if t.track_id == track_id {
-                        Some(t.metadata.tags.iter())
-                    } else {
-                        None
-                    }
-                })
-                .unwrap_or_default();
-            let std_tags: Vec<_> = per_track
-                .into_iter()
-                .chain(latest.media.tags.iter())
-                .filter_map(|t| t.std.as_ref())
-                .collect();
-            Some(Metadata {
-                artist: find_tag!(std_tags, StandardTag::Artist),
-                album_artist: find_tag!(std_tags, StandardTag::AlbumArtist),
-                album: find_tag!(std_tags, StandardTag::Album),
-                song: find_tag!(std_tags, StandardTag::TrackTitle),
-                track_number: find_tag!(std_tags, StandardTag::TrackNumber)
-                    .map(|t| t.parse().ok())
-                    .flatten(),
-                duration: self.decoder.duration(),
-            })
+            Some(self.extract_metadata(&latest))
         } else {
             None
+        }
+    }
+
+    fn extract_metadata(&self, latest: &MetadataRevision) -> Metadata {
+        let track_id = self.decoder.track_id() as u64;
+        let per_track = latest
+            .per_track
+            .iter()
+            .find_map(|t| {
+                if t.track_id == track_id {
+                    Some(t.metadata.tags.iter())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_default();
+        let std_tags: Vec<_> = per_track
+            .into_iter()
+            .chain(latest.media.tags.iter())
+            .filter_map(|t| t.std.as_ref())
+            .collect();
+        Metadata {
+            artist: find_tag!(std_tags, StandardTag::Artist),
+            album_artist: find_tag!(std_tags, StandardTag::AlbumArtist),
+            album: find_tag!(std_tags, StandardTag::Album),
+            song: find_tag!(std_tags, StandardTag::TrackTitle),
+            track_number: find_tag!(std_tags, StandardTag::TrackNumber)
+                .map(|t| t.parse().ok())
+                .flatten(),
+            duration: self.decoder.duration(),
         }
     }
 }
