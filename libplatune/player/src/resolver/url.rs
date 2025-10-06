@@ -1,4 +1,3 @@
-use std::io::BufReader;
 use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::Arc;
@@ -17,9 +16,8 @@ use stream_download::source::{DecodeError, SourceStream};
 use stream_download::storage::adaptive::AdaptiveStorageProvider;
 use stream_download::storage::temp::TempStorageProvider;
 use stream_download::{Settings, StreamDownload};
-use tap::{TapFallible, TapOptional};
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 use super::MetadataSource;
 use crate::dto::track::Metadata;
@@ -228,28 +226,9 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for FileSourceRe
     }
 
     async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
-        let path = input.source.to_string();
-        let file = fs::File::open(&path).tap_err(|e| error!("Error opening file {path} {e:?}"))?;
-
-        let file_len = file
-            .metadata()
-            .map(|m| m.len())
-            .tap_err(|e| warn!("Error reading file metadata from {path}: {e:?}"))
-            .ok();
-
-        let extension = Path::new(&path)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .tap_none(|| {
-                warn!(
-                    "File extension for {path} contains invalid unicode. Not using extension hint"
-                )
-            })
-            .map(|ext| ext.to_owned());
-
-        let reader = BufReader::new(file);
+        let source = ReadSeekSource::from_path(Path::new(&input.source.to_string()))?;
         let track = MetadataSource {
-            source: Box::new(ReadSeekSource::new(reader, file_len, extension)),
+            source: Box::new(source),
             metadata: None,
         };
         Ok((track, CancellationToken::new()))
