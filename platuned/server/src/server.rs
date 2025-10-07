@@ -25,7 +25,7 @@ use libplatune_player::CpalOutput;
 use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlayerEvent;
-use platuned::{file_server_port, main_server_port, service_label};
+use platuned::{file_server_port, ipc_server_name, main_server_port, service_label};
 use tipsy::{IntoIpcPath, ServerId};
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Server;
@@ -48,7 +48,7 @@ use crate::v1::player_server::PlayerServer;
 
 enum Transport {
     Http(SocketAddr),
-    Ipc(&'static str),
+    Ipc(String),
 }
 
 #[derive(Clone)]
@@ -133,7 +133,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
         |context: ServiceContext| async move {
             run_server(
                 services,
-                Transport::Ipc("platune/platuned"),
+                Transport::Ipc(ipc_server_name()),
                 context.cancellation_token().clone(),
             )
             .await?;

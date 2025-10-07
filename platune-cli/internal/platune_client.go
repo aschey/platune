@@ -32,7 +32,11 @@ type PlatuneClient struct {
 }
 
 func NewPlatuneClient(statusNotifier *StatusNotifier) *PlatuneClient {
-	playerConn, err := platune.GetIpcClient()
+	ipcName := os.Getenv("PLATUNE_IPC_NAME")
+	if ipcName == "" {
+		ipcName = "platuned"
+	}
+	playerConn, err := platune.GetIpcClient(ipcName)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

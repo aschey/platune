@@ -236,7 +236,7 @@ impl LazyPlayerClient {
         }
 
         loop {
-            if let Ok(client) = PlayerClient::connect_ipc().await {
+            if let Ok(client) = PlayerClient::connect_ipc("platuned").await {
                 self.0 = Some(client);
                 return self.0.as_mut().unwrap();
             } else {

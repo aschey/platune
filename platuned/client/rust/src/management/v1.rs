@@ -17,8 +17,8 @@ impl ManagementClient<Channel> {
         Ok(client)
     }
 
-    pub async fn connect_ipc() -> Result<ManagementClient<Channel>, Box<dyn Error>> {
-        let channel = get_ipc_channel().await?;
+    pub async fn connect_ipc(name: &str) -> Result<ManagementClient<Channel>, Box<dyn Error>> {
+        let channel = get_ipc_channel(name).await?;
         let client = ManagementClient::new(channel);
         Ok(client)
     }

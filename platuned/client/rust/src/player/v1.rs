@@ -15,8 +15,8 @@ impl PlayerClient<Channel> {
         Ok(client)
     }
 
-    pub async fn connect_ipc() -> Result<PlayerClient<Channel>, tonic::transport::Error> {
-        let channel = get_ipc_channel().await?;
+    pub async fn connect_ipc(name: &str) -> Result<PlayerClient<Channel>, tonic::transport::Error> {
+        let channel = get_ipc_channel(name).await?;
         let client = PlayerClient::new(channel);
         Ok(client)
     }

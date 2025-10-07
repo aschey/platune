@@ -8,6 +8,7 @@ use daemon_slayer::core::Label;
 
 const DEFAULT_MAIN_SERVER_PORT: usize = 50051;
 const DEFAULT_FILE_SERVER_PORT: usize = 50050;
+const DEFAULT_IPC_NAME: &str = "platuned";
 
 pub fn main_server_port() -> Result<usize, ParseIntError> {
     Ok(match env::var("PLATUNE_SERVER_PORT") {
@@ -21,6 +22,14 @@ pub fn file_server_port() -> Result<usize, ParseIntError> {
         Ok(port) => port.parse()?,
         Err(_) => DEFAULT_FILE_SERVER_PORT,
     })
+}
+
+pub fn ipc_server_name() -> String {
+    "platune/".to_string()
+        + &match env::var("PLATUNE_IPC_NAME") {
+            Ok(name) => name,
+            Err(_) => DEFAULT_IPC_NAME.to_string(),
+        }
 }
 
 pub fn clap_base_command() -> clap::Command {

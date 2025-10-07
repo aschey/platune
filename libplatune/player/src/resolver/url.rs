@@ -1,7 +1,8 @@
+use std::ffi::OsStr;
 use std::num::NonZeroUsize;
-use std::path::Path;
-use std::sync::Arc;
-use std::{env, fs};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, LazyLock};
+use std::{env, fs, io};
 
 use async_trait::async_trait;
 use decal::decoder::ReadSeekSource;
@@ -22,6 +23,8 @@ use tracing::{info, warn};
 use super::MetadataSource;
 use crate::dto::track::Metadata;
 use crate::resolver::{TEMP_BUFFER_SIZE, bitrate_to_prefetch};
+
+static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(reqwest::Client::new);
 
 pub(crate) struct DefaultUrlResolver {
     rules: Vec<Rule>,
@@ -46,17 +49,57 @@ impl RegistryEntry<Result<Vec<Input>>> for DefaultUrlResolver {
     }
 
     async fn handler(&mut self, input: Input) -> Result<Vec<Input>> {
-        if let registry::Source::Url(url) = &input.source
-            && let Ok(path) = url.to_file_path()
-        {
+        let path = match &input.source {
+            registry::Source::Url(url) => url.to_file_path(),
+            registry::Source::String(s) => Ok(PathBuf::from(s)),
+        };
+
+        if let Ok(path) = path {
+            if path.exists() && path.extension() == Some(OsStr::new("pls")) {
+                let content = fs::read_to_string(&path)?;
+                if let Ok(playlist) = try_parse_pls(&mut content.as_bytes()) {
+                    return Ok(playlist);
+                }
+            }
+
             return Ok(vec![Input {
                 prefix: None,
                 source: registry::Source::String(path.to_string_lossy().to_string()),
             }]);
         }
 
+        if let registry::Source::Url(url) = &input.source {
+            let req = CLIENT.head(url.clone()).build()?;
+            let res = CLIENT.execute(req).await?;
+            if let Some(content_type) = res.headers().get("Content-Type")
+                && let Ok(content_str) = str::from_utf8(content_type.as_bytes())
+                && content_str == "audio/x-scpls"
+            {
+                let req = CLIENT.get(url.clone()).build()?;
+                let content = CLIENT.execute(req).await?.bytes().await?.to_vec();
+                if let Ok(playlist) = try_parse_pls(&mut content.as_slice()) {
+                    return Ok(playlist);
+                }
+            }
+        }
+
         Ok(vec![input])
     }
+}
+
+fn try_parse_pls<R>(reader: &mut R) -> Result<Vec<Input>>
+where
+    R: io::Read,
+{
+    let playlist = pls::parse(reader)?;
+    let playlist_items = playlist
+        .into_iter()
+        .map(|p| Input {
+            prefix: None,
+            source: p.path.into(),
+        })
+        .collect();
+    Ok(playlist_items)
 }
 
 pub(crate) struct HttpSourceResolver {
@@ -105,6 +148,7 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
                 }
             }
         }
+
         // We need to add a header to tell the Icecast server that we can parse the metadata
         // embedded within the stream itself.
         let client = client_builder.request_icy_metadata().build()?;

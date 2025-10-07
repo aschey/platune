@@ -12,10 +12,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func GetIpcClient() (*grpc.ClientConn, error) {
+func GetIpcClient(name string) (*grpc.ClientConn, error) {
 	return grpc.NewClient("0.0.0.0", grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
-			conn, err := winio.DialPipe(`\\.\pipe\platune\platuned`, nil)
+			conn, err := winio.DialPipe(`\\.\pipe\platune\`+name, nil)
 			return conn, err
 		}))
 }
