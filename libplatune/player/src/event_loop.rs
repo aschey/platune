@@ -52,11 +52,10 @@ pub(crate) fn decode_loop<B: AudioBackend>(
     manager.set_volume(volume);
 
     loop {
-        let (decoder, metadata) = match queue_rx.try_recv() {
+        let (decoder, metadata, has_content_length) = match queue_rx.try_recv() {
             Ok(queue_source) => {
                 info!("Got source on initial attempt");
                 init_source(&mut manager, &queue_source);
-
                 if let Ok(decoder) = manager
                     .init_decoder(
                         queue_source.source,
@@ -66,7 +65,11 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     )
                     .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
                 {
-                    (decoder, queue_source.metadata)
+                    (
+                        decoder,
+                        queue_source.metadata,
+                        queue_source.has_content_length,
+                    )
                 } else {
                     continue;
                 }
@@ -89,7 +92,11 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                             )
                             .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
                         {
-                            (decoder, queue_source.metadata)
+                            (
+                                decoder,
+                                queue_source.metadata,
+                                queue_source.has_content_length,
+                            )
                         } else {
                             continue;
                         }
@@ -111,6 +118,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                 .inspect_err(|e| error!("Error creating processor: {e}"))
         {
             let mut send_time = true;
+            let mut is_first_packet = true;
             loop {
                 match processor.next() {
                     Ok((InputResult::Stop, _)) => {
@@ -119,6 +127,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         break;
                     }
                     Ok((_, DecoderResult::Unfinished)) => {
+                        is_first_packet = false;
                         if send_time {
                             // Send initial position
                             // this is usually 0:00, but may be something else for live streams or
@@ -153,6 +162,21 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     }
                     Err(e) => {
                         error!("Error while decoding: {e:?}");
+                        player_cmd_tx
+                            .send(Command::DecoderFailed)
+                            .tap_err(|e| error!("Unable to send command: {e:?}"))
+                            .ok();
+                        // For live streams, we may get a stream error if the source has been
+                        // paused for a long time.
+                        // Forcing a reconnect should let it recover.
+                        // If it failed on the first packet, it's probably just a bad input
+                        // though.
+                        if !has_content_length && !is_first_packet {
+                            player_cmd_tx
+                                .send(Command::Reinitialize)
+                                .tap_err(|e| error!("Unable to send command: {e:?}"))
+                                .ok();
+                        }
                         break;
                     }
                 }
@@ -235,6 +259,12 @@ pub(crate) async fn main_loop(
             }
             Command::Previous => {
                 player.go_previous().await?;
+            }
+            Command::Reinitialize => {
+                player.reinitialize().await?;
+            }
+            Command::DecoderFailed => {
+                player.on_decoder_failed();
             }
             Command::Metadata(metadata) => {
                 player.update_metadata(metadata);

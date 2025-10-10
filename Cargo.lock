@@ -2221,7 +2221,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=3c27091df9867a69761e27ab7f4466666da8ad07#3c27091df9867a69761e27ab7f4466666da8ad07"
+source = "git+https://github.com/aschey/decal?rev=16f418c5db99915d499efe1bb228deeb2083bee8#16f418c5db99915d499efe1bb228deeb2083bee8"
 dependencies = [
  "cpal",
  "dasp",
@@ -2310,6 +2310,27 @@ checksum = "ab63b0e2bf4d5928aff72e83a7dace85d7bba5fe12dcc3c5a572d78caffd3f3c"
 dependencies = [
  "derive_builder_core",
  "syn 2.0.106",
+]
+
+[[package]]
+name = "derive_more"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
+dependencies = [
+ "derive_more-impl",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -2981,6 +3002,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "from_map"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99f31122ab0445ff8cee420b805f24e07683073815de1dd276ee7d588d301700"
+dependencies = [
+ "hashmap_derive",
 ]
 
 [[package]]
@@ -4361,6 +4391,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashmap_derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb30bf173e72cc31b5265dac095423ca14e7789ff7c3b0e6096a37a996f12883"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "hdrhistogram"
 version = "7.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4420,6 +4461,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b5f8eb2ad728638ea2c7d47a21db23b7b58a72ed6a38256b8a1849f15fbbdf7"
 dependencies = [
  "hmac",
+]
+
+[[package]]
+name = "hls_client"
+version = "1.1.0"
+source = "git+https://github.com/aschey/hls_client_rs?rev=a90d08617343bf6d309f9d7bbc6d4ad4d3c5bd08#a90d08617343bf6d309f9d7bbc6d4ad4d3c5bd08"
+dependencies = [
+ "bytes",
+ "futures",
+ "hls_m3u8",
+ "mediatype",
+ "reqwest",
+ "stream-download",
+ "thiserror 2.0.17",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "hls_m3u8"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3540d6aab90788c46dab12263fb70b25f5b16e0eee6a07bbdc9960057947e128"
+dependencies = [
+ "derive_builder",
+ "derive_more",
+ "hex",
+ "shorthand",
+ "stable-vec",
+ "strum 0.26.3",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -5312,6 +5384,7 @@ dependencies = [
  "flume",
  "futures",
  "futures-util",
+ "hls_client",
  "icy-metadata",
  "lazy-regex",
  "pls",
@@ -5754,6 +5827,12 @@ dependencies = [
  "libc",
  "memoffset 0.9.1",
 ]
+
+[[package]]
+name = "no-std-compat"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df270209a7f04d62459240d890ecb792714d5db12c92937823574a09930276b4"
 
 [[package]]
 name = "nom"
@@ -7935,6 +8014,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "shorthand"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "474f77f985d8212610f170332eaf173e768404c0c1d4deb041f32c297cf18931"
+dependencies = [
+ "from_map",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "signal-hook"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8317,6 +8408,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "stable-vec"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1dff32a2ce087283bec878419027cebd888760d8760b2941ad0843531dc9ec8"
+dependencies = [
+ "no-std-compat",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8330,9 +8430,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "stream-download"
-version = "0.22.5"
+version = "0.22.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75ceb9cdf31218261682a81df3b446ff6439510a8be6ef908ef4cee3b6caa582"
+checksum = "2ce59a19fddd0ca870524449d713f07ae05af4ab7b1be3fa320e7a2d9f4dd303"
 dependencies = [
  "async-trait",
  "bytes",
@@ -8455,7 +8555,7 @@ dependencies = [
 [[package]]
 name = "symphonia"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
@@ -8476,8 +8576,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-adapter-fdk-aac"
-version = "0.1.1"
-source = "git+https://github.com/aschey/symphonia-adapters?rev=cc1a7beac9779f8c94be7585107bccf0908b0c48#cc1a7beac9779f8c94be7585107bccf0908b0c48"
+version = "0.1.2"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=bf5c14d520ee0e4cd048a1654d1c6e991c1561c5#bf5c14d520ee0e4cd048a1654d1c6e991c1561c5"
 dependencies = [
  "fdk-aac",
  "log",
@@ -8486,8 +8586,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-adapter-libopus"
-version = "0.1.1"
-source = "git+https://github.com/aschey/symphonia-adapters?rev=cc1a7beac9779f8c94be7585107bccf0908b0c48#cc1a7beac9779f8c94be7585107bccf0908b0c48"
+version = "0.1.2"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=bf5c14d520ee0e4cd048a1654d1c6e991c1561c5#bf5c14d520ee0e4cd048a1654d1c6e991c1561c5"
 dependencies = [
  "opusic-sys",
  "symphonia-core",
@@ -8496,7 +8596,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-flac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8507,7 +8607,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-mp3"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "lazy_static",
  "log",
@@ -8517,7 +8617,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-aac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "lazy_static",
  "log",
@@ -8527,7 +8627,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-adpcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8536,7 +8636,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-alac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8545,7 +8645,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-pcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8554,7 +8654,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-vorbis"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8564,8 +8664,9 @@ dependencies = [
 [[package]]
 name = "symphonia-common"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
+ "log",
  "symphonia-core",
  "symphonia-metadata",
 ]
@@ -8573,7 +8674,7 @@ dependencies = [
 [[package]]
 name = "symphonia-core"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "bitflags 2.9.4",
  "bytemuck",
@@ -8587,16 +8688,17 @@ dependencies = [
 [[package]]
 name = "symphonia-format-caf"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
+ "symphonia-common",
  "symphonia-core",
 ]
 
 [[package]]
 name = "symphonia-format-isomp4"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8607,7 +8709,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-mkv"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "lazy_static",
  "log",
@@ -8618,7 +8720,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-ogg"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8629,7 +8731,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-riff"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "extended",
  "log",
@@ -8640,7 +8742,7 @@ dependencies = [
 [[package]]
 name = "symphonia-metadata"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454#e8e986fddbd6966bf4ec2aa0bf2bcbfbfa109454"
+source = "git+https://github.com/aschey/Symphonia?rev=cae6bc5cb060c80c5f65b6f4bce6750fe4becb76#cae6bc5cb060c80c5f65b6f4bce6750fe4becb76"
 dependencies = [
  "lazy_static",
  "log",

@@ -9,4 +9,5 @@ pub(crate) struct QueueSource {
     pub(crate) metadata: Metadata,
     pub(crate) volume: Option<f32>,
     pub(crate) settings: Settings,
+    pub(crate) has_content_length: bool,
 }

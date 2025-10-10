@@ -452,6 +452,7 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for YtDlpSourceR
                     .seekable(false),
             ),
             metadata: Some(metadata),
+            has_content_length: content_length.is_some(),
         };
         Ok((track, token))
     }

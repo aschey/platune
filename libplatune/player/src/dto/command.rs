@@ -20,6 +20,8 @@ pub(crate) enum Command {
     Ended,
     Next,
     Previous,
+    DecoderFailed,
+    Reinitialize,
     Shutdown,
     Reset,
 }

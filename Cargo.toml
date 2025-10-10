@@ -13,10 +13,11 @@ axum = "0.8.4"
 clap = "4.5.48"
 console-subscriber = "0.4.1"
 daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "7caa9397428713c8f9689723f36c1e3406c7a434" }
-decal = { git = "https://github.com/aschey/decal", rev = "3c27091df9867a69761e27ab7f4466666da8ad07" }
+decal = { git = "https://github.com/aschey/decal", rev = "16f418c5db99915d499efe1bb228deeb2083bee8" }
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "9dbce3919b1f386fa8abe6c195f4ab4cb261523f" }
 slite = { git = "https://github.com/aschey/slite", rev = "1c4ecd93b51604da80e4c125e52b5e9a96155bab", default-features = false }
 background-service = { git = "https://github.com/aschey/background-service-rs", rev = "6d9a1ddb2b57ac4fe305eff84545168d70171a5d" }
+hls_client = { git = "https://github.com/aschey/hls_client_rs", rev = "a90d08617343bf6d309f9d7bbc6d4ad4d3c5bd08", default-features = false }
 directories = "6.0.0"
 dotenvy = "0.15.7"
 futures = "0.3.31"
@@ -70,7 +71,7 @@ lazy-regex = "3.4.1"
 reqwest = { version = "0.12.23", default-features = false }
 reqwest-middleware = "0.4.2"
 reqwest-retry = "0.7.0"
-stream-download = "0.22.5"
+stream-download = "0.22.6"
 lofty = "0.22.4"
 icy-metadata = "0.5.1"
 pls = "0.2.2"

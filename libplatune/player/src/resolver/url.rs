@@ -7,7 +7,9 @@ use std::{env, fs, io};
 use async_trait::async_trait;
 use decal::decoder::ReadSeekSource;
 use eyre::{Context, Result, eyre};
+use hls_client::stream::HLSStream;
 use icy_metadata::{IcyHeaders, IcyMetadataReader, RequestIcyMetadata};
+use reqwest::header;
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
 use stream_download::http::HttpStream;
@@ -68,23 +70,64 @@ impl RegistryEntry<Result<Vec<Input>>> for DefaultUrlResolver {
             }]);
         }
 
-        if let registry::Source::Url(url) = &input.source {
-            let req = CLIENT.head(url.clone()).build()?;
-            let res = CLIENT.execute(req).await?;
-            if let Some(content_type) = res.headers().get("Content-Type")
-                && let Ok(content_str) = str::from_utf8(content_type.as_bytes())
-                && content_str == "audio/x-scpls"
-            {
-                let req = CLIENT.get(url.clone()).build()?;
-                let content = CLIENT.execute(req).await?.bytes().await?.to_vec();
-                if let Ok(playlist) = try_parse_pls(&mut content.as_slice()) {
-                    return Ok(playlist);
-                }
-            }
+        if let registry::Source::Url(url) = &input.source
+            && let Ok(content_type) = fetch_content_type(url).await
+            && let Ok(Some(playlist)) = handle_playlist(&content_type, url).await
+        {
+            return Ok(playlist);
         }
 
         Ok(vec![input])
     }
+}
+
+async fn fetch_content_type(url: &Url) -> Result<String> {
+    let req = CLIENT.head(url.clone()).build()?;
+    let res = CLIENT.execute(req).await?;
+    if let Some(content_type) = res.headers().get(header::CONTENT_TYPE) {
+        let res = str::from_utf8(content_type.as_bytes())?;
+        Ok(res.to_string())
+    } else {
+        Ok("".to_string())
+    }
+}
+
+async fn handle_playlist(content_type: &str, url: &Url) -> Result<Option<Vec<Input>>> {
+    if content_type == "audio/x-scpls" {
+        let req = CLIENT.get(url.clone()).build()?;
+        let content = CLIENT.execute(req).await?.bytes().await?.to_vec();
+        if let Ok(playlist) = try_parse_pls(&mut content.as_slice()) {
+            return Ok(Some(playlist));
+        }
+    }
+
+    Ok(None)
+}
+
+async fn hls_source(url: Url) -> Result<(MetadataSource, CancellationToken)> {
+    // HLS usually uses mp3 or aac
+    let prefetch = bitrate_to_prefetch(content_subtype_to_bitrate("aac"), None);
+    let settings = Settings::default().prefetch_bytes(prefetch);
+
+    let reader = StreamDownload::new::<HLSStream>(
+        hls_client::config::ConfigBuilder::new().url(url)?.build()?,
+        AdaptiveStorageProvider::new(
+            TempStorageProvider::new(),
+            NonZeroUsize::new(TEMP_BUFFER_SIZE).unwrap(),
+        ),
+        settings,
+    )
+    .await?;
+
+    let token = reader.cancellation_token();
+
+    let track = MetadataSource {
+        source: Box::new(ReadSeekSource::new(reader, None, None)),
+        metadata: None,
+        has_content_length: false,
+    };
+
+    Ok((track, token))
 }
 
 fn try_parse_pls<R>(reader: &mut R) -> Result<Vec<Input>>
@@ -147,6 +190,14 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
                     client_builder = client_builder.identity(Identity::from_pem(&cert)?);
                 }
             }
+        }
+
+        let content_type = fetch_content_type(&url).await;
+
+        if let Ok("audio/mpegurl" | "application/vnd.apple.mpegurl") = content_type.as_deref()
+            && let Ok((stream, token)) = hls_source(url.clone()).await
+        {
+            return Ok((stream, token));
         }
 
         // We need to add a header to tell the Icecast server that we can parse the metadata
@@ -224,12 +275,14 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for HttpSourceRe
             let track = MetadataSource {
                 source: Box::new(ReadSeekSource::new(icy_reader, file_len, extension)),
                 metadata: None,
+                has_content_length: file_len.is_some(),
             };
             Ok((track, token))
         } else {
             let track = MetadataSource {
                 source: Box::new(ReadSeekSource::new(reader, file_len, extension)),
                 metadata: None,
+                has_content_length: file_len.is_some(),
             };
 
             Ok((track, token))
@@ -270,10 +323,19 @@ impl RegistryEntry<Result<(MetadataSource, CancellationToken)>> for FileSourceRe
     }
 
     async fn handler(&mut self, input: Input) -> Result<(MetadataSource, CancellationToken)> {
+        let source = input.source.to_string();
+        let source_path = Path::new(&source);
+        if source_path.exists()
+            && source_path.extension() == Some(OsStr::new("m3u8"))
+            && let Ok((source, token)) = hls_source(source.parse()?).await
+        {
+            return Ok((source, token));
+        }
         let source = ReadSeekSource::from_path(Path::new(&input.source.to_string()))?;
         let track = MetadataSource {
             source: Box::new(source),
             metadata: None,
+            has_content_length: true,
         };
         Ok((track, CancellationToken::new()))
     }

@@ -110,6 +110,7 @@ impl Player {
                     .queue_tx
                     .send_async(QueueSource {
                         source: source.source,
+                        has_content_length: source.has_content_length,
                         settings: self.settings.clone(),
                         volume: self.pending_volume.take(),
                         // Metadata precedence:
@@ -554,6 +555,20 @@ impl Player {
             );
         }
 
+        Ok(())
+    }
+
+    pub(crate) fn on_decoder_failed(&mut self) {
+        // Set the status to stopped so we don't try to wait for a response from the audio
+        // processor.
+        self.state.status = AudioStatus::Stopped;
+    }
+
+    pub(crate) async fn reinitialize(&mut self) -> Result<(), String> {
+        self.reset_queue().await?;
+        self.start()
+            .await
+            .map_err(|e| e.map(|e| format!("{e:?}")).unwrap_or_default())?;
         Ok(())
     }
 }

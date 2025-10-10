@@ -12,6 +12,7 @@ use crate::dto::track::Metadata;
 pub(crate) struct MetadataSource {
     pub(crate) source: Box<dyn Source>,
     pub(crate) metadata: Option<Metadata>,
+    pub(crate) has_content_length: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -47,6 +47,10 @@ lazy-regex = { workspace = true }
 which = { workspace = true, features = ["tracing"] }
 icy-metadata = { workspace = true }
 pls = { workspace = true }
+hls_client = { workspace = true, features = [
+  "stream_download",
+  "reqwest-rustls",
+] }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
