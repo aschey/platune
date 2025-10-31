@@ -65,9 +65,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.88"
+version = "0.1.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e539d3fca749fcee5236ab05e93a52867dd549cc157c8cb7f99595f3cedffdb5"
+checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -181,6 +181,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "cmake"
+version = "0.1.54"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7caa3f9de89ddbe2c607f4101924c5abec803763ae9534e4f4d7d8f84aa81f0"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "combine"
 version = "4.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -272,6 +281,41 @@ name = "ctor-proc-macro"
 version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2931af7e13dc045d8e9d26afccc6fa115d64e115c9c84b1166288b46f6782c2"
+
+[[package]]
+name = "darling"
+version = "0.20.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc7f46116c46ff9ab3eb1597a45688b6715c6e628b5c133e288e709a29bcb4ee"
+dependencies = [
+ "darling_core",
+ "darling_macro",
+]
+
+[[package]]
+name = "darling_core"
+version = "0.20.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d00b9596d185e565c2207a0b01f8bd1a135483d02d9b7b0a54b11da8d53412e"
+dependencies = [
+ "fnv",
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.20.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc34b93ccb385b40dc71c6fceac4b2ad23662c7eeb248cf10d529b7e055b6ead"
+dependencies = [
+ "darling_core",
+ "quote",
+ "syn 2.0.104",
+]
 
 [[package]]
 name = "dasp"
@@ -405,15 +449,17 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=ca90c5444593747f754d03c1a1117543fe01c2dc#ca90c5444593747f754d03c1a1117543fe01c2dc"
+source = "git+https://github.com/aschey/decal?rev=463a729e8e84a683fd3dd2bc4eebbb62490023d5#463a729e8e84a683fd3dd2bc4eebbb62490023d5"
 dependencies = [
  "cpal",
  "dasp",
  "rb",
  "rubato",
  "symphonia",
+ "symphonia-adapter-fdk-aac",
+ "symphonia-adapter-libopus",
  "tap",
- "thiserror 2.0.12",
+ "thiserror 2.0.17",
  "tracing",
 ]
 
@@ -437,6 +483,58 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.104",
+]
+
+[[package]]
+name = "derive_builder"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "507dfb09ea8b7fa618fcf76e953f4f5e192547945816d5358edffe39f6f94947"
+dependencies = [
+ "derive_builder_macro",
+]
+
+[[package]]
+name = "derive_builder_core"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d5bcf7b024d6835cfb3d473887cd966994907effbe9227e8c8219824d06c4e8"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "derive_builder_macro"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab63b0e2bf4d5928aff72e83a7dace85d7bba5fe12dcc3c5a572d78caffd3f3c"
+dependencies = [
+ "derive_builder_core",
+ "syn 2.0.104",
+]
+
+[[package]]
+name = "derive_more"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
+dependencies = [
+ "derive_more-impl",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -561,6 +659,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
+name = "fdk-aac"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7bb67e142688083cb9afb63f2424203fc98c4e7afb494bf912b60b55513b177e"
+dependencies = [
+ "fdk-aac-sys",
+]
+
+[[package]]
+name = "fdk-aac-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24516d2611506d5cb1833555adc75f6baf9fe2706b9c13e6fc33a6b22c51ca83"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "flume"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -585,6 +701,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "from_map"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99f31122ab0445ff8cee420b805f24e07683073815de1dd276ee7d588d301700"
+dependencies = [
+ "hashmap_derive",
 ]
 
 [[package]]
@@ -735,10 +860,58 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 
 [[package]]
+name = "hashmap_derive"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb30bf173e72cc31b5265dac095423ca14e7789ff7c3b0e6096a37a996f12883"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "heck"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hls_client"
+version = "1.1.0"
+source = "git+https://github.com/aschey/hls_client_rs?rev=a90d08617343bf6d309f9d7bbc6d4ad4d3c5bd08#a90d08617343bf6d309f9d7bbc6d4ad4d3c5bd08"
+dependencies = [
+ "bytes",
+ "futures",
+ "hls_m3u8",
+ "mediatype",
+ "reqwest",
+ "stream-download",
+ "thiserror 2.0.17",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "hls_m3u8"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3540d6aab90788c46dab12263fb70b25f5b16e0eee6a07bbdc9960057947e128"
+dependencies = [
+ "derive_builder",
+ "derive_more",
+ "hex",
+ "shorthand",
+ "stable-vec",
+ "strum 0.26.3",
+ "thiserror 1.0.69",
+]
 
 [[package]]
 name = "http"
@@ -932,15 +1105,21 @@ dependencies = [
 
 [[package]]
 name = "icy-metadata"
-version = "0.4.1"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eda57d35fae891e71c56fd2eb5bc6777f8444db3b1dddbfcee06a812745e895a"
+checksum = "538e622397ac8d6ab100bb5be97a9a4a86374fa417ad91bafde43b1a58302e60"
 dependencies = [
  "http",
  "reqwest",
  "tracing",
  "urlencoding",
 ]
+
+[[package]]
+name = "ident_case"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "idna"
@@ -1130,16 +1309,18 @@ dependencies = [
  "eyre",
  "flume",
  "futures-util",
+ "hls_client",
  "icy-metadata",
  "lazy-regex",
+ "pls",
  "regex",
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
  "stream-download",
- "strum",
+ "strum 0.27.2",
  "tap",
- "thiserror 2.0.12",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-util",
  "tracing",
@@ -1183,9 +1364,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.27"
+version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
+checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lru-slab"
@@ -1286,6 +1467,12 @@ checksum = "ee6cda3051665f1fb8d9e08fc35c96d5a244fb1be711a03b71118828afc9a873"
 dependencies = [
  "jni-sys",
 ]
+
+[[package]]
+name = "no-std-compat"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df270209a7f04d62459240d890ecb792714d5db12c92937823574a09930276b4"
 
 [[package]]
 name = "nu-ansi-term"
@@ -1451,6 +1638,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
 
 [[package]]
+name = "opusic-sys"
+version = "0.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f43c183739dc81651487e7c9f3e4330fe4a3fd26c0fa961c788ce5fb21fa75b"
+dependencies = [
+ "cmake",
+ "libc",
+]
+
+[[package]]
 name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1529,6 +1726,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7edddbd0b52d732b21ad9a5fab5c704c14cd949e5e9a1ec5929a24fded1b904c"
 
 [[package]]
+name = "pls"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d9b4706f4bdab6c8904537069910c3e4209169c9a6a8b58ed18e9f94b4679cc"
+dependencies = [
+ "rust-ini",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1587,7 +1793,7 @@ dependencies = [
  "rustc-hash",
  "rustls",
  "socket2 0.5.10",
- "thiserror 2.0.12",
+ "thiserror 2.0.17",
  "tokio",
  "tracing",
  "web-time",
@@ -1608,7 +1814,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "slab",
- "thiserror 2.0.12",
+ "thiserror 2.0.17",
  "tinyvec",
  "tracing",
  "web-time",
@@ -1743,9 +1949,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.11.1"
+version = "1.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b544ef1b4eac5dc2db33ea63606ae9ffcfac26c1416a2806ae0bf5f56b201191"
+checksum = "843bc0191f75f3e22651ae5f1e72939ab2f72a4bc30fa80a066bd66edefc24d4"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1755,9 +1961,9 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.4.9"
+version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "809e8dc61f6de73b46c85f4c96486310fe304c434cfa43669d7b40f711150908"
+checksum = "5276caf25ac86c8d810222b3dbb938e512c55c6831a10f3e6ed1c93b84041f1c"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1778,9 +1984,9 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "reqwest"
-version = "0.12.22"
+version = "0.12.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbc931937e6ca3a06e3b6c0aa7841849b160a90351d6ab467a8b9b9959767531"
+checksum = "9d0946410b9f7b082a427e4ef5c8ff541a88b357bc6c637c40db3a68ac70a36f"
 dependencies = [
  "base64",
  "bytes",
@@ -1892,6 +2098,12 @@ dependencies = [
  "num-traits",
  "realfft",
 ]
+
+[[package]]
+name = "rust-ini"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a654c5bda722c699be6b0fe4c0d90de218928da5b724c3e467fc48865c37263"
 
 [[package]]
 name = "rustc-demangle"
@@ -2098,6 +2310,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "shorthand"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "474f77f985d8212610f170332eaf173e768404c0c1d4deb041f32c297cf18931"
+dependencies = [
+ "from_map",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2148,6 +2372,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "stable-vec"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d1dff32a2ce087283bec878419027cebd888760d8760b2941ad0843531dc9ec8"
+dependencies = [
+ "no-std-compat",
+]
+
+[[package]]
 name = "stable_deref_trait"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2155,9 +2388,9 @@ checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "stream-download"
-version = "0.22.2"
+version = "0.22.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "801db49d4e7caebc2e1373ee5df828486b28cd7e06584d2dbb9ae257a0324325"
+checksum = "df1661ebf497d15294e5b3ffa5635c5c63e4a2c67dfa8543dd65edaed302c0c9"
 dependencies = [
  "async-trait",
  "bytes",
@@ -2170,7 +2403,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "tempfile",
- "thiserror 2.0.12",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-util",
  "tracing",
@@ -2184,12 +2417,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe895eb47f22e2ddd4dabc02bce419d2e643c8e3b585c78158b349195bc24d82"
 
 [[package]]
+name = "strsim"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
+
+[[package]]
+name = "strum"
+version = "0.26.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
+dependencies = [
+ "strum_macros 0.26.4",
+]
+
+[[package]]
 name = "strum"
 version = "0.27.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.27.2",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.26.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -2213,16 +2474,18 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 [[package]]
 name = "symphonia"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
  "symphonia-bundle-mp3",
  "symphonia-codec-aac",
  "symphonia-codec-adpcm",
+ "symphonia-codec-alac",
  "symphonia-codec-pcm",
  "symphonia-codec-vorbis",
  "symphonia-core",
+ "symphonia-format-caf",
  "symphonia-format-isomp4",
  "symphonia-format-mkv",
  "symphonia-format-ogg",
@@ -2231,9 +2494,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "symphonia-adapter-fdk-aac"
+version = "0.1.2"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=9b5c42961994dae8b71a63ee9bc9d688a754e7b2#9b5c42961994dae8b71a63ee9bc9d688a754e7b2"
+dependencies = [
+ "fdk-aac",
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
+name = "symphonia-adapter-libopus"
+version = "0.2.0"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=9b5c42961994dae8b71a63ee9bc9d688a754e7b2#9b5c42961994dae8b71a63ee9bc9d688a754e7b2"
+dependencies = [
+ "log",
+ "opusic-sys",
+ "symphonia-core",
+]
+
+[[package]]
 name = "symphonia-bundle-flac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "log",
  "symphonia-common",
@@ -2244,7 +2527,7 @@ dependencies = [
 [[package]]
 name = "symphonia-bundle-mp3"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "lazy_static",
  "log",
@@ -2254,7 +2537,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-aac"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "lazy_static",
  "log",
@@ -2264,7 +2547,16 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-adpcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+dependencies = [
+ "log",
+ "symphonia-core",
+]
+
+[[package]]
+name = "symphonia-codec-alac"
+version = "0.5.4"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "log",
  "symphonia-core",
@@ -2273,7 +2565,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-pcm"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "log",
  "symphonia-core",
@@ -2282,7 +2574,7 @@ dependencies = [
 [[package]]
 name = "symphonia-codec-vorbis"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "log",
  "symphonia-common",
@@ -2292,8 +2584,9 @@ dependencies = [
 [[package]]
 name = "symphonia-common"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
+ "log",
  "symphonia-core",
  "symphonia-metadata",
 ]
@@ -2301,20 +2594,31 @@ dependencies = [
 [[package]]
 name = "symphonia-core"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "bitflags 2.9.1",
  "bytemuck",
  "lazy_static",
  "log",
  "num-complex",
+ "rustfft",
  "smallvec",
+]
+
+[[package]]
+name = "symphonia-format-caf"
+version = "0.5.4"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+dependencies = [
+ "log",
+ "symphonia-common",
+ "symphonia-core",
 ]
 
 [[package]]
 name = "symphonia-format-isomp4"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "log",
  "symphonia-common",
@@ -2325,7 +2629,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-mkv"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "lazy_static",
  "log",
@@ -2336,7 +2640,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-ogg"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "log",
  "symphonia-common",
@@ -2347,7 +2651,7 @@ dependencies = [
 [[package]]
 name = "symphonia-format-riff"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "extended",
  "log",
@@ -2358,7 +2662,7 @@ dependencies = [
 [[package]]
 name = "symphonia-metadata"
 version = "0.5.4"
-source = "git+https://github.com/pdeljanov/Symphonia?rev=ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6#ecefdd0b796207eae7d18e8c26ce59c46c5cb5f6"
+source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
 dependencies = [
  "lazy_static",
  "log",
@@ -2460,11 +2764,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.12"
+version = "2.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "567b8a2dae586314f7be2a752ec7474332959c6460e02bde30d702a66d488708"
+checksum = "f63587ca0f12b72a0600bcba1d40081f830876000bb46dd2337a3051618f4fc8"
 dependencies = [
- "thiserror-impl 2.0.12",
+ "thiserror-impl 2.0.17",
 ]
 
 [[package]]
@@ -2480,9 +2784,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.12"
+version = "2.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f7cf42b4507d8ea322120659672cf1b9dbb93f8f2d4ecfd6e51350ff5b17a1d"
+checksum = "3ff15c8ecd7de3849db632e14d18d2571fa09dfc5ed93479bc4485c7a517c913"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2716,6 +3020,12 @@ name = "unicode-ident"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
+
+[[package]]
+name = "unicode-xid"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
 name = "untrusted"
@@ -3309,7 +3619,7 @@ dependencies = [
 [[package]]
 name = "youtube_dl"
 version = "0.10.0"
-source = "git+https://github.com/aschey/youtube-dl-rs?rev=2a2533633ad2d6d718baf63e25b9b7d7c2a053d1#2a2533633ad2d6d718baf63e25b9b7d7c2a053d1"
+source = "git+https://github.com/aschey/youtube-dl-rs?rev=9dbce3919b1f386fa8abe6c195f4ab4cb261523f#9dbce3919b1f386fa8abe6c195f4ab4cb261523f"
 dependencies = [
  "log",
  "serde",

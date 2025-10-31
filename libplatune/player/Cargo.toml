@@ -55,7 +55,6 @@ hls_client = { workspace = true, features = [
 [dev-dependencies]
 assert_matches = { workspace = true }
 async-trait = { workspace = true }
-ctor = { workspace = true }
 futures = { workspace = true }
 pretty_assertions = { workspace = true }
 rstest = { workspace = true }

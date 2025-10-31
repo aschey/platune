@@ -58,16 +58,6 @@ fn get_test_files(num_songs: NumSongs) -> Vec<Track> {
     }
 }
 
-#[ctor::ctor]
-fn init() {
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_thread_ids(true)
-        .with_thread_names(true)
-        .with_test_writer()
-        .init();
-}
-
 fuzz_target!(|input: Input| {
     RUNTIME.block_on(async {
         match input {

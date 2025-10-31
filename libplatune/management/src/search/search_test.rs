@@ -9,23 +9,11 @@ use lofty::tag::{Accessor, ItemKey, TagExt};
 use pretty_assertions::assert_eq;
 use rstest::*;
 use tempfile::TempDir;
-use tracing::{Level, info};
+use tracing::info;
 
 use crate::config::MemoryConfig;
 use crate::database::Database;
 use crate::manager::Manager;
-
-#[ctor::ctor]
-fn init() {
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_thread_ids(true)
-        .with_thread_names(true)
-        .with_test_writer()
-        .with_max_level(Level::INFO)
-        .try_init()
-        .unwrap_or_default();
-}
 
 #[derive(Default)]
 pub struct SongTest {

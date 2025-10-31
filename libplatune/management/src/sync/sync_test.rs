@@ -13,23 +13,10 @@ use normpath::PathExt;
 use pretty_assertions::assert_eq;
 use rstest::*;
 use tempfile::TempDir;
-use tracing::Level;
 
 use crate::config::MemoryConfig;
 use crate::database::Database;
 use crate::manager::Manager;
-
-#[ctor::ctor]
-fn init() {
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_thread_ids(true)
-        .with_thread_names(true)
-        .with_test_writer()
-        .with_max_level(Level::INFO)
-        .try_init()
-        .unwrap_or_default();
-}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
 pub async fn test_sync_empty() {

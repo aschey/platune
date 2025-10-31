@@ -9,24 +9,13 @@ use rstest::*;
 use tempfile::{TempDir, tempdir};
 use tokio::sync::mpsc;
 use tokio::time::timeout;
-use tracing::Level;
 
 use super::{FileWatchManager, Progress};
 use crate::config::MemoryConfig;
 use crate::database::Database;
 use crate::manager::Manager;
 
-#[ctor::ctor]
-fn init() {
-    tracing_subscriber::fmt()
-        .pretty()
-        .with_thread_ids(true)
-        .with_thread_names(true)
-        .with_test_writer()
-        .with_max_level(Level::INFO)
-        .try_init()
-        .unwrap_or_default();
-}
+
 
 #[rstest]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

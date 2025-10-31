@@ -57,12 +57,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                 info!("Got source on initial attempt");
                 init_source(&mut manager, &queue_source);
                 if let Ok(decoder) = manager
-                    .init_decoder(
-                        queue_source.source,
-                        DecoderSettings {
-                            enable_gapless: true,
-                        },
-                    )
+                    .init_decoder(queue_source.source, DecoderSettings::new())
                     .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
                 {
                     (
@@ -84,12 +79,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                         info!("Got source after waiting");
                         init_source(&mut manager, &queue_source);
                         if let Ok(decoder) = manager
-                            .init_decoder(
-                                queue_source.source,
-                                DecoderSettings {
-                                    enable_gapless: true,
-                                },
-                            )
+                            .init_decoder(queue_source.source, DecoderSettings::new())
                             .tap_err(|e| handle_decoder_failure(e, &mut cmd_rx))
                         {
                             (
