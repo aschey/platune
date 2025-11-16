@@ -78,6 +78,10 @@ jobs:
           verbose: true
           fail_ci_if_error: true
           files: ./codecov.json
+      # Prevent disk space issues when saving cache
+      - name: Cleanup profraw files
+        if: matrix.os == 'ubuntu-latest'
+        run: find . -name "*.profraw" -type f -delete
   go:
     strategy:
       matrix:
