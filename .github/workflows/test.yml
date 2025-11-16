@@ -79,9 +79,9 @@ jobs:
           fail_ci_if_error: true
           files: ./codecov.json
       # Prevent disk space issues when saving cache
-      - name: Cleanup profraw files
+      - name: Cleanup coverage files
         if: matrix.os == 'ubuntu-latest'
-        run: find . -name "*.profraw" -type f -delete
+        run: rm -rf ./target/llvm-cov-target
   go:
     strategy:
       matrix:
