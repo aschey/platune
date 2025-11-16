@@ -15,8 +15,6 @@ use crate::config::MemoryConfig;
 use crate::database::Database;
 use crate::manager::Manager;
 
-
-
 #[rstest]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_file_sync_sequential(
@@ -146,6 +144,8 @@ async fn test_file_sync_concurrent(rename: bool) {
     })
     .await
     .unwrap();
+    // Wait for tasks to start
+    tokio::time::sleep(Duration::from_millis(20)).await;
     let mut receiver = file_watch_manager.subscribe_progress();
 
     let (started_tx, mut started_rx) = mpsc::channel(1);
@@ -200,7 +200,11 @@ async fn test_file_sync_concurrent(rename: bool) {
     let manager = file_watch_manager.read().await;
 
     for path in &paths {
-        assert!(manager.get_song_by_path(path).await.unwrap().is_some());
+        assert!(
+            manager.get_song_by_path(path).await.unwrap().is_some(),
+            "{:?}",
+            path
+        );
     }
 }
 
