@@ -130,10 +130,8 @@ async fn test_file_sync_sequential(
     }
 }
 
-#[rstest(rename, 
-//    case(true), TODO: this is flakey 
-    case(false)
-)]
+#[cfg_attr(not(target_os = "linux"), rstest(rename, case(true), case(false)))]
+#[cfg_attr(target_os = "linux", rstest(rename, case(false)))] // TODO: this is flakey on linux
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_file_sync_concurrent(rename: bool) {
     let (_tempdir, temp_path) = create_tempdir();
