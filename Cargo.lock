@@ -784,6 +784,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "block-modes"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9e2211b0817f061502a8dd9f11a37e879e79763e3c698d2418cf824d8cb2f21e"
+
+[[package]]
 name = "block2"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4421,10 +4427,13 @@ dependencies = [
 [[package]]
 name = "hls_client"
 version = "1.1.0"
-source = "git+https://github.com/aschey/hls_client_rs?rev=a90d08617343bf6d309f9d7bbc6d4ad4d3c5bd08#a90d08617343bf6d309f9d7bbc6d4ad4d3c5bd08"
+source = "git+https://github.com/Ovenoboyo/hls_client_rs?rev=8ed92fe7a05c207779a79ddeb1154ce3fe512798#8ed92fe7a05c207779a79ddeb1154ce3fe512798"
 dependencies = [
+ "async-trait",
+ "block-modes",
  "bytes",
  "futures",
+ "hex",
  "hls_m3u8",
  "mediatype 0.20.0",
  "reqwest",
@@ -7981,7 +7990,7 @@ checksum = "7a2ae44ef20feb57a68b23d846850f861394c2e02dc425a50098ae8c90267589"
 [[package]]
 name = "slite"
 version = "0.0.1-dev"
-source = "git+https://github.com/aschey/slite?rev=1c4ecd93b51604da80e4c125e52b5e9a96155bab#1c4ecd93b51604da80e4c125e52b5e9a96155bab"
+source = "git+https://github.com/aschey/slite?rev=44fdd3e74b1f3ec58264bf6691a5039d98c29e72#44fdd3e74b1f3ec58264bf6691a5039d98c29e72"
 dependencies = [
  "ansi-to-tui",
  "content_inspector",
@@ -9530,8 +9539,9 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tui-syntax-highlight"
-version = "0.1.0"
-source = "git+https://github.com/aschey/tui-syntax-highlight?rev=f803d895624967de27374e3d169fd4aca738a87f#f803d895624967de27374e3d169fd4aca738a87f"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b628410d3ef515b09e9895d2ff1713081eccfe757ba7561287cbaae802a8004"
 dependencies = [
  "ratatui",
  "syntect",
