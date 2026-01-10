@@ -33,12 +33,7 @@ decal = { workspace = true, features = [
 ] }
 reqwest-retry = { workspace = true }
 # The default-tls feature seems to break mtls client auth in some cases
-reqwest = { workspace = true, default-features = false, features = [
-  "charset",
-  "http2",
-  "macos-system-configuration",
-  "rustls-tls-native-roots",
-] }
+reqwest = { workspace = true }
 reqwest-middleware = { workspace = true }
 async-trait = { workspace = true }
 youtube_dl = { workspace = true, features = ["tokio"] }

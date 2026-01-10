@@ -9,15 +9,15 @@ members = [
 resolver = "3"
 
 [workspace.dependencies]
-axum = "0.8.7"
-clap = "4.5.53"
+axum = "0.8.8"
+clap = "4.5.54"
 console-subscriber = "0.5.0"
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "ff621dbdbea57762e00390d1ca5c6cd061687890" }
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "c27d0be3829aaca9b8c78610236d831f8d672713" }
 decal = { git = "https://github.com/aschey/decal", rev = "00dc0dd0dd76daed17e8574f2c3177a87d1a5a06" }
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "9dbce3919b1f386fa8abe6c195f4ab4cb261523f" }
 slite = { git = "https://github.com/aschey/slite", rev = "4125208834455947b9fa4df75040fa15bd7ba535", default-features = false }
-background-service = { git = "https://github.com/aschey/background-service-rs", rev = "6d9a1ddb2b57ac4fe305eff84545168d70171a5d" }
-hls_client = { git = "https://github.com/Ovenoboyo/hls_client_rs", rev = "8ed92fe7a05c207779a79ddeb1154ce3fe512798", default-features = false }
+background-service = { git = "https://github.com/aschey/background-service-rs", rev = "e932670ce7998022d8cf56a593f2e39c3c0362b5" }
+hls_client = { git = "https://github.com/aschey/hls_client_rs", rev = "6b81fc82c3bb1e99b7880bbb1fc914770f65b294", default-features = false }
 directories = "6.0.0"
 dotenvy = "0.15.7"
 futures = "0.3.31"
@@ -28,9 +28,9 @@ prost-types = "0.14.1"
 rcgen = "0.14.6"
 hyper-util = "0.1.19"
 time = "0.3.44"
-tokio = "1.48.0"
-tokio-util = "0.7.17"
-tokio-stream = "0.1.17"
+tokio = "1.49.0"
+tokio-util = "0.7.18"
+tokio-stream = "0.1.18"
 tonic = "0.14"
 tonic-build = "0.14"
 tonic-health = "0.14"
@@ -67,13 +67,13 @@ thiserror = "2.0.17"
 walkdir = "2.5.0"
 async-trait = "0.1.89"
 flume = "0.12.0"
-lazy-regex = "3.4.2"
-reqwest = { version = "0.12.26", default-features = false }
-reqwest-middleware = "0.4.2"
-reqwest-retry = "0.8.0"
-stream-download = "0.22.9"
+lazy-regex = "3.5.1"
+reqwest = { version = "0.13.1", default-features = false }
+reqwest-middleware = "0.5.0"
+reqwest-retry = "0.9.0"
+stream-download = "0.23.0"
 lofty = "0.22.4"
-icy-metadata = "0.5.1"
+icy-metadata = "0.6.0"
 pls = "0.2.3"
 
 # testing dependencies
@@ -81,5 +81,5 @@ criterion = "0.8.1"
 assert_matches = "1.5.0"
 rstest = "0.26.1"
 pretty_assertions = "1.4.1"
-tempfile = "3.23.0"
+tempfile = "3.24.0"
 spin_sleep = "1.3.3"
