@@ -69,7 +69,7 @@ async fn run(offset_time: OffsetTime<Rfc3339>) -> Result<(), BoxedError> {
                     .summary("The platune service encountered a fatal error"),
             ),
         )
-        .with_provider(build_info())
+        .with_provider(build_info()?)
         .initialize()?;
 
     // TODO: use get_logger_with_reload when we have config file support

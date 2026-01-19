@@ -1,6 +1,6 @@
 use std::env::current_exe;
 
-use auto_launch::AutoLaunchBuilder;
+use auto_launch::{AutoLaunchBuilder, MacOSLaunchMode};
 use clap::{FromArgMatches, Subcommand};
 use daemon_slayer::cli::{Cli, InputState};
 use daemon_slayer::client::cli::ClientCliProvider;
@@ -100,7 +100,7 @@ async fn run(offset_time: OffsetTime<Rfc3339>) -> Result<(), BoxedError> {
         .with_provider(LoggingCliProvider::new(logger_builder))
         .with_provider(ErrorHandlerCliProvider::default())
         .with_provider(HealthCheckCliProvider::new(health_check))
-        .with_provider(build_info())
+        .with_provider(build_info()?)
         .initialize()?;
 
     let logger = cli
@@ -131,7 +131,7 @@ async fn run(offset_time: OffsetTime<Rfc3339>) -> Result<(), BoxedError> {
         let auto_launch = AutoLaunchBuilder::new()
             .set_app_name("Platune Tray")
             .set_app_path(&app_path)
-            .set_use_launch_agent(true)
+            .set_macos_launch_mode(MacOSLaunchMode::LaunchAgent)
             .build()
             .unwrap();
         match tray {

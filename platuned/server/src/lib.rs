@@ -3,8 +3,8 @@ use std::num::ParseIntError;
 
 use clap::builder::styling;
 use daemon_slayer::build_info::cli::BuildInfoCliProvider;
-use daemon_slayer::build_info::vergen_pretty::{self, Pretty, vergen_pretty_env};
-use daemon_slayer::core::Label;
+use daemon_slayer::build_info::vergen_pretty::{self, PrettyBuilder, vergen_pretty_env};
+use daemon_slayer::core::{BoxedError, Label};
 
 const DEFAULT_MAIN_SERVER_PORT: usize = 50051;
 const DEFAULT_FILE_SERVER_PORT: usize = 50050;
@@ -44,8 +44,8 @@ pub fn clap_base_command() -> clap::Command {
     )
 }
 
-pub fn build_info() -> BuildInfoCliProvider {
-    let config = Pretty::builder()
+pub fn build_info() -> Result<BuildInfoCliProvider, BoxedError> {
+    let config = PrettyBuilder::default()
         .env(vergen_pretty_env!())
         .key_style(
             vergen_pretty::Style::default()
@@ -54,9 +54,9 @@ pub fn build_info() -> BuildInfoCliProvider {
         )
         .value_style(vergen_pretty::Style::default())
         .category(false)
-        .build();
+        .build()?;
 
-    BuildInfoCliProvider::new(config)
+    Ok(BuildInfoCliProvider::new(config))
 }
 
 pub fn service_label() -> Label {
