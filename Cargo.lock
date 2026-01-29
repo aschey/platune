@@ -157,7 +157,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -168,7 +168,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -532,6 +532,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
+name = "audio-core"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f93ebbf82d06013f4c41fe71303feb980cddd78496d904d06be627972de51a24"
+
+[[package]]
 name = "audio_thread_priority"
 version = "0.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -543,6 +549,37 @@ dependencies = [
  "log",
  "mach2 0.4.3",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "audioadapter"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e25c5bb54993ad4693d8b68b6f29f872c5fd9f92a6469d0acb0cbaf80a13d0f9"
+dependencies = [
+ "audio-core",
+ "num-traits",
+]
+
+[[package]]
+name = "audioadapter-buffers"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6af89882334c4e501faa08992888593ada468f9e1ab211635c32f9ada7786e0"
+dependencies = [
+ "audioadapter",
+ "audioadapter-sample",
+ "num-traits",
+]
+
+[[package]]
+name = "audioadapter-sample"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e9a3d502fec0b21aa420febe0b110875cf8a7057c49e83a0cace1df6a73e03e"
+dependencies = [
+ "audio-core",
+ "num-traits",
 ]
 
 [[package]]
@@ -610,9 +647,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.15.3"
+version = "1.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e84ce723ab67259cfeb9877c6a639ee9eb7a27b28123abd71db7f0d5d0cc9d86"
+checksum = "7b7b6141e96a8c160799cc2d5adecd5cbbe5054cb8c7c4af53da0f83bb7ad256"
 dependencies = [
  "aws-lc-sys",
  "zeroize",
@@ -620,9 +657,9 @@ dependencies = [
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.36.0"
+version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43a442ece363113bd4bd4c8b18977a7798dd4d3c3383f34fb61936960e8f4ad8"
+checksum = "5c34dda4df7017c8db52132f0f8a2e0f8161649d15723ed63fc00c82d0f2081a"
 dependencies = [
  "cc",
  "cmake",
@@ -1017,9 +1054,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.2.53"
+version = "1.2.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "755d2fce177175ffca841e9a06afdb2c4ab0f593d53b4dee48147dfaade85932"
+checksum = "6354c81bbfd62d9cfa9cb3c773c2b7b2a3a482d569de977fd0e961f6e7c00583"
 dependencies = [
  "find-msvc-tools",
  "jobserver",
@@ -1098,9 +1135,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.54"
+version = "4.5.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6e6ff9dcd79cff5cd969a17a545d79e84ab086e444102a591e288a8aa3ce394"
+checksum = "3e34525d5bbbd55da2bb745d34b36121baac88d07619a9a09cfcf4a6c0832785"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -1108,9 +1145,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.54"
+version = "4.5.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa42cf4d2b7a41bc8f663a7cab4031ebafa1bf3875705bfaf8466dc60ab52c00"
+checksum = "59a20016a20a3da95bef50ec7238dbd09baeef4311dcdd38ec15aba69812fb61"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1120,9 +1157,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "4.5.49"
+version = "4.5.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a0b5487afeab2deb2ff4e03a807ad1a03ac532ff5a2cee5d86884440c7f7671"
+checksum = "a92793da1a46a5f2a02a6f4c46c6496b28c43638adea8306fcb0caa1634f24e5"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -1265,9 +1302,9 @@ dependencies = [
 
 [[package]]
 name = "concread"
-version = "0.5.8"
+version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59bdad7f183b180e608debcf5147cf2afd11c66615fc2b70bccac4844bbaf275"
+checksum = "88b8000ef9f2d922a5e4efbe0d400744a2dfa3fddc58722e6eab97dcfbf9dc56"
 dependencies = [
  "crossbeam-queue",
  "crossbeam-utils",
@@ -1958,7 +1995,7 @@ source = "git+https://github.com/aschey/daemon-slayer?rev=acb06e5e8c1e3238d19548
 dependencies = [
  "daemon-slayer-core",
  "futures",
- "signal-hook 0.4.1",
+ "signal-hook 0.4.3",
  "signal-hook-tokio",
  "tap",
  "tokio",
@@ -2199,8 +2236,9 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=a53fd798c141c125dad1671f03aa8c2964295e1d#a53fd798c141c125dad1671f03aa8c2964295e1d"
+source = "git+https://github.com/aschey/decal?rev=0d3a20a0ee08f57204231da74cdaf92fcc350856#0d3a20a0ee08f57204231da74cdaf92fcc350856"
 dependencies = [
+ "audioadapter-buffers",
  "cpal",
  "dasp",
  "rb",
@@ -2664,7 +2702,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4002,7 +4040,7 @@ dependencies = [
  "gix-fs",
  "libc",
  "parking_lot",
- "signal-hook 0.4.1",
+ "signal-hook 0.4.3",
  "signal-hook-registry",
  "tempfile",
 ]
@@ -4606,7 +4644,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.6.1",
+ "socket2 0.6.2",
  "tokio",
  "tower-service",
  "tracing",
@@ -4629,9 +4667,9 @@ dependencies = [
 
 [[package]]
 name = "iana-time-zone"
-version = "0.1.64"
+version = "0.1.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33e57f83510bb73707521ebaffa789ec8caf86f9657cad665b092b581d40e9fb"
+checksum = "e31bc9ad994ba00e440a8aa5c9ef0ec67d5cb5e5cb0cc7f8b744a35b389cc470"
 dependencies = [
  "android_system_properties",
  "core-foundation-sys",
@@ -4962,7 +5000,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi 0.5.2",
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5013,7 +5051,7 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5261,9 +5299,9 @@ dependencies = [
 
 [[package]]
 name = "libm"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
 
 [[package]]
 name = "libplatune-management"
@@ -5866,9 +5904,12 @@ dependencies = [
 
 [[package]]
 name = "notify-types"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e0826a989adedc2a244799e823aece04662b66609d96af8dff7ac6df9a8925d"
+checksum = "42b8cfee0e339a0337359f3c88165702ac6e600dc01c0cc9579a92d62b08477a"
+dependencies = [
+ "bitflags 2.10.0",
+]
 
 [[package]]
 name = "ntapi"
@@ -5925,9 +5966,9 @@ dependencies = [
 
 [[package]]
 name = "num-conv"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
+checksum = "cf97ec579c3c42f953ef76dbf8d55ac91fb219dde70e49aa4a6b7d74e9919050"
 
 [[package]]
 name = "num-derive"
@@ -6333,9 +6374,9 @@ checksum = "d6790f58c7ff633d8771f42965289203411a5e5c68388703c06e14f24770b41e"
 
 [[package]]
 name = "openssl-probe"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f50d9b3dabb09ecd771ad0aa242ca6894994c130308ca3d7684634df8037391"
+checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
 name = "option-ext"
@@ -6977,9 +7018,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.105"
+version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "535d180e0ecab6268a3e718bb9fd44db66bbbc256257165fc699dadf70d16fe7"
+checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
 ]
@@ -7028,8 +7069,8 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "343d3bd7056eda839b03204e68deff7d1b13aba7af2b2fd16890697274262ee7"
 dependencies = [
- "heck 0.5.0",
- "itertools 0.14.0",
+ "heck 0.4.1",
+ "itertools 0.13.0",
  "log",
  "multimap",
  "petgraph",
@@ -7050,7 +7091,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27c6023962132f4b30eb4c172c91ce92d933da334c59c23cddee82358ddafb0b"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.13.0",
  "proc-macro2",
  "quote",
  "syn 2.0.114",
@@ -7140,7 +7181,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.6.1",
+ "socket2 0.6.2",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -7178,16 +7219,16 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.6.1",
+ "socket2 0.6.2",
  "tracing",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
 name = "quote"
-version = "1.0.43"
+version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc74d9a594b72ae6656596548f56f667211f8a97b3d4c3d467150794690dc40a"
+checksum = "21b2ebcf727b7760c461f091f9f0f539b77b8e87f2fd88131e7f1b433b3cece4"
 dependencies = [
  "proc-macro2",
 ]
@@ -7731,14 +7772,18 @@ dependencies = [
 
 [[package]]
 name = "rubato"
-version = "0.16.2"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5258099699851cfd0082aeb645feb9c084d9a5e1f1b8d5372086b989fc5e56a1"
+checksum = "90173154a8a14e6adb109ea641743bc95ec81c093d94e70c6763565f7108ebeb"
 dependencies = [
+ "audioadapter",
+ "audioadapter-buffers",
  "num-complex",
  "num-integer",
  "num-traits",
  "realfft",
+ "visibility",
+ "windowfunctions",
 ]
 
 [[package]]
@@ -7876,7 +7921,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -7934,7 +7979,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -8260,9 +8305,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook"
-version = "0.4.1"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a37d01603c37b5466f808de79f845c7116049b0579adb70a6b7d47c1fa3a952"
+checksum = "3b57709da74f9ff9f4a27dce9526eec25ca8407c45a7887243b031a58935fb8e"
 dependencies = [
  "libc",
  "signal-hook-registry",
@@ -8297,7 +8342,7 @@ checksum = "e513e435a8898a0002270f29d0a708b7879708fb5c4d00e46983ca2d2d378cf0"
 dependencies = [
  "futures-core",
  "libc",
- "signal-hook 0.4.1",
+ "signal-hook 0.4.3",
  "tokio",
 ]
 
@@ -8334,9 +8379,9 @@ checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
 name = "siphasher"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
+checksum = "b2aa850e253778c88a04c3d7323b043aeda9d3e30d5971937c1855769763678e"
 
 [[package]]
 name = "slab"
@@ -8392,9 +8437,9 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17129e116933cf371d018bb80ae557e889637989d8638274fb25622827b03881"
+checksum = "86f4aa3ad99f2088c990dfa82d367e19cb29268ed67c574d10d0a4bfe71f07e0"
 dependencies = [
  "libc",
  "windows-sys 0.60.2",
@@ -8796,8 +8841,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "lazy_static",
  "symphonia-bundle-flac",
@@ -8819,7 +8864,7 @@ dependencies = [
 [[package]]
 name = "symphonia-adapter-fdk-aac"
 version = "0.1.3"
-source = "git+https://github.com/aschey/symphonia-adapters?rev=c7b05150d5b4534cd48cb2fa96588018762e9b0c#c7b05150d5b4534cd48cb2fa96588018762e9b0c"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=39e6c51343917bdc47af1e80389692cbdadd806b#39e6c51343917bdc47af1e80389692cbdadd806b"
 dependencies = [
  "fdk-aac",
  "log",
@@ -8829,7 +8874,7 @@ dependencies = [
 [[package]]
 name = "symphonia-adapter-libopus"
 version = "0.2.5"
-source = "git+https://github.com/aschey/symphonia-adapters?rev=c7b05150d5b4534cd48cb2fa96588018762e9b0c#c7b05150d5b4534cd48cb2fa96588018762e9b0c"
+source = "git+https://github.com/aschey/symphonia-adapters?rev=39e6c51343917bdc47af1e80389692cbdadd806b#39e6c51343917bdc47af1e80389692cbdadd806b"
 dependencies = [
  "log",
  "opusic-sys",
@@ -8838,8 +8883,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-bundle-flac"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8849,8 +8894,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-bundle-mp3"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "lazy_static",
  "log",
@@ -8859,8 +8904,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-codec-aac"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "lazy_static",
  "log",
@@ -8869,8 +8914,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-codec-adpcm"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8878,8 +8923,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-codec-alac"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8887,8 +8932,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-codec-pcm"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8896,8 +8941,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-codec-vorbis"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8906,8 +8951,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-common"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-core",
@@ -8916,8 +8961,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-core"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "bitflags 2.10.0",
  "bytemuck",
@@ -8930,8 +8975,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-format-caf"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8940,8 +8985,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-format-isomp4"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8951,8 +8996,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-format-mkv"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "lazy_static",
  "log",
@@ -8962,8 +9007,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-format-ogg"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "log",
  "symphonia-common",
@@ -8973,8 +9018,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-format-riff"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "extended",
  "log",
@@ -8984,8 +9029,8 @@ dependencies = [
 
 [[package]]
 name = "symphonia-metadata"
-version = "0.5.4"
-source = "git+https://github.com/aschey/Symphonia?rev=9c7caeda511da11f16a8d9c292d65e436b61d1cc#9c7caeda511da11f16a8d9c292d65e436b61d1cc"
+version = "0.6.0"
+source = "git+https://github.com/aschey/Symphonia?rev=846b25b8f27f76bdb21990a85341557b3e5ab531#846b25b8f27f76bdb21990a85341557b3e5ab531"
 dependencies = [
  "lazy_static",
  "log",
@@ -9177,7 +9222,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.3",
- "windows-sys 0.59.0",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -9338,9 +9383,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.45"
+version = "0.3.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9e442fc33d7fdb45aa9bfeb312c095964abdf596f7567261062b2a7107aaabd"
+checksum = "9da98b7d9b7dad93488a84b8248efc35352b0b2657397d4167e7ad67e5d535e5"
 dependencies = [
  "deranged",
  "itoa",
@@ -9355,15 +9400,15 @@ dependencies = [
 
 [[package]]
 name = "time-core"
-version = "0.1.7"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b36ee98fd31ec7426d599183e8fe26932a8dc1fb76ddb6214d05493377d34ca"
+checksum = "7694e1cfe791f8d31026952abf09c69ca6f6fa4e1a1229e18988f06a04a12dca"
 
 [[package]]
 name = "time-macros"
-version = "0.2.25"
+version = "0.2.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71e552d1249bf61ac2a52db88179fd0673def1e1ad8243a00d9ec9ed71fee3dd"
+checksum = "78cc610bac2dcee56805c99642447d4c5dbde4d01f752ffea0199aee1f601dc4"
 dependencies = [
  "num-conv",
  "time-core",
@@ -9429,7 +9474,7 @@ dependencies = [
  "mio",
  "pin-project-lite",
  "signal-hook-registry",
- "socket2 0.6.1",
+ "socket2 0.6.2",
  "tokio-macros",
  "tracing",
  "windows-sys 0.61.2",
@@ -9592,9 +9637,9 @@ checksum = "ab16f14aed21ee8bfd8ec22513f7287cd4a91aa92e44edfe2c17ddd004e92607"
 
 [[package]]
 name = "tonic"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb7613188ce9f7df5bfe185db26c5814347d110db17920415cf2fbcad85e7203"
+checksum = "a286e33f82f8a1ee2df63f4fa35c0becf4a85a0cb03091a15fd7bf0b402dc94a"
 dependencies = [
  "async-trait",
  "axum",
@@ -9609,7 +9654,7 @@ dependencies = [
  "hyper-util",
  "percent-encoding",
  "pin-project",
- "socket2 0.6.1",
+ "socket2 0.6.2",
  "sync_wrapper",
  "tokio",
  "tokio-rustls",
@@ -9622,9 +9667,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-build"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c40aaccc9f9eccf2cd82ebc111adc13030d23e887244bc9cfa5d1d636049de3"
+checksum = "27aac809edf60b741e2d7db6367214d078856b8a5bff0087e94ff330fb97b6fc"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -9634,9 +9679,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-health"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a82868bf299e0a1d2e8dce0dc33a46c02d6f045b2c1f1d6cc8dc3d0bf1812ef"
+checksum = "8dbde2c702c4be12b9b2f6f7e6c824a84a7b7be177070cada8ee575a581af359"
 dependencies = [
  "prost",
  "tokio",
@@ -9647,9 +9692,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-prost"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66bd50ad6ce1252d87ef024b3d64fe4c3cf54a86fb9ef4c631fdd0ded7aeaa67"
+checksum = "d6c55a2d6a14174563de34409c9f92ff981d006f56da9c6ecd40d9d4a31500b0"
 dependencies = [
  "bytes",
  "prost",
@@ -9658,9 +9703,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-prost-build"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4a16cba4043dc3ff43fcb3f96b4c5c154c64cbd18ca8dce2ab2c6a451d058a2"
+checksum = "a4556786613791cfef4ed134aa670b61a85cfcacf71543ef33e8d801abae988f"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -9674,9 +9719,9 @@ dependencies = [
 
 [[package]]
 name = "tonic-reflection"
-version = "0.14.2"
+version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34da53e8387581d66db16ff01f98a70b426b091fdf76856e289d5c1bd386ed7b"
+checksum = "758112f988818866f38face806ebf8c8961ad2c087e2ba89ad30010ba5fd80c1"
 dependencies = [
  "prost",
  "prost-types",
@@ -10074,9 +10119,9 @@ checksum = "133bf74f01486773317ddfcde8e2e20d2933cc3b68ab797e5d718bef996a81de"
 
 [[package]]
 name = "uuid"
-version = "1.19.0"
+version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2e054861b4bd027cd373e18e8d8d8e6548085000e41290d95ce0c373a654b4a"
+checksum = "ee48d38b119b0cd71fe4141b30f5ba9c7c5d9f4e7a3a8b4a674e4b6ef789976f"
 dependencies = [
  "atomic",
  "getrandom 0.3.4",
@@ -10175,6 +10220,17 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "visibility"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d674d135b4a8c1d7e813e2f8d1c9a58308aee4a680323066025e53132218bd91"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
 
 [[package]]
 name = "vswhom"
@@ -10544,6 +10600,15 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "windowfunctions"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90628d739333b7c5d2ee0b70210b97b8cddc38440c682c96fd9e2c24c2db5f3a"
+dependencies = [
+ "num-traits",
+]
 
 [[package]]
 name = "windows"
@@ -11463,18 +11528,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.33"
+version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "668f5168d10b9ee831de31933dc111a459c97ec93225beb307aed970d1372dfd"
+checksum = "fdea86ddd5568519879b8187e1cf04e24fce28f7fe046ceecbce472ff19a2572"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.33"
+version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c7962b26b0a8685668b671ee4b54d007a67d4eaf05fda79ac0ecf41e32270f1"
+checksum = "0c15e1b46eff7c6c91195752e0eeed8ef040e391cdece7c25376957d5f15df22"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11549,9 +11614,9 @@ checksum = "40990edd51aae2c2b6907af74ffb635029d5788228222c4bb811e9351c0caad3"
 
 [[package]]
 name = "zmij"
-version = "1.0.15"
+version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94f63c051f4fe3c1509da62131a678643c5b6fbdc9273b2b79d4378ebda003d2"
+checksum = "02aae0f83f69aafc94776e879363e9771d7ecbffe2c7fbb6c14c5e00dfe88439"
 
 [[package]]
 name = "zune-core"
