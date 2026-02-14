@@ -12,8 +12,8 @@ resolver = "3"
 axum = "0.8.8"
 clap = "4.5.58"
 console-subscriber = "0.5.0"
-daemon-slayer = { git = "https://github.com/aschey/daemon-slayer" }
-decal = { git = "https://github.com/aschey/decal", rev = "4fc131aca0f0bfac8a9bf344818c0df3fc63cc91" }                                        #{ git = "https://github.com/aschey/decal", rev = "52fee0829b6a7cd55c998251cdc349959871a056" }
+daemon-slayer = { git = "https://github.com/aschey/daemon-slayer", rev = "70597d1349aab1ab7be3f3ab4e1083182365f9c4" }
+decal = { git = "https://github.com/aschey/decal", rev = "df17c314b55d3d69298e6002a965c5e3b5d142e7" }
 youtube_dl = { git = "https://github.com/aschey/youtube-dl-rs", rev = "9dbce3919b1f386fa8abe6c195f4ab4cb261523f" }
 slite = { git = "https://github.com/aschey/slite", rev = "266a2ce37be237b0df3b5faaa1e6dc5ba5d13f4c", default-features = false }
 background-service = { git = "https://github.com/aschey/background-service-rs", rev = "e932670ce7998022d8cf56a593f2e39c3c0362b5" }
@@ -42,7 +42,7 @@ tower-http = "0.6.8"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 tracing-appender = "0.2.4"
-uuid = "1.20.0"
+uuid = "1.21.0"
 vergen-gix = "9.1.0"
 console = "0.16.2"
 which = "8.0.0"
@@ -72,7 +72,7 @@ reqwest = { version = "0.13.2", default-features = false }
 reqwest-middleware = "0.5.1"
 reqwest-retry = "0.9.1"
 stream-download = "0.23.0"
-lofty = "0.23.1"
+lofty = "0.22"
 icy-metadata = "0.6.0"
 pls = "0.2.3"
 
