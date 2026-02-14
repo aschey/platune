@@ -9,9 +9,9 @@ jobs:
   rust:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-15-intel]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
-          - os: macos-15-intel
+          - os: macos-latest
             protoc-target: osx-x86_64
             binstall-target: x86_64-apple-darwin.zip
             binstall-extract: unzip
