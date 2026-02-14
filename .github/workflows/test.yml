@@ -2,8 +2,8 @@ on: [push]
 
 name: CI
 env:
-  BINSTALL_VERSION: 1.16.0
-  PROTOC_VERSION: 33.1
+  BINSTALL_VERSION: 1.17.5
+  PROTOC_VERSION: 33.5
 
 jobs:
   rust:
@@ -62,7 +62,7 @@ jobs:
           # Install precompiled binaries to improve build time
           curl -LO https://github.com/cargo-bins/cargo-binstall/releases/download/v${{env.BINSTALL_VERSION}}/cargo-binstall-${{ matrix.binstall-target }}
           ${{ matrix.binstall-extract }} cargo-binstall-${{ matrix.binstall-target }}
-          ./cargo-binstall cargo-nextest --no-confirm --force
+          ./cargo-binstall cargo-nextest --no-confirm --force --locked
           rustup component add llvm-tools-preview 
           cargo nextest run --locked --no-fail-fast
       - name: Generate coverage
