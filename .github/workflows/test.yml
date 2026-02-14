@@ -12,8 +12,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: macos-latest
-            protoc-target: osx-x86_64
-            binstall-target: x86_64-apple-darwin.zip
+            protoc-target: osx-aarch_64
+            binstall-target: aarch64-apple-darwin.zip
             binstall-extract: unzip
             rustflags: ""
           - os: ubuntu-latest
