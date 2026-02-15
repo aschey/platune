@@ -231,7 +231,8 @@ struct LazyPlayerClient(Option<PlayerClient<Channel>>);
 
 impl LazyPlayerClient {
     async fn get(&mut self) -> &mut PlayerClient<Channel> {
-        // false positive - using `if let` here causes a borrowck error due to assigning self.0 below
+        // false positive - using `if let` here causes a borrowck error due to assigning self.0
+        // below
         #[allow(clippy::unnecessary_unwrap)]
         if self.0.is_some() {
             return self.0.as_mut().unwrap();

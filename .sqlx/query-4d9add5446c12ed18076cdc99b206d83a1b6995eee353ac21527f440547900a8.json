@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            WITH albums_to_delete AS (\n                SELECT album_id FROM album a\n                WHERE NOT EXISTS (select 1 FROM song s WHERE s.album_id = a.album_id)\n            )\n            DELETE FROM album WHERE album_id IN (SELECT album_id FROM albums_to_delete)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "4d9add5446c12ed18076cdc99b206d83a1b6995eee353ac21527f440547900a8"
+}

@@ -167,7 +167,7 @@ impl<'a> SyncDAL<'a> {
         sqlx::query!(
             r#"
             WITH albums_to_delete AS (
-                SELECT album_id FROM album a 
+                SELECT album_id FROM album a
                 WHERE NOT EXISTS (select 1 FROM song s WHERE s.album_id = a.album_id)
             )
             DELETE FROM album WHERE album_id IN (SELECT album_id FROM albums_to_delete)
@@ -180,8 +180,8 @@ impl<'a> SyncDAL<'a> {
         sqlx::query!(
             r#"
             WITH artists_to_delete AS (
-                SELECT artist_id FROM artist ar 
-                WHERE NOT EXISTS (SELECT 1 FROM album al WHERE al.artist_id = ar.artist_id) 
+                SELECT artist_id FROM artist ar
+                WHERE NOT EXISTS (SELECT 1 FROM album al WHERE al.artist_id = ar.artist_id)
                 AND NOT EXISTS (SELECT 1 FROM song s WHERE s.artist_id = ar.artist_id)
             )
             DELETE FROM artist WHERE artist_id IN (SELECT artist_id FROM artists_to_delete)
