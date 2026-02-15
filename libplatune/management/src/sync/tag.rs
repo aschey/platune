@@ -28,8 +28,9 @@ impl From<TaggedFile> for Tag {
         let props = tagged_file.properties();
         match tag {
             Some(tag) => {
-                let artists = tag.get_strings(&ItemKey::TrackArtist).join("/");
-                let mut album_artists = tag.get_strings(&ItemKey::AlbumArtist).join("/");
+                // Ensure we remove duplicate artist/album artist info
+                let artists = tag.get_strings(ItemKey::TrackArtist).unique().join("/");
+                let mut album_artists = tag.get_strings(ItemKey::AlbumArtist).unique().join("/");
                 if album_artists.is_empty() {
                     album_artists.clone_from(&artists);
                 }
@@ -40,7 +41,7 @@ impl From<TaggedFile> for Tag {
                     track_number: tag.track().unwrap_or(1),
                     disc_number: tag.disk().unwrap_or(1),
                     // TODO: Support full date
-                    year: tag.year().unwrap_or(0),
+                    year: tag.date().map(|d| d.year as u32).unwrap_or(0),
                     duration: props.duration().as_millis() as i64,
                     sample_rate: props.sample_rate().unwrap_or(0),
                     bitrate: props.audio_bitrate().unwrap_or(0),

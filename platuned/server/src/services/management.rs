@@ -192,6 +192,7 @@ impl Management for ManagementImpl {
                             .is_err()
                         {
                             info!("client disconnected");
+                            break;
                         }
                     }
                     Some(Err(RecvError::Lagged(_))) => {}

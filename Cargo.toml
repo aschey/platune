@@ -72,7 +72,7 @@ reqwest = { version = "0.13.2", default-features = false }
 reqwest-middleware = "0.5.1"
 reqwest-retry = "0.9.1"
 stream-download = "0.23.0"
-lofty = "0.22"
+lofty = { git = "https://github.com/Serial-ATA/lofty-rs", rev = "caa12824953178cc9e3a5b6cf6249e9995e41eeb" }
 icy-metadata = "0.6.0"
 pls = "0.2.3"
 

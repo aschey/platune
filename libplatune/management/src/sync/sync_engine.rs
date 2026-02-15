@@ -248,6 +248,7 @@ impl SyncEngine {
 
             dal.sync_spellfix().await?;
             SyncEngine::add_search_aliases(&mut dal).await?;
+            dal.remove_empty_entries().await?;
 
             info!("Committing changes");
             dal.commit().await?;
