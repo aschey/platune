@@ -114,6 +114,9 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                     Ok((InputResult::Stop, _)) => {
                         // Don't send Command::Ended when we explicitly requested to stop
                         // because we don't want to initialize the next track
+                        let _ = manager
+                            .flush()
+                            .inspect_err(|e| error!("error flushing: {e:?}"));
                         break;
                     }
                     Ok((_, DecoderResult::Unfinished)) => {
