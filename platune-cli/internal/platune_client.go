@@ -98,7 +98,7 @@ func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *player_v1.EventRespo
 	}
 	for {
 		if *p.playerEventClient == nil {
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(time.Second)
 			continue
 		}
 
@@ -110,6 +110,8 @@ func (p *PlatuneClient) SubscribePlayerEvents(eventCh chan *player_v1.EventRespo
 		}
 		if err == nil {
 			eventCh <- msg
+		} else {
+			time.Sleep(time.Second)
 		}
 	}
 }
@@ -120,13 +122,15 @@ func (p *PlatuneClient) SubscribeManagementEvents(progressCh chan *management_v1
 	}
 	for {
 		if *p.managementEventClient == nil {
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(time.Second)
 			continue
 		}
 
 		msg, err := (*p.managementEventClient).Recv()
 		if err == nil {
 			progressCh <- msg
+		} else {
+			time.Sleep(time.Second)
 		}
 	}
 }

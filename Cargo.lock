@@ -2234,7 +2234,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=b7c3b3e0e08cc2c79f101d358af97e38622603cc#b7c3b3e0e08cc2c79f101d358af97e38622603cc"
+source = "git+https://github.com/aschey/decal?rev=64cd66818906bae7d09a60a518f7e0a7fb7e591d#64cd66818906bae7d09a60a518f7e0a7fb7e591d"
 dependencies = [
  "audioadapter-buffers",
  "cpal",
@@ -4456,7 +4456,7 @@ dependencies = [
 [[package]]
 name = "hls_client"
 version = "1.1.0"
-source = "git+https://github.com/aschey/hls_client_rs?rev=6b81fc82c3bb1e99b7880bbb1fc914770f65b294#6b81fc82c3bb1e99b7880bbb1fc914770f65b294"
+source = "git+https://github.com/aschey/hls_client_rs?rev=4c0b0f9f4e2636c3edc9c71eb338eeff5b296222#4c0b0f9f4e2636c3edc9c71eb338eeff5b296222"
 dependencies = [
  "async-trait",
  "block-modes",
@@ -4464,7 +4464,7 @@ dependencies = [
  "futures",
  "hex",
  "hls_m3u8",
- "mediatype 0.20.0",
+ "mediatype",
  "reqwest",
  "stream-download",
  "thiserror 2.0.18",
@@ -4647,9 +4647,11 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "socket2 0.6.2",
+ "system-configuration",
  "tokio",
  "tower-service",
  "tracing",
+ "windows-registry",
 ]
 
 [[package]]
@@ -5613,12 +5615,6 @@ dependencies = [
  "cfg-if",
  "digest",
 ]
-
-[[package]]
-name = "mediatype"
-version = "0.20.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f490ea2ae935dd8ac89c472d4df28c7f6b87cc20767e1b21fd5ed6a16e7f61e4"
 
 [[package]]
 name = "mediatype"
@@ -7070,7 +7066,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "343d3bd7056eda839b03204e68deff7d1b13aba7af2b2fd16890697274262ee7"
 dependencies = [
  "heck 0.5.0",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "log",
  "multimap",
  "petgraph",
@@ -7091,7 +7087,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27c6023962132f4b30eb4c172c91ce92d933da334c59c23cddee82358ddafb0b"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.116",
@@ -7607,8 +7603,10 @@ checksum = "ab3f43e3283ab1488b624b44b0e988d0acea0b3214e694730a055cb6b2efa801"
 dependencies = [
  "base64 0.22.1",
  "bytes",
+ "encoding_rs",
  "futures-core",
  "futures-util",
+ "h2",
  "http",
  "http-body",
  "http-body-util",
@@ -7617,6 +7615,7 @@ dependencies = [
  "hyper-util",
  "js-sys",
  "log",
+ "mime",
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -8655,15 +8654,15 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "stream-download"
-version = "0.23.0"
+version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c8601ba9c2be28b0968738995cd4362c863ad4f02881680cc51e1eff64d0532"
+checksum = "b85218bb1bf22ffe9da95da88236eda9c20531701b5a24ebd0a1871db50556af"
 dependencies = [
  "async-trait",
  "bytes",
  "educe",
  "futures-util",
- "mediatype 0.21.0",
+ "mediatype",
  "parking_lot",
  "rangemap",
  "regex",
@@ -9063,6 +9062,27 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-io-kit",
  "windows 0.62.2",
+]
+
+[[package]]
+name = "system-configuration"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a13f3d0daba03132c0aa9767f98351b3488edc2c100cda2d2ec2b04f3d8d3c8b"
+dependencies = [
+ "bitflags 2.11.0",
+ "core-foundation 0.9.4",
+ "system-configuration-sys",
+]
+
+[[package]]
+name = "system-configuration-sys"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e1d1b10ced5ca923a1fcb8d03e96b8d3268065d724548c0211415ff6ac6bac4"
+dependencies = [
+ "core-foundation-sys",
+ "libc",
 ]
 
 [[package]]

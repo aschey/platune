@@ -16,7 +16,6 @@ flume = { workspace = true }
 futures-util = { workspace = true }
 tokio-util = { workspace = true }
 stream-download = { workspace = true, features = [
-  "reqwest-rustls",
   "reqwest-middleware",
   "registry",
   "process",

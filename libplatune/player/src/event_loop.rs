@@ -77,6 +77,10 @@ pub(crate) fn decode_loop<B: AudioBackend>(
                 match queue_rx.recv() {
                     Ok(queue_source) => {
                         info!("Got source after waiting");
+                        // Ensure we reset the output in case the device changed
+                        let _ = manager
+                            .reset_output()
+                            .tap_err(|e| error!("error resetting output: {e:?}"));
                         init_source(&mut manager, &queue_source);
                         if let Ok(decoder) = manager
                             .init_decoder(queue_source.source, DecoderSettings::new())
