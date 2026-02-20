@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use decal::decoder::{DecoderResult, DecoderSettings, ResamplerSettings};
-use decal::output::{AudioBackend, OutputBuilder, OutputSettings, WriteBlockingError};
+use decal::output::{Host, OutputBuilder, OutputSettings, WriteBlockingError};
 use decal::{AudioManager, ResetError, WriteOutputError};
 use flume::{Receiver, TryRecvError};
 use tap::TapFallible;
@@ -18,17 +18,17 @@ use crate::platune_player::PlayerEvent;
 use crate::player::Player;
 use crate::two_way_channel::{TwoWayReceiver, TwoWaySender};
 
-pub(crate) fn decode_loop<B: AudioBackend>(
+pub(crate) fn decode_loop<H: Host>(
     queue_rx: Receiver<QueueSource>,
     volume: f32,
     mut cmd_rx: TwoWayReceiver<DecoderCommand, DecoderResponse>,
     player_cmd_tx: TwoWaySender<Command, PlayerResponse>,
     event_tx: tokio::sync::broadcast::Sender<PlayerEvent>,
-    audio_backend: B,
+    host_id: H::Id,
 ) {
     let player_cmd_tx_ = player_cmd_tx.clone();
     let output_builder = OutputBuilder::new(
-        audio_backend,
+        H::from_id(host_id).unwrap(),
         OutputSettings::default(),
         move || {
             info!("Output device changed");
@@ -182,7 +182,7 @@ pub(crate) fn decode_loop<B: AudioBackend>(
     }
 }
 
-fn init_source<B: AudioBackend>(manager: &mut AudioManager<f32, B>, queue_source: &QueueSource) {
+fn init_source<H: Host>(manager: &mut AudioManager<f32, H>, queue_source: &QueueSource) {
     info!("got source {queue_source:?}");
     if let Some(volume) = queue_source.volume {
         manager.set_volume(volume);

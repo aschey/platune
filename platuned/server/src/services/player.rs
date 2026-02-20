@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use libplatune_player::platune_player::{AudioStatus, PlatunePlayer, PlayerEvent, PlayerState};
-use libplatune_player::{CpalOutput, platune_player};
+use libplatune_player::{CpalHost, platune_player};
 use tokio::sync::broadcast::error::RecvError;
 use tokio_util::future::FutureExt;
 use tokio_util::sync::CancellationToken;
@@ -15,13 +15,13 @@ use crate::rpc::v1::{SeekMode, *};
 use crate::v1::player_server::Player;
 
 pub struct PlayerImpl {
-    player: Arc<PlatunePlayer<CpalOutput>>,
+    player: Arc<PlatunePlayer<CpalHost>>,
     cancellation_token: CancellationToken,
 }
 
 impl PlayerImpl {
     pub fn new(
-        player: Arc<PlatunePlayer<CpalOutput>>,
+        player: Arc<PlatunePlayer<CpalHost>>,
         cancellation_token: CancellationToken,
     ) -> Self {
         PlayerImpl {

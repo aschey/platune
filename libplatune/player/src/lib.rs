@@ -6,14 +6,14 @@ mod resolver;
 mod settings;
 mod two_way_channel;
 
-pub use decal::output::{AudioBackend, CpalOutput, MockOutput};
+pub use decal::output::{CpalHost, Host, MockHost};
 
 pub mod platune_player {
     use std::fs::remove_file;
     use std::thread;
     use std::time::{Duration, Instant};
 
-    use decal::output::{AudioBackend, Device, Host};
+    use decal::output::{Device, Host};
     use derivative::Derivative;
     use tap::TapFallible;
     use thiserror::Error;
@@ -48,18 +48,18 @@ pub mod platune_player {
 
     #[derive(Derivative)]
     #[derivative(Debug)]
-    pub struct PlatunePlayer<B: AudioBackend> {
+    pub struct PlatunePlayer<H: Host> {
         cmd_sender: TwoWaySender<Command, PlayerResponse>,
         decoder_tx: TwoWaySender<DecoderCommand, DecoderResponse>,
         event_tx: broadcast::Sender<PlayerEvent>,
         decoder_handle: thread::JoinHandle<()>,
         main_loop_handle: tokio::task::JoinHandle<Result<(), String>>,
         #[derivative(Debug = "ignore")]
-        audio_backend: B,
+        audio_backend: H,
     }
 
-    impl<B: AudioBackend + Send + 'static> PlatunePlayer<B> {
-        pub fn new(audio_backend: B, settings: Settings) -> Self {
+    impl<H: Host + Send + 'static> PlatunePlayer<H> {
+        pub fn new(audio_backend: H, settings: Settings) -> Self {
             Self::clean_temp_files();
 
             let (event_tx, _) = broadcast::channel(32);
@@ -87,16 +87,9 @@ pub mod platune_player {
                     main_loop(cmd_rx, player).await
                 }
             };
-            let audio_backend_ = audio_backend.clone();
+            let host_id = audio_backend.id();
             let decoder_fn = || {
-                decode_loop(
-                    queue_rx_,
-                    1.0,
-                    decoder_rx,
-                    cmd_tx_,
-                    event_tx__,
-                    audio_backend_,
-                );
+                decode_loop::<H>(queue_rx_, 1.0, decoder_rx, cmd_tx_, event_tx__, host_id);
             };
 
             let main_loop_handle = tokio::spawn(main_loop_fn);
@@ -133,7 +126,6 @@ pub mod platune_player {
         pub fn output_devices(&self) -> Result<Vec<String>, PlayerError> {
             let devices = self
                 .audio_backend
-                .default_host()
                 .output_devices()
                 .map_err(|e| PlayerError(format!("{e:?}")))?;
 

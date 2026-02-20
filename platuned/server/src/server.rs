@@ -20,7 +20,7 @@ use libplatune_management::file_watch_manager::FileWatchManager;
 #[cfg(feature = "management")]
 use libplatune_management::manager::Manager;
 #[cfg(feature = "player")]
-use libplatune_player::CpalOutput;
+use libplatune_player::CpalHost;
 #[cfg(feature = "player")]
 use libplatune_player::platune_player::PlatunePlayer;
 #[cfg(feature = "player")]
@@ -54,7 +54,7 @@ enum Transport {
 #[derive(Clone)]
 struct Services {
     #[cfg(feature = "player")]
-    player: Arc<PlatunePlayer<CpalOutput>>,
+    player: Arc<PlatunePlayer<CpalHost>>,
     #[cfg(feature = "management")]
     manager: FileWatchManager,
 }
@@ -170,7 +170,7 @@ pub async fn run_all(shutdown_rx: BroadcastEventStore<Signal>) -> Result<()> {
 }
 
 #[cfg(feature = "player")]
-fn show_notifications(player: &Arc<PlatunePlayer<CpalOutput>>) {
+fn show_notifications(player: &Arc<PlatunePlayer<CpalHost>>) {
     let mut player_rx = player.subscribe();
     tokio::spawn(async move {
         while let Ok(event) = player_rx.recv().await {

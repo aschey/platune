@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use decal::decoder::{CurrentPosition, Decoder, DecoderResult};
-use decal::output::AudioBackend;
+use decal::output::Host;
 use decal::symphonia::core::meta::{MetadataRevision, StandardTag};
 use decal::{AudioManager, ResetMode};
 use flume::TryRecvError;
@@ -14,9 +14,9 @@ use crate::dto::processor_error::ProcessorError;
 use crate::platune_player::{Metadata, PlayerEvent, SeekMode};
 use crate::two_way_channel::TwoWayReceiver;
 
-pub(crate) struct AudioProcessor<'a, B: AudioBackend> {
+pub(crate) struct AudioProcessor<'a, H: Host> {
     cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
-    manager: &'a mut AudioManager<f32, B>,
+    manager: &'a mut AudioManager<f32, H>,
     decoder: Decoder<f32>,
     last_sent_position: Duration,
     event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
@@ -44,9 +44,9 @@ macro_rules! find_tag {
     };
 }
 
-impl<'a, B: AudioBackend> AudioProcessor<'a, B> {
+impl<'a, H: Host> AudioProcessor<'a, H> {
     pub(crate) fn new(
-        manager: &'a mut AudioManager<f32, B>,
+        manager: &'a mut AudioManager<f32, H>,
         decoder: Decoder<f32>,
         cmd_rx: &'a mut TwoWayReceiver<DecoderCommand, DecoderResponse>,
         event_tx: &'a tokio::sync::broadcast::Sender<PlayerEvent>,
