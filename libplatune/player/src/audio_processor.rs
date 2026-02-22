@@ -121,6 +121,7 @@ impl<'a, H: Host> AudioProcessor<'a, H> {
                     }
                     DecoderCommand::Pause => {
                         self.decoder.pause();
+                        self.manager.pause();
 
                         self.cmd_rx
                             .respond(DecoderResponse::Received)

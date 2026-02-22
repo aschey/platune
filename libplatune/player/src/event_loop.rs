@@ -74,6 +74,7 @@ pub(crate) fn decode_loop<H: Host>(
                 let _ = manager
                     .flush()
                     .tap_err(|e| error!("Error flushing output: {e:?}"));
+                manager.pause();
                 match queue_rx.recv() {
                     Ok(queue_source) => {
                         info!("Got source after waiting");

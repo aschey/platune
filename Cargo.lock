@@ -157,7 +157,7 @@ version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c48f72fd53cd289104fc64099abca73db4166ad86ea0b4341abe65af83dadc"
 dependencies = [
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -168,7 +168,7 @@ checksum = "291e6a250ff86cd4a820112fb8898808a366d8f9f58ce16d1f538353ad55747d"
 dependencies = [
  "anstyle",
  "once_cell_polyfill",
- "windows-sys 0.60.2",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1271,7 +1271,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2233,7 +2233,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=22e5942b428c620ba9e43f249a30e97201d5fbd8#22e5942b428c620ba9e43f249a30e97201d5fbd8"
+source = "git+https://github.com/aschey/decal?rev=c983f7bd70669bc6e4ae7135da857a022aa13415#c983f7bd70669bc6e4ae7135da857a022aa13415"
 dependencies = [
  "audioadapter-buffers",
  "cpal",
@@ -2281,9 +2281,9 @@ dependencies = [
 
 [[package]]
 name = "deranged"
-version = "0.5.6"
+version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc3dc5ad92c2e2d1c193bbbbdf2ea477cb81331de4f3103f267ca18368b988c4"
+checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
 dependencies = [
  "powerfmt",
 ]
@@ -2439,7 +2439,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users 0.5.2",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2698,7 +2698,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4998,7 +4998,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi 0.5.2",
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5049,7 +5049,7 @@ dependencies = [
  "portable-atomic",
  "portable-atomic-util",
  "serde_core",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5112,9 +5112,9 @@ dependencies = [
 
 [[package]]
 name = "js-sys"
-version = "0.3.85"
+version = "0.3.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c942ebf8e95485ca0d52d97da7c5a2c387d0e7f0ba4c35e93bfcaee045955b3"
+checksum = "c7e709f3e3d22866f9c25b3aff01af289b18422cc8b4262fb19103ee80fe513d"
 dependencies = [
  "once_cell",
  "wasm-bindgen",
@@ -5922,7 +5922,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7064,8 +7064,8 @@ version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "343d3bd7056eda839b03204e68deff7d1b13aba7af2b2fd16890697274262ee7"
 dependencies = [
- "heck 0.4.1",
- "itertools 0.13.0",
+ "heck 0.5.0",
+ "itertools 0.14.0",
  "log",
  "multimap",
  "petgraph",
@@ -7086,7 +7086,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27c6023962132f4b30eb4c172c91ce92d933da334c59c23cddee82358ddafb0b"
 dependencies = [
  "anyhow",
- "itertools 0.13.0",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn 2.0.117",
@@ -7899,7 +7899,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys 0.11.0",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -7957,7 +7957,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -9193,7 +9193,7 @@ dependencies = [
  "getrandom 0.4.1",
  "once_cell",
  "rustix 1.1.3",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -10307,9 +10307,9 @@ checksum = "b8dad83b4f25e74f184f64c43b150b91efe7647395b42289f38e50566d82855b"
 
 [[package]]
 name = "wasm-bindgen"
-version = "0.2.108"
+version = "0.2.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64024a30ec1e37399cf85a7ffefebdb72205ca1c972291c51512360d90bd8566"
+checksum = "ec1adf1535672f5b7824f817792b1afd731d7e843d2d04ec8f27e8cb51edd8ac"
 dependencies = [
  "cfg-if",
  "once_cell",
@@ -10320,9 +10320,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-futures"
-version = "0.4.58"
+version = "0.4.61"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70a6e77fd0ae8029c9ea0063f87c46fde723e7d887703d74ad2616d792e51e6f"
+checksum = "fe88540d1c934c4ec8e6db0afa536876c5441289d7f9f9123d4f065ac1250a6b"
 dependencies = [
  "cfg-if",
  "futures-util",
@@ -10334,9 +10334,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro"
-version = "0.2.108"
+version = "0.2.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "008b239d9c740232e71bd39e8ef6429d27097518b6b30bdf9086833bd5b6d608"
+checksum = "19e638317c08b21663aed4d2b9a2091450548954695ff4efa75bff5fa546b3b1"
 dependencies = [
  "quote",
  "wasm-bindgen-macro-support",
@@ -10344,9 +10344,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-macro-support"
-version = "0.2.108"
+version = "0.2.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5256bae2d58f54820e6490f9839c49780dff84c65aeab9e772f15d5f0e913a55"
+checksum = "2c64760850114d03d5f65457e96fc988f11f01d38fbaa51b254e4ab5809102af"
 dependencies = [
  "bumpalo",
  "proc-macro2",
@@ -10357,9 +10357,9 @@ dependencies = [
 
 [[package]]
 name = "wasm-bindgen-shared"
-version = "0.2.108"
+version = "0.2.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f01b580c9ac74c8d8f0c0e4afb04eeef2acf145458e52c03845ee9cd23e3d12"
+checksum = "60eecd4fe26177cfa3339eb00b4a36445889ba3ad37080c2429879718e20ca41"
 dependencies = [
  "unicode-ident",
 ]
@@ -10439,9 +10439,9 @@ dependencies = [
 
 [[package]]
 name = "web-sys"
-version = "0.3.85"
+version = "0.3.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "312e32e551d92129218ea9a2452120f4aabc03529ef03e4d0d82fb2780608598"
+checksum = "9d6bb20ed2d9572df8584f6dc81d68a41a625cadc6f15999d649a70ce7e3597a"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
@@ -10606,7 +10606,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
