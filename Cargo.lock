@@ -2273,7 +2273,7 @@ dependencies = [
 [[package]]
 name = "decal"
 version = "0.1.0"
-source = "git+https://github.com/aschey/decal?rev=6bfe55007124e4322979ccc9b4b0b2daa51349cb#6bfe55007124e4322979ccc9b4b0b2daa51349cb"
+source = "git+https://github.com/aschey/decal?rev=b2d063aef410b7c5d741efffeba1dfdda72742a1#b2d063aef410b7c5d741efffeba1dfdda72742a1"
 dependencies = [
  "audioadapter-buffers",
  "cpal",
