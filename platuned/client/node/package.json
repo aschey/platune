@@ -1,0 +1,23 @@
+{
+  "name": "platune-client",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT Or Apache2.0",
+  "author": "",
+  "type": "commonjs",
+  "main": "dist/client.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.4",
+    "google-protobuf": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/google-protobuf": "^3.15.12",
+    "typescript": "^7.0.2"
+  },
+  "allowScripts": {
+    "protobufjs@7.6.5": true
+  }
+}
