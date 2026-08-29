@@ -100,7 +100,7 @@ async fn run(offset_time: OffsetTime<Rfc3339>) -> Result<(), BoxedError> {
         .with_provider(LoggingCliProvider::new(logger_builder))
         .with_provider(ErrorHandlerCliProvider::default())
         .with_provider(HealthCheckCliProvider::new(health_check))
-        .with_provider(build_info()?)
+        .with_provider(build_info())
         .initialize()?;
 
     let logger = cli

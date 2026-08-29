@@ -6,7 +6,13 @@
       {
         "name": "folder_path",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "folder",
+            "name": "folder_path"
+          }
+        }
       }
     ],
     "parameters": {

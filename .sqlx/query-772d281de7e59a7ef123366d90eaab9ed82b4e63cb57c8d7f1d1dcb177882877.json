@@ -6,7 +6,13 @@
       {
         "name": "mount_uuid",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mount",
+            "name": "mount_uuid"
+          }
+        }
       }
     ],
     "parameters": {

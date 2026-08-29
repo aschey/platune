@@ -7,7 +7,7 @@ use concread::arcache::{ARCache, ARCacheBuilder};
 use itertools::Itertools;
 use regex::Regex;
 use sqlx::pool::PoolConnection;
-use sqlx::{Pool, Row, Sqlite};
+use sqlx::{AssertSqlSafe, Pool, Row, Sqlite};
 use tap::Tap;
 use tracing::{info, warn};
 
@@ -119,11 +119,11 @@ impl SearchEngine {
 
     async fn run_spellfix_query(
         &self,
-        spellfix_query: &str,
+        spellfix_query: String,
         terms: &[&str],
         conn: &mut PoolConnection<Sqlite>,
     ) -> Result<Vec<SpellfixResult>, DbError> {
-        let mut corrected = sqlx::query_as::<_, SpellfixResult>(spellfix_query);
+        let mut corrected = sqlx::query_as::<_, SpellfixResult>(AssertSqlSafe(spellfix_query));
         for term in terms {
             corrected = corrected.bind(term);
         }
@@ -186,7 +186,7 @@ impl SearchEngine {
         let spellfix_query = get_full_spellfix_query(&terms);
 
         let spellfix_results = self
-            .run_spellfix_query(&spellfix_query, &terms, &mut conn)
+            .run_spellfix_query(spellfix_query, &terms, &mut conn)
             .await?;
 
         let weights = spellfix_results
@@ -242,7 +242,7 @@ impl SearchEngine {
     ) -> Result<Vec<SearchEntry>, DbError> {
         let full_query = get_search_query(artist_filter, &options.valid_entry_types);
 
-        let mut sql_query = sqlx::query(&full_query)
+        let mut sql_query = sqlx::query(AssertSqlSafe(full_query))
             .bind(options.start_highlight)
             .bind(options.end_highlight)
             .bind(query.to_owned())

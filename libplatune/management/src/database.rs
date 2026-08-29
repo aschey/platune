@@ -82,22 +82,26 @@ impl Database {
         // it is recommended to use a separate reader and writer pool.
         // The writer pool should have 1 connection to avoid db locks and the reader pool should set
         // readonly=true
-        let reader_opts = SqliteConnectOptions::new()
-            .filename(path.as_ref())
-            .create_if_missing(create_if_missing)
-            .read_only(true)
-            .journal_mode(SqliteJournalMode::Wal)
-            .log_statements(LevelFilter::Debug)
-            .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .extension(Self::get_spellfix_lib());
+        let reader_opts = unsafe {
+            SqliteConnectOptions::new()
+                .filename(path.as_ref())
+                .create_if_missing(create_if_missing)
+                .read_only(true)
+                .journal_mode(SqliteJournalMode::Wal)
+                .log_statements(LevelFilter::Debug)
+                .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
+                .extension(Self::get_spellfix_lib())
+        };
 
-        let writer_opts = SqliteConnectOptions::new()
-            .filename(path.as_ref())
-            .create_if_missing(create_if_missing)
-            .journal_mode(SqliteJournalMode::Wal)
-            .log_statements(LevelFilter::Debug)
-            .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .extension(Self::get_spellfix_lib());
+        let writer_opts = unsafe {
+            SqliteConnectOptions::new()
+                .filename(path.as_ref())
+                .create_if_missing(create_if_missing)
+                .journal_mode(SqliteJournalMode::Wal)
+                .log_statements(LevelFilter::Debug)
+                .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
+                .extension(Self::get_spellfix_lib())
+        };
 
         let write_pool = sqlx::pool::PoolOptions::new()
             .max_connections(1)
@@ -118,11 +122,13 @@ impl Database {
     }
 
     pub async fn connect_in_memory() -> Result<Self, DbError> {
-        let opts = SqliteConnectOptions::from_str(":memory:")
-            .unwrap()
-            .log_statements(LevelFilter::Debug)
-            .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
-            .extension(Self::get_spellfix_lib());
+        let opts = unsafe {
+            SqliteConnectOptions::from_str(":memory:")
+                .unwrap()
+                .log_statements(LevelFilter::Debug)
+                .log_slow_statements(LevelFilter::Info, Duration::from_secs(1))
+                .extension(Self::get_spellfix_lib())
+        };
 
         let pool = SqlitePool::connect_with(opts).await.unwrap();
 
@@ -358,13 +364,13 @@ impl Database {
     ) -> Result<Vec<Album>, DbError> {
         sqlx::query_as!(
             Album,
-            "
-            SELECT al.album_name album, al.album_id, aa.artist_name album_artist, aa.artist_id \
-             album_artist_id
+            r#"
+            SELECT al.album_name album, al.album_id as "album_id!", aa.artist_name album_artist,
+                aa.artist_id as "album_artist_id!"
             FROM album al
             INNER JOIN artist aa ON aa.artist_id = al.artist_id
             WHERE aa.artist_id = ?
-            ",
+            "#,
             artist_ids[0]
         )
         .fetch_all(&self.read_pool)

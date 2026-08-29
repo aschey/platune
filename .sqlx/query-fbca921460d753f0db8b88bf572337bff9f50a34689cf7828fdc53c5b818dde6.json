@@ -6,12 +6,24 @@
       {
         "name": "song_id",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "deleted_song",
+            "name": "song_id"
+          }
+        }
       },
       {
         "name": "song_path",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "song",
+            "name": "song_path"
+          }
+        }
       }
     ],
     "parameters": {

@@ -144,21 +144,22 @@ impl<'a> SyncDAL<'a> {
     }
 
     pub(crate) async fn get_long_entries(&mut self) -> Result<Vec<String>, DbError> {
-        let long_vals = sqlx::query!(
+        let long_vals: Result<Vec<(String,)>, sqlx::Error> = sqlx::query_as(
             r#"
-            SELECT entry_value as "entry_value: String"
+            SELECT entry_value
             FROM search_index
             WHERE length(entry_value) >= $1
             and entry_type != 'song';
             "#,
-            MIN_LEN as i32
         )
+        .bind(MIN_LEN as i32)
         .fetch_all(&mut *self.tran)
-        .await
-        .map_err(|e| DbError::DbError(format!("{e:?}")))?
-        .into_iter()
-        .map(|r| r.entry_value.unwrap_or_default())
-        .collect_vec();
+        .await;
+        let long_vals = long_vals
+            .map_err(|e| DbError::DbError(format!("{e:?}")))?
+            .into_iter()
+            .map(|r| r.0)
+            .collect_vec();
 
         Ok(long_vals)
     }
