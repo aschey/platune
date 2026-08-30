@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "./src",
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "sourceMap": true,

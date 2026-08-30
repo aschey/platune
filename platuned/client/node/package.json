@@ -4,8 +4,12 @@
   "description": "",
   "license": "MIT Or Apache2.0",
   "author": "",
-  "type": "commonjs",
-  "main": "dist/client.js",
+  "type": "module",
+  "main": "src/index.ts",
+  "files": [
+    "src/*"
+  ],
+  "types": "./dist/src/index.d.ts",
   "scripts": {
     "build": "tsc"
   },

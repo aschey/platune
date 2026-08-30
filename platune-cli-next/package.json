@@ -1,0 +1,26 @@
+{
+  "name": "platune-cli",
+  "module": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/index.tsx"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@commander-js/extra-typings": "^15.0.0",
+    "@opentui/core": "^0.5.9",
+    "@opentui/keymap": "^0.5.9",
+    "@opentui/solid": "^0.5.9",
+    "babel-preset-solid": "1.9.12",
+    "platune-client": "file:../platuned/client/node",
+    "solid-js": "1.9.12"
+  }
+}
