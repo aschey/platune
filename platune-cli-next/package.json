@@ -20,7 +20,7 @@
     "@opentui/keymap": "^0.5.9",
     "@opentui/solid": "^0.5.9",
     "babel-preset-solid": "1.9.12",
-    "platune-client": "file:../platuned/client/node",
+    "platune-client": "file:../platuned/client/node/dist",
     "solid-js": "1.9.12"
   }
 }

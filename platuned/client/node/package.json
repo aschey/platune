@@ -11,7 +11,7 @@
   ],
   "types": "./dist/src/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "rm -r dist && tsc && cp package.json dist"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
