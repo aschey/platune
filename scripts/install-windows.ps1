@@ -12,6 +12,7 @@ Copy-Item "${repoDir}\target\release\platunectl.exe" "$Env:LOCAL_BIN\"
 Set-Location "${repoDir}\platune-cli"
 
 go build .
+taskkill -f -im 'platune-cli.exe'
 Copy-Item .\cli.exe "$Env:LOCAL_BIN\platune-cli.exe"
 
 platunectl start
