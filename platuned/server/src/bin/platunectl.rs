@@ -81,6 +81,13 @@ async fn run(offset_time: OffsetTime<Rfc3339>) -> Result<(), BoxedError> {
         manager_builder =
             manager_builder.with_environment_variable("FFMPEG_PATH", ffmpeg_path.to_string_lossy());
     }
+
+    // PATH is not set in launchd
+    #[cfg(target_os = "macos")]
+    {
+        manager_builder = manager_builder.with_environment_variable_if_exists("PATH");
+    }
+
     let manager = manager_builder.build().await.unwrap();
     let logger_builder = LoggerBuilder::new(label.clone(), offset_time);
 
