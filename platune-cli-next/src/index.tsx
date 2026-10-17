@@ -9,88 +9,87 @@ const runCli = () => {
     managementClient: new ManagementClient(),
   };
   const program = new Command();
+  const namespaceMap: Record<string, Command> = {};
   for (let command of commands) {
-    program.register(commandContext, command);
+    let parentCommand = program;
+    if (command.namespace) {
+      if (!(command.namespace in namespaceMap)) {
+        namespaceMap[command.namespace] = program.command(command.namespace);
+      }
+      parentCommand = namespaceMap[command.namespace]!;
+    }
+    const newCommand = parentCommand.command(command.name);
+    newCommand.action(() => command.action(commandContext));
   }
   program.parse();
 };
 
 runCli();
 
-// import { createCliRenderer } from "@opentui/core";
-// import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui";
-// import {
-//   KeymapProvider,
-//   useBindings,
-//   useKeymap,
-//   useKeymapSelector,
-// } from "@opentui/keymap/solid";
-// import { render } from "@opentui/solid";
-// import {
-//   registerDefaultKeys,
-//   registerExCommands,
-//   registerMetadataFields,
-// } from "@opentui/keymap/addons";
-// import type { CommandContext } from "./commandContext";
-// import { ManagementClient } from "platune-client";
+import { createCliRenderer } from "@opentui/core";
+import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui";
+import { KeymapProvider, useBindings, useKeymap } from "@opentui/keymap/react";
 
-// const renderer = await createCliRenderer();
-// const keymap = createDefaultOpenTuiKeymap(renderer);
-// registerDefaultKeys(keymap);
-// registerExCommands(keymap);
-// registerMetadataFields(keymap);
+import {
+  registerDefaultKeys,
+  registerExCommands,
+  registerMetadataFields,
+} from "@opentui/keymap/addons";
+import { createRoot } from "@opentui/react";
+import { CommandPalette } from "./components/ui/command-palette";
+import { useState } from "react";
 
-// function App() {
-//   const k = useKeymap();
-//   useBindings(() => ({
-//     commands: [
-//       {
-//         name: "app.quit",
-//         run() {
-//           renderer.destroy();
-//         },
-//       },
-//       {
-//         name: "app.dispatch",
-//         run() {
-//           let res = k.dispatchCommand(":w");
+const renderer = await createCliRenderer();
+const keymap = createDefaultOpenTuiKeymap(renderer);
+registerDefaultKeys(keymap);
+registerExCommands(keymap);
+registerMetadataFields(keymap);
 
-//           if (!res || !res.ok) {
-//             throw Error(res.reason);
-//           }
-//         },
-//       },
-//       {
-//         name: "write",
-//         namespace: "excommands",
-//         aliases: ["w"],
-//         title: "Write file",
-//         desc: "Write file",
-//         run() {
-//           renderer.destroy();
-//         },
-//       },
-//     ],
-//     bindings: [
-//       { key: "q", cmd: "app.quit" },
-//       { key: "w", cmd: "app.dispatch" },
-//     ],
-//   }));
+function App() {
+  const commandContext: CommandContext = {
+    managementClient: new ManagementClient(),
+  };
+  useBindings(() => ({
+    commands: commands.map((c) => ({
+      name: [c.namespace, c.name].filter((c) => !!c).join("."),
+      namespace: "excommands",
+      aliases: c.aliases,
+      title: c.title,
+      desc: c.desc,
+      run() {
+        c.action(commandContext);
+      },
+    })),
+    bindings: [{ key: "q", cmd: "app.quit" }],
+  }));
 
-//   const entries = useKeymapSelector((k) => k.getCommandEntries());
+  const keymap = useKeymap();
+  const [isOpen, setOpen] = useState(false);
 
-//   return <text>{entries()[0]?.command.name}</text>;
-//   // return entries()
-//   //   .flatMap((k) => k.bindings)
-//   //   .flatMap((k) => k.sequence)
-//   //   .map((k) => <text>a {k.display}</text>);
-// }
+  return (
+    <>
+      <text onMouseDown={() => setOpen(true)}>show keymap</text>
 
-// await render(
-//   () => (
-//     <KeymapProvider keymap={keymap}>
-//       <App />
-//     </KeymapProvider>
-//   ),
-//   renderer,
-// );
+      <CommandPalette
+        isOpen={isOpen}
+        onClose={() => setOpen(false)}
+        commands={keymap.getCommandEntries().map((c) => ({
+          id: c.command.name.substring(1),
+          label: c.command.name.substring(1),
+          onSelect: () => {
+            keymap.dispatchCommand(c.command.name);
+          },
+        }))}
+      />
+    </>
+  );
+}
+
+renderer.keyInput.on("keypress", (key) => {
+  if (key.name === "`") renderer.console.toggle();
+});
+createRoot(renderer).render(
+  <KeymapProvider keymap={keymap}>
+    <App />
+  </KeymapProvider>,
+);
