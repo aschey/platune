@@ -1,30 +1,30 @@
 import { UnaryCall } from "./grpc_promisify";
-import { ManagementClient as ManagementRpc } from "./management/management_grpc_pb";
-import { FoldersMessage } from "./management/management_pb";
-import { Empty } from "google-protobuf/google/protobuf/empty_pb.js";
+import { platune } from "./management/management";
+import { google } from "./management/google/protobuf/empty";
 import { credentials } from "@grpc/grpc-js";
 
 async function main() {
-  var client = new ManagementRpc(
+  var client = new platune.management.v1.ManagementClient(
     "unix:///tmp/platune/platuned.sock",
     credentials.createInsecure(),
   );
-  var res: FoldersMessage = await UnaryCall(
+  var res: platune.management.v1.FoldersMessage | undefined = await UnaryCall(
     client,
-    client.getAllFolders,
-    new Empty(),
+    client.GetAllFolders,
+    new google.protobuf.Empty(),
   );
-
-  console.log(res.getFoldersList());
+  if (res) {
+    console.log(res);
+  }
 }
 
 // main();
 
 export class ManagementClient {
-  private client: ManagementRpc;
+  private client: platune.management.v1.ManagementClient;
 
   constructor() {
-    let client = new ManagementRpc(
+    let client = new platune.management.v1.ManagementClient(
       "unix:///tmp/platune/platuned.sock",
       credentials.createInsecure(),
     );
@@ -32,11 +32,21 @@ export class ManagementClient {
   }
 
   getAllFolders = async () => {
-    var res: FoldersMessage = await UnaryCall(
+    let res: platune.management.v1.FoldersMessage | undefined = await UnaryCall(
       this.client,
-      this.client.getAllFolders,
-      new Empty(),
+      this.client.GetAllFolders,
+      new google.protobuf.Empty(),
     );
-    return res.getFoldersList();
+    return res?.folders;
+  };
+
+  getRegisteredMount = async () => {
+    let res: platune.management.v1.RegisteredMountMessage | undefined =
+      await UnaryCall(
+        this.client,
+        this.client.GetRegisteredMount,
+        new google.protobuf.Empty(),
+      );
+    return res?.mount;
   };
 }

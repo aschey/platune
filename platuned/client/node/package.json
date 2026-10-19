@@ -4,7 +4,7 @@
   "description": "",
   "license": "MIT Or Apache2.0",
   "author": "",
-  "type": "module",
+  "type": "commonjs",
   "main": "src/index.ts",
   "files": [
     "src/*"
@@ -14,8 +14,8 @@
     "build": "rm -r dist && tsc && cp package.json dist"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.14.4",
-    "google-protobuf": "^4.0.2"
+    "@grpc/grpc-js": "^1.14.6",
+    "google-protobuf": "^4.0.3"
   },
   "devDependencies": {
     "@types/google-protobuf": "^3.15.12",

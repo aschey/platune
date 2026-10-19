@@ -13,6 +13,7 @@ go install github.com/golang/mock/mockgen@latest
 # cli grpc generation
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+npm install -g protoc-gen-ts grpc-tools
 # go linting
 curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b "$(go env GOPATH)/bin"
 '''
@@ -58,8 +59,13 @@ cd platuned/client/go
 protoc --go_out=./player_v1 --go_opt=paths=source_relative --go-grpc_out=./player_v1 --go-grpc_opt=paths=source_relative --proto_path "./../../proto/player/v1" --go_opt=Mplayer.proto=github.com/aschey/platune/protos/v1/player  "./../../proto/player/v1/player.proto"
 protoc --go_out=./management_v1 --go_opt=paths=source_relative --go-grpc_out=./management_v1 --go-grpc_opt=paths=source_relative --proto_path "./../../proto/management/v1" --go_opt=Mmanagement_rpc.proto=github.com/aschey/platune/protos/v1/management "./../../proto/management/v1/management.proto"
 echo "regenerated go client"
+cd ../../proto/player/v1
+protoc --plugin=protoc-gen-ts=$(which protoc-gen-ts) --ts_out=grpc_js:../../../client/node/src/player player.proto
+cd ../../management/v1
+protoc --plugin=protoc-gen-ts=$(which protoc-gen-ts) --ts_out=grpc_js:../../../client/node/src/management management.proto
+echo "regenerated node client"
 
-cd ../../../platune-cli
+cd ../../../../platune-cli
 mockgen -package=test -source="./../platuned/client/go/player_v1/player_grpc.pb.go" > "./test/player_mock.go"
 mockgen -package=test -source="./../platuned/client/go/management_v1/management_grpc.pb.go" > "./test/management_mock.go"
 mockgen -package=test google.golang.org/grpc ServerStreamingClient,BidiStreamingClient > ./test/grpc_mock.go

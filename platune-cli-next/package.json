@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.tsx"
+    "dev": "npx tsx --watch src/index.tsx",
+    "debug": "npx tsx --inspect-brk src/index.tsx"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -17,13 +18,12 @@
     "@babel/core": "^7.29.7",
     "@babel/preset-typescript": "^7.29.7",
     "@commander-js/extra-typings": "^15.0.0",
-    "@opentui/core": "^0.5.12",
-    "@opentui/keymap": "^0.5.12",
-    "@opentui/react": "^0.5.12",
+    "@opentui/core": "^0.6.6",
+    "@opentui/keymap": "^0.6.6",
+    "@opentui/react": "^0.6.6",
     "@tailwindcss/cli": "^4.3.3",
-    "babel-preset-solid": "1.9.12",
     "class-variance-authority": "^0.7.1",
-    "cn": "^0.3.0",
+    "cn": "^0.5.0",
     "lucide-react": "^1.45.0",
     "platune-client": "file:../platuned/client/node/dist",
     "react": "^19.3.0",

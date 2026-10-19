@@ -2,14 +2,6 @@ import type { Command } from "commander";
 import type { CommandContext } from "../commandContext";
 import type { AppCommand } from ".";
 
-// export const folders = (command: Command, context: CommandContext) => {
-//   let folders = command.command("folders");
-//   folders.command("list").action(async () => {
-//     const folders = await context.managementClient.getAllFolders();
-//     console.log(folders);
-//   });
-// };
-
 export const folders: AppCommand = {
   namespace: "folders",
   name: "list",

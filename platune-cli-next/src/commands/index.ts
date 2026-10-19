@@ -1,7 +1,8 @@
 import type { CommandContext } from "@/commandContext";
 import { folders } from "./folders";
+import { mount } from "./mount";
 
-export const commands = [folders];
+export const commands = [folders, mount];
 
 export interface AppCommand {
   namespace?: string;

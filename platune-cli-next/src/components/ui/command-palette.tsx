@@ -147,6 +147,7 @@ export const CommandPalette = ({
           value={query}
           onKeyDown={handleKey}
           cursorColor={theme.colors.focusRing}
+          focused
         />
       </box>
 
