@@ -60,7 +60,7 @@ fn main() -> Result<(), BoxedError> {
 
     let hotkeys_manager = GlobalHotKeyManager::new().unwrap();
     #[cfg(not(target_os = "macos"))]
-    let hotkey = HotKey::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::KeyJ);
+    let hotkey = HotKey::new(Some(Modifiers::META | Modifiers::SHIFT), Code::KeyJ);
     #[cfg(target_os = "macos")]
     let hotkey = HotKey::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyJ);
     let toggle_id = hotkey.id();
@@ -589,6 +589,7 @@ impl MenuHandler for PlatuneMenuHandler {
                             .unwrap();
                     }
                     MediaControlEvent::Raise => {}
+                    _ => {}
                 }
             })
             .unwrap();
